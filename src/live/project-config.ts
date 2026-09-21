@@ -82,7 +82,48 @@ function getTrack(song: any, target: Record<string, any>): any | undefined {
   return song.tracks?.[index];
 }
 
+export function isSupportedMappingMode(target: { mode?: unknown } | null | undefined): boolean {
+  return !!target && (target.mode === undefined || target.mode === 'continuous'
+    || target.mode === 'toggle' || target.mode === 'trigger_note');
+}
+
+function isMidiNoteTarget(target: Record<string, any>): boolean {
+  return target.mode === "trigger_note";
+}
+
+function isMidiTrack(track: any): boolean {
+  return Boolean(track?.isMidi || track?.is_midi_track || track?.constructor?.name === "MidiTrack");
+}
+
+function captureTrackTargetSignature(song: any, target: Record<string, any>): SemanticTargetSignature {
+  const track = getTrack(song, target);
+  return {
+    targetType: "midi_track",
+    trackSessionId: persistentId(track),
+    trackName: track?.name,
+    trackType: track?.constructor?.name,
+    trackKind: target.trackKind ?? "track",
+    trackIndex: target.trackIndex ?? 0,
+    lastValidatedAt: new Date().toISOString(),
+  };
+}
+
+function trackOnlySignature(signature: SemanticTargetSignature): SemanticTargetSignature {
+  return {
+    targetType: "midi_track",
+    trackPersistentId: signature.trackPersistentId,
+    trackSessionId: signature.trackSessionId,
+    trackName: signature.trackName,
+    trackType: signature.trackType,
+    trackKind: signature.trackKind,
+    trackIndex: signature.trackIndex,
+    lastValidatedAt: signature.lastValidatedAt,
+  };
+}
+
 export function captureTargetSignature(song: any, target: Record<string, any>): SemanticTargetSignature {
+  if (isMidiNoteTarget(target)) return captureTrackTargetSignature(song, target);
+  if (target.type === "tempo") return { targetType: "tempo" };
   const track = getTrack(song, target);
   const mixerTarget = target.type === "mixer_volume" || target.type === "mixer_pan" || target.type === "mixer_send";
   const device = target.type === "device_param" ? track?.devices?.[target.deviceIndex ?? 0] : mixerTarget ? track?.mixer : undefined;
@@ -160,7 +201,7 @@ export function buildProjectConfig(
       ...target,
       signature: {
         ...captureTargetSignature(song, target),
-        ...(target.signature ?? {}),
+        ...(target.type === "tempo" && !isMidiNoteTarget(target) ? {} : target.signature ?? {}),
         lastValidatedAt: new Date().toISOString(),
       },
     }));
@@ -170,7 +211,10 @@ export function buildProjectConfig(
     version: PROJECT_CONFIG_VERSION,
     project: { ...project, savedAt: new Date().toISOString() },
     mappings: serialized,
-    preferences: { globalTakeover: "scale", ...preferences },
+    preferences: {
+      globalTakeover: "scale",
+      ...preferences,
+    },
     ...extras,
   };
 }
@@ -204,7 +248,16 @@ export function migrateLegacyClientMappings(raw: unknown): LegacyMappingMigratio
 
   if (!isRecord(raw)) return { mappings, migrated, conflicts };
 
-  const entries = Object.entries(raw);
+  const entries = Object.entries(raw).flatMap(([control, value]) => {
+    const targets = Array.isArray(value) ? value : [value];
+    const supported = targets.filter(isSupportedMappingMode);
+    if (supported.length !== targets.length) {
+      conflicts.push('Removed unsupported or retired mapping mode from "' + control + '". Re-map if needed.');
+      migrated += 1;
+    }
+    if (supported.length === targets.length) return [[control, value] as const];
+    return supported.length ? [[control, Array.isArray(value) ? supported : supported[0]] as const] : [];
+  });
   // Global keys first, so they own their control before any fold is attempted.
   for (const [control, targets] of entries) {
     if (!LEGACY_CLIENT_KEY.test(control)) mappings[control] = targets;
@@ -313,8 +366,23 @@ export function scoreSemanticMatch(expected: SemanticTargetSignature, candidate:
   return possible > 0 ? Math.max(0, Math.min(1, score / possible)) : 0;
 }
 
-function enumerateCandidates(song: any, type: string): ProjectMappingTarget[] {
+function enumerateCandidates(song: any, original: ProjectMappingTarget): ProjectMappingTarget[] {
   const candidates: ProjectMappingTarget[] = [];
+  if (isMidiNoteTarget(original)) {
+    for (let index = 0; index < (song?.tracks?.length ?? 0); index++) {
+      const track = song.tracks[index];
+      if (!isMidiTrack(track)) continue;
+      const target = {
+        type: original.type,
+        mode: original.mode,
+        trackIndex: index,
+        trackKind: "track",
+      };
+      candidates.push({ ...target, signature: captureTrackTargetSignature(song, target) });
+    }
+    return candidates;
+  }
+  const type = original.type;
   const tracks: Array<{ track: any; kind: string; index: number }> = [
     ...(song?.tracks ?? []).map((track: any, index: number) => ({ track, kind: "track", index })),
     ...(song?.returnTracks ?? []).map((track: any, index: number) => ({ track, kind: "return", index })),
@@ -355,8 +423,12 @@ export function relinkProjectConfig(configValue: ProjectConfig, song: any): {
     for (const original of targets) {
       const { relinkCandidates: _untrustedCandidates, ...originalWithoutCandidates } = original;
       report.total++;
-      const signature = original.signature ?? {};
-      const ranked = enumerateCandidates(song, original.type)
+      const signature = isMidiNoteTarget(original)
+        ? trackOnlySignature(original.signature ?? {})
+        // Tempo is a singleton owned by Song. Old profiles accidentally stored
+        // track/device traits; discard those only for this global target.
+        : original.type === "tempo" ? { targetType: "tempo" } : (original.signature ?? {});
+      const ranked = enumerateCandidates(song, original)
         .map((target) => ({ target, confidence: scoreSemanticMatch(signature, target.signature ?? {}) }))
         .sort((a, b) => b.confidence - a.confidence);
       const best = ranked[0];

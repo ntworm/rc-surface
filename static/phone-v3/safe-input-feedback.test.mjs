@@ -28,11 +28,16 @@ test('phone consumes safe-input state and exposes integrated ghost feedback', ()
   assert.match(controls, /dataset\.safeMode/);
 });
 
-test('audio panel exposes live values for every mapped analysis channel', () => {
+test('audio surface shows a live value for every channel it still ships', () => {
   const html = read('index.html');
   const app = read('app.js');
-  for (const channel of ['rms', 'envelope', 'clarity', 'gate', 'bend']) {
-    assert.match(html, new RegExp(`id=["']lbl-audio-${channel}["']`));
-    assert.match(app, new RegExp(`lbl-audio-${channel}`));
+  const workspace = read('audio-workspace.js');
+  assert.match(html, /id=["']lbl-audio-rms["']/);
+  assert.match(app, /lbl-audio-rms/);
+  // The twelve detector readouts are built from the shared catalogue.
+  assert.match(workspace, /value\.id = 'lbl-audio-' \+ entry\.field/);
+  for (const retired of ['clarity', 'bend', 'pitch', 'note', 'bpm']) {
+    assert.doesNotMatch(html, new RegExp(`id=["']lbl-audio-${retired}["']`),
+      retired + ' left the surface with the dormant pitch lane');
   }
 });

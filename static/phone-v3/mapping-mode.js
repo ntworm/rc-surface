@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 (function () {
   'use strict';
+  const T = (k, fallback) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
+    ? window.RcSurfaceI18n.t(k) : (fallback ?? k);
 
   const state = {
     open: false,
@@ -22,6 +24,7 @@
     busy: false,
     error: '',
     pickerMode: null,
+    midiTargetMode: 'trigger_note',
     pickerFilter: '',
     pendingConflict: null,
   };
@@ -43,31 +46,7 @@
     }
   }
 
-  const CONTROL_GROUPS = [
-    { group: 'Pads', items: Array.from({ length: 12 }, (_, i) => `pad-${i + 1}`) },
-    { group: 'XY Pads', items: ['xy-1.x', 'xy-1.y', 'xy-2.x', 'xy-2.y'] },
-    { group: 'LFOs', items: ['toggle-1', 'toggle-2', 'toggle-3', 'toggle-4'] },
-    { group: 'Stutters', items: ['button-1', 'button-2', 'button-3', 'button-4'] },
-    { group: 'Knobs', items: Array.from({ length: 6 }, (_, i) => `knob-${i + 1}`) },
-    { group: 'Faders', items: Array.from({ length: 6 }, (_, i) => `fader-${i + 1}`) },
-    { group: 'Sensors: Orientation + Motion', items: [
-      'sensor.orient.alpha', 'sensor.orient.beta', 'sensor.orient.gamma',
-      'sensor.motion.ax', 'sensor.motion.ay', 'sensor.motion.az',
-      'sensor.motion.gx', 'sensor.motion.gy', 'sensor.motion.gz',
-    ] },
-    { group: 'Sensors: Audio', items: [
-      'sensor.audio.rms', 'sensor.audio.pitch', 'sensor.audio.bpm',
-      'sensor.audio.note', 'sensor.audio.clarity', 'sensor.audio.whistle.bend',
-      'sensor.audio.envelope', 'sensor.audio.gate',
-    ] },
-    { group: 'Sensors: Vision', items: [
-      'sensor.vision.active', 'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
-      'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
-      'sensor.vision.open', 'sensor.vision.fingers', 'sensor.vision.color.r',
-      'sensor.vision.color.g', 'sensor.vision.color.b',
-      'sensor.vision.gesture.1', 'sensor.vision.gesture.2', 'sensor.vision.gesture.3',
-    ] },
-  ];
+  const CONTROL_GROUPS = window.MappingInputContract.getControlGroups();
 
   function rawControlName(name) {
     return String(name || '').split('::').pop();
@@ -267,16 +246,14 @@
     return saveTargetsForSelected(current, false);
   }
 
-  function selectedTarget() {
-    const targets = targetsForControl(state.selectedControl);
-    return targets[state.selectedTargetIndex] || null;
-  }
-
   function normalizeMidiNote(value) {
     const text = String(value || '').trim().toUpperCase();
     if (/^[A-G]#?-?\d+$/.test(text) || /^\d+$/.test(text)) return text;
     return null;
   }
+
+  const NUMERIC_TARGET_FIELDS = ['inMin', 'inMax', 'outMin', 'outMax', 'threshold',
+    'drive', 'compressor', 'smooth', 'idleValue', 'neutralValue'];
 
   async function updateMobileTargetField(field, value, opts = {}) {
     if (!state.selectedControl) return;
@@ -288,8 +265,19 @@
       target[field] = note;
     } else if (field === 'midiVelocity') {
       target[field] = Math.max(1, Math.min(127, Math.round(Number(value) || 1)));
-    } else if (['inMin', 'inMax', 'outMin', 'outMax', 'threshold', 'drive', 'compressor', 'smooth', 'idleValue'].includes(field)) {
-      target[field] = Number(value);
+    } else if (NUMERIC_TARGET_FIELDS.includes(field)) {
+      // Editor sliders hand over input.value, which is a string. A target that
+      // keeps the string reaches Live as "0.35": the mapping is rejected and
+      // the editor it was opened from disappears with it.
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      target[field] = numeric;
+    } else if (field === 'mode') {
+      if (!['continuous', 'toggle', 'trigger_note'].includes(value)) return;
+      target[field] = value;
+      if (value === 'trigger_note' && !target.midiNote) {
+        target.midiNote = 'C3';
+      }
     } else {
       target[field] = value;
     }
@@ -307,20 +295,9 @@
 
   function closePicker() {
     state.pickerMode = null;
+    state.midiTargetMode = 'trigger_note';
     state.pendingConflict = null;
     renderDetail();
-  }
-
-  function flattenTargets() {
-    const out = [{ type: 'tempo', label: 'Song Tempo' }];
-    for (const track of state.allTargets) {
-      if (track.type === 'tempo') continue;
-      for (const mixer of track.mixer || []) out.push(mixer);
-      for (const device of track.devices || []) {
-        for (const param of device.params || []) out.push(param);
-      }
-    }
-    return out;
   }
 
   async function bindMobileTarget(target) {
@@ -377,31 +354,45 @@
     else setStatus(response.error || 'Could not delete preset', 'error');
   }
 
-  async function createMobileTriggerNoteTarget(track) {
+  async function createMobileMidiTarget(track) {
     if (!state.selectedControl || !track || typeof track.trackIndex !== 'number') return false;
+    const targetMode = 'trigger_note';
     state.busy = true;
     renderDetail();
     const install = await command('addUdpReceiverToTrack', { trackIndex: track.trackIndex });
     state.busy = false;
     if (!install.ok || !install.result || !install.result.success) {
-      setStatus('Não consegui inserir automaticamente. Coloque manualmente RC-Midi-Receiver.amxd nesta track e tente novamente.', 'error');
+      const reason = install.result?.reason;
+      setStatus(reason === 'receiver_upgrade_required'
+        ? T('map.receiverUpgrade', 'Substitua o Receiver antigo dessa track pelo RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP) e tente novamente.')
+        : reason === 'receiver_ambiguous'
+          ? T('map.receiverAmbiguous', 'Há mais de um Receiver nessa track. Deixe apenas um Receiver v2 e tente novamente.')
+        : reason === 'receiver_missing'
+        ? 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.'
+        : (install.error || 'Não foi possível verificar RC-Midi-Receiver.amxd nessa track.'), 'error');
       renderDetail();
       return false;
     }
     const targets = targetsForControl(state.selectedControl)
-      .filter((target) => !(target.mode === 'trigger_note' && target.trackIndex === track.trackIndex));
-    targets.push({
+      .filter((target) => !(target.mode === targetMode && target.trackIndex === track.trackIndex));
+    const target = {
       type: 'device_param',
       trackIndex: track.trackIndex,
-      mode: 'trigger_note',
-      midiNote: 'C3',
+      mode: targetMode,
       midiVelocity: 100,
-    });
-    await saveTargetsForSelected(targets);
+    };
+    if (targetMode === 'trigger_note') target.midiNote = 'C3';
+    targets.push(target);
+    return saveTargetsForSelected(targets);
+  }
+
+  async function createMobileTriggerNoteTarget(track) {
+    return createMobileMidiTarget(track, 'trigger_note');
   }
 
   function openMidiTrackPicker() {
     state.pickerMode = 'midi';
+    state.midiTargetMode = 'trigger_note';
     renderDetail();
   }
 
@@ -496,6 +487,10 @@
     if (typeof window.setPhoneMappingModeActive === 'function') {
       window.setPhoneMappingModeActive(true);
     }
+    // CFG mode is exclusive with MAP: opening MAP must close CFG.
+    if (window.RcConfigModeInstance && typeof window.RcConfigModeInstance.off === 'function') {
+      window.RcConfigModeInstance.off();
+    }
     // MAP is an overlay, not a page. Routing it through showPhonePage() made
     // the layout persist "mapping" as the active page; restoring that on the
     // next load hid every real page and opened the app on a black screen.
@@ -507,6 +502,7 @@
 
     const overlay = $('mapping-mode');
     if (overlay) overlay.classList.remove('hidden');
+    syncOverlayPresentation();
     setStatus('Loading...', 'loading');
     if (typeof setTimeout === 'function' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
       setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
@@ -531,11 +527,27 @@
     renderPresets();
     renderControls();
     renderDetail();
+    syncOverlayPresentation();
     updatePageControlHighlights();
   }
+
+  function syncOverlayPresentation() {
+    const editing = Boolean(state.selectedControl);
+    const overlay = $('mapping-mode');
+    const armedStrip = $('map-armed-strip');
+    const detail = $('map-mobile-detail');
+    const detailPane = detail?.closest('.map-pane-right');
+    if (overlay) overlay.dataset.state = editing ? 'editing' : 'armed';
+    if (armedStrip) armedStrip.classList.toggle('hidden', editing);
+    if (detailPane) detailPane.classList.toggle('hidden', !editing);
+  }
+
   function closeMappingMode() {
     if (!state.open) return;
     state.open = false;
+    state.selectedControl = null;
+    state.pickerMode = null;
+    state.pendingConflict = null;
     document.body.classList.remove('mapping-mode');
     const btn = $('btn-map-mode');
     if (btn) {
@@ -547,6 +559,7 @@
     }
     const overlay = $('mapping-mode');
     if (overlay) overlay.classList.add('hidden');
+    syncOverlayPresentation();
     const previousPage = state.previousPage || 'performance';
     if (typeof window.showPhonePage === 'function') {
       window.showPhonePage(previousPage);
@@ -583,13 +596,13 @@
 
     const save = document.createElement('button');
     save.type = 'button';
-    save.textContent = 'Save';
+    save.textContent = T('mm.save', 'Save');
     save.addEventListener('click', () => saveMobileMappingPreset(name.value));
     el.appendChild(save);
 
     const del = document.createElement('button');
     del.type = 'button';
-    del.textContent = 'Delete';
+    del.textContent = T('mm.delete', 'Delete');
     del.addEventListener('click', () => {
       if (window.confirm && !window.confirm(`Delete preset "${select.value}"?`)) return;
       deleteMobileMappingPreset(select.value);
@@ -599,7 +612,7 @@
     const clearAll = document.createElement('button');
     clearAll.type = 'button';
     clearAll.className = 'map-action-danger';
-    clearAll.textContent = 'Clear All';
+    clearAll.textContent = T('mm.clearAll', 'Clear All');
     clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
     el.appendChild(clearAll);
   }
@@ -662,7 +675,7 @@
     const save = document.createElement('button');
     save.type = 'button';
     save.className = 'map-mini-btn';
-    save.textContent = 'Save';
+    save.textContent = T('mm.save', 'Save');
     save.addEventListener('click', () => {
       saveMobileMappingPreset(name.value);
       name.value = '';
@@ -672,7 +685,7 @@
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'map-mini-btn';
-    del.textContent = 'Delete';
+    del.textContent = T('mm.delete', 'Delete');
     del.addEventListener('click', () => {
       if (window.confirm && !window.confirm(`Delete preset "${select.value}"?`)) return;
       deleteMobileMappingPreset(select.value);
@@ -685,7 +698,7 @@
     const clearAll = document.createElement('button');
     clearAll.type = 'button';
     clearAll.className = 'map-mini-btn map-action-danger';
-    clearAll.textContent = 'Clear All Mappings';
+    clearAll.textContent = T('mm.clearAllMappings', 'Clear All Mappings');
     clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
     container.appendChild(clearAll);
   }
@@ -714,7 +727,7 @@
       return;
     }
     if (!state.selectedControl) {
-      el.textContent = 'Select a control';
+      el.textContent = T('mm.selectControl', 'Select a control');
       return;
     }
 
@@ -731,7 +744,7 @@
     const refreshBtn = document.createElement('button');
     refreshBtn.type = 'button';
     refreshBtn.className = 'map-mini-btn';
-    refreshBtn.textContent = 'Refresh';
+    refreshBtn.textContent = T('mm.refresh', 'Refresh');
     refreshBtn.addEventListener('click', loadMobileMappingData);
     statusRow.appendChild(refreshBtn);
     el.appendChild(statusRow);
@@ -749,7 +762,7 @@
     const deselectBtn = document.createElement('button');
     deselectBtn.type = 'button';
     deselectBtn.className = 'map-mini-btn';
-    deselectBtn.textContent = 'Close';
+    deselectBtn.textContent = T('mm.close', 'Close');
     deselectBtn.style.float = 'right';
     deselectBtn.addEventListener('click', () => {
       state.selectedControl = null;
@@ -768,7 +781,7 @@
       const btnX = document.createElement('button');
       btnX.type = 'button';
       btnX.className = `map-axis-tab${activeAxis === 'x' ? ' active' : ''}`;
-      btnX.textContent = 'X Axis (Horizontal)';
+      btnX.textContent = T('mm.xAxis', 'X Axis (Horizontal)');
       btnX.addEventListener('click', () => {
         state.selectedControl = `${base}.x`;
         state.selectedTargetIndex = 0;
@@ -778,7 +791,7 @@
       const btnY = document.createElement('button');
       btnY.type = 'button';
       btnY.className = `map-axis-tab${activeAxis === 'y' ? ' active' : ''}`;
-      btnY.textContent = 'Y Axis (Vertical)';
+      btnY.textContent = T('mm.yAxis', 'Y Axis (Vertical)');
       btnY.addEventListener('click', () => {
         state.selectedControl = `${base}.y`;
         state.selectedTargetIndex = 0;
@@ -790,19 +803,13 @@
       el.appendChild(axisSelector);
     }
 
-    if (state.selectedControl && state.selectedControl.startsWith('sensor.vision.')) {
+    if (state.selectedControl && ['sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z'].includes(state.selectedControl)) {
       const filterConfig = document.createElement('div');
       filterConfig.className = 'map-vision-filter-panel';
-      filterConfig.style.marginTop = '12px';
-      filterConfig.style.padding = '8px';
-      filterConfig.style.border = '1px solid #333';
-      filterConfig.style.borderRadius = '4px';
 
       const filterTitle = document.createElement('div');
-      filterTitle.textContent = 'VISION SENSOR FILTER (1€)';
-      filterTitle.style.fontSize = '11px';
-      filterTitle.style.color = '#888';
-      filterTitle.style.marginBottom = '8px';
+      filterTitle.className = 'map-vision-filter-title';
+      filterTitle.textContent = T('mm.visionFilter', 'VISION SENSOR FILTER (1€)');
       filterConfig.appendChild(filterTitle);
 
       const isDepth = state.selectedControl === 'sensor.vision.z';
@@ -810,23 +817,28 @@
 
       const createSliderRow = (label, prop, min, max, step) => {
         const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.alignItems = 'center';
-        row.style.marginBottom = '6px';
+        row.className = 'map-vision-filter-row';
         const lbl = document.createElement('span');
+        lbl.className = 'map-vision-filter-label';
         lbl.textContent = label;
-        lbl.style.width = '70px';
-        lbl.style.fontSize = '12px';
         const input = document.createElement('input');
         input.type = 'range';
+        input.className = 'morph-slider map-vision-slider';
         input.min = min;
         input.max = max;
         input.step = step;
-        input.style.flex = '1';
         const valSpan = document.createElement('span');
-        valSpan.style.width = '30px';
-        valSpan.style.textAlign = 'right';
-        valSpan.style.fontSize = '12px';
+        valSpan.className = 'map-vision-filter-value';
+
+        function paintProgress(el) {
+          const mn = Number(el.min) || 0;
+          const mx = Number(el.max) || 1;
+          const vl = Number(el.value) || 0;
+          const pct = (mx - mn) === 0 ? 0 : ((vl - mn) / (mx - mn)) * 100;
+          if (typeof el.style.setProperty === 'function') {
+            el.style.setProperty('--range-progress', `${Number.isFinite(pct) ? pct : 0}%`);
+          }
+        }
 
         const updateUI = () => {
           const filters = getAxisFilters();
@@ -836,11 +848,13 @@
           }
           const f = isDepth ? filters.z : filters.x;
           input.value = f[prop];
+          paintProgress(input);
           valSpan.textContent = Number(f[prop]).toFixed(1);
         };
         updateUI();
 
         input.addEventListener('input', () => {
+          paintProgress(input);
           const filters = getAxisFilters();
           if (filters) {
             const v = Number(input.value);
@@ -870,7 +884,7 @@
       banner.textContent = `Already mapped to ${controlLabel(state.pendingConflict.owner)}`;
       const replace = document.createElement('button');
       replace.type = 'button';
-      replace.textContent = 'Replace';
+      replace.textContent = T('mm.replace', 'Replace');
       replace.addEventListener('click', async () => {
         const conflict = state.pendingConflict;
         if (!conflict) return;
@@ -889,7 +903,7 @@
       });
       const cancel = document.createElement('button');
       cancel.type = 'button';
-      cancel.textContent = 'Cancel';
+      cancel.textContent = T('mm.cancel', 'Cancel');
       cancel.addEventListener('click', () => { state.pendingConflict = null; renderDetail(); });
       banner.appendChild(replace);
       banner.appendChild(cancel);
@@ -922,14 +936,14 @@
     actions.className = 'map-detail-actions';
     const bind = document.createElement('button');
     bind.type = 'button';
-    bind.textContent = 'Bind';
+    bind.textContent = T('mm.bind', 'Bind');
     bind.addEventListener('click', openTargetPicker);
     actions.appendChild(bind);
 
     const trigger = document.createElement('button');
     trigger.type = 'button';
-    trigger.textContent = 'Trigger Note';
-    trigger.addEventListener('click', openMidiTrackPicker);
+    trigger.textContent = T('mm.triggerNote', 'Trigger Note');
+    trigger.addEventListener('click', () => openMidiTrackPicker('trigger_note'));
     actions.appendChild(trigger);
 
     // If there are mapped targets, show the Delete and Clear All options!
@@ -937,7 +951,7 @@
       const unbind = document.createElement('button');
       unbind.type = 'button';
       unbind.className = 'map-action-danger';
-      unbind.textContent = 'Unbind Target';
+      unbind.textContent = T('mm.unbindTarget', 'Unbind Target');
       unbind.addEventListener('click', async () => {
         if (window.confirm && !window.confirm('Remove this mapping?')) return;
         await removeMobileMappingTarget(state.selectedTargetIndex);
@@ -951,7 +965,7 @@
       const clearControl = document.createElement('button');
       clearControl.type = 'button';
       clearControl.className = 'map-action-danger';
-      clearControl.textContent = 'Clear Control';
+      clearControl.textContent = T('mm.clearControl', 'Clear Control');
       clearControl.addEventListener('click', async () => {
         if (window.confirm && !window.confirm('Clear all mappings for this control?')) return;
         await clearSelectedMobileControl();
@@ -970,11 +984,11 @@
     head.className = 'map-picker-head';
     const back = document.createElement('button');
     back.type = 'button';
-    back.textContent = 'Back';
+    back.textContent = T('mm.back', 'Back');
     back.addEventListener('click', closePicker);
     head.appendChild(back);
     const title = document.createElement('strong');
-    title.textContent = 'Pick MIDI Track';
+    title.textContent = T('mm.triggerNote', 'Trigger Note');
     head.appendChild(title);
     container.appendChild(head);
 
@@ -997,9 +1011,10 @@
       row.disabled = state.busy;
       row.textContent = state.busy ? 'Installing...' : (track.name || `Track ${track.trackIndex + 1}`);
       row.addEventListener('click', async () => {
-        const result = await createMobileTriggerNoteTarget(track);
+        const result = await createMobileMidiTarget(track, state.midiTargetMode);
         // Only close the picker on success; on failure the error is shown inside the detail pane.
-        if (result !== false) closePicker();
+        if (result === false || result?.ok === false) return;
+        closePicker();
       });
       list.appendChild(row);
     }
@@ -1013,10 +1028,12 @@
     span.textContent = label;
     const select = document.createElement('select');
     for (const option of options) {
+      const optionValue = typeof option === 'string' ? option : option.value;
+      const optionLabel = typeof option === 'string' ? option : option.label;
       const item = document.createElement('option');
-      item.value = option;
-      item.textContent = option;
-      item.selected = option === value;
+      item.value = optionValue;
+      item.textContent = optionLabel;
+      item.selected = optionValue === value;
       select.appendChild(item);
     }
     select.addEventListener('change', () => updateMobileTargetField(field, select.value));
@@ -1295,8 +1312,10 @@
 
     const selectRow = document.createElement('div');
     selectRow.className = 'map-editor-row-selects';
-    addEditorSelect(selectRow, 'Mode', 'mode', target.mode || 'continuous', ['continuous', 'toggle', 'trigger_note']);
+    const modeOptions = ['continuous', 'toggle', 'trigger_note'];
+    addEditorSelect(selectRow, 'Mode', 'mode', target.mode || 'continuous', modeOptions);
     addEditorSelect(selectRow, 'Curve', 'curve', target.curve || 'linear', ['linear', 'exponential', 'logarithmic', 's-curve']);
+    addEditorSelect(selectRow, 'Target scale', 'targetScale', target.targetScale || 'auto', ['auto', 'linear', 'geometric']);
     addEditorSelect(selectRow, 'Takeover', 'takeoverMode', target.takeoverMode || 'scale', ['scale', 'pickup', 'jump']);
     // Five modes, each distinct: hold freezes, zero/center/custom park, and
     // release glides back to the control's rest position. 'initial' and
@@ -1315,7 +1334,7 @@
     
     const readout = document.createElement('div');
     readout.className = 'map-curve-readout';
-    readout.textContent = 'In: 0.00 | Out: 0.00';
+    readout.textContent = T('mm.inOut', 'In: 0.00 | Out: 0.00');
     canvasWrap.appendChild(readout);
     editor.appendChild(canvasWrap);
 
@@ -1336,6 +1355,7 @@
       addEditorSlider(slidersGrid, 'Threshold', 'threshold', target.threshold ?? 0.5, 0, 1, 0.01);
     }
 
+
     editor.appendChild(slidersGrid);
 
     if ((target.mode || 'continuous') === 'trigger_note') {
@@ -1355,7 +1375,7 @@
     
     const label = document.createElement('span');
     label.className = 'map-editor-field-label';
-    label.textContent = 'MIDI Note';
+    label.textContent = T('mm.midiNote', 'MIDI Note');
     noteWrap.appendChild(label);
 
     const selectRow = document.createElement('div');
@@ -1411,11 +1431,11 @@
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'map-mini-btn';
-    back.textContent = 'Back';
+    back.textContent = T('mm.back', 'Back');
     back.addEventListener('click', closePicker);
     head.appendChild(back);
     const title = document.createElement('strong');
-    title.textContent = 'Pick Target';
+    title.textContent = T('mm.pickTarget', 'Pick Target');
     head.appendChild(title);
     container.appendChild(head);
 
@@ -1441,16 +1461,12 @@
     searchInput.className = 'map-picker-search';
     searchInput.style.flex = '1';
     searchInput.value = state.pickerFilter || '';
-    searchInput.addEventListener('input', () => {
-      state.pickerFilter = searchInput.value;
-      if (typeof doRenderTree === 'function') doRenderTree();
-    });
     searchWrap.appendChild(searchInput);
 
     const btnUseSelected = document.createElement('button');
     btnUseSelected.type = 'button';
     btnUseSelected.className = 'map-mini-btn';
-    btnUseSelected.textContent = 'Selected in Live';
+    btnUseSelected.textContent = T('mm.selectedInLive', 'Selected in Live');
     btnUseSelected.style.whiteSpace = 'nowrap';
     btnUseSelected.style.height = '28px';
     btnUseSelected.style.fontSize = '10px';
@@ -1507,36 +1523,9 @@
       const showTempo = !filter || 'song tempo'.includes(filter) || 'tempo'.includes(filter);
       const mainTrackData = state.allTargets.find(t => t.trackKind === 'main');
       
-      const songItems = [];
-      if (showTempo) {
-        songItems.push({ label: 'Tempo', target: tempoTarget });
-      }
-      if (mainTrackData) {
-        for (const mixer of mainTrackData.mixer || []) {
-          if (!filter || mixer.label.toLowerCase().includes(filter)) {
-            songItems.push({ label: `Mixer > ${mixer.label}`, target: mixer });
-          }
-        }
-        for (const device of mainTrackData.devices || []) {
-          for (const param of device.params || []) {
-            if (!filter || device.name.toLowerCase().includes(filter) || param.label.toLowerCase().includes(filter)) {
-              songItems.push({ label: `${device.name} > ${param.label}`, target: param });
-            }
-          }
-        }
-      }
-
-      if (songItems.length > 0) {
-        const groupEl = document.createElement('div');
-        groupEl.className = 'map-picker-group';
-        const groupTitle = document.createElement('h4');
-        groupTitle.textContent = 'Song / Main / Master';
-        groupEl.appendChild(groupTitle);
-        for (const item of songItems) {
-          groupEl.appendChild(createPickerRow(item.label, item.target));
-        }
-        treeContainer.appendChild(groupEl);
-      }
+      renderTrackGroup(T('mm.songMain', 'Song / Main / Master'),
+        mainTrackData ? [mainTrackData] : [], filter, treeContainer,
+        showTempo ? [{ label: 'Tempo', target: tempoTarget }] : []);
 
       // Normal Tracks
       const normalTracks = state.allTargets.filter(t => t.trackKind === 'track');
@@ -1569,7 +1558,7 @@
     return row;
   }
 
-  function renderTrackGroup(groupTitleText, tracks, filter, parentContainer) {
+  function renderTrackGroup(groupTitleText, tracks, filter, parentContainer, leadingItems = []) {
     const trackBlocks = [];
     
     let filterTrack = null;
@@ -1708,12 +1697,13 @@
       }
     }
 
-    if (trackBlocks.length > 0) {
+    if (trackBlocks.length > 0 || leadingItems.length > 0) {
       const groupEl = document.createElement('div');
       groupEl.className = 'map-picker-group';
       const title = document.createElement('h4');
       title.textContent = groupTitleText;
       groupEl.appendChild(title);
+      for (const item of leadingItems) groupEl.appendChild(createPickerRow(item.label, item.target));
       for (const block of trackBlocks) {
         groupEl.appendChild(block);
       }
@@ -1731,16 +1721,7 @@
     const back = $('btn-map-back');
     const refresh = $('btn-map-refresh');
     if (btn) btn.addEventListener('click', () => state.open ? closeMappingMode() : openMappingMode());
-    if (back) {
-      back.addEventListener('click', () => {
-        if (state.selectedControl) {
-          state.selectedControl = null;
-          renderAll();
-        } else {
-          closeMappingMode();
-        }
-      });
-    }
+    if (back) back.addEventListener('click', closeMappingMode);
     if (refresh) refresh.addEventListener('click', loadMobileMappingData);
 
     const search = $('map-mobile-search');

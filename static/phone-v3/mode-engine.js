@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 (function (global) {
@@ -46,6 +46,9 @@
     // drag depth of a pad feels identical to the other vertical controls.
     return 150;
   }
+
+  // The surface emits at 30 Hz; one frame is the shortest thing it can send.
+  const EMIT_FRAME_MS = 1000 / 30;
 
   function valueFromDrag(state, y) {
     const dy = state.startY - y;
@@ -93,8 +96,22 @@
     }
 
     if (mode === 'D') {
-      const durationMs = Math.max(80, opts.burstDurationMs || 520);
-      const attackMs = Math.max(10, Math.min(opts.burstAttackMs || 70, durationMs - 10));
+      // Phones restate their whole control set at 30 Hz, so a burst shorter
+      // than one frame cannot be transmitted however the envelope is shaped.
+      // Anything above that is a musical value and is left alone: a floor of
+      // 80 ms used to swallow every subdivision below a quarter beat, and at a
+      // fast tempo all of them, so the seven lengths in the settings arrived as
+      // one and Live's tempo stopped reaching the burst.
+      const asked = Number(opts.burstDurationMs);
+      const durationMs = Math.max(
+        EMIT_FRAME_MS,
+        Number.isFinite(asked) && asked > 0 ? asked : 520,
+      );
+      const askedAttack = Number(opts.burstAttackMs);
+      const attackMs = Math.max(1, Math.min(
+        Number.isFinite(askedAttack) && askedAttack > 0 ? askedAttack : 70,
+        durationMs * 0.9,
+      ));
       state.startValue = 0;
       state.burst = {
         active: true,

@@ -24,11 +24,13 @@ import {
   controlMappings,
   eventModesState,
   lastMappedValues,
+  lastMappedInputAt,
   resolveNeutralInputValue,
   startSmoothTimer,
   stopSmoothTimer,
 } from "../src/live/mappings.ts";
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
+import { continuousTargetActuator } from "../src/live/continuous-target-actuator.ts";
 
 const LAST = 0.9;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,6 +78,7 @@ function setupSong(targets) {
   lastMappedValues.clear();
   activeSmooths.clear();
   eventModesState.clear();
+  lastMappedInputAt.clear();
   setExtensionContext({
     application: { song: { tempo: 120, tracks: [{ devices: [{ parameters: [param] }] }] } },
   });
@@ -91,6 +94,7 @@ test("safe loss: center parks the parameter at the middle immediately", async (t
 
   await applyMapping("client-1", "sensor.vision.x", 0.9);
   await applyMapping("client-1", "sensor.vision.x", 0.9, true);
+  await continuousTargetActuator.settle("device_param::0::0::0");
   assert.ok(Math.abs(param.value - 0.5) < 0.01, `expected 0.5, got ${param.value}`);
 });
 
@@ -131,4 +135,14 @@ test("safe loss: release GLIDES to the rest position instead of jumping", async 
     Math.abs(param.value - 0.5) < 0.05,
     `release must settle at the rest position 0.5, got ${param.value}`,
   );
+});
+
+test("safe loss: a neutral value stored as text is read as a number, not passed on", () => {
+  // The phone editor sent input.value, so mappings saved before that fix hold
+  // strings. They must not reach a parameter write as "0.35".
+  assert.equal(resolveNeutralInputValue("sensor.vision.x", { neutralPolicy: "custom", neutralValue: "0.35" }, LAST), 0.35);
+  assert.equal(resolveNeutralInputValue("sensor.vision.x", { neutralPolicy: "release", neutralValue: "0.35" }, LAST), 0.35);
+  // Nonsense falls back to the policy default instead of poisoning the write.
+  assert.equal(resolveNeutralInputValue("sensor.vision.x", { neutralPolicy: "custom", neutralValue: "abc" }, LAST), 0);
+  assert.equal(resolveNeutralInputValue("sensor.vision.x", { neutralPolicy: "release", neutralValue: NaN }, LAST), 0.5);
 });

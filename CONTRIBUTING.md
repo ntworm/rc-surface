@@ -1,4 +1,4 @@
-# Contributing to Ableton RC Surface
+# Contributing to RC Surface
 
 Thanks for considering contributing. This project is released under the
 PolyForm Noncommercial 1.0.0 license and welcomes issues, bug reports, and
@@ -8,6 +8,18 @@ sending a pull request, and do not assume unsolicited PRs will be merged.
 
 ## Getting started
 
+Requires **Node.js >=24.16.0 <25** (see `package.json`; `.nvmrc` and
+`.node-version` pin the development baseline).
+
+Before any test/build command, set `ABLETON_RC_DEV_SYNC=0` to prevent the
+development build from copying files into an installed Live extension:
+
+```powershell
+$env:ABLETON_RC_DEV_SYNC = '0'
+```
+
+On macOS/Linux: `export ABLETON_RC_DEV_SYNC=0`.
+
 ```bash
 git clone <this-repo>
 cd ableton-rc-surface
@@ -16,8 +28,6 @@ npm test           # test:static + test:src
 npm run build      # tsc check + esbuild bundle to dist/
 npm run ci         # test + lint + typecheck + production build + UI tests
 ```
-
-Requires **Node.js 24.16.0** (see `.nvmrc` and `.node-version`).
 
 ## Code structure
 
@@ -59,17 +69,43 @@ client.
 `npm test` runs two suites:
 
 ```bash
-npm run test:static   # static/{admin,panel,phone-v3}/*.test.mjs plus scripts/*.test.mjs
+npm run test:static   # static/{admin,panel,phone-v3,shared}/*.test.mjs plus scripts/*.test.mjs
 npm run test:src      # tests/*.test.mjs with tsx
 ```
 
-The release gate is:
+The full local gate includes lint, TypeScript, the production build and
+Playwright UI tests on desktop and mobile layouts:
 
 ```bash
-npm test
-npx tsc --noEmit
-npm run build:prod
+npm run ci
 ```
+
+| Area | Test ownership |
+| --- | --- |
+| Browser controls, LFO/Stutter, snapshots and mapping editor | `static/phone-v3/*.test.mjs` |
+| Panel/admin and shared catalogs | `static/{panel,admin,shared}/*.test.mjs` |
+| Host modulation, parameter delivery, MIDI and saved mappings | `tests/live-*.test.mjs`, `tests/lfo-*.test.mjs`, `tests/host-modulator-*.test.mjs`, `tests/project-config.test.mjs` |
+| Network authentication, authorization, queues and lifecycle | `tests/server-*.test.mjs` |
+| Device/build/package contracts | `scripts/*.test.mjs`, `tests/release-*.test.mjs` |
+| UI integration and responsive layouts | `tests/ui/*.spec.mjs` with `tests/ui/test-server.mjs` |
+
+During a focused edit, run the relevant file first, for example:
+
+```bash
+node --test static/phone-v3/stutter-mode.test.mjs
+node --import tsx --test tests/modulator-policy-parity.test.mjs
+npx playwright test tests/ui/lfo-bandwidth.spec.mjs
+```
+
+The reported total counts test cases (including parameterized inputs and two
+UI projects), not separate test files. Tests are excluded from production
+packages. Keep regression tests that reject retired controls or unsafe legacy
+payloads: they protect the current product. Remove a test only when its subject
+is genuinely retired or its coverage is demonstrably redundant.
+
+Local gates do not certify physical Live timing, real device behavior or
+macOS acceptance. See `internal/TESTER-GUIDE.md` for manual acceptance;
+experimental audio benchmark evidence is maintained separately.
 
 Use `npm run build:prod-ablx` to generate the versioned `.ablx` and `npm run
 package:tester` to generate the tester kit.
@@ -81,6 +117,7 @@ package:tester` to generate the tester kit.
 3. Keep commits focused: one logical change per commit.
 4. Do not commit build artifacts (`dist/`, `.ablx`, `release-kits/`) unless a maintainer explicitly asks.
 5. Keep public docs aligned with behavior when changing install flow, controls, network behavior, or compatibility.
+6. When adding or upgrading a dependency, update `NOTICE` and `docs/THIRD-PARTY-NOTICES.md` in both English and Portuguese, and keep the internal distribution review current, so the packaged-component matrix and notices stay true. The Ableton Extensions SDK/CLI tarballs in `vendor/` are licensed only for use inside the application: they are untracked (`vendor/*.tgz` in `.gitignore`), verified by `npm run check:vendor` against `vendor/manifest.json`, and must never be added to releases, commits or public artifacts. Hosted CI stages them from a private repository (see the README inside `vendor/`).
 
 ## Style guide
 
@@ -106,3 +143,8 @@ Please include:
 
 Open an issue with the `enhancement` label once the repository is public.
 Describe the use case, not just the proposed implementation.
+
+## Trademarks
+
+Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
+project, not affiliated with, endorsed by, or sponsored by Ableton AG.

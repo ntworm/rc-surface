@@ -7,7 +7,7 @@ labels: question
 
 ## What I'm trying to do
 
-One or two sentences. (Example: _"set up Ableton-RC-Surface so my iPad can control the EQ Eight on track 3"_).
+One or two sentences. (Example: _"set up RC-Surface so my iPad can control the EQ Eight on track 3"_).
 
 ## What I've done so far
 
@@ -17,7 +17,7 @@ Steps already taken, even if they failed. Helps avoid re-asking the obvious.
 
 - Ableton Live version
 - OS + browser on the phone
-- Extension version (`Ableton-RC-Surface-X.Y.Z.ablx`)
+- Extension version (`RC-Surface-X.Y.Z.ablx`)
 
 ## Where I looked
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// Tests for Same-Origin port matching rejection (Task 3.1 / P1.2)
+// Same-origin port matching rejection.
 
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-/* ── Ableton RC Surface — Panel Client App v0.4 ──────────────── */
+/* ── RC Surface — Panel Client App v0.4 ──────────────── */
 
 const clientsMap = new Map();
 window.clientsMap = clientsMap;
@@ -34,10 +34,6 @@ const sensorHistory = {};
 window.sensorHistory = sensorHistory;
 const sensorHistoryMax = 30;
 
-// Packet tracking for VU meter
-let packetCount = 0;
-let packetsPerSec = 0;
-
 // Define the 12 primary sensors for the Connect grid
 const gridSensors = [
   { key: "sensor.orient.alpha", name: "Yaw (Alpha)", min: 0, max: 360, group: "orientation" },
@@ -47,9 +43,12 @@ const gridSensors = [
   { key: "sensor.motion.ay", name: "Accel Y", min: -20, max: 20, group: "motion" },
   { key: "sensor.motion.az", name: "Accel Z", min: -20, max: 20, group: "motion" },
   { key: "sensor.audio.rms", name: "Audio RMS", min: 0, max: 1, group: "audio" },
-  { key: "sensor.audio.pitch", name: "Audio Pitch", min: 50, max: 1500, group: "audio" },
+  { key: "sensor.audio.transient", name: "Audio Transient", min: 0, max: 1, group: "audio" },
   { key: "sensor.vision.pinch", name: "Pinch", min: 0, max: 1, group: "vision" },
-  { key: "sensor.vision.rotateVal", name: "Victory Rotate", min: 0, max: 1, group: "vision" }
+  { key: "sensor.vision.rotateVal", name: "Victory Rotate", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_x", name: "Pinch Clutch X", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_y", name: "Pinch Clutch Y", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_z", name: "Pinch Clutch Z", min: 0, max: 1, group: "vision" }
 ];
 window.gridSensors = gridSensors;
 
@@ -64,20 +63,22 @@ const allSensorMetadataList = [
   { key: "sensor.motion.gy", name: "Gyro Y", min: -200, max: 200, group: "motion" },
   { key: "sensor.motion.gz", name: "Gyro Z", min: -200, max: 200, group: "motion" },
   { key: "sensor.audio.rms", name: "Audio RMS", min: 0, max: 1, group: "audio" },
-  { key: "sensor.audio.pitch", name: "Audio Pitch", min: 50, max: 1500, group: "audio" },
-  { key: "sensor.audio.bpm", name: "Audio BPM", min: 40, max: 220, group: "audio" },
-  { key: "sensor.audio.note", name: "Audio MIDI Note", min: 0, max: 127, group: "audio" },
-  { key: "sensor.audio.clarity", name: "Audio Clarity", min: 0, max: 1, group: "audio" },
-  { key: "sensor.audio.whistle.bend", name: "Bend", min: 0, max: 1, group: "audio" },
   { key: "sensor.audio.envelope", name: "Audio Envelope", min: 0, max: 1, group: "audio" },
   { key: "sensor.audio.gate", name: "Audio Gate", min: 0, max: 1, group: "audio" },
+  { key: "sensor.audio.attack", name: "Audio Attack", min: 0, max: 1, group: "audio" },
+  ...window.AudioDescriptorCatalog.map(({ name: key, label }) => ({
+    key, name: "Audio " + label, min: 0, max: 1, group: "audio",
+  })),
   // Live hand position from the camera — the DIRECT MAP X/Y/Z readout on the
   // phone's VID page. Already normalised to 0..1 by the vision processor.
   { key: "sensor.vision.x", name: "Hand X", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.y", name: "Hand Y", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.z", name: "Hand Z (Depth)", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.pinch", name: "Pinch", min: 0, max: 1, group: "vision" },
-  { key: "sensor.vision.rotateVal", name: "Victory Rotate", min: 0, max: 1, group: "vision" }
+  { key: "sensor.vision.rotateVal", name: "Victory Rotate", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_x", name: "Pinch Clutch X", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_y", name: "Pinch Clutch Y", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.pinch_z", name: "Pinch Clutch Z", min: 0, max: 1, group: "vision" }
 ];
 
 function getControlMetadata(key) {
@@ -107,7 +108,7 @@ function getControlMetadata(key) {
 const defaultRecentKeys = [
   "sensor.orient.alpha", "sensor.orient.beta", "sensor.orient.gamma",
   "sensor.motion.ax", "sensor.motion.ay", "sensor.motion.az",
-  "sensor.audio.rms", "sensor.audio.pitch",
+  "sensor.audio.rms", "sensor.audio.transient",
   "sensor.vision.pinch"
 ];
 
@@ -120,7 +121,7 @@ window.markSensorRecent = function(key) {
     if (saved) {
       recent = JSON.parse(saved);
     }
-  } catch (e) {}
+  } catch {}
 
   if (!recent || !Array.isArray(recent)) {
     recent = [];
@@ -148,15 +149,15 @@ const allControlsGrouped = {
     "sensor.motion.gx", "sensor.motion.gy", "sensor.motion.gz"
   ],
   AUDIO: [
-    "sensor.audio.rms", "sensor.audio.pitch", "sensor.audio.bpm",
-    "sensor.audio.note", "sensor.audio.clarity", "sensor.audio.whistle.bend",
-    "sensor.audio.envelope", "sensor.audio.gate"
+    // The pitch lane (pitch, note, bpm, clarity, whistle bend) is dormant: it
+    // is no longer offered for new mappings, stored ones stay inert.
+    "sensor.audio.rms", "sensor.audio.envelope", "sensor.audio.gate", "sensor.audio.attack",
+    ...window.AudioDescriptorCatalog.map(({ name }) => name)
   ],
   VISION: [
-    "sensor.vision.active",
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
-    "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open", "sensor.vision.fingers",
-    "sensor.vision.color.r", "sensor.vision.color.g", "sensor.vision.color.b",
+    "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
+    "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
     "sensor.vision.gesture.1", "sensor.vision.gesture.2", "sensor.vision.gesture.3"
   ],
 
@@ -164,10 +165,10 @@ const allControlsGrouped = {
     "pad-1", "pad-2", "pad-3", "pad-4", "pad-5", "pad-6", "pad-7", "pad-8", "pad-9", "pad-10", "pad-11", "pad-12"
   ],
   Knobs: [
-    "knob-1", "knob-2", "knob-3", "knob-4", "knob-5", "knob-6"
+    "knob-1", "knob-2", "knob-3", "knob-4", "knob-5", "knob-6", "knob-7", "knob-8"
   ],
   Faders: [
-    "fader-1", "fader-2", "fader-3", "fader-4", "fader-5", "fader-6"
+    "fader-1", "fader-2", "fader-3", "fader-4", "fader-5", "fader-6", "fader-7", "fader-8"
   ],
   "XY Pads": [
     "xy-1.x", "xy-1.y", "xy-2.x", "xy-2.y"
@@ -224,6 +225,8 @@ function getControlDisplayName(ctrl) {
       "whistle.bend": "Bend",
       envelope: "Envelope",
       gate: "Audio Gate",
+      attack: "Attack",
+      ...Object.fromEntries(window.AudioDescriptorCatalog.map(({ field, label }) => [field, label])),
     };
     return `Audio ${labels[prop] || prop.toUpperCase()}`;
   }
@@ -234,6 +237,8 @@ function getControlDisplayName(ctrl) {
       x:       "X",
       y:       "Y",
       z:       "Z (Depth)",
+      palm:    "Palm Size",
+      face:    "Palm Facing",
       fist:    "Fist",
       pinch:   "Pinch",
       victory: "Victory",
@@ -290,13 +295,54 @@ window.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initCopyButtons();
   initFooterActions();
+  initAutostartToggle();
   buildCtrlGroups();
   connectWS();
+  checkMigrationNotice();
 
   // Poll server state and VU meter regularly
   setInterval(updateVUMeter, 1000);
   setInterval(refreshServerInfo, 3000);
 });
+
+/**
+ * Check whether the mappings file exists. If not, show a one-line notice
+ * pointing the user to the kit's Migrate-RC-Surface-Data script. The notice
+ * is informational only — the extension never reads outside its storage folder.
+ */
+function checkMigrationNotice() {
+  if (typeof sendWS !== "function") return;
+  // Wait briefly for WS to be ready, then query project config status.
+  const tryQuery = () => {
+    sendWS("getProjectConfigStatus", {}, (res) => {
+      if (!res || !res.result) return;
+      const status = res.result;
+      if (status.mappingsFileExists === false) {
+        showMigrationNotice();
+      }
+    });
+  };
+  // Small delay so connectWS finishes setting up the message handler.
+  setTimeout(tryQuery, 1500);
+}
+
+function showMigrationNotice() {
+  if (document.getElementById("migration-notice")) return;
+  const t = (key) => {
+    if (window.RcSurfaceI18n && typeof window.RcSurfaceI18n.t === "function") {
+      return window.RcSurfaceI18n.t(key);
+    }
+    return key;
+  };
+  const div = document.createElement("div");
+  div.id = "migration-notice";
+  div.className = "migration-notice";
+  div.setAttribute("role", "status");
+  div.textContent = t("panel.migrationNotice");
+  // Insert near the top of the main panel body.
+  const target = document.querySelector("main") || document.body;
+  target.insertBefore(div, target.firstChild);
+}
 
 
 // ── Tab Navigation ───────────────────────────────────────────
@@ -345,7 +391,6 @@ function connectWS() {
     },
     // onClientUpdate
     (msg) => {
-      packetCount++;
       const clientId = msg.client.client_id;
       if (msg.client.status === "stale") {
         clientsMap.delete(clientId);
@@ -357,12 +402,14 @@ function connectWS() {
       processClientSensors(msg);
     },
     // onCustomMessage
-    (msg) => {}
+    () => {}
   );
 }
 
 // sendWS is provided globally by mappings-core.js (window.sendWS)
+let languageReady = false;
 function refreshServerInfo() {
+  if (!languageReady) { languageReady = true; setupLanguageSelector(); }
   sendWS("getServerInfo", {}, (res) => {
     if (res.ok) {
       serverInfo = res.result;
@@ -600,17 +647,18 @@ function buildCtrlGroups() {
     "sensor.motion.ax", "sensor.motion.ay", "sensor.motion.az"
   ];
   const handsKeys = [
-    "sensor.vision.active",
     // Hand position first: it is the continuous signal most worth mapping,
     // and it mirrors the DIRECT MAP X/Y/Z readout on the phone's VID page.
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
-    "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open", "sensor.vision.fingers",
+    "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
+    "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
     "sensor.vision.gesture.1", "sensor.vision.gesture.2", "sensor.vision.gesture.3"
   ];
   const audioKeys = [
-    "sensor.audio.rms", "sensor.audio.pitch", "sensor.audio.bpm",
-    "sensor.audio.note", "sensor.audio.clarity", "sensor.audio.whistle.bend",
-    "sensor.audio.envelope", "sensor.audio.gate"
+    // The pitch lane (pitch, note, bpm, clarity, whistle bend) is dormant: it
+    // is no longer offered for new mappings, stored ones stay inert.
+    "sensor.audio.rms", "sensor.audio.envelope", "sensor.audio.gate", "sensor.audio.attack",
+    ...window.AudioDescriptorCatalog.map(({ name }) => name)
   ];
 
   const groups = [
@@ -676,7 +724,7 @@ function buildCtrlGroups() {
     list.className = "ctrl-group-list hidden";
     list.dataset.group = group.label;
 
-    group.keys.forEach((key, index) => {
+    group.keys.forEach((key) => {
       list.appendChild(buildControlCell(key, {
         scope: group.label,
         instanceId: `${group.label}-${key}`,
@@ -697,35 +745,6 @@ function buildCtrlGroups() {
   });
 }
 
-/**
- * Build a polished empty-state card. The caller decides where to attach
- * it; the function never inserts the card itself. Use the `.empty-state`
- * CSS contract (see style.css) so every empty card on the panel looks
- * identical. Returns the created element for one-line appendChild calls.
- */
-function renderEmptyState(opts) {
-  const card = document.createElement("div");
-  card.className = "empty-state";
-  if (opts && opts.title) {
-    const t = document.createElement("div");
-    t.className = "empty-title";
-    t.textContent = opts.title;
-    card.appendChild(t);
-  }
-  if (opts && opts.subtitle) {
-    const s = document.createElement("div");
-    s.className = "empty-sub";
-    s.textContent = opts.subtitle;
-    card.appendChild(s);
-  } else if (opts && opts.message) {
-    // Plain single-line message variant for narrower places (picker etc.).
-    const m = document.createElement("div");
-    m.textContent = opts.message;
-    card.appendChild(m);
-  }
-  return card;
-}
-
 function updateClientsStrip() {
   const countEl = document.getElementById("conn-count");
   const count = clientsMap.size;
@@ -740,8 +759,6 @@ function updateClientsStrip() {
 let lastCpuUsage = 0;
 
 function updateVUMeter() {
-  packetsPerSec = packetCount;
-  packetCount = 0;
   const fill = document.getElementById("vu-fill");
   if (!fill) return;
   fill.style.width = Math.max(0, Math.min(100, lastCpuUsage)) + "%";
@@ -831,11 +848,6 @@ function processClientSensors(msg) {
   const orient = latest.sensors?.orientation_reading || {};
   const audio = latest.sensors?.audio_reading || {};
   const visionReading = latest.sensors?.vision_reading || {};
-  // vision_reading now has { left: {...}, right: {...}, color: {...} }.
-  // Old single-hand shape (flat active/x/y/z/is_fist) still works as a
-  // fallback so existing payloads from older clients don't crash.
-  const visionLeft = visionReading.left || null;
-  const visionRight = visionReading.right || null;
 
   // For sensors, update liveControls and DOM rows too
   if (statuses.orientation === "available" || statuses.orientation === "active") {
@@ -869,13 +881,12 @@ function processClientSensors(msg) {
   if (statuses.audio === "available" || statuses.audio === "active") {
     if (typeof audio.rms === 'number') {
       updateSensorLiveControl("sensor.audio.rms", audio.rms);
-      updateSensorLiveControl("sensor.audio.pitch", audio.pitch);
-      updateSensorLiveControl("sensor.audio.bpm", audio.bpm);
-      updateSensorLiveControl("sensor.audio.note", audio.note ?? 0);
-      updateSensorLiveControl("sensor.audio.clarity", audio.clarity ?? 0);
-      updateSensorLiveControl("sensor.audio.whistle.bend", audio.whistle_bend ?? 0.5);
       updateSensorLiveControl("sensor.audio.envelope", audio.envelope ?? 0);
       updateSensorLiveControl("sensor.audio.gate", audio.gate ?? 0);
+      updateSensorLiveControl("sensor.audio.attack", controlsMap.get("sensor.audio.attack") ?? audio.attack ?? 0);
+    }
+    for (const { name, field } of window.AudioDescriptorCatalog) {
+      updateSensorLiveControl(name, controlsMap.get(name) ?? audio[field] ?? 0);
     }
   }
   if (statuses.vision === "available" || statuses.vision === "active") {
@@ -898,7 +909,15 @@ function processClientSensors(msg) {
       // the wire payload carries.
       updateSensorLiveControl("sensor.vision.rotateVal", controlsMap.get("sensor.vision.rotateVal") ?? (visionReading.rotateVal ?? 0.5));
       updateSensorLiveControl("sensor.vision.open", controlsMap.get("sensor.vision.open") ?? (visionReading.open ? 1 : 0));
-      updateSensorLiveControl("sensor.vision.fingers", controlsMap.get("sensor.vision.fingers") ?? (visionReading.fingers ?? 0));
+      // The clutch axes come off the wire only. visibleReading carries no
+      // pinch_* field, so a `?? (visionReading.pinch_x ?? 0.5)` fallback like
+      // the lines above would be permanently undefined. Without these three the
+      // tiles render and then sit frozen for the whole session: every
+      // sensor.vision.* key counts as having a dedicated reading, so the
+      // generic fallback loop skips them.
+      updateSensorLiveControl("sensor.vision.pinch_x", controlsMap.get("sensor.vision.pinch_x") ?? 0.5);
+      updateSensorLiveControl("sensor.vision.pinch_y", controlsMap.get("sensor.vision.pinch_y") ?? 0.5);
+      updateSensorLiveControl("sensor.vision.pinch_z", controlsMap.get("sensor.vision.pinch_z") ?? 0.5);
       for (let slot = 1; slot <= 3; slot += 1) {
         const key = `sensor.vision.gesture.${slot}`;
         updateSensorLiveControl(key, controlsMap.get(key) ?? 0);
@@ -974,17 +993,6 @@ function updateControlCell(key, value, available = true, minVal, maxVal) {
   bumpGroupActivity(key, value);
 }
 
-// Per-group activity bookkeeping driven by control updates. Each call
-// records that a control inside `group` moved, increments the local
-// "active" counter, marks `data-has-data="1"` so CSS shows the pulse,
-// and decays the counter + signal after SIGNAL_DECAY_MS of silence.
-// A burst of updates collapses into one tick because of dedupeMap.
-//
-// The bare `function` declaration keeps `bumpGroupActivity` in the
-// global scope so callers inside this module (e.g. updateControlCell)
-// can reference it directly rather than via `window.`.
-let groupActivityLastTick = new Map(); // groupLabel → timestamp
-
 function isMeaningfulGroupActivity(key, value) {
   if (typeof value !== "number" || !Number.isFinite(value)) return false;
 
@@ -994,12 +1002,6 @@ function isMeaningfulGroupActivity(key, value) {
   }
 
   if (key.startsWith("sensor.audio.")) {
-    if (key === "sensor.audio.whistle.bend") {
-      return Math.abs(value - 0.5) > 0.05;
-    }
-    if (key === "sensor.audio.pitch" || key === "sensor.audio.bpm" || key === "sensor.audio.note") {
-      return value > 0.001;
-    }
     return Math.abs(value) > 0.01;
   }
 
@@ -1022,8 +1024,7 @@ function bumpGroupActivity(key, value) {
 
 function bumpGroupWrap(wrap) {
   if (!wrap) return;
-  const group = wrap.dataset.group;
-  // Per-group store attached to wrap dataset the first time it is touched.
+  // Activity state belongs to the group element and decays after silence.
   if (!wrap._activity) {
     wrap._activity = { active: 0, alive: false, decayTimer: null };
   }
@@ -1294,6 +1295,33 @@ function showCopied(btn) {
   }, 1200);
 }
 
+function readAutostart() {
+  if (typeof window.INITIAL_AUTOSTART === "boolean") return window.INITIAL_AUTOSTART;
+  const q = new URLSearchParams(window.location.search).get("autostart");
+  if (q === "1") return true;
+  if (q === "0") return false;
+  // Neither channel answered: say what the extension does by default rather
+  // than showing a state the user might act on.
+  return true;
+}
+
+function initAutostartToggle() {
+  const btn = document.getElementById("btn-autostart");
+  if (!btn) return;
+  const on = readAutostart();
+  // Through data-i18n, like every other label here: the panel has no T().
+  btn.setAttribute("data-i18n", on ? "common.on" : "common.off");
+  btn.textContent = on ? "On" : "Off";
+  window.RcSurfaceI18n?.apply?.();
+  btn.classList.toggle("on", on);
+  btn.setAttribute("aria-pressed", String(on));
+  btn.addEventListener("click", () => {
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    sendHostAction(on ? "autostart-off" : "autostart-on");
+  });
+}
+
 function initFooterActions() {
   document.querySelectorAll(".footer .btn[data-action]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1371,4 +1399,26 @@ function updatePerformanceStatus() {
 
   const mpLatency = typeof network.mpLatency === "number" ? `${network.mpLatency} ms` : "—";
   document.getElementById("perf-mediapipe").textContent = mpLatency;
+}
+
+/* ── interface language ───────────────────────────────────────────────────
+   The extension holds the setting, so the panel reads it on connect rather
+   than trusting whatever this browser happened to store, and writes it back
+   on every change. The phone picks the change up over its own socket; the
+   panel does not talk to the phone directly. */
+function setupLanguageSelector() {
+  const i18n = window.RcSurfaceI18n;
+  if (!i18n) return;
+
+  i18n.bindSelector(document.querySelector('.lang-select'), (locale) => {
+    sendWS('setLocale', { locale }, () => {});
+  });
+
+  sendWS('getLocale', {}, (res) => {
+    if (res && res.ok && res.result && res.result.locale) {
+      i18n.adoptFromServer(res.result.locale);
+    }
+  });
+
+  i18n.apply();
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 //
@@ -10,12 +10,11 @@
 //
 // The phone sends a modulator's *configuration* once (shape, rate, depth,
 // sync) and then goes quiet; the host generates the signal from there. That
-// keeps a 20 Hz LFO off the radio link entirely, and it keeps the modulation
+// keeps LFO samples off the radio link entirely, and it keeps the modulation
 // running when the phone's browser throttles its timers in the background.
 //
-// Phase is always derived from absolute time rather than accumulated per
-// tick, so a delayed or dropped tick reads the correct phase for the instant
-// it eventually runs instead of drifting.
+// Phase uses elapsed timestamps, not a nominal tick count. Rate changes only
+// affect future time; FREE LFO rate morphs integrate the frequency ramp.
 //
 // Depends on the mapping engine one way only: this module calls applyMapping,
 // nothing in mappings.ts calls back into here.
@@ -23,7 +22,7 @@ import { getExtensionContext } from "../context.js";
 import { trackedClients, appendHistory, pushClientUpdate } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs } from "./state.js";
 import { oscTransport } from "./osc-transport.js";
-import { computeSyncedLfoValue, computeSyncedStutterValue } from "./transport-clock.js";
+import { computeSyncedLfoValue, computeSyncedStutterValue, getLfoSubdivision, getLfoMaxHz, getStutterTiming, LFO_SUBDIVISIONS } from "./transport-clock.js";
 import { applyMapping } from "./mappings.js";
 
 export type HostModulatorKind = "lfo" | "stutter";
@@ -52,33 +51,41 @@ export interface HostModulatorState {
   syncMode: HostModulatorSyncMode;
   clockSource?: "osc" | "sdk" | "free";
   phase: number;
-  // Anchor for free-mode phase calculation. Set on first tick after the
-  // state is created so the host can derive phase as
-  // `(now - phaseZeroMs) * freq * 2π + phase`. Avoids integrator drift
-  // when a tick is dropped or delayed.
+  // Timestamp of the phase stored above; initialized on the first tick.
   phaseZeroMs?: number;
+  /** Phase at the last beat sample; rate changes only own future beats. */
+  syncAnchor?: {
+    beat: number;
+    cycles: number;
+    subdivision: number;
+    phaseOffset: number;
+    clockSource: "osc" | "sdk";
+    timestamp: number;
+  };
   lastTime: number | null;
   morph?: HostModulatorMorph;
   syncSubdivisionBeats?: number;
   phaseOffsetBeats?: number;
   swing?: number;
   shape?: "sine" | "triangle" | "ramp_up" | "ramp_down" | "square";
-  /** Last value actually pushed to Live, for redundant-write suppression. */
+  /**
+   * Pad mode D. The phone sends the shape; the start is stamped here because
+   * the two clocks are unrelated. While these are set, every generated value
+   * is scaled by the attack-release envelope.
+   */
+  burstStartMs?: number;
+  burstDurationMs?: number;
+  burstAttackMs?: number;
+  /** Last value submitted to mappings (not an SDK delivery acknowledgement). */
   lastWrittenValue?: number;
 }
 
 /**
  * Smallest change worth a write to Live.
  *
- * The motor ticks at 250 Hz because a 20 Hz LFO needs that to stay smooth —
- * that part is right and stays. What was wrong is that every tick wrote,
- * whatever the value was doing. A stutter gate holds 1 for its whole open
- * phase and was written 250 times a second to say "still 1"; a slow LFO moves
- * ~0.0001 per tick and was written just as often.
- *
- * Below this delta the write cannot change what anyone hears or sees, so
- * skipping it is lossless. A 20 Hz LFO at full depth moves ~0.25 per tick and
- * is completely unaffected: it still writes on every single tick.
+ * Suppress near-identical submissions, including unchanged stutter gates.
+ * This is a normalized-value approximation, not a perceptual guarantee.
+ * Generator cadence does not prove SDK delivery or automation recording rate.
  */
 const HOST_MODULATOR_WRITE_EPSILON = 0.0005;
 
@@ -98,12 +105,31 @@ function shouldWriteHostValue(state: HostModulatorState, value: number): boolean
 export const hostModulators = new Map<string, HostModulatorState>();
 
 let hostModulatorInterval: NodeJS.Timeout | null = null;
-// Tick fast enough to resolve the maximum LFO frequency the phone can
-// request (20 Hz free / 20 Hz synced) with at least 12 samples per
-// cycle so the visual / audible step is below the perceptual threshold.
-// 20 Hz × 12 = 240 Hz tick → 4 ms. The old 20 ms (50 Hz) tick only
-// gave ~2.5 samples per cycle at 20 Hz, which aliased badly (jitter).
+// Requested generator cadence only. Event-loop stalls and SDK completion can
+// reduce delivered samples; the LFO bandwidth policy is separate from this loop.
 const HOST_MODULATOR_INTERVAL_MS = 4;
+
+/**
+ * Position inside an attack-release burst as 0..1, or 1 when none is running.
+ * The same shape the pads use, so one press feels the same on every control.
+ */
+function burstEnvelope(state: HostModulatorState, now: number): number {
+  const start = state.burstStartMs;
+  const total = state.burstDurationMs;
+  if (start === undefined || total === undefined || !(total > 0)) return 1;
+  const elapsed = now - start;
+  if (elapsed <= 0) return 0;
+  if (elapsed >= total) return 0;
+  const attack = Math.min(
+    state.burstAttackMs !== undefined && state.burstAttackMs > 0
+      ? state.burstAttackMs
+      : total * 0.135,
+    total * 0.9,
+  );
+  if (elapsed < attack) return elapsed / attack;
+  const release = total - attack;
+  return release > 0 ? Math.max(0, 1 - (elapsed - attack) / release) : 0;
+}
 
 function clamp01(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value)
@@ -172,24 +198,80 @@ function maybeStopHostModulatorLoop(): void {
 function getHostModulatorFrequencyHz(state: HostModulatorState, tempo: number): number {
   if (state.kind === "lfo") {
     if (state.syncMode === "sync") {
-      const subdivisions = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625];
-      const subdiv = subdivisions[Math.floor(state.rate * (subdivisions.length - 0.01))] ?? 1;
-      return Math.min(20, (tempo / 60) / subdiv);
+      return (tempo / 60) / getLfoSubdivision(state.rate, tempo, state.syncSubdivisionBeats, state.shape);
     }
-    return 0.1 + state.rate * 19.9;
+    return 0.1 + state.rate * (getLfoMaxHz(state.shape) - 0.1);
   }
 
-  let baseFreqHz: number;
-  if (state.syncMode === "sync") {
-    const subdivisions = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-    const subdiv = subdivisions[Math.floor(state.rate * (subdivisions.length - 0.01))] ?? 1;
-    baseFreqHz = (tempo / 60) / subdiv;
-  } else {
-    baseFreqHz = 1 + state.rate * 19;
+  return getStutterTiming(state.rate, state.count, tempo, state.syncMode === "sync",
+    state.syncSubdivisionBeats, state.swing).frequency;
+}
+
+function advanceFreePhase(state: HostModulatorState, now: number, tempo: number): void {
+  const from = state.phaseZeroMs ?? now;
+  const elapsedMs = Math.max(0, now - from);
+  let cycles = getHostModulatorFrequencyHz(state, tempo) * elapsedMs / 1000;
+  const morph = state.morph;
+  if (state.kind === "lfo" && state.syncMode === "free" && morph) {
+    // Integral of clamped linear progress. Includes time beyond the end of
+    // a morph when a tick is delayed, without applying the final rate early.
+    const duration = Math.max(1, morph.endTime - morph.startTime);
+    const progressIntegral = (time: number): number => {
+      const x = Math.max(0, time - morph.startTime);
+      return x < duration ? x * x / (2 * duration) : x - duration / 2;
+    };
+    const rateMs = morph.startRate * elapsedMs + (morph.targetRate - morph.startRate)
+      * (progressIntegral(Math.max(from, now)) - progressIntegral(from));
+    cycles = (0.1 * elapsedMs + (getLfoMaxHz(state.shape) - 0.1) * rateMs) / 1000;
   }
-  const ratchetLevels = [1, 2, 3, 4];
-  const ratchet = ratchetLevels[Math.floor(state.count * (ratchetLevels.length - 0.01))] ?? 1;
-  return Math.min(15, baseFreqHz * ratchet);
+  const turn = 2 * Math.PI;
+  state.phase = ((state.phase + cycles * turn) % turn + turn) % turn;
+  state.phaseZeroMs = Math.max(from, now);
+}
+
+function getHostSyncedBeats(state: HostModulatorState, now: number, tempo: number): number | null {
+  if (state.syncMode !== "sync") return null;
+  const source = state.clockSource || "osc";
+  if (source === "osc" && oscTransport.state.available && oscTransport.state.connected && oscTransport.state.isPlaying) {
+    return oscTransport.state.currentSongTimeBeats
+      + ((now - oscTransport.lastSongTimeUpdateAt) / 1000) * (tempo / 60);
+  }
+  if (source === "sdk" && playheadActive) {
+    return ((playheadBaseTimeMs + (now - playheadStartTime)) / 1000) * (tempo / 60);
+  }
+  return null;
+}
+
+function advanceHostLfoPhase(state: HostModulatorState, now: number, tempo: number): void {
+  const beats = getHostSyncedBeats(state, now, tempo);
+  if (beats === null) {
+    advanceFreePhase(state, now, tempo);
+    // Paused/internal-clock fallback continues the wave; Play re-locks it.
+    delete state.syncAnchor;
+    return;
+  }
+
+  const subdivision = getLfoSubdivision(state.rate, tempo, state.syncSubdivisionBeats, state.shape);
+  const phaseOffset = state.phaseOffsetBeats ?? 0;
+  const clockSource = state.clockSource === "sdk" ? "sdk" : "osc";
+  const anchor = state.syncAnchor;
+  let cycles = (beats + phaseOffset) / subdivision;
+  if (anchor && anchor.clockSource === clockSource) {
+    const beatDelta = beats - anchor.beat;
+    const expectedDelta = Math.max(0, now - anchor.timestamp) / 1000 * (tempo / 60);
+    // A seek/loop aligns to the new song beat. Small OSC corrections are
+    // retained as beat corrections, without discarding the rate-change anchor.
+    const seek = beatDelta < -0.25
+      || Math.abs(beatDelta - expectedDelta) > Math.max(0.25, Math.abs(expectedDelta) * 0.5);
+    if (!seek) {
+      cycles = anchor.cycles + beatDelta / anchor.subdivision
+        + (phaseOffset - anchor.phaseOffset) / subdivision;
+    }
+  }
+  cycles = ((cycles % 1) + 1) % 1;
+  state.phase = cycles * 2 * Math.PI;
+  state.phaseZeroMs = now;
+  state.syncAnchor = { beat: beats, cycles, subdivision, phaseOffset, clockSource, timestamp: now };
 }
 
 async function applyHostGeneratedControl(
@@ -230,13 +312,25 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
   const active = !!payload["active"];
   const existing = hostModulators.get(key);
   const morphMs = clampMorphMs(payload["morphMs"]);
-  const morphStart = existing?.lastTime ?? Date.now();
-  if (existing) applyHostModulatorMorph(existing, morphStart);
+  const morphStart = Date.now();
+  if (existing) {
+    // Settle the old frequency before accepting the new configuration.
+    if (existing.phaseZeroMs !== undefined) {
+      const tempo = getExtensionContext()?.application.song?.tempo ?? 120;
+      if (existing.kind === "lfo") advanceHostLfoPhase(existing, morphStart, tempo);
+      else advanceFreePhase(existing, morphStart, tempo);
+    }
+    applyHostModulatorMorph(existing, morphStart);
+  }
 
   const targetRate = clamp01(payload["rate"], existing?.rate ?? (kind === "lfo" ? 0.5 : 0.1));
   const targetDepth = clamp01(payload["depth"], existing?.depth ?? 0.5);
   const targetCount = clamp01(payload["count"], existing?.count ?? 0);
   const syncMode = payload["syncMode"] === "free" ? "free" : "sync";
+  const burstDurationMs = typeof payload["burstDurationMs"] === "number"
+    && payload["burstDurationMs"] > 0 ? payload["burstDurationMs"] : undefined;
+  const burstAttackMs = typeof payload["burstAttackMs"] === "number"
+    && payload["burstAttackMs"] > 0 ? payload["burstAttackMs"] : undefined;
 
   if (!active) {
     if (existing && morphMs > 0) {
@@ -252,6 +346,9 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
         targetCount,
         deactivateAtEnd: true,
       };
+      if (existing.kind === "lfo" && existing.phaseZeroMs !== undefined) {
+        advanceHostLfoPhase(existing, morphStart, getExtensionContext()?.application.song?.tempo ?? 120);
+      }
       startHostModulatorLoop();
       return;
     }
@@ -270,19 +367,37 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
     depth: targetDepth,
     count: targetCount,
     syncMode,
-    // Initial phase offset. LFO defaults to -π/2 (so cos-style starts
-    // at the bottom of the wave; the host adds +π/2 inside the
-    // tick). Stutter defaults to 0 (gate open on the first tick). The
-    // sync-mode path overwrites this from the beat clock on every
-    // tick, so the initial value is only relevant in free mode.
+    // FREE LFO starts at the bottom of the sine (-π/2); stutter starts
+    // with its gate open (0). SYNC first aligns to the song beat.
     phase: kind === "lfo" ? -Math.PI / 2 : 0,
     lastTime: null,
   };
   state.active = true;
   state.syncMode = syncMode;
 
-  const allowedSubdivisions = new Set([4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125]);
-  if (payload["syncSubdivisionBeats"] !== undefined) {
+  // Stamped here, not taken from the phone: the two clocks are unrelated. A
+  // repeat of the same configuration while a burst is already running must not
+  // restart it, or a coalesced re-send would stretch the envelope.
+  if (burstDurationMs === undefined) {
+    delete state.burstStartMs;
+    delete state.burstDurationMs;
+    delete state.burstAttackMs;
+  } else if (state.burstDurationMs === undefined || state.burstStartMs === undefined) {
+    state.burstStartMs = Date.now();
+    state.burstDurationMs = burstDurationMs;
+    if (burstAttackMs === undefined) {
+      delete state.burstAttackMs;
+    } else {
+      state.burstAttackMs = burstAttackMs;
+    }
+  }
+
+  const allowedSubdivisions = new Set<number>(kind === "lfo"
+    ? LFO_SUBDIVISIONS : [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125]);
+  // Explicit Auto survives JSON; omission remains a partial-update no-op.
+  if (payload["syncSubdivisionBeats"] === null) {
+    delete state.syncSubdivisionBeats;
+  } else if (payload["syncSubdivisionBeats"] !== undefined) {
     const val = Number(payload["syncSubdivisionBeats"]);
     if (allowedSubdivisions.has(val)) {
       state.syncSubdivisionBeats = val;
@@ -334,6 +449,12 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
     delete state.morph;
   }
 
+  if (state.kind === "lfo" && state.phaseZeroMs !== undefined) {
+    // Rebase at the same configuration timestamp: the old rate has already
+    // settled above, while the new pin/rate and explicit phase own the future.
+    advanceHostLfoPhase(state, morphStart, getExtensionContext()?.application.song?.tempo ?? 120);
+  }
+
   hostModulators.set(key, state);
   startHostModulatorLoop();
 }
@@ -349,62 +470,39 @@ export async function tickHostModulators(now: number = Date.now()): Promise<void
   const applies: Promise<void>[] = [];
 
   for (const [key, state] of hostModulators.entries()) {
+    // Settle the previous subdivision before sampling a SYNC rate morph;
+    // FREE LFO morphs integrate their ramp across the complete elapsed interval.
+    if (state.kind === "lfo") advanceHostLfoPhase(state, now, tempo);
+    else advanceFreePhase(state, now, tempo);
     if (!applyHostModulatorMorph(state, now)) {
       hostModulators.delete(key);
       applies.push(applyHostGeneratedControl(state.clientId, state.name, 0, now, true));
       continue;
     }
+    if (state.kind === "lfo" && state.syncAnchor) advanceHostLfoPhase(state, now, tempo);
 
-    // Phase-as-function-of-time. Computing the phase from absolute `now`
-    // (instead of accumulating `state.phase += freq*dt`) keeps the
-    // signal beat-locked: if a tick is delayed or dropped, the next
-    // tick reads the right phase for that instant. Accumulator-based
-    // phase drifts whenever dt is wrong (variable setInterval firing,
-    // GC pauses, event loop blocking).
-    // Only the timestamp is carried forward: both branches below derive phase
-    // from absolute time, so there is no delta to integrate.
     state.lastTime = now;
 
-    const source = state.clockSource || "osc";
-    let beats = 0;
-    let useSynced = false;
-
-    if (state.syncMode === "sync") {
-      if (source === "osc" && oscTransport.state.available && oscTransport.state.connected && oscTransport.state.isPlaying) {
-        const elapsedMs = now - oscTransport.lastSongTimeUpdateAt;
-        beats = oscTransport.state.currentSongTimeBeats + (elapsedMs / 1000) * (tempo / 60);
-        useSynced = true;
-      } else if (source === "sdk" && playheadActive) {
-        const playheadTimeMs = playheadBaseTimeMs + (now - playheadStartTime);
-        beats = (playheadTimeMs / 1000) * (tempo / 60);
-        useSynced = true;
-      }
-    }
-
-    if (useSynced) {
+    const beats = getHostSyncedBeats(state, now, tempo);
+    if (beats !== null) {
       if (state.kind === "lfo") {
         const shape = state.shape || "sine";
-        const subdivisions = [4, 2, 1, 0.5, 0.25, 0.125, 0.0625];
-        const subdiv = state.syncSubdivisionBeats ?? (subdivisions[Math.floor(state.rate * (subdivisions.length - 0.01))] ?? 1);
-        const phaseOffset = state.phaseOffsetBeats ?? 0;
+        const lfoVal = computeSyncedLfoValue(shape, state.phase / (2 * Math.PI), 1, 0);
+        // In pad mode D the depth opens and closes; centre is where an
+        // LFO is doing nothing, so a closed envelope lands there.
+        const value = 0.5 + lfoVal * 0.5 * state.depth * burstEnvelope(state, now);
 
-        const lfoVal = computeSyncedLfoValue(shape, beats, subdiv, phaseOffset);
-        const value = 0.5 + lfoVal * 0.5 * state.depth;
-
-        state.phase = ((beats + phaseOffset) / subdiv * 2 * Math.PI) % (2 * Math.PI);
         if (shouldWriteHostValue(state, value)) {
           applies.push(applyHostGeneratedControl(state.clientId, state.name, value, now));
         }
       } else {
-        const subdivisions = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-        const subdiv = state.syncSubdivisionBeats ?? (subdivisions[Math.floor(state.rate * (subdivisions.length - 0.01))] ?? 1);
+        const { subdivision: subdiv, ratchet } = getStutterTiming(state.rate, state.count, tempo, true,
+          state.syncSubdivisionBeats, state.swing);
         const phaseOffset = state.phaseOffsetBeats ?? 0;
         const swing = state.swing ?? 0;
-        const ratchetLevels = [1, 2, 3, 4];
-        const ratchet = ratchetLevels[Math.floor(state.count * (ratchetLevels.length - 0.01))] ?? 1;
 
         const isGateOpen = computeSyncedStutterValue(beats, subdiv, phaseOffset, swing, ratchet);
-        const value = isGateOpen ? 1 : 0;
+        const value = (isGateOpen ? state.depth : 0) * burstEnvelope(state, now);
 
         state.phase = ((beats + phaseOffset) / (subdiv / ratchet) * 2 * Math.PI) % (2 * Math.PI);
         if (shouldWriteHostValue(state, value)) {
@@ -412,40 +510,16 @@ export async function tickHostModulators(now: number = Date.now()): Promise<void
         }
       }
     } else {
-      // Free mode: derive phase from absolute time so jitter/drift is
-      // bounded to the tick quantization, not the integrator error.
-      const freqHz = getHostModulatorFrequencyHz(state, tempo);
       if (state.kind === "lfo") {
-        // Phase zero is anchored at state.phaseZeroMs so user-initiated
-        // bursts all start at a predictable point. The actual phase
-        // value is read here on every tick from absolute time, not
-        // accumulated, so a missed tick does not cause drift.
-        if (state.phaseZeroMs === undefined) state.phaseZeroMs = now;
-        const elapsedSec = (now - state.phaseZeroMs) / 1000;
-        // `state.phase` is the initial offset (-π/2 by default for
-        // LFO). With this offset the first tick yields phase = -π/2,
-        // which computeSyncedLfoValue maps to sin(-π/2) = -1 → output
-        // 0.5 - 0.5*depth. This matches the pre-refactor integrator
-        // design's first-tick output, so the test suite and the user
-        // see no visible behaviour change. Without the offset the
-        // LFO would start at value 0.5 (sine at 0), which differs.
-        const phaseRad = 2 * Math.PI * freqHz * elapsedSec + state.phase;
         const shape = state.shape || "sine";
-        const normalizedPhase = ((phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
+        const normalizedPhase = state.phase / (2 * Math.PI);
         const lfoVal = computeSyncedLfoValue(shape, normalizedPhase, 1.0, 0.0);
-        const value = 0.5 + lfoVal * 0.5 * state.depth;
+        const value = 0.5 + lfoVal * 0.5 * state.depth * burstEnvelope(state, now);
         if (shouldWriteHostValue(state, value)) {
           applies.push(applyHostGeneratedControl(state.clientId, state.name, value, now));
         }
       } else {
-        if (state.phaseZeroMs === undefined) state.phaseZeroMs = now;
-        const elapsedSec = (now - state.phaseZeroMs) / 1000;
-        const phaseRad = 2 * Math.PI * freqHz * elapsedSec + state.phase;
-        // Stutter: phase < π → gate open, else closed. Same gate
-        // condition as before but anchored to absolute time so the
-        // pulse pattern does not shift when ticks are dropped.
-        const normalizedPhase = ((phaseRad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const value = normalizedPhase < Math.PI ? 1 : 0;
+        const value = (state.phase < Math.PI ? state.depth : 0) * burstEnvelope(state, now);
         if (shouldWriteHostValue(state, value)) {
           applies.push(applyHostGeneratedControl(state.clientId, state.name, value, now));
         }
@@ -481,7 +555,7 @@ export function clearHostModulatorsForClient(clientId: string): void {
   for (const [key, state] of [...hostModulators.entries()]) {
     if (state.clientId !== clientId) continue;
     hostModulators.delete(key);
-    void applyHostGeneratedControl(clientId, state.name, 0, Date.now());
+    void applyHostGeneratedControl(clientId, state.name, 0, Date.now(), true);
   }
   maybeStopHostModulatorLoop();
 }

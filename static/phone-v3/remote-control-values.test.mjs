@@ -70,6 +70,8 @@ function loadApp({ padMode = 'B' } = {}) {
   context.window = context;
 
   vm.runInNewContext(read('mode-engine.js'), context, { filename: 'mode-engine.js' });
+  vm.runInNewContext(read('../shared/audio-descriptor-catalog.js'), context);
+  vm.runInNewContext(read('control-stream.js'), context);
   vm.runInNewContext(read('app.js'), context, { filename: 'app.js' });
 
   // Stand in for controls.js: record what the surface was asked to move.
@@ -152,4 +154,20 @@ test('a setter that throws does not stop the rest of the batch', () => {
   };
   context.window.applyRemoteControlValues({ 'knob-2': 0.5, 'fader-1': 0.9 });
   assert.deepEqual(applied, [['fader-1', 0.9]]);
+});
+
+test('remote setters never echo a control frame; local gesture still sends immediately with MAP open', () => {
+  const { context } = loadApp();
+  const sent = [];
+  context.phoneWs = { readyState: 1, controlStreamVersion: 1, bufferedAmount: 0, send: raw => sent.push(JSON.parse(raw)) };
+  context.getPhoneClientId = () => 'echo-test';
+  context.RCSurface = { getMappingModeActive: () => true, getTelemetryThrottleUntil: () => Infinity };
+  context.controlSetters['fader-1'] = value => context.onControl({ name: 'fader-1', value });
+  context.applyRemoteControlValues({ 'fader-1': 0.7 });
+  assert.equal(sent.length, 0);
+  assert.equal(context.currentControlStates['fader-1'], 0.7);
+  context.onControl({ name: 'fader-1', value: 0.2 });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'control_frame');
+  assert.equal(sent[0].controls[0].value, 0.2);
 });

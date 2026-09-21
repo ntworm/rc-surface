@@ -1,0 +1,63 @@
+﻿# RC Surface — User Guide
+### Realtime control in the current candidate
+## 1. Phone layout at a glance
+## 2. Pad modes (A / B / C / D)
+### Mode A — Momentary (default)
+### Mode B — Hold
+### Mode C — Toggle
+### Mode D — Burst
+## 3. LFOs (L1 / L2 / L3 / L4)
+### Controls on each LFO
+### Typical use
+## 4. Stutters (S1 / S2 / S3 / S4)
+### Two axes, one button
+### Mode B behaviour for Stutters
+### Compact rate feedback
+## 5. PERF UTIL shortcuts
+## 6. XY pads
+### XY 1 — direct control
+### XY 2 — physics joystick
+## 7. Top-bar controls
+### SYNC
+### CALIBRATE
+### STAGE
+## 8. MAP mode - mobile mapping
+### Selecting a control
+### Bind to parameter
+### Trigger note to MIDI track
+### Mapping editor fields
+### Presets, refresh, and unbind
+## 9. MIX tab — Knobs and Faders
+### Knobs
+### Faders
+## 9.5 Config Mode (CFG)
+### What you can change per control
+### How to open CFG
+### Clearing overrides
+### Where the data lives
+## 10. SNP tab — Snapshots and morph
+### Slots
+### Capture
+### Clear
+### Morph time
+### Morph modes
+## 11. SNS tab — Sensors
+### Sensor status
+### MOTION
+### ORIENTATION
+### LOCAL VIEW
+## 12. AUD and VID tabs — Audio and Vision
+### Audio input
+### Selecting the browser audio input
+### Built-in audio detectors
+### The detector knobs
+### Attack level
+### Listening to a track instead of a microphone
+### VID performance console
+### Learned static poses
+## 13. Quick reference
+### Per-control vertical range
+### Mode summary
+### Control names (for mapping)
+## 14. Common gestures cheat sheet
+## 15. Troubleshooting

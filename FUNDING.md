@@ -2,7 +2,7 @@
 
 If this project saved you time on stage, in the studio, or while prototyping, consider supporting development.
 
-Ableton RC Surface is **licensed under the PolyForm Noncommercial 1.0.0**
+RC Surface is **licensed under the PolyForm Noncommercial 1.0.0**
 and free to install for noncommercial use. The code is open source, the
 `.ablx` is free to install, and there is no Pro tier. Donations fund the next
 round of work, not gate existing features.
@@ -26,3 +26,8 @@ This project is built and tested on commodity gear. Funds keep the lights on whi
 If you can't pay: starring the repo, filing issues with reproduction steps, and sharing screenshots or clips on social media is just as useful. The goal is reach, not extraction.
 
 — Gabriel Worm, Palmas, BR, 2026
+
+## Trademarks
+
+Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
+project, not affiliated with, endorsed by, or sponsored by Ableton AG.

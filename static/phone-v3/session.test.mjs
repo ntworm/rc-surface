@@ -9,7 +9,7 @@ import vm from 'node:vm';
 
 const source = fs.readFileSync(path.join(import.meta.dirname, 'modules/session.js'), 'utf8');
 
-function loadSession(WebSocketImpl, { onLine = true, fetchImpl = null } = {}) {
+function loadSession(WebSocketImpl, { onLine = true, fetchImpl = null, locale = null } = {}) {
   const listeners = new Map();
   let reconnectCallback = null;
   let reconnectDelay = null;
@@ -40,6 +40,11 @@ function loadSession(WebSocketImpl, { onLine = true, fetchImpl = null } = {}) {
   };
   context.window = context;
   context.globalThis = context;
+  if (locale) {
+    vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/i18n-catalog.js'), 'utf8'), context);
+    // Use the actual catalog, with a minimal translator boundary.
+    context.RcSurfaceI18n = { t: (key) => context.RcSurfaceI18nCatalog?.[key]?.[locale] ?? key };
+  }
   vm.runInNewContext(source, context, { filename: 'session.js' });
   return { context, status, getReconnect: () => ({ callback: reconnectCallback, delay: reconnectDelay }) };
 }
@@ -59,6 +64,25 @@ test('session reconnects cleanly when WebSocket construction is rejected', () =>
   assert.equal(env.getReconnect().delay, 1000);
   assert.equal(env.context.phoneWs, null);
 });
+
+for (const locale of ['en', 'pt-BR']) {
+  test('session recovery messages follow the selected locale: ' + locale, () => {
+    class Socket {
+      static OPEN = 1; static CONNECTING = 0;
+      constructor() { this.readyState = 1; }
+      send() {} close() {}
+    }
+    const env = loadSession(Socket, { locale });
+    env.context.RCSurface.initSession();
+    const socket = env.context.phoneWs;
+    socket.onopen();
+    socket.onmessage({ data: JSON.stringify({ type: 'hello', client_id: 'test-client', role: 'viewer', tokenStatus: 'stale' }) });
+    assert.match(env.status.textContent, locale === 'en' ? /SESSION EXPIRED/ : /SESSÃO EXPIRADA/);
+    socket.onclose({ code: 4009 });
+    assert.match(env.status.textContent, locale === 'en' ? /ANOTHER TAB/ : /OUTRA ABA/);
+    assert.equal(env.getReconnect().callback, null, 'replacement must not enter reconnect ping-pong');
+  });
+}
 
 test('session builds the WebSocket URL from the page origin and keeps the controller token', () => {
   class WebSocketMock {

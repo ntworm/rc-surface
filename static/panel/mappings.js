@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-/* ── Ableton RC Surface — Panel Dialog Mappings Tab Logic ────────── */
+/* ── RC Surface — Panel Dialog Mappings Tab Logic ────────── */
 
 window.frontendToggleStates = new Map();
 
@@ -18,6 +18,9 @@ window.frontendToggleStates = new Map();
 window.isSameTarget = function(a, b) {
   if (!a || !b) return false;
   if (a.type !== b.type) return false;
+  const aKind = a.trackKind || 'track';
+  const bKind = b.trackKind || 'track';
+  if (aKind !== bKind) return false;
   // trigger_note uses a distinct identity (track + midiNote) and must never
   // collide with a regular device_param on the same slot.
   const aTrigger = a.mode === 'trigger_note';
@@ -334,13 +337,17 @@ function makeKnob(container, labelText, value, min, max, isPercent, isMs, step, 
 
   wheel.addEventListener("pointerdown", onPointerDown);
   container.appendChild(wrapper);
+  return wrapper;
 }
 
 function renderTargetChip(targetContainer, t, idx) {
   const chip = document.createElement("div");
   chip.className = "bound-chip";
   chip.dataset.targetIdx = String(idx);
-  chip.style.cssText = "position:relative; display:flex; flex-direction:column; gap:12px; padding:12px; margin-bottom:12px; background:#2c2c2f; border:1px solid #1a1a1c; border-radius:0; box-shadow:0 3px 8px rgba(0,0,0,0.3); color:#c0c0c0; width:100%; box-sizing:border-box;";
+  // Layout only. Paint — background, border, colour — belongs to .bound-chip
+  // in the stylesheet; setting it here silently beat the retheme, which is
+  // why this block still looked like the old design after the sweep.
+  chip.style.cssText = "position:relative; display:flex; flex-direction:column; gap:12px; width:100%; box-sizing:border-box;";
 
   // Close/remove button in top-right corner
   const removeBtn = document.createElement("span");
@@ -364,7 +371,8 @@ function renderTargetChip(targetContainer, t, idx) {
 
   const labelSpan = document.createElement("span");
   labelSpan.style.cssText = "font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:15px;";
-  labelSpan.textContent = t.label || t.type;
+  labelSpan.textContent = t.label
+    || t.type;
   col1.appendChild(labelSpan);
   if (t.relinkStatus && t.relinkStatus !== 'loaded') {
     const relinkBadge = document.createElement('span');
@@ -421,6 +429,23 @@ function renderTargetChip(targetContainer, t, idx) {
   });
   col1.appendChild(curveSelect);
 
+  const targetScaleSelect = document.createElement("select");
+  targetScaleSelect.className = "target-scale";
+  targetScaleSelect.title = "Target range scale";
+  targetScaleSelect.style.cssText = curveSelect.style.cssText;
+  for (const opt of ["auto", "linear", "geometric"]) {
+    const option = document.createElement("option");
+    option.value = opt;
+    option.textContent = `Scale: ${opt}`;
+    option.selected = (t.targetScale || "auto") === opt;
+    targetScaleSelect.appendChild(option);
+  }
+  targetScaleSelect.addEventListener("change", () => {
+    t.targetScale = targetScaleSelect.value;
+    window.saveMappingTargets();
+  });
+  col1.appendChild(targetScaleSelect);
+
   const takeoverSelect = document.createElement("select");
   takeoverSelect.className = "target-takeover";
   takeoverSelect.title = "Soft takeover mode";
@@ -463,11 +488,12 @@ function renderTargetChip(targetContainer, t, idx) {
   const modeSelect = document.createElement("select");
   modeSelect.className = "target-mode";
   modeSelect.style.cssText = "background:#1f1f1f; color:#fff; border:1px solid #333333; border-radius:0; font-size:10px; height:20px; padding:0 2px; width:100%; cursor:pointer; margin-top:4px;";
-  for (const opt of [
+  const modeOptions = [
     { value: "continuous", label: "Continuous" },
     { value: "toggle", label: "Toggle" },
     { value: "trigger_note", label: "Trigger Note" }
-  ]) {
+  ];
+  for (const opt of modeOptions) {
     const o = document.createElement("option");
     o.value = opt.value;
     o.textContent = opt.label;
@@ -649,6 +675,9 @@ function renderTargetChip(targetContainer, t, idx) {
 
   modeSelect.addEventListener("change", () => {
     t.mode = modeSelect.value;
+    if (t.mode === "trigger_note" && !t.midiNote) {
+      t.midiNote = "C3";
+    }
     window.saveMappingTargets();
     updateModeUI(t.mode);
   });
@@ -707,7 +736,7 @@ window.renderMappingDetail = function() {
 
   const btnTrigger = document.getElementById("btn-trigger");
   if (btnTrigger) {
-    btnTrigger.onclick = () => window.openMidiTrackPicker();
+    btnTrigger.onclick = () => window.openMidiTrackPicker("trigger_note");
   }
 };
 
@@ -743,7 +772,7 @@ function bindProjectProfileActions() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = res.result.filename || 'Ableton-RC-Surface.rcsurface';
+        link.download = res.result.filename || 'RC-Surface.rcsurface';
         link.click();
         URL.revokeObjectURL(url);
       });
@@ -1110,6 +1139,19 @@ window.saveMappingTargets = function(targets = null, opts = {}) {
 // whether the picker is currently visible without poking at DOM classLists.
 window.pickerOpen = false;
 
+function fillPickerRow(row, parts) {
+  // Live track/device/parameter names are user-controlled. Build the picker
+  // at the insertion boundary with textContent so a name can never become
+  // panel markup.
+  row.innerHTML = '';
+  for (const [className, value] of parts) {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = String(value ?? '');
+    row.appendChild(span);
+  }
+}
+
 /**
  * Hide the inline picker. Called after a successful commit or when the user
  * cancels. Safe to invoke when already closed (no-op). Declared before
@@ -1158,7 +1200,11 @@ window.openPicker = function() {
           const row = document.createElement("div");
           row.className = "picker-track";
           row.dataset.kind = "tempo";
-          row.innerHTML = `<span class="picker-chev">▶</span><span class="picker-track-name">Song Tempo</span><span class="picker-kind">tempo</span>`;
+          fillPickerRow(row, [
+            ['picker-chev', '▶'],
+            ['picker-track-name', 'Song Tempo'],
+            ['picker-kind', 'tempo'],
+          ]);
           row.onclick = () => {
             window.commitBind(track);
             window.closePicker();
@@ -1179,12 +1225,17 @@ window.openPicker = function() {
         if (!mixerMatches && !deviceMatches) return;
       }
 
-      const trackKey = `track-${track.trackIndex}`;
+      const trackKind = track.trackKind || 'track';
+      const trackKey = `track-${trackKind}-${track.trackIndex}`;
       const isExpanded = filter || expanded.has(trackKey);
 
       const trackRow = document.createElement("div");
       trackRow.className = "picker-track";
-      trackRow.innerHTML = `<span class="picker-chev">${isExpanded ? "▼" : "▶"}</span><span class="picker-track-name">${trackLabel}</span><span class="picker-kind">track</span>`;
+      fillPickerRow(trackRow, [
+        ['picker-chev', isExpanded ? '▼' : '▶'],
+        ['picker-track-name', trackLabel],
+        ['picker-kind', trackKind],
+      ]);
       trackRow.onclick = () => {
         if (expanded.has(trackKey)) expanded.delete(trackKey);
         else expanded.add(trackKey);
@@ -1200,7 +1251,7 @@ window.openPicker = function() {
         if (filter && !lbl.toLowerCase().includes(filter)) return;
         const row = document.createElement("div");
         row.className = "picker-param picker-mixer";
-        row.innerHTML = `<span class="picker-name">${lbl}</span><span class="picker-kind">mixer</span>`;
+        fillPickerRow(row, [['picker-name', lbl], ['picker-kind', 'mixer']]);
         row.onclick = () => {
           window.commitBind(m);
           window.closePicker();
@@ -1211,7 +1262,7 @@ window.openPicker = function() {
 
       (track.devices || []).forEach((dev) => {
         const devLabel = dev.name || `Device ${dev.index + 1}`;
-        const devKey = `device-${track.trackIndex}-${dev.index}`;
+        const devKey = `device-${trackKind}-${track.trackIndex}-${dev.index}`;
         const devMatches = !filter ||
           devLabel.toLowerCase().includes(filter) ||
           (dev.params || []).some(p => (p.label || p.type || "").toLowerCase().includes(filter));
@@ -1222,7 +1273,11 @@ window.openPicker = function() {
 
         const devRow = document.createElement("div");
         devRow.className = "picker-track picker-device-track";
-        devRow.innerHTML = `<span class="picker-chev">${devExpanded ? "▼" : "▶"}</span><span class="picker-track-name">${devLabel}</span><span class="picker-kind">device</span>`;
+        fillPickerRow(devRow, [
+          ['picker-chev', devExpanded ? '▼' : '▶'],
+          ['picker-track-name', devLabel],
+          ['picker-kind', 'device'],
+        ]);
         devRow.onclick = () => {
           if (expanded.has(devKey)) expanded.delete(devKey);
           else expanded.add(devKey);
@@ -1238,7 +1293,7 @@ window.openPicker = function() {
           if (filter && !plbl.toLowerCase().includes(filter)) return;
           const row = document.createElement("div");
           row.className = "picker-param picker-device-param";
-          row.innerHTML = `<span class="picker-name">${plbl}</span><span class="picker-kind">param</span>`;
+          fillPickerRow(row, [['picker-name', plbl], ['picker-kind', 'param']]);
           row.onclick = () => {
             window.commitBind(p);
             window.closePicker();
@@ -1264,6 +1319,8 @@ window.openMidiTrackPicker = function() {
   const search = document.getElementById("map-picker-search");
 
   if (!picker || !list || !search) return;
+
+  const midiMode = "trigger_note";
 
   window.pickerOpen = true;
   picker.classList.remove("hidden");
@@ -1294,11 +1351,13 @@ window.openMidiTrackPicker = function() {
       const trackRow = document.createElement("div");
       trackRow.className = "picker-track";
       trackRow.style.cursor = "pointer";
-      trackRow.innerHTML = `<span class="picker-chev">▶</span><span class="picker-track-name">${trackLabel}</span><span class="picker-kind">midi track</span>`;
+      fillPickerRow(trackRow, [
+        ['picker-chev', '▶'],
+        ['picker-track-name', trackLabel],
+        ['picker-kind', 'midi track'],
+      ]);
       
       trackRow.onclick = () => {
-        window.closePicker();
-        
         console.log(`[ableton-rc-surface] Triggering setup for M4L on MIDI track index: ${track.trackIndex}`);
         
         window.sendWS("addUdpReceiverToTrack", { trackIndex: track.trackIndex }, (res) => {
@@ -1306,23 +1365,39 @@ window.openMidiTrackPicker = function() {
             const newTarget = {
               type: "device_param",
               trackIndex: track.trackIndex,
-              mode: "trigger_note",
-              midiNote: "C3",
+              mode: midiMode,
               midiVelocity: 100
             };
+            if (midiMode === "trigger_note") newTarget.midiNote = "C3";
             
             const currentTargets = window.currentMappings[window.selectedControl] || [];
-            const cleanTargets = currentTargets.filter(t => !(t.mode === 'trigger_note' && t.trackIndex === track.trackIndex));
+            const cleanTargets = currentTargets.filter(t => !(t.mode === midiMode && t.trackIndex === track.trackIndex));
             cleanTargets.push(newTarget);
             
             window.sendWS("setMapping", {
               control: window.selectedControl,
               targets: cleanTargets
-            }, () => {
+            }, (mappingRes) => {
+              if (mappingRes && mappingRes.ok === false) {
+                alert(mappingRes.error || "Não foi possível salvar o mapping MIDI.");
+                return;
+              }
+              window.closePicker();
               if (typeof window.fetchMappings === "function") window.fetchMappings();
             });
           } else {
-            alert("Erro: " + ((res && res.error) || "Não foi possível carregar o receptor MIDI na faixa.") + "\n\nCertifique-se de ter salvo o dispositivo Max 'RC-Midi-Receiver.amxd' em sua User Library.");
+            const reason = res?.result?.reason;
+            if (reason === 'receiver_upgrade_required' || reason === 'receiver_ambiguous') {
+              const upgrade = reason === 'receiver_upgrade_required';
+              alert(window.RcSurfaceI18n?.t(upgrade ? 'map.receiverUpgrade' : 'map.receiverAmbiguous')
+                || (upgrade ? 'Substitua o Receiver antigo pelo RC-Midi-Receiver v2 e tente novamente.'
+                  : 'Há mais de um Receiver nessa track. Deixe apenas um Receiver v2.'));
+              return;
+            }
+            const missing = res?.result?.reason === "receiver_missing";
+            alert(missing
+              ? "RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo manualmente nela no Live e escolha a track novamente."
+              : "Erro: " + ((res && res.error) || "Não foi possível verificar o receptor MIDI na faixa."));
           }
         });
       };

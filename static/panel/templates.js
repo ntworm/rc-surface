@@ -2,12 +2,24 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-/* ── Ableton RC Surface — Mapping Starter Templates ────────────── */
+/* ── RC Surface — Mapping Starter Templates ────────────── */
 
 window.MappingTemplates = {
+  'mixer-8': {
+    name: '8-Track Mixer',
+    description: '8 volume faders; first 4 tracks also get Mute toggles.',
+    mappings: Object.fromEntries([
+      ...Array.from({ length: 8 }, (_, i) => [`fader-${i + 1}`, [
+        { type: 'mixer_volume', trackIndex: i, label: `Track ${i + 1} Vol`, outMin: 0, outMax: 1, curve: 'linear' },
+      ]]),
+      ...Array.from({ length: 4 }, (_, i) => [`toggle-${i + 1}`, [
+        { type: 'track_mute', trackIndex: i, label: `Track ${i + 1} Mute`, outMin: 0, outMax: 1, curve: 'linear' },
+      ]]),
+    ]),
+  },
   'dj-controller': {
     name: 'DJ Controller',
     description: '2 tracks with Volume, Pan and Mute controls.',
@@ -38,7 +50,7 @@ window.MappingTemplates = {
   },
   'instrument-macro': {
     name: 'Instrument Macros & Solos',
-    description: '6 knobs mapped to Device 1 parameters, and 4 solo buttons.',
+    description: '8 knobs mapped to Device 1 parameters, and 4 solo buttons.',
     mappings: {
       'knob-1': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 1, label: 'Macro 1', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-2': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 2, label: 'Macro 2', outMin: 0, outMax: 1, curve: 'linear' }],
@@ -46,6 +58,8 @@ window.MappingTemplates = {
       'knob-4': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 4, label: 'Macro 4', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-5': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 5, label: 'Macro 5', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-6': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 6, label: 'Macro 6', outMin: 0, outMax: 1, curve: 'linear' }],
+      'knob-7': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 7, label: 'Macro 7', outMin: 0, outMax: 1, curve: 'linear' }],
+      'knob-8': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 8, label: 'Macro 8', outMin: 0, outMax: 1, curve: 'linear' }],
       'button-1': [{ type: 'track_solo', trackIndex: 0, label: 'Track 1 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
       'button-2': [{ type: 'track_solo', trackIndex: 1, label: 'Track 2 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
       'button-3': [{ type: 'track_solo', trackIndex: 2, label: 'Track 3 Solo', outMin: 0, outMax: 1, curve: 'linear' }],

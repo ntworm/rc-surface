@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 
 /**
- * backpressure.ts — Per-connection backpressure monitor (ADR-004).
+ * backpressure.ts — Per-connection backpressure monitor.
+ *
+ * The identity model (client_id + session, not IP) and the thresholds below
+ * are the contract the phone clients and the server tests both rely on.
  *
  * Watches `ws.bufferedAmount` and takes progressive action:
  *   1. Above BACKPRESSURE_DROP_THRESHOLD  → skip non-critical outbound messages.

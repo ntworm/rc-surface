@@ -8,6 +8,7 @@
 
 (function () {
   'use strict';
+  const T = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
 
   window.RCSurface = window.RCSurface || {};
 
@@ -39,14 +40,14 @@
     if (typeof CustomEvent !== 'undefined' && typeof window.dispatchEvent === 'function') {
       window.dispatchEvent(new CustomEvent(name, { detail }));
     } else if (typeof window.dispatchEvent === 'function') {
-      try { window.dispatchEvent({ type: name, detail }); } catch (e) {}
+      try { window.dispatchEvent({ type: name, detail }); } catch {}
     }
   }
 
   function failPendingPhoneCommands(error) {
     for (const [id, cb] of phoneCommandCallbacks.entries()) {
       const response = { id, ok: false, error };
-      try { if (typeof cb === 'function') cb(response); } catch (e) {}
+      try { if (typeof cb === 'function') cb(response); } catch {}
       dispatchPhoneEvent('ableton-rc:phone-command-response', { id, response });
     }
     phoneCommandCallbacks.clear();
@@ -74,7 +75,7 @@
     }
     el.textContent = text;
     el.className = 'status ' + (cls || '');
-    el.title = cls === 'connected' ? 'Tap to rename' : '';
+    el.title = cls === 'connected' ? T('session.rename', 'Tap to rename') : '';
   }
 
   // A server that refuses an upgrade destroys the socket, so the browser only
@@ -174,6 +175,7 @@
 
         if (msg.type === 'hello') {
           clientId = msg.client_id;
+          socket.controlStreamVersion = msg.controlStreamVersion === 1 ? 1 : 0;
           if (window.state) window.state.role = msg.role || 'viewer';
           dispatchPhoneEvent('ableton-rc:phone-client-id', { clientId, role: msg.role || 'viewer' });
           window.PhoneIdentity?.persist(clientId);
@@ -184,9 +186,9 @@
             // The session works as a viewer, so transport, pads and knobs are
             // all rejected. Say that plainly instead of showing a healthy
             // "connected" badge the user cannot act on.
-            setStatus('\u26A0 SESSION EXPIRED \u2014 RESCAN QR', 'stale');
+            setStatus(T('session.expired', '⚠ SESSION EXPIRED — RESCAN QR'), 'stale');
           } else {
-            const roleLabel = msg.role === 'viewer' ? ' (Viewer)' : '';
+            const roleLabel = msg.role === 'viewer' ? ' (' + T('session.viewer', 'Viewer') + ')' : '';
             setStatus(`\u26A1 ${name}${roleLabel}`, 'connected');
           }
           const savedName = localStorage.getItem('ableton-rc:display_name');
@@ -196,7 +198,7 @@
         }
 
         if (typeof _onMessage === 'function') _onMessage(msg, { clientId, ws });
-      } catch (err) { /* ignore parse errors */ }
+      } catch { /* ignore parse errors */ }
     };
 
     socket.onclose = (event) => {
@@ -214,7 +216,7 @@
         clientId = null;
         failPendingPhoneCommands('Session moved to another tab or device');
         if (typeof window.resetTransientControls === 'function') window.resetTransientControls();
-        setStatus('\u23f8 OUTRA ABA ASSUMIU \u2014 RECARREGUE', 'stale');
+        setStatus(T('session.replaced', '⏸ ANOTHER TAB TOOK CONTROL — RELOAD'), 'stale');
         dispatchPhoneEvent('ableton-rc:phone-ws-close', { replaced: true });
         if (typeof _onClose === 'function') _onClose();
         return;

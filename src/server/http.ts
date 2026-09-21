@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as http from "node:http";
@@ -11,11 +11,12 @@ import * as fsSync from "node:fs";
 import * as path from "node:path";
 import { actualPort, actualHttpsPort, serverInstance, useHttps } from "./state.js";
 import { commands } from "../live/mappings.js";
-import { validateSameOrigin, authenticateRequest, checkSameOrigin, classifyRequestToken, getAdminToken, getControllerToken, sanitizeRequestUrl, buildSessionCookie } from "./session-auth.js";
+import { authenticateRequest, checkSameOrigin, classifyRequestToken, getAdminToken, getControllerToken, sanitizeRequestUrl, buildSessionCookie } from "./session-auth.js";
 import { getQueryParam, stripQueryParam } from "../util/url.js";
 import { getPublicCommandsMetadata } from "./command-dispatch.js";
 import { lastUpgradeRejection, getRateLimitDiagnostics } from "./ws.js";
 import { getLanAddresses, pickLanIps } from "../util/helpers.js";
+import { buildServerAccessUrls } from "./access-urls.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -31,15 +32,18 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+const MAX_LOG_BODY_BYTES = 64 * 1024;
+const LOG_BODY_TIMEOUT_MS = 5_000;
+
 /**
  * Inject server-state globals into the panel HTML so the UI renders
  * the correct phoneUrl / QR code on first paint — no WebSocket needed
  * for the initial state.
  *
  * Admin-gated, because the injected globals include BOTH session tokens. The
- * server listens on 0.0.0.0 so the phone can reach it, and a plain navigation
- * from another device carries no Origin header — which the origin check
- * deliberately allows for curl/CLI/WebView clients. Ungated, that made
+ * Although plaintext HTTP is loopback-only, this route remains admin-gated as
+ * defense in depth: a plain navigation carries no Origin header, which the
+ * origin check deliberately allows for curl/CLI/WebView clients. Ungated, that made
  * `GET /static/panel/index.html` hand the admin token to anyone on the same
  * network, and the admin token is a full command console (`/test`, /admin/ws).
  *
@@ -59,8 +63,7 @@ async function servePanelHtml(
     res.end("Forbidden: admin role required\n");
     return;
   }
-  const panelDir = path.join(__dirname, "static/panel");
-  const htmlPath = path.join(panelDir, "index.html");
+  const htmlPath = path.join(resolveStaticDir(), "panel", "index.html");
   let html: string;
   try {
     html = await fs.readFile(htmlPath, "utf8");
@@ -74,13 +77,16 @@ async function servePanelHtml(
   const port = actualPort;
   const httpsPort = actualHttpsPort;
   const { primary, others } = pickLanIps(getLanAddresses());
-  const phoneProto = useHttps && httpsPort ? "https" : "http";
-  const phonePort = useHttps && httpsPort ? httpsPort : port;
   const ctrlToken = getControllerToken();
   const adminToken = getAdminToken();
-  const phoneUrl = isRunning && port !== null
-    ? `${phoneProto}://${primary}:${phonePort}/?token=${ctrlToken}`
-    : null;
+  const { phoneUrl } = buildServerAccessUrls({
+    isRunning,
+    httpPort: port,
+    httpsPort,
+    primaryIp: primary,
+    controllerToken: ctrlToken,
+    adminToken,
+  });
   const statusText = isRunning
     ? port !== null
       ? `Running (HTTP: ${port}${httpsPort ? `, HTTPS: ${httpsPort}` : ""})`
@@ -108,14 +114,22 @@ async function servePanelHtml(
   res.end(html);
 }
 
+/**
+ * The bundle ships its assets next to extension.js (`dist/static`); the
+ * sources under tsx have no build yet, so fall back to the checkout's
+ * `static/` the same way for every static route.
+ */
+function resolveStaticDir(): string {
+  const bundled = path.join(__dirname, "static");
+  return fsSync.existsSync(bundled) ? bundled : path.join(process.cwd(), "static");
+}
+
 async function serveStaticFile(
   req: http.IncomingMessage,
   reqUrl: string,
   res: http.ServerResponse,
 ): Promise<void> {
-  const staticDir = fsSync.existsSync(path.join(__dirname, "static"))
-    ? path.join(__dirname, "static")
-    : path.join(process.cwd(), "static");
+  const staticDir = resolveStaticDir();
   const rawPath = reqUrl.split("?")[0] ?? "/";
   const relativePath = rawPath.startsWith("/static/")
     ? rawPath.slice("/static/".length)
@@ -200,7 +214,7 @@ pre { background: #000; border: 1px solid #333; padding: 10px; font-size: 11px; 
 <script>
 const out = document.getElementById('out');
 const verdict = document.getElementById('verdict');
-const report = { pageUrl: location.href, pageOrigin: location.origin, navigatorOnLine: navigator.onLine };
+const report = { pageUrl: location.origin + location.pathname, pageOrigin: location.origin, navigatorOnLine: navigator.onLine };
 
 function show() { out.textContent = JSON.stringify(report, null, 2); }
 
@@ -389,14 +403,49 @@ export async function handleHttp(req: http.IncomingMessage, res: http.ServerResp
   }
 
   if (req.method === "POST" && req.url === "/log") {
+    const declaredLength = Number(req.headers["content-length"]);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_LOG_BODY_BYTES) {
+      res.writeHead(413, { "Content-Type": "text/plain", "Connection": "close" });
+      res.end("payload too large\n");
+      req.resume();
+      return;
+    }
+
     const chunks: Buffer[] = [];
-    req.on("data", (c) => chunks.push(c as Buffer));
+    let bodyBytes = 0;
+    let settled = false;
+    const rejectBody = (statusCode: number, message: string): void => {
+      if (settled) return;
+      settled = true;
+      req.setTimeout(0);
+      res.writeHead(statusCode, { "Content-Type": "text/plain", "Connection": "close" });
+      res.end(`${message}\n`);
+      req.removeAllListeners("data");
+      req.resume();
+    };
+
+    req.setTimeout(LOG_BODY_TIMEOUT_MS, () => {
+      rejectBody(408, "request timeout");
+      req.destroy();
+    });
+    req.on("data", (chunk) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      bodyBytes += buffer.length;
+      if (bodyBytes > MAX_LOG_BODY_BYTES) {
+        rejectBody(413, "payload too large");
+        return;
+      }
+      chunks.push(buffer);
+    });
     req.on("end", () => {
+      if (settled) return;
+      settled = true;
+      req.setTimeout(0);
       try {
         const body = Buffer.concat(chunks).toString("utf-8");
         const payload = JSON.parse(body) as { level?: string; parts?: unknown[]; url?: string };
         const level = typeof payload.level === "string" ? payload.level : "log";
-        const url = typeof payload.url === "string" ? payload.url : "";
+        const url = typeof payload.url === "string" ? sanitizeRequestUrl(payload.url) : "";
         const parts = Array.isArray(payload.parts)
           ? payload.parts.map((p) => (typeof p === "string" ? p : JSON.stringify(p)))
           : [];
@@ -413,6 +462,8 @@ export async function handleHttp(req: http.IncomingMessage, res: http.ServerResp
       res.end();
     });
     req.on("error", () => {
+      if (settled) return;
+      settled = true;
       res.writeHead(400);
       res.end();
     });

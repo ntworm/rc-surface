@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -17,11 +17,13 @@ class FakeElement {
   constructor(id = '') {
     this.id = id;
     this.children = [];
+    this.parentNode = null;
     this.className = '';
     this.dataset = {};
     this._textContent = '';
     this.value = '';
-    this.style = {};
+    this.style = { setProperty(k, v) { this[k] = v; }, getPropertyValue(k) { return this[k] || ''; } };
+    this.listeners = new Map();
     this.listeners = new Map();
     this.classList = {
       add: (name) => { this.className = `${this.className} ${name}`.trim(); },
@@ -49,7 +51,7 @@ class FakeElement {
       this._textContent = '';
     }
   }
-  appendChild(child) { this.children.push(child); return child; }
+  appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
   addEventListener(name, fn) { this.listeners.set(name, fn); }
   setAttribute(name, value) { this[name] = value; }
   getAttribute(name) { return this[name] || null; }
@@ -66,9 +68,20 @@ class FakeElement {
   }
 }
 
+function findByText(scope, text) {
+  if (!scope) return null;
+  if (scope._textContent === text) return scope;
+  for (const child of scope.children || []) {
+    const found = findByText(child, text);
+    if (found) return found;
+  }
+  return null;
+}
+
 function loadMappingMode(overrides = {}) {
   const ids = [
     'btn-map-mode', 'btn-map-back', 'btn-map-refresh', 'mapping-mode',
+    'map-armed-strip',
     'map-mobile-status', 'map-mobile-presets', 'map-mobile-search',
     'map-mobile-controls', 'map-mobile-detail',
   ];
@@ -139,6 +152,7 @@ function loadMappingMode(overrides = {}) {
   });
   context.window.window = context.window;
   context.window.document = document;
+  vm.runInContext(fs.readFileSync(path.join(root, 'mapping-input-contract.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'mapping-mode.js'), 'utf8'), context);
   return { context, document, calls, elements, eventListeners };
 }
@@ -152,6 +166,47 @@ test('mobile mapping mode loads targets, mappings, clients, and presets on open'
   assert.equal(context.window.mobileMappingState.currentMappings['pad-1'][0].type, 'tempo');
   assert.equal(context.window.mobileMappingState.currentPreset, 'Gig');
   assert.equal(elements.get('map-mobile-status').textContent, 'Loaded 1; relinked 0; review 0; missing 0');
+});
+
+test('MAP opens as an armed strip and expands only after a performance control is picked', async () => {
+  const { context, elements, eventListeners } = loadMappingMode();
+
+  const opening = context.window.openMobileMappingMode();
+  const overlay = elements.get('mapping-mode');
+  const armedStrip = elements.get('map-armed-strip');
+  const detailPane = elements.get('map-mobile-detail').closest('.map-pane-right');
+
+  assert.equal(overlay.dataset.state, 'armed', 'the compact state must be applied before loading finishes');
+  assert.equal(armedStrip.classList.contains('hidden'), false, 'the waiting strip must be visible');
+  assert.equal(detailPane.classList.contains('hidden'), true, 'the full editor must not cover the surface while waiting');
+  await opening;
+
+  const target = new FakeElement('div');
+  target.setAttribute('data-name', 'knob-2');
+  target.closest = (selector) => {
+    if (selector === '[data-name]') return target;
+    if (selector === '#mapping-mode' || selector === '.tabs') return null;
+    return null;
+  };
+  const event = { target, preventDefault() {}, stopPropagation() {} };
+  for (const listener of eventListeners.get('click') || []) listener(event);
+
+  assert.equal(overlay.dataset.state, 'editing');
+  assert.equal(armedStrip.classList.contains('hidden'), true, 'the strip yields to the editor after selection');
+  assert.equal(detailPane.classList.contains('hidden'), false, 'the complete editor expands for the chosen control');
+});
+
+test('closing and reopening MAP clears the old control and returns to the armed strip', async () => {
+  const { context, elements } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl = 'pad-1';
+
+  context.window.closeMobileMappingMode();
+  await context.window.openMobileMappingMode();
+
+  assert.equal(context.window.mobileMappingState.selectedControl, null);
+  assert.equal(elements.get('mapping-mode').dataset.state, 'armed');
+  assert.equal(elements.get('map-armed-strip').classList.contains('hidden'), false);
 });
 
 test('control browser renders grouped controls and selecting one renders mapped targets', async () => {
@@ -168,6 +223,83 @@ test('control browser renders grouped controls and selecting one renders mapped 
   assert.equal(context.window.mobileMappingState.selectedControl, 'pad-1');
   assert.match(elements.get('map-mobile-detail').textContent, /Pad 1/);
   assert.match(elements.get('map-mobile-detail').textContent, /Song Tempo/);
+});
+
+test('mobile target editor exposes Auto, Linear, and Geometric target scales', async () => {
+  const { context, elements } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  const controls = elements.get('map-mobile-controls');
+  const padRow = controls.children.flatMap((group) => group.children || [])
+    .find((child) => child.dataset.control === 'pad-1');
+  padRow.listeners.get('click')();
+
+  const label = findByText(elements.get('map-mobile-detail'), 'Target scale');
+  assert.ok(label, 'target scale label should render');
+  const select = label.parentNode?.children?.find((child) => child.id === 'select')
+    || label.parentNode?.children?.[1];
+  assert.deepEqual(Array.from(select.children, (option) => option.value), ['auto', 'linear', 'geometric']);
+  assert.equal(select.children.find((option) => option.selected)?.value, 'auto');
+});
+
+test('mobile audio note target does not offer withheld Follow Detected Note mode', async () => {
+  const { context, elements } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.currentMappings = {
+    'pad-1': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 0, mode: 'continuous' }],
+  };
+  const controls = elements.get('map-mobile-controls');
+  const noteRow = controls.children.flatMap((group) => group.children || [])
+    .find((child) => child.dataset.control === 'pad-1');
+  assert.ok(noteRow, 'pad row must exist');
+  noteRow.listeners.get('click')();
+
+  const label = findByText(elements.get('map-mobile-detail'), 'Mode');
+  assert.ok(label, 'mode label should render');
+  const select = label.parentNode?.children?.[1];
+  assert.deepEqual(Array.from(select.children, (option) => option.value), [
+    'continuous', 'toggle', 'trigger_note',
+  ]);
+});
+
+test('mobile audio note picker does not offer Follow Detected Note setup', async () => {
+  const { context, elements, calls } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.allTargets = [
+    { trackIndex: 4, name: 'MIDI Track', isMidi: true },
+  ];
+  context.window.mobileMappingState.currentMappings = { 'pad-1': [] };
+
+  const controls = elements.get('map-mobile-controls');
+  const noteRow = controls.children.flatMap((group) => group.children || [])
+    .find((child) => child.dataset.control === 'pad-1');
+  assert.ok(noteRow, 'pad row must exist');
+  noteRow.listeners.get('click')();
+
+  const actions = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-detail-actions');
+  const follow = actions?.children.find((child) => child.textContent === 'Follow Detected Note');
+  assert.equal(follow, undefined,
+    'Follow Detected Note is withheld from every v1.0 creation surface');
+  // The two actions that apply to any control are still here.
+  assert.ok(actions?.children.some((child) => child.textContent === 'Bind'));
+  assert.ok(actions?.children.some((child) => child.textContent === 'Trigger Note'));
+});
+
+test('mobile non-audio target does not expose Follow Detected Note mode', async () => {
+  const { context, elements } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl = 'pad-1';
+  context.window.mobileMappingState.currentMappings = {
+    'pad-1': [{ type: 'tempo', mode: 'continuous' }],
+  };
+  // Re-select through the browser so renderDetail runs with the chosen control.
+  const controls = elements.get('map-mobile-controls');
+  const padRow = controls.children.flatMap((group) => group.children || [])
+    .find((child) => child.dataset.control === 'pad-1');
+  padRow.listeners.get('click')();
+
+  const label = findByText(elements.get('map-mobile-detail'), 'Mode');
+  const select = label.parentNode?.children?.[1];
+  assert.deepEqual(Array.from(select.children, (option) => option.value), ['continuous', 'toggle', 'trigger_note']);
 });
 
 test('removing the final target sends removeMapping', async () => {
@@ -360,12 +492,12 @@ test('btn-map-refresh triggers a full data reload', async () => {
   );
 });
 
-test('trigger note install failure keeps picker open and does not send setMapping', async () => {
+test('missing Receiver keeps the picker open and does not send setMapping', async () => {
   const { context, calls, elements } = loadMappingMode({
     sendPhoneCommand(cmd, args, cb) {
       calls.push({ cmd, args });
       if (cmd === 'addUdpReceiverToTrack') {
-        cb({ ok: false, error: 'No device slot' });
+        cb({ ok: true, result: { success: false, existing: false, inserted: false, reason: 'receiver_missing' } });
         return true;
       }
       cb({ ok: true });
@@ -378,7 +510,61 @@ test('trigger note install failure keeps picker open and does not send setMappin
 
   assert.strictEqual(result, false, 'should return false on install failure');
   assert.ok(!calls.some((c) => c.cmd === 'setMapping'), 'setMapping must NOT be called after a failed install');
-  assert.equal(elements.get('map-mobile-status').textContent, 'Não consegui inserir automaticamente. Coloque manualmente RC-Midi-Receiver.amxd nesta track e tente novamente.');
+  assert.equal(elements.get('map-mobile-status').textContent, 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.');
+});
+
+for (const [reason, expected] of [['receiver_upgrade_required', /v2/], ['receiver_ambiguous', /mais de um|more than one/i]]) {
+  test(`MIDI picker explains ${reason} without saving`, async () => {
+    const { context, calls, elements } = loadMappingMode({
+      sendPhoneCommand(cmd, args, cb) {
+        calls.push({ cmd, args });
+        cb({ ok: true, result: { success: false, reason } });
+        return true;
+      },
+    });
+    context.window.mobileMappingState.selectedControl = 'pad-1';
+    assert.equal(await context.window.createMobileTriggerNoteTarget({ trackIndex: 0, isMidi: true }), false);
+    assert.match(elements.get('map-mobile-status').textContent, expected);
+    assert.ok(!calls.some(call => call.cmd === 'setMapping'));
+  });
+}
+
+test('MIDI target save failure keeps the picker open', async () => {
+  const { context, elements, calls } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.sendPhoneCommand = (cmd, args, cb) => {
+    calls.push({ cmd, args });
+    if (cmd === 'addUdpReceiverToTrack') {
+      cb({ ok: true, result: { success: true } });
+      return true;
+    }
+    if (cmd === 'setMapping') {
+      cb({ ok: false, error: 'Mapping write failed' });
+      return true;
+    }
+    cb({ ok: true });
+    return true;
+  };
+  context.window.mobileMappingState.selectedControl = 'pad-1';
+  context.window.mobileMappingState.allTargets = [{ trackIndex: 4, name: 'MIDI Track', isMidi: true }];
+  context.window.mobileMappingState.currentMappings = { 'pad-1': [] };
+  const controls = elements.get('map-mobile-controls');
+  const noteRow = controls.children.flatMap((group) => group.children || [])
+    .find((child) => child.dataset.control === 'pad-1');
+  assert.ok(noteRow, 'pad row should exist');
+  noteRow.listeners.get('click')();
+  const actions = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-detail-actions');
+  // Driven through Trigger Note: the behaviour under test is that a failed
+  // write leaves the picker open, and Follow is no longer reachable from here.
+  const trigger = actions?.children.find((child) => child.textContent === 'Trigger Note');
+  assert.ok(trigger, 'trigger action should be present');
+  trigger.listeners.get('click')();
+
+  const row = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-picker-list').children[0];
+  await row.listeners.get('click')();
+
+  assert.equal(context.window.mobileMappingState.pickerMode, 'midi');
+  assert.equal(calls.filter((call) => call.cmd === 'setMapping').length, 1);
 });
 
 test('trigger_note does not conflict with device_param on track 0 / device 0 / param 0', async () => {
@@ -404,6 +590,8 @@ test('trigger_note does not conflict with device_param on track 0 / device 0 / p
     'trigger_note should NOT conflict with a regular device_param on the same slot',
   );
 });
+
+
 
 test('pad-1 and pad-2 trigger_note on same MIDI track with different notes do not conflict', async () => {
   const { context } = loadMappingMode();
@@ -549,6 +737,44 @@ test('picker Bind to renders Track > Device > Parameter hierarchy instead of fla
 
   const devHeader = deviceBlock.children.find(c => c.className.includes('map-picker-device-header'));
   assert.ok(devHeader.textContent.includes('Auto Filter'), 'device header should include device name');
+});
+
+test('Main uses collapsed track/device hierarchy, keeps Tempo direct, filters and binds the exact Main target', async () => {
+  const target = { type: 'device_param', trackIndex: 0, trackKind: 'main', deviceIndex: 1, paramIndex: 2, label: 'Ceiling' };
+  const calls = [];
+  const { context, elements } = loadMappingMode({ sendPhoneCommand(cmd, args, cb) {
+    calls.push({ cmd, args });
+    cb(cmd === 'getTargets' ? { ok: true, result: { targets: [{ trackIndex: 0, trackKind: 'main', name: 'Main', mixer: [], devices: [{ name: 'Limiter', params: [target] }] }] } }
+      : { ok: true, result: { mappings: {}, clients: [], presets: [] } });
+    return true;
+  } });
+  await context.window.openMobileMappingMode();
+  const controls = elements.get('map-mobile-controls');
+  controls.children.flatMap(g => g.children || []).find(c => c.dataset.control === 'pad-1').listeners.get('click')();
+  const detail = elements.get('map-mobile-detail');
+  detail.children.find(c => c.className === 'map-detail-actions').children.find(c => c.textContent === 'Bind').listeners.get('click')();
+  const tree = detail.children.find(c => c.className === 'map-picker-tree');
+  const group = tree.children[0];
+  assert.ok(group.children.some(c => c.textContent === 'Tempo'));
+  const block = group.children.find(c => c.className === 'map-picker-track-block');
+  assert.ok(block, 'Main must not be a flat list of every parameter');
+  const content = block.children.find(c => c.className.includes('map-picker-track-content'));
+  assert.ok(content.classList.contains('hidden'));
+  block.children[0].listeners.get('click')();
+  assert.equal(content.classList.contains('hidden'), false);
+  const dev = content.children.find(c => c.className === 'map-picker-device-block');
+  assert.ok(dev.children[1].classList.contains('hidden'));
+  dev.children[0].listeners.get('click')({ stopPropagation() {} });
+  assert.equal(dev.children[1].classList.contains('hidden'), false);
+  const search = detail.children.find(c => c.className === 'map-picker-search-wrap').children[0];
+  for (const filter of ['ceiling', 'limiter', 'Main > Limiter']) {
+    search.value = filter; search.listeners.get('input')();
+    const filtered = tree.children[0].children.find(c => c.className === 'map-picker-track-block');
+    assert.ok(filtered, filter);
+    assert.equal(filtered.children[1].classList.contains('hidden'), false);
+  }
+  await findByText(tree, 'Ceiling').listeners.get('click')();
+  assert.equal(calls.find(c => c.cmd === 'setMapping').args.targets[0].trackKind, 'main');
 });
 
 test('binding a duplicate mapping target sets status to error and does not add targets', async () => {
@@ -719,4 +945,87 @@ test('the MAP presets row renders a Clear All button', async () => {
     labels.some((l) => /clear all/i.test(l || '')),
     `expected a Clear All button, got: ${labels.join(' | ')}`,
   );
+});
+
+test('slider edits store numbers, including the neutral value', async () => {
+  const { context, calls } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl = 'pad-1';
+  context.window.mobileMappingState.selectedTargetIndex = 0;
+
+  // Every editor slider hands over `input.value`, which is a string. A target
+  // field that keeps the string reaches Live as "0.35" and breaks the mapping.
+  for (const field of ['inMin', 'inMax', 'outMin', 'outMax', 'idleValue',
+    'neutralValue', 'drive', 'compressor', 'smooth']) {
+    await context.window.updateMobileTargetField(field, '0.35');
+    const target = calls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets[0];
+    assert.equal(typeof target[field], 'number', field + ' must be stored as a number');
+    assert.equal(target[field], 0.35);
+  }
+});
+
+test('F-007: VISION SENSOR FILTER (1€) panel appears only for vision x/y/z, never for gestures or other controls', async () => {
+  const positionFilters = {
+    x: { minCutoff: 2.0, beta: 1.5 },
+    y: { minCutoff: 2.0, beta: 1.5 },
+    z: { minCutoff: 1.0, beta: 0.5 },
+  };
+  const { context, elements } = loadMappingMode({
+    currentVisionProcessor: { positionFilters },
+  });
+  await context.window.openMobileMappingMode();
+  const detail = elements.get('map-mobile-detail');
+
+  // Must appear for sensor.vision.x, y, z
+  for (const control of ['sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z']) {
+    context.window.mobileMappingState.selectedControl = control;
+    context.window.mobileMappingState.selectedTargetIndex = 0;
+    await context.window.loadMobileMappingData();
+    const panel = detail.children.find((c) => (c.className || '').includes('map-vision-filter-panel'));
+    assert.ok(panel, `filter panel must appear for ${control}`);
+    const title = panel.children.find((c) => (c.textContent || '').includes('VISION SENSOR FILTER (1€)'));
+    assert.ok(title, `filter title must exist for ${control}`);
+  }
+
+  // Must NOT appear for gestures or other controls
+  for (const control of ['sensor.vision.gesture.1', 'sensor.vision.gesture1', 'sensor.vision.fist', 'sensor.orient.alpha', 'pad-1']) {
+    context.window.mobileMappingState.selectedControl = control;
+    context.window.mobileMappingState.selectedTargetIndex = 0;
+    await context.window.loadMobileMappingData();
+    const panel = detail.children.find((c) => (c.className || '').includes('map-vision-filter-panel'));
+    assert.equal(
+      panel,
+      undefined,
+      `filter panel must NOT appear for ${control}`,
+    );
+  }
+});
+test('MAP vision sensor filter sliders set --range-progress on render and input', async () => {
+  const positionFilters = { x: { minCutoff: 2.0, beta: 1.5 }, y: { minCutoff: 2.0, beta: 1.5 }, z: { minCutoff: 1.0, beta: 0.5 } };
+  const { context, elements } = loadMappingMode({ currentVisionProcessor: { positionFilters } });
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl = 'sensor.vision.x';
+  await context.window.loadMobileMappingData();
+  const detail = elements.get('map-mobile-detail');
+
+  const panel = detail.children.find((c) => (c.className || '').includes('map-vision-filter-panel'));
+  const inputs = [];
+  function collectRangeInputs(node) {
+    if ((node.tagName === 'INPUT' || node.id === 'input') && (node.type === 'range' || node.getAttribute('type') === 'range')) {
+      inputs.push(node);
+    }
+    for (const child of node.children || []) collectRangeInputs(child);
+  }
+  collectRangeInputs(panel);
+  const input = inputs[0]; // minCutoff: min=0.1, max=5.0
+
+  input.value = '1.0';
+  input.listeners.get('input')();
+  const pct1 = parseFloat(input.style.getPropertyValue('--range-progress'));
+  assert.ok(Math.abs(pct1 - 18.36) < 0.2, `expected ~18.4, got ${pct1}`);
+
+  input.value = '5.0';
+  input.listeners.get('input')();
+  const pct2 = parseFloat(input.style.getPropertyValue('--range-progress'));
+  assert.ok(Math.abs(pct2 - 100) < 0.1, `expected 100, got ${pct2}`);
 });

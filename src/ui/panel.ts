@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { initialize, type ActivationContext } from "@ableton-extensions/sdk";
+import { initialize } from "@ableton-extensions/sdk";
 import { actualPort, serverInstance } from "../server/state.js";
 import { startServer, stopServer } from "../server/state.js";
+import { isAutostartEnabled, setAutostartEnabled } from "../server/autostart.js";
 import { showInfoDialog } from "../util/helpers.js";
 import { getAdminToken } from "../server/session-auth.js";
 
@@ -60,6 +61,9 @@ export async function showPanelDialog(
         // Stop first (idempotent if already stopped), then start fresh.
         await callbacks.stopServer();
         await callbacks.startServer();
+      } else if (action === "autostart-on" || action === "autostart-off") {
+        // Only the launch behaviour changes. Nothing starts or stops here.
+        setAutostartEnabled(action === "autostart-on");
       } else if (action === "mappings") {
         await callbacks.showMappingDialog(context);
       }
@@ -84,7 +88,8 @@ async function renderPanelDialog(context: ModalContext): Promise<string> {
 
   if (isRunning && port !== null) {
     const adminToken = getAdminToken();
-    const url = `http://127.0.0.1:${port}/static/panel/index.html?token=${adminToken}`;
+    const autostart = isAutostartEnabled() ? "1" : "0";
+    const url = `http://127.0.0.1:${port}/static/panel/index.html?token=${adminToken}&autostart=${autostart}`;
     return await context.ui.showModalDialog(url, 900, 820);
   }
 
@@ -105,6 +110,7 @@ async function renderPanelDialog(context: ModalContext): Promise<string> {
         window.INITIAL_PORT = null;
         window.INITIAL_IS_RUNNING = false;
         window.INITIAL_CLIENTS = [];
+        window.INITIAL_AUTOSTART = ${isAutostartEnabled()};
       </script>
     `;
     html = html.replace('<body>', `<body>${injection}`);
@@ -159,6 +165,6 @@ export function registerPanelCommand(context: ReturnType<typeof initialize>): vo
     "Scene",
   ] as const;
   for (const scope of SCOPES) {
-    void context.ui.registerContextMenuAction(scope, "RC Surface: Panel", "abletonRcSurface.panel");
+    void context.ui.registerContextMenuAction(scope, "Panel", "abletonRcSurface.panel");
   }
 }

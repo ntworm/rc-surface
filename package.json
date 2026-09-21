@@ -1,6 +1,6 @@
 {
   "name": "ableton-rc-surface",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/extension.js",
   "engines": {
@@ -9,11 +9,12 @@
   "scripts": {
     "build": "tsc --noEmit && tsx build.ts",
     "build:prod": "tsc --noEmit && tsx build.ts --production",
-    "build:prod-ablx": "npm run build:prod && node -e \"const fs=require('fs');const v=JSON.parse(fs.readFileSync('package.json')).version;require('child_process').execSync('npx extensions-cli package -i dist/static -o Ableton-RC-Surface-'+v+'.ablx',{stdio:'inherit'})\"",
-    "lint": "npx eslint src static tests && tsc --noEmit",
+    "build:prod-ablx": "npm run build:prod && node -e \"const fs=require('fs');const v=JSON.parse(fs.readFileSync('package.json')).version;require('child_process').execSync('npx extensions-cli package -i dist/static -o RC-Surface-'+v+'.ablx',{stdio:'inherit'})\"",
+    "lint": "npx eslint src static tests docs scripts build.ts && tsc --noEmit",
+    "check:vendor": "node scripts/check-vendor-sdk.mjs",
     "ci": "npm test && npm run lint && npm run build:prod && npm run test:ui",
     "watch": "tsx build.ts --watch",
-    "test:static": "node --test --test-force-exit static/admin/*.test.mjs static/panel/*.test.mjs static/phone-v3/*.test.mjs scripts/*.test.mjs",
+    "test:static": "node --test --test-force-exit static/admin/*.test.mjs static/panel/*.test.mjs static/phone-v3/*.test.mjs static/shared/*.test.mjs scripts/*.test.mjs",
     "test:src": "node --import tsx --test --test-force-exit tests/*.test.mjs",
     "test": "npm run test:static && npm run test:src",
     "start": "tsx build.ts && extensions-cli run",
@@ -37,6 +38,7 @@
     "@typescript-eslint/parser": "^8.65.0",
     "esbuild": "0.28.1",
     "eslint": "^9.39.5",
+    "globals": "14.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3"
   },

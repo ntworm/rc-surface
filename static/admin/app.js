@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // Admin dashboard: connects to /admin/ws, renders client list + selected client detail.
@@ -64,7 +64,7 @@
   function mergeClientHistory(clientId, msg) {
     if (msg.history) return msg.history;
     const previous = state.clients.get(clientId);
-    const merged = Object.assign({}, previous ? previous.history : null);
+    const merged = Object.assign(Object.create(null), previous ? previous.history : null);
     const delta = msg.historyDelta;
     if (delta) {
       for (const name of Object.keys(delta)) {
@@ -616,7 +616,7 @@
         ctx2.beginPath();
         const w = canvas.width, h = canvas.height;
         const xstep = w / Math.max(1, series.length - 1);
-        series.forEach(([t, v], i) => {
+        series.forEach(([, v], i) => {
           const x = i * xstep;
           const y = h - (v * h);
           if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
@@ -665,7 +665,7 @@
         ctx2.lineWidth = 1.5;
         ctx2.beginPath();
         const xstep = w / Math.max(1, series.length - 1);
-        series.forEach(([t, rawV, smoothV], j) => {
+        series.forEach(([, rawV, smoothV], j) => {
           const smoothed = smoothV !== undefined ? smoothV : rawV;
           const v = normalizer ? normalizer(sig, smoothed, hist) : smoothed;
           const x = j * xstep;
@@ -743,7 +743,6 @@
         if (msg.type !== 'client_update') return;
         const clientId = msg.client.client_id;
         const isNewClient = !state.clients.has(clientId);
-        const oldSig = isNewClient ? null : clientCompositionKey(state.clients.get(clientId));
         msg.history = mergeClientHistory(clientId, msg);
         state.clients.set(clientId, msg);
         pruneDeadClients();
@@ -760,14 +759,14 @@
           renderCounts();
           renderList();
         } else {
-          // Even if signature unchanged, refresh ages/labels in-place.
+          // Refresh ages/labels in-place for existing clients.
           renderList();
         }
 
         if (selectionChanged || clientId === state.selectedId) {
           renderDetail();
         }
-      } catch (err) { /* ignore */ }
+      } catch { /* ignore */ }
     };
     ws.onclose = () => {
       const el = document.getElementById('counts');
@@ -777,11 +776,6 @@
       }
       setTimeout(connect, 1000);
     };
-  }
-
-  function clientCompositionKey(upd) {
-    if (!upd) return '';
-    return `${upd.client.client_id}/${upd.client.status}/${upd.client.display_name || ''}/${upd.client.user_agent || ''}`;
   }
 
   // Test-only hook. Exposes the per-client sensor history and selection

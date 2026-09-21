@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import { SessionRole, Session } from "./session-auth.js";
@@ -30,6 +30,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   // Read side effects (viewer, controller, admin)
   getState: "read",
   getDeviceParams: "read",
+  getLocale: "read",
   getProjectConfigStatus: "read",
   getTargets: "read",
   getMappings: "read",
@@ -70,8 +71,16 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   importProjectConfig: "config-write",
   rollbackProjectConfig: "config-write",
 
+  // The language is a console-wide setting, so writing it is admin like the
+  // rest of the project configuration. Reading it is not gated: the phone
+  // has to know which language to draw in before it has any role.
+  setLocale: "config-write",
+
   // Server-admin side effects (admin only)
   getServerInfo: "server-admin",
+  getActuatorStats: "server-admin",
+  resetActuatorStats: "server-admin",
+  benchDeviceParamWrites: "server-admin",
 };
 
 export function getRequiredRoleForSideEffect(sideEffect: SideEffect): SessionRole {

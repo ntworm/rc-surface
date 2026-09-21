@@ -25,13 +25,18 @@ import {
   actualHttpsPort,
   DEFAULT_PREFERRED_PORT,
 } from "../src/server/state.ts";
+import {
+  classifyRequestToken,
+  getAdminToken,
+  getControllerToken,
+} from "../src/server/session-auth.ts";
 
 /** Reserve, then release, an OS-assigned port so we know it is currently free. */
 async function borrowFreePort() {
   const probe = net.createServer();
   await new Promise((resolve, reject) => {
     probe.once("error", reject);
-    probe.listen(0, "0.0.0.0", resolve);
+    probe.listen(0, "127.0.0.1", resolve);
   });
   const { port } = probe.address();
   await new Promise((resolve) => probe.close(resolve));
@@ -44,7 +49,7 @@ async function trySquat(port) {
   try {
     await new Promise((resolve, reject) => {
       srv.once("error", reject);
-      srv.listen(port, "0.0.0.0", resolve);
+      srv.listen(port, "127.0.0.1", resolve);
     });
     return srv;
   } catch {
@@ -157,5 +162,39 @@ test("R1: a sibling extension holding the preferred port does not break startup"
     bound,
     port,
     "server must not claim a port already owned by a sibling extension",
+  );
+});
+
+test("R2: every real server restart rotates both session credentials", async () => {
+  const beforeStart = {
+    controller: getControllerToken(),
+    admin: getAdminToken(),
+  };
+
+  await startServer();
+  const firstStart = {
+    controller: getControllerToken(),
+    admin: getAdminToken(),
+  };
+  await stopServer();
+
+  await startServer();
+  const secondStart = {
+    controller: getControllerToken(),
+    admin: getAdminToken(),
+  };
+  await stopServer();
+
+  assert.notEqual(firstStart.controller, beforeStart.controller);
+  assert.notEqual(firstStart.admin, beforeStart.admin);
+  assert.notEqual(secondStart.controller, firstStart.controller);
+  assert.notEqual(secondStart.admin, firstStart.admin);
+  assert.deepEqual(
+    classifyRequestToken({
+      url: `/ws?token=${firstStart.controller}`,
+      headers: {},
+    }),
+    { role: "viewer", tokenPresent: true, tokenValid: false },
+    "a controller credential from the stopped server must be stale",
   );
 });

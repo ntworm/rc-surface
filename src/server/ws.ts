@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as http from "node:http";
@@ -23,6 +23,7 @@ import {
   clearHostModulatorsForClient,
   commands,
   getControlValues,
+  getBipolarControls,
   getProjectConfigStatus,
   handleClientDisconnect,
   updateHostModulator,
@@ -37,10 +38,18 @@ import {
   HISTORY_RING_SIZE,
   RATE_BURST,
   RATE_SUSTAINED_PER_SEC,
+  MAX_WS_CONNECTIONS,
+  MAX_WS_CONNECTIONS_PER_IP,
+  CACHE_MAX_ENTRIES,
+  WS_HEARTBEAT_INTERVAL_MS,
+  WebSocketConnectionLimiter,
+  WebSocketHeartbeatMonitor,
   sanitizeNumber,
   sanitizeClientName,
   isValidControlName,
   boundSnapshotControls,
+  boundImmediateControls,
+  boundControlFrame,
   createRateLimiter,
   consumeToken,
   takeRateLimitNotice,
@@ -78,11 +87,13 @@ export interface TrackedClient {
    * Monotonic count of samples ever appended per control. The ring buffer
    * above rotates, so its length cannot be used to work out what an admin has
    * already seen — after a rotation the length is unchanged while the contents
-   * moved. This counter never rewinds, so the delta is always exact.
+   * moved. Retained controls never rewind; eviction forces a full snapshot.
    */
   historyWritten: Record<string, number>;
   /** Per-control sample totals already broadcast to admins. */
   adminHistoryCursor: Record<string, number>;
+  /** Eviction must also remove old rings from connected dashboards. */
+  historyNeedsFullUpdate?: boolean;
   ws: WebSocket;
   rateLimiter: RateLimiterState;
   /** Throttle state for the admin client_update feed. Lazily created. */
@@ -116,6 +127,9 @@ export const SESSION_REPLACED_CODE = 4009;
 
 let wsServer: WebSocketServer | null = null;
 let adminWsServer: WebSocketServer | null = null;
+let heartbeatTimer: NodeJS.Timeout | null = null;
+const connectionLimiter = new WebSocketConnectionLimiter();
+const heartbeatMonitor = new WebSocketHeartbeatMonitor<WebSocket>();
 
 export function wssInit() {
   wsServer = new WebSocketServer({
@@ -132,6 +146,15 @@ export function wssInit() {
   setupWssHandlers(wsServer, "/ws", "WS", false);
   setupWssHandlers(adminWsServer, "/admin/ws", "ADMIN-WS", true);
 
+  heartbeatTimer = setInterval(() => {
+    const sockets = [
+      ...(wsServer?.clients ?? []),
+      ...(adminWsServer?.clients ?? []),
+    ];
+    heartbeatMonitor.sweep(sockets);
+  }, WS_HEARTBEAT_INTERVAL_MS);
+  heartbeatTimer.unref?.();
+
   return { wsServer, adminWsServer };
 }
 
@@ -146,6 +169,50 @@ function refuseUpgrade(socket: any, path: string, reason: string, detail: string
   lastUpgradeRejection = { at: Date.now(), path, reason, detail };
   console.warn(`[ableton-rc-surface] WS upgrade refused path=${path} reason=${reason} ${detail}`);
   socket.destroy();
+}
+
+function normalizedRemoteAddress(req: http.IncomingMessage): string {
+  return (req.socket.remoteAddress || "<unknown>").replace(/^::ffff:/, "");
+}
+
+function handleLimitedUpgrade(
+  server: WebSocketServer,
+  req: http.IncomingMessage,
+  socket: any,
+  head: Buffer,
+  path: string,
+): void {
+  const ipAddress = normalizedRemoteAddress(req);
+  if (!connectionLimiter.tryAcquire(ipAddress)) {
+    refuseUpgrade(
+      socket,
+      path,
+      "connection-limit",
+      `maximum ${MAX_WS_CONNECTIONS} total / ${MAX_WS_CONNECTIONS_PER_IP} per IP`,
+    );
+    return;
+  }
+
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    connectionLimiter.release(ipAddress);
+  };
+  socket.once("close", release);
+
+  try {
+    server.handleUpgrade(req, socket, head, (ws) => {
+      socket.off("close", release);
+      ws.once("close", release);
+      heartbeatMonitor.add(ws);
+      ws.on("pong", () => heartbeatMonitor.markAlive(ws));
+      server.emit("connection", ws, req);
+    });
+  } catch (error) {
+    release();
+    throw error;
+  }
 }
 
 export function handleUpgrade(req: http.IncomingMessage, socket: any, head: Buffer) {
@@ -168,9 +235,7 @@ export function handleUpgrade(req: http.IncomingMessage, socket: any, head: Buff
       refuseUpgrade(socket, urlPath, "ws-server-not-initialised", "wssInit() has not run or the server was stopped");
       return;
     }
-    wsServer.handleUpgrade(req, socket, head, (ws) => {
-      wsServer!.emit("connection", ws, req);
-    });
+    handleLimitedUpgrade(wsServer, req, socket, head, urlPath);
   } else if (urlPath === "/admin/ws") {
     if (!adminWsServer) {
       refuseUpgrade(socket, urlPath, "admin-ws-server-not-initialised", "wssInit() has not run or the server was stopped");
@@ -181,15 +246,17 @@ export function handleUpgrade(req: http.IncomingMessage, socket: any, head: Buff
       refuseUpgrade(socket, urlPath, "admin-role-required", `resolved role=${role}`);
       return;
     }
-    adminWsServer.handleUpgrade(req, socket, head, (ws) => {
-      adminWsServer!.emit("connection", ws, req);
-    });
+    handleLimitedUpgrade(adminWsServer, req, socket, head, urlPath);
   } else {
     refuseUpgrade(socket, urlPath, "unknown-upgrade-path", "expected /ws or /admin/ws");
   }
 }
 
 export function stopAllWsClients(): void {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
   if (pendingBroadcastTimeout) {
     clearTimeout(pendingBroadcastTimeout);
     pendingBroadcastTimeout = null;
@@ -205,6 +272,7 @@ export function stopAllWsClients(): void {
   resetSurfaceState();
   trackedClients.clear();
   adminSockets.clear();
+  connectionLimiter.reset();
   if (wsServer) {
     try {
       wsServer.clients.forEach((client) => client.terminate());
@@ -281,6 +349,13 @@ export function recordSurfaceValue(origin: string, name: string, value: number):
   if (!isSharedSurfaceControl(name)) return;
   const previous = surfaceControlValues.get(name);
   if (previous !== undefined && Math.abs(previous - value) < SURFACE_SYNC_EPSILON) return;
+  if (previous === undefined && surfaceControlValues.size >= CACHE_MAX_ENTRIES) {
+    const oldest = surfaceControlValues.keys().next().value;
+    if (oldest !== undefined) {
+      surfaceControlValues.delete(oldest);
+      pendingSurfaceChanges.delete(oldest);
+    }
+  }
   surfaceControlValues.set(name, value);
 
   // Nobody else is looking; the surface state is still worth keeping for
@@ -327,14 +402,38 @@ export function resetSurfaceState(): void {
 
 export function appendHistory(c: TrackedClient, name: string, value: number, ts: number): void {
   if (!c.history) c.history = {};
-  if (!c.history[name]) c.history[name] = [];
-  const series = c.history[name];
+  let series = Object.hasOwn(c.history, name) ? c.history[name] : undefined;
+  if (!series) {
+    const names = Object.keys(c.history);
+    if (names.length >= CACHE_MAX_ENTRIES) {
+      const oldest = names[0];
+      if (oldest !== undefined) {
+        delete c.history[oldest];
+        c.historyNeedsFullUpdate = true;
+        if (c.historyWritten) delete c.historyWritten[oldest];
+        if (c.adminHistoryCursor) delete c.adminHistoryCursor[oldest];
+      }
+    }
+    series = [];
+    Object.defineProperty(c.history, name, {
+      value: series,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
   series.push([ts, value]);
   if (series.length > HISTORY_MAX) {
     series.splice(0, series.length - HISTORY_MAX);
   }
   if (!c.historyWritten) c.historyWritten = {};
-  c.historyWritten[name] = (c.historyWritten[name] ?? 0) + 1;
+  const written = Object.hasOwn(c.historyWritten, name) ? c.historyWritten[name] : 0;
+  Object.defineProperty(c.historyWritten, name, {
+    value: (written ?? 0) + 1,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
 }
 
 export function broadcastToAdmins(payload: object): void {
@@ -376,21 +475,27 @@ function buildHistoryPayload(c: TrackedClient, full: boolean): Record<string, un
   if (!c.historyWritten) c.historyWritten = {};
   if (!c.adminHistoryCursor) c.adminHistoryCursor = {};
 
-  if (full) {
+  if (full || c.historyNeedsFullUpdate) {
+    delete c.historyNeedsFullUpdate;
     c.adminHistoryCursor = { ...c.historyWritten };
     return { history: c.history };
   }
 
-  const delta: Record<string, [number, number][]> = {};
+  const delta: Record<string, [number, number][]> = Object.create(null);
   for (const [name, written] of Object.entries(c.historyWritten)) {
-    const seen = c.adminHistoryCursor[name] ?? 0;
+    const seen = Object.hasOwn(c.adminHistoryCursor, name) ? (c.adminHistoryCursor[name] ?? 0) : 0;
     const pending = written - seen;
     if (pending <= 0) continue;
     const series = c.history[name] ?? [];
     // The ring may have dropped samples the admin never saw. Sending what
     // survives is the honest best effort; the gap is older than the ring.
     delta[name] = pending >= series.length ? series.slice() : series.slice(-pending);
-    c.adminHistoryCursor[name] = written;
+    Object.defineProperty(c.adminHistoryCursor, name, {
+      value: written,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
   }
   return { historyDelta: delta };
 }
@@ -508,7 +613,8 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
       trackedClients.delete(clientId);
     }
 
-    // IP-based deduplication removed per ADR-004; identity is client_id + session.
+    // Identity is client_id + session, never IP: two phones behind the same
+    // NAT each keep their own session and reconnect replaces only their own.
 
     const info: TrackedClient = {
       id: clientId,
@@ -561,7 +667,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
 
     ws.on("message", (data) => {
       info.lastSeen = Date.now();
-      // ── Rate limiting (ADR-004) ──
+      // ── Rate limiting (token bucket, see ws-bounds.ts) ──
       if (!consumeToken(info.rateLimiter)) {
         // A dropped message gets no reply, so an over-budget client used to
         // see nothing at all — the control simply stopped responding. Say so,
@@ -699,6 +805,7 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
       ws,
       JSON.stringify({
         type: "hello",
+        controlStreamVersion: 1,
         client_id: clientId,
         role: info.role,
         tokenStatus: info.tokenStatus,
@@ -710,6 +817,7 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
         playheadActive,
         playheadTimeMs: currentPos,
         values: initValues,
+        bipolarControls: getBipolarControls(),
         projectConfig: getProjectConfigStatus(),
       }),
       "critical",
@@ -731,7 +839,7 @@ interface TypedMessageResult {
   handled: boolean;
   // True when the type-tagged message should also push a client_update
   // to the admin socket. Snapshot/control/set_display_name push; the
-  // high-frequency types (modulator/ping/toggle_play) do not.
+  // high-frequency types (controls/modulator/ping/toggle_play) do not.
   pushClientUpdate: boolean;
   // The parsed message, handed to the command-envelope path so it does not
   // parse the same string a second time. Absent only when parsing failed.
@@ -757,7 +865,7 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     }
     const snapData = parsed["data"] as Record<string, any> | undefined;
     if (snapData) {
-      // Validate controls count per ADR-004
+      // Validate controls count against the protocol bound (see ws-bounds.ts)
       const rawControls = (snapData["controls"] ?? []) as unknown[];
       const bounded = boundSnapshotControls(rawControls);
       if (bounded === null) {
@@ -774,6 +882,25 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     }
     handleControl(info, parsed["control"], Date.now());
     return { handled: true, pushClientUpdate: true };
+  } else if (t === "control_frame") {
+    if (!isRoleAuthorized(info.role, "live-write")) return { handled: true, pushClientUpdate: false };
+    const controls = boundControlFrame(parsed["controls"]);
+    if (controls === null) return { handled: true, pushClientUpdate: false };
+    const receivedAt = Date.now();
+    for (const control of controls) handleControl(info, control, receivedAt);
+    return { handled: true, pushClientUpdate: false };
+  } else if (t === "controls") {
+    if (!isRoleAuthorized(info.role, "live-write")) {
+      return { handled: true, pushClientUpdate: false };
+    }
+    const controls = boundImmediateControls(parsed["controls"]);
+    if (controls === null) return { handled: true, pushClientUpdate: false };
+    const receivedAt = Date.now();
+    for (const control of controls) handleControl(info, control, receivedAt);
+    // The normal snapshot owns lastData/admin fallback. Mapping dispatch above
+    // is immediate; a 120 Hz admin broadcast would add latency pressure with
+    // no extra observable state.
+    return { handled: true, pushClientUpdate: false };
   } else if (t === "modulator") {
     if (!isRoleAuthorized(info.role, "live-write")) {
       return { handled: true, pushClientUpdate: false };
@@ -836,6 +963,9 @@ function handleControl(info: TrackedClient, ctrl: any, receivedAt: number): void
 
 function handleSnapshot(info: TrackedClient, snapData: Record<string, any>): void {
   info.lastData = snapData;
+  // Negotiated v1 clients send gestures separately. A visual snapshot must
+  // never replay stale positions, remote echoes or momentary presses.
+  if (snapData['controlsRealtime'] === true) return;
   const receivedAt = Date.now();
   const controls = (snapData["controls"] ?? []) as any[];
   const controlNames = new Set<string>();
@@ -1005,9 +1135,16 @@ oscTransport.on("update", (state) => {
 });
 
 oscTransport.on("beat", (val) => {
+  // The value is an absolute count from the start of playback, not a position
+  // in the bar, so the downbeat is the one that divides by the signature.
+  const numerator = oscTransport.state.signatureNumerator;
+  const perBar = Number.isFinite(numerator) && numerator > 0 ? numerator : 4;
+  const beatInBar = ((Math.round(val) % perBar) + perBar) % perBar;
   const payload = JSON.stringify({
     type: "beat",
-    beat: val
+    beat: val,
+    beatInBar,
+    beatsPerBar: perBar
   });
   for (const c of trackedClients.values()) {
     if (!c.isAdmin && c.ws.readyState === WebSocket.OPEN) {

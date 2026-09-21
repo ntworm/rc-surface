@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // Fake phone + Live API mock for end-to-end LFO/stutter jitter test.
@@ -10,9 +10,8 @@
 // Reproduces the production wiring:
 //   phone (WebSocket) → server (ws.ts) → mappings.ts (host motor) → Live param
 //
-// Goal: prove that at high modulator frequency, the host generates a
-// continuous, beat-locked signal without jitter, even when the simulated
-// phone stops sending updates after the initial config.
+// Local generator proof only, not measured Live throughput. Phone sends
+// configuration; output must obey the shape-aware editable-automation policy.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -151,7 +150,7 @@ function advanceClock(ms) {
   fakeNowValue += ms;
 }
 
-test("fake phone: high-frequency LFO generates continuous values without jitter", async () => {
+test("fake phone: maximum LFO emits four sine cycles per second", async () => {
   resetState();
   fakeNowValue = 0;
   const { applied } = setupLiveParam();
@@ -159,7 +158,8 @@ test("fake phone: high-frequency LFO generates continuous values without jitter"
 
   try {
     // The "phone" sends a single modulator config message: LFO on,
-    // max rate (free mode = 20 Hz), max depth. From here on, NO further
+    // max rate (free mode = 4 Hz, fallback for teto_efetivo ≈ 50 escritas/s;
+    // write-ceiling P04 pendente), max depth. From here on, NO further
     // phone traffic. The host motor must keep generating the signal.
     updateHostModulator("client-1", {
       kind: "lfo",
@@ -188,8 +188,7 @@ test("fake phone: high-frequency LFO generates continuous values without jitter"
       `expected ~250 applied values for 1s @ 250Hz, got ${applied.length}`,
     );
 
-    // No jitter test: at 20 Hz LFO, the value must cross zero on the
-    // way up and down ~20 times per second. Count zero-crossings.
+    // Count both crossings per cycle independently of the timer frequency.
     let zeroCrossings = 0;
     for (let i = 1; i < applied.length; i++) {
       const prev = applied[i - 1].v;
@@ -198,29 +197,55 @@ test("fake phone: high-frequency LFO generates continuous values without jitter"
         zeroCrossings++;
       }
     }
-    // 20 Hz LFO = 20 cycles/sec = 40 zero-crossings/sec (sine crosses 0.5
-    // twice per cycle). Allow ±50% jitter band for the under-resolved
-    // 50 Hz sample rate (2.5 samples per cycle at 20 Hz).
-    assert.ok(
-      zeroCrossings >= 20 && zeroCrossings <= 60,
-      `expected ~40 zero-crossings for 1s of 20Hz sine, got ${zeroCrossings}`,
-    );
+    assert.equal(zeroCrossings, 8, 'four cycles must produce eight crossings');
 
-    // Continuity: no value should jump by more than the theoretical
-    // maximum per-tick step (sine at 20Hz with 50Hz tick = ~80% of full
-    // swing per sample in the worst case near the zero crossing).
+    // Max normalized sine step at 4Hz/4ms is sin(pi * 4 * .004).
     let maxStep = 0;
     for (let i = 1; i < applied.length; i++) {
       const step = Math.abs(applied[i].v - applied[i - 1].v);
       if (step > maxStep) maxStep = step;
     }
     assert.ok(
-      maxStep <= 0.9,
+      maxStep <= 0.063,
       `value jump too large (jitter): ${maxStep.toFixed(3)}`,
     );
   } finally {
     resetState();
   }
+});
+
+test('4Hz sine bounds curve error with modeled14–19ms sampling and duplicate suppression', async () => {
+  resetState(); fakeNowValue = 0;
+  const { applied } = setupLiveParam();
+  setupTrackedClient();
+  try {
+    updateHostModulator('client-1', { kind: 'lfo', name: 'toggle-1', active: true,
+      rate: 1, depth: 1, syncMode: 'free', shape: 'sine' });
+    stopHostModulatorLoop();
+    await tickHostModulators(0);
+    const intervals = [14, 17, 18, 16, 19, 15];
+    for (let i = 0; fakeNowValue < 2000; i++) {
+      advanceClock(intervals[i % intervals.length]);
+      await tickHostModulators(fakeNow());
+    }
+    // Model a slower control consumer, NOT a measured Live/SDK sample rate.
+    const ideal = time => 0.5 + 0.5 * Math.sin(2 * Math.PI * 4 * time / 1000 - Math.PI / 2);
+    for (const point of applied) {
+      assert.ok(Math.abs(point.v - ideal(point.t)) < 0.000001, 'delivered sample must match phase');
+    }
+    let worstError = 0;
+    for (let i = 1; i < applied.length; i++) {
+      const a = applied[i - 1], b = applied[i];
+      assert.ok(b.t - a.t <= 38, 'no growing history or unexplained gap');
+      for (let time = a.t; time <= b.t; time++) {
+        const interpolated = a.v + (b.v - a.v) * (time - a.t) / (b.t - a.t);
+        worstError = Math.max(worstError, Math.abs(interpolated - ideal(time)));
+      }
+    }
+    // Equal values around a peak can be deduplicated, extending a segment to
+    //38ms. Sine interpolation bound: (0.5*(2*pi*4)^2)*.038^2/8 < .058.
+    assert.ok(worstError < 0.06, `normalized interpolation error ${worstError}`);
+  } finally { resetState(); }
 });
 
 test("fake phone: stutter at high rate generates regular on/off pulses", async () => {
@@ -234,8 +259,9 @@ test("fake phone: stutter at high rate generates regular on/off pulses", async (
       kind: "stutter",
       name: "button-1",
       active: true,
-      rate: 1, // free mode max = 15 Hz base × 4 ratchet = 60 Hz pulses
+      rate: 1, // effective FREE ceiling = 15 Hz including ratchet
       count: 0, // ratchet 1
+      depth: 1, // gate-open value = 1 (full amplitude)
       syncMode: "free",
     });
 
@@ -254,10 +280,10 @@ test("fake phone: stutter at high rate generates regular on/off pulses", async (
       unique.size >= 1 && unique.size <= 2,
       `stutter should produce ~0/1 values, got unique=${[...unique]}`,
     );
-    // Count rising edges (0 → 1) = number of pulses
+    // Count rising edges (0 → non-zero) = number of pulses
     let pulses = 0;
     for (let i = 1; i < values.length; i++) {
-      if (values[i - 1] === 0 && values[i] === 1) pulses++;
+      if (values[i - 1] === 0 && values[i] > 0) pulses++;
     }
     assert.ok(
       pulses >= 10,
@@ -404,16 +430,9 @@ test("fake phone: phase-from-time gives deterministic value at a target time", a
     const perfect = applied.slice();
     const actualAt1000 = perfect[perfect.length - 1]?.v;
 
-    // Expected: with state.phase = -π/2 and freqHz = 20, the LFO value
-    // at t = (4 + 1000) ms is sin(2π·20·(1000/1000) + (-π/2)) = sin(π/2) = 1.
-    // After the (1 + 0.5*depth) → 0.5 + 1*0.5*1 = 1.0.
-    // Note: phaseZeroMs anchors at the first tick (4ms), so at the
-    // t=1000ms tick (now=1000), elapsedSec = (1000 - 4)/1000 = 0.996.
-    // phaseRad = 2π·20·0.996 + (-π/2) = 125.13 - 1.57 = 123.56.
-    // normalizedPhase = 0.673. sin(0.673·2π) = -0.873. value = 0.063.
-    // We assert the value matches the formula exactly (no drift).
+    // First tick anchors at4ms; max 4Hz integrates the following 996ms.
     const expectedPhaseRad =
-      2 * Math.PI * 20 * ((1000 - 4) / 1000) + (-Math.PI / 2);
+      2 * Math.PI * 4 * ((1000 - 4) / 1000) + (-Math.PI / 2);
     const expectedNormalizedPhase =
       ((expectedPhaseRad / (2 * Math.PI)) % 1 + 1) % 1;
     const expectedLfoVal = Math.sin(expectedNormalizedPhase * 2 * Math.PI);

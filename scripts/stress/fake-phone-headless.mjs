@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // Fake phone client — pure WebSocket (no browser, no playwright).
@@ -95,10 +95,8 @@ const ws = new WebSocket(url, { rejectUnauthorized: false });
 let pingTimer = null;
 let modulatorTimer = null;
 let durationTimer = null;
-let connected = false;
 
 ws.on("open", () => {
-  connected = true;
   log("WS_OPEN", url);
   ws.send(JSON.stringify({
     type: "resume",
@@ -157,7 +155,7 @@ ws.on("message", (data) => {
   let msg;
   try {
     msg = JSON.parse(data.toString());
-  } catch (e) {
+  } catch {
     log("WS_MSG_PARSE_FAIL", data.toString().slice(0, 100));
     return;
   }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -14,6 +14,10 @@ import vm from 'node:vm';
 test('mapping starter templates only reference current phone controls', () => {
   const context = { window: {} };
   vm.createContext(context);
+  vm.runInContext(
+    fs.readFileSync(path.join(import.meta.dirname, '..', 'phone-v3', 'mapping-input-contract.js'), 'utf8'),
+    context
+  );
   vm.runInContext(
     fs.readFileSync(path.join(import.meta.dirname, '..', 'admin', 'mappings-core.js'), 'utf8'),
     context

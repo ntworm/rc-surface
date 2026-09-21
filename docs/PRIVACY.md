@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Ableton RC Surface is a local-network extension.
+RC Surface is a local-network extension.
 It does not collect, transmit, or store personal data beyond the user's own machine and LAN.
 
 ## Data Stored Locally
@@ -11,10 +11,11 @@ It does not collect, transmit, or store personal data beyond the user's own mach
 | Control mappings | Ableton storage | Persistent across sessions |
 | Mapping presets | Ableton storage | Until deleted |
 | Phone preferences | Phone browser storage | Until browser data is cleared |
+| Audio analysis settings | Phone browser storage | Until browser data is cleared |
 
 ## Network Data
 
-- Bridge traffic stays on the user's LAN unless the user sets up a tunnel.
+- The supported bridge path stays on the user's trusted LAN.
 - No telemetry.
 - No analytics.
 - No crash reporting.
@@ -29,11 +30,19 @@ The phone client runs in the browser. It does not install a native app.
 Permissions are requested only for active features:
 
 - motion/orientation sensors;
-- microphone for audio RMS/pitch/BPM;
+- selected audio input for amplitude and twelve audio descriptors;
 - camera for MediaPipe hand tracking.
 
 Sensor data is processed in the phone browser and sent as numeric control values over WebSocket.
-Raw audio and raw video frames are not sent to Ableton RC Surface.
+Raw audio and raw video frames are not sent to RC Surface.
+
+Capture requests echo cancellation, noise suppression and automatic gain control
+off; actual processing depends on the browser/driver. The selected device ID
+is remembered in local browser storage. Opening/reloading AUD never starts capture.
+
+Only numeric measurements cross WebSocket: RMS, envelope, gate, attack,
+transient, kick, snare, brightness, centroid, rolloff95, flux, flatness,
+spread and low/mid/high band energy. No raw audio is transmitted.
 
 ## Third-Party Runtime
 
@@ -41,8 +50,6 @@ MediaPipe Hands is bundled with the extension and served over the local
 connection. The hand-tracking model runs in the phone browser. Camera frames
 are not sent to Google by this project.
 
-On a fully offline network, core touch, motion, audio, mapping, and mixer
-controls continue to work, but camera hand tracking is unavailable unless
-the MediaPipe files are already cached by the phone browser.
-
-Offline-bundled MediaPipe remains future work.
+On a fully offline network, core touch, motion, audio, mapping, mixer, and
+camera hand-tracking controls continue to work because the MediaPipe runtime
+and model files are bundled with the extension and served locally.

@@ -2,22 +2,26 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as fs from "node:fs/promises";
+import { existsSync as fsExistsSync } from "node:fs";
 import * as path from "node:path";
 import { getExtensionContext, requireCtx, requireTrack } from "../context.js";
-import { trackedClients, appendHistory, pushClientUpdate } from "../server/ws.js";
-import { getScaleLabel, playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
+import { trackedClients } from "../server/ws.js";
+import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
 import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
-import { sendMidiNote, noteNameToMidiNumber } from "./udp-midi.js";
+import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
 import { oscTransport } from "./osc-transport.js";
 import { globalWriteScheduler } from "../server/write-scheduler.js";
 import { registerCatalogCommands } from "./catalog/index.js";
 import { applyCurve, applyCurveInverse } from "./curves.js";
+import { scaleTargetValue, unscaleTargetValue, type TargetScale } from "./target-scale.js";
+import { continuousTargetActuator, defaultNow as nowMs } from "./continuous-target-actuator.js";
 import { stopAllHostModulators } from "./host-modulators.js";
 import { SafeInputRegistry, SafeSignalFilter, type SafeInputResult, type TakeoverMode } from "./safe-input.js";
+import { buildServerAccessUrls } from "../server/access-urls.js";
 import {
   buildProjectConfig,
   fingerprintSong,
@@ -27,6 +31,7 @@ import {
   rollbackProjectConfigFile,
   saveProjectConfigFile,
   validateProjectConfig,
+  isSupportedMappingMode,
   type ProjectConfig,
   type RelinkReport,
   type SemanticTargetSignature,
@@ -51,6 +56,7 @@ export interface MappingTarget {
   inMax?: number;
   drive?: number;
   compressor?: number;
+  targetScale?: TargetScale;
   mode?: 'continuous' | 'toggle' | 'trigger_note';
   threshold?: number;
   midiNote?: string;
@@ -87,7 +93,6 @@ const lastClientControlValues = new Map<string, number>();
 export const lastMappedInputAt = new Map<string, number>();
 const clientReleaseTimers = new Map<string, NodeJS.Timeout[]>();
 const lastSafeFeedback = new Map<string, string>();
-
 function sendSafeInputFeedback(
   clientId: string,
   controlName: string,
@@ -122,6 +127,7 @@ export interface SmoothState {
   target: number;
   smoothFactor: number;
   apply: (val: number) => Promise<void>;
+  isCurrent?: () => boolean;
   lastTime: number;
 }
 
@@ -151,7 +157,11 @@ let mappingMutationTail: Promise<void> = Promise.resolve();
 
 /** Serialize mapping mutations so persistence and rollback cannot overlap. */
 export function runMappingMutation<T>(mutation: () => Promise<T> | T): Promise<T> {
-  const result = mappingMutationTail.then(mutation, mutation);
+  const run = async () => {
+    try { return await mutation(); }
+    finally { await releaseRetiredMappingWork(); }
+  };
+  const result = mappingMutationTail.then(run, run);
   mappingMutationTail = result.then(() => undefined, () => undefined);
   return result;
 }
@@ -165,6 +175,7 @@ export function getProjectConfigStatus() {
     loaded: projectConfigLoaded,
     // Clients need the profile identity, never the host's absolute storage path.
     file: currentProjectFilePath ? path.basename(currentProjectFilePath) : null,
+    mappingsFileExists: mappingsFilePath != null && fsExistsSync(mappingsFilePath),
     report: { ...currentProjectReport, compatibility: [...currentProjectReport.compatibility] },
     preferences: { ...currentProjectPreferences },
     clientState: { ...currentProjectExtras },
@@ -239,6 +250,7 @@ export function getTargetKey(target: MappingTarget): string {
 }
 
 export function startSmoothTimer(): void {
+  continuousTargetActuator.start();
   if (smoothInterval) return;
   smoothInterval = setInterval(async () => {
     if (activeSmooths.size === 0) {
@@ -252,6 +264,11 @@ export function startSmoothTimer(): void {
     const promises: Promise<void>[] = [];
 
     for (const [key, state] of activeSmooths.entries()) {
+      if (state.isCurrent && !state.isCurrent()) {
+        activeSmooths.delete(key);
+        promises.push(state.apply(0));
+        continue;
+      }
       const dt = now - state.lastTime;
       state.lastTime = now;
 
@@ -280,6 +297,7 @@ export function startSmoothTimer(): void {
  * stopped timer is a no-op (does not throw, does not reset state).
  */
 export function stopSmoothTimer(): void {
+  continuousTargetActuator.stop();
   if (smoothInterval === null) return;
   clearInterval(smoothInterval);
   smoothInterval = null;
@@ -290,10 +308,10 @@ export function stopSmoothTimer(): void {
  * Self-shutoff: returns false while no smooth mapping is active.
  */
 export function isSmoothTimerRunning(): boolean {
-  return smoothInterval !== null;
+  return smoothInterval !== null || continuousTargetActuator.isRunning();
 }
 
-async function loadBestProjectProfile(song: any): Promise<boolean> {
+async function loadBestProjectProfile(song: any, isCurrent: () => boolean): Promise<boolean> {
   if (!projectsDirPath) return false;
   const { fingerprint } = fingerprintSong(song);
   const exactPath = path.join(projectsDirPath, `${fingerprint}.rcsurface`);
@@ -314,6 +332,7 @@ async function loadBestProjectProfile(song: any): Promise<boolean> {
   let best: { file: string; config: ProjectConfig; relink: ReturnType<typeof relinkProjectConfig>; score: number } | null = null;
   let runnerUpScore = -1;
   for (const file of candidates) {
+    if (!isCurrent()) return false;
     try {
       const config = await loadProjectConfigFile(file);
       const relink = relinkProjectConfig(config, song);
@@ -333,7 +352,7 @@ async function loadBestProjectProfile(song: any): Promise<boolean> {
       );
     }
   }
-  if (!best || best.score < 0.55) return false;
+  if (!isCurrent() || !best || best.score < 0.55) return false;
   if (best.file !== exactPath && runnerUpScore >= 0 && best.score - runnerUpScore < 0.1) {
     currentProjectReport.compatibility.push('Multiple project profiles match this set; import the intended .rcsurface file explicitly.');
     return false;
@@ -354,6 +373,7 @@ async function loadBestProjectProfile(song: any): Promise<boolean> {
   currentProjectReport = best.relink.report;
   projectConfigLoaded = true;
   console.log(`[ableton-rc-surface] loaded ${controlMappings.size} mappings from project profile ${best.file}`);
+  await releaseRetiredMappingWork();
   return true;
 }
 
@@ -395,12 +415,14 @@ async function saveCurrentProjectProfile(
   commitCurrentProjectProfilePayload(payload);
 }
 
-export async function loadMappings(): Promise<void> {
+export async function loadMappings(isCurrent: () => boolean = () => true): Promise<void> {
+  if (!isCurrent()) return;
   const song = getExtensionContext()?.application.song;
-  if (song && await loadBestProjectProfile(song)) return;
-  if (!mappingsFilePath) return;
+  if (song && await loadBestProjectProfile(song, isCurrent)) return;
+  if (!isCurrent() || !mappingsFilePath) return;
   try {
     const raw = await fs.readFile(mappingsFilePath, "utf-8");
+    if (!isCurrent()) return;
     const obj = JSON.parse(raw) as Record<string, MappingTarget | MappingTarget[]>;
     // The .rcsurface profile path already folds per-phone keys onto their
     // control; this fallback file has to do the same or a set loaded through
@@ -420,6 +442,7 @@ export async function loadMappings(): Promise<void> {
       );
     }
     console.log(`[ableton-rc-surface] loaded ${controlMappings.size} mappings from ${mappingsFilePath}`);
+    await releaseRetiredMappingWork();
   } catch {
     console.log("[ableton-rc-surface] no mappings file found, starting fresh");
   }
@@ -452,7 +475,14 @@ async function stageTextFile(filePath: string, contents: string): Promise<Staged
   const nonce = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const temporary = `${filePath}.tmp-${nonce}`;
   const rollback = `${filePath}.rollback-${nonce}`;
-  await fs.writeFile(temporary, contents, "utf8");
+  try {
+    await fs.writeFile(temporary, contents, "utf8");
+  } catch (error) {
+    // A failed write may have created a partial staging file. Never touch the
+    // prior destination; clean only this operation's unique temporary.
+    try { await fs.rm(temporary, { force: true }); } catch {}
+    throw error;
+  }
   let settled = false;
 
   return {
@@ -550,7 +580,49 @@ const activeApplyLocks = new Set<string>();
 const pendingMappedApplies = new Map<string, {
   value: number;
   apply: (val: number) => Promise<void>;
+  isCurrent: () => boolean;
 }>();
+
+let mappingDispatchGeneration = 0;
+const mappingClientSessions = new Map<string, object>();
+const heldTriggerNotes = new Map<string, { voice: HeldMidiNote; isCurrent: () => boolean }>();
+
+async function releaseRetiredTriggerNotes(): Promise<void> {
+  const releases: Promise<void>[] = [];
+  for (const [key, held] of heldTriggerNotes) {
+    if (held.isCurrent()) continue;
+    releases.push(held.voice.release());
+    heldTriggerNotes.delete(key);
+    eventModesState.delete(key);
+  }
+  await Promise.all(releases.map(release => release.catch(error => {
+    console.error("[ableton-rc-surface] MIDI release failed:", error);
+  })));
+}
+
+async function releaseRetiredMappingWork(): Promise<void> {
+  await releaseRetiredTriggerNotes();
+  const releases: Promise<void>[] = [];
+  for (const [key, state] of [...activeSmooths]) {
+    if (!state.isCurrent || state.isCurrent()) continue;
+    activeSmooths.delete(key);
+    releases.push(state.apply(0).catch(() => {}));
+  }
+  await Promise.all(releases);
+}
+
+/** Invalidate unsent work; SDK calls already in flight cannot be recalled. */
+export function cancelPendingMappingWrites(): Promise<void> {
+  mappingDispatchGeneration++;
+  mappingClientSessions.clear();
+  globalWriteScheduler.clear();
+  pendingMappedApplies.clear();
+  for (const timers of clientReleaseTimers.values()) {
+    for (const timer of timers) clearTimeout(timer);
+  }
+  clientReleaseTimers.clear();
+  return releaseRetiredMappingWork();
+}
 
 // The LFO/stutter motor and the response curves used to live in this file.
 // They are re-exported here so every existing import keeps resolving — this
@@ -560,6 +632,7 @@ export {
   applyCurve,
   applyCurveInverse,
 } from "./curves.js";
+export { scaleTargetValue } from "./target-scale.js";
 export {
   hostModulators,
   updateHostModulator,
@@ -578,21 +651,24 @@ async function applyMappedValue(
   value: number,
   apply: (val: number) => Promise<void>,
   isDiscrete = false,
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
   globalWriteScheduler.enqueue({
     targetKey: key,
     isDiscrete,
     value,
     execute: async () => {
+      if (!isCurrent()) return;
       if (activeApplyLocks.has(key)) {
-        pendingMappedApplies.set(key, { value, apply });
+        pendingMappedApplies.set(key, { value, apply, isCurrent });
         return;
       }
       activeApplyLocks.add(key);
       let nextValue = value;
       let nextApply = apply;
+      let nextIsCurrent = isCurrent;
       try {
-        while (true) {
+        while (nextIsCurrent()) {
           activeSmooths.delete(key);
           lastMappedValues.set(key, nextValue);
           await nextApply(nextValue);
@@ -602,6 +678,7 @@ async function applyMappedValue(
           pendingMappedApplies.delete(key);
           nextValue = pending.value;
           nextApply = pending.apply;
+          nextIsCurrent = pending.isCurrent;
         }
       } finally {
         activeApplyLocks.delete(key);
@@ -640,9 +717,20 @@ async function readTargetNormalizedValue(song: any, target: MappingTarget): Prom
             : mixer?.sends?.[target.sendIndex ?? 0];
         if (!parameter || typeof parameter.getValue !== 'function') return null;
         const current = await parameter.getValue();
-        return parameter.max > parameter.min
-          ? Math.max(0, Math.min(1, (current - parameter.min) / (parameter.max - parameter.min)))
-          : 0;
+        const family = target.type === 'mixer_volume'
+          ? 'mixer_volume'
+          : target.type === 'mixer_pan'
+            ? 'mixer_pan'
+            : 'mixer_send';
+        return unscaleTargetValue(
+          current,
+          parameter.min,
+          parameter.max,
+          parameter.isQuantized,
+          target.targetScale ?? 'auto',
+          parameter.name ?? '',
+          family,
+        );
       }
       case 'device_param': {
         const parameter = getTargetTrack(song, target)
@@ -650,9 +738,15 @@ async function readTargetNormalizedValue(song: any, target: MappingTarget): Prom
           ?.parameters?.[target.paramIndex ?? 0];
         if (!parameter || typeof parameter.getValue !== 'function') return null;
         const current = await parameter.getValue();
-        return parameter.max > parameter.min
-          ? Math.max(0, Math.min(1, (current - parameter.min) / (parameter.max - parameter.min)))
-          : 0;
+        return unscaleTargetValue(
+          current,
+          parameter.min,
+          parameter.max,
+          parameter.isQuantized,
+          target.targetScale ?? 'auto',
+          parameter.name ?? '',
+          'device',
+        );
       }
     }
   } catch {
@@ -677,7 +771,7 @@ function targetNormalizedToInputValue(targetValue: number, target: MappingTarget
   return Math.max(0, Math.min(1, inMin + inverse * (inMax - inMin)));
 }
 
-const DISCRETE_CONTROL_RE = /^(?:pad|toggle|button)-|^sensor\.vision\.gesture\.|\.(?:active|fist|pinch|victory|open|gate|transient)$/;
+const DISCRETE_CONTROL_RE = /^(?:pad|toggle|button)-|^sensor\.vision\.gesture\.|^sensor\.audio\.(?:transient|kick|snare)$|\.(?:active|fist|pinch|victory|open|gate|transient)$/;
 
 export function shouldUseTakeover(controlName: string, target: MappingTarget): boolean {
   if (target.mode === 'toggle' || target.mode === 'trigger_note') return false;
@@ -685,7 +779,14 @@ export function shouldUseTakeover(controlName: string, target: MappingTarget): b
   return !DISCRETE_CONTROL_RE.test(controlName);
 }
 
+/**
+ * Convert the shared 0..1 mapping domain into a Live target's native range.
+ * The final boundary owns clamping so malformed saved ranges or stale clients
+ * cannot drive Live beyond the target contract. Quantized parameters snap only
+ * after scaling, in the same units exposed by the Live parameter.
+ */
 function isRelinkDispatchable(target: MappingTarget): boolean {
+  if (!isSupportedMappingMode(target)) return false;
   return target.relinkStatus !== 'review'
     && target.relinkStatus !== 'ambiguous'
     && target.relinkStatus !== 'missing';
@@ -741,10 +842,19 @@ export async function applyMapping(clientId: string, controlName: string, value:
   // depending on who touched it — the ambiguity the shared surface removes.
   let targets = controlMappings.get(controlName);
   if (!targets || targets.length === 0) return;
+  const binding = targets;
+  const generation = mappingDispatchGeneration;
+  let clientSession = mappingClientSessions.get(clientId);
+  if (!clientSession) {
+    clientSession = {};
+    mappingClientSessions.set(clientId, clientSession);
+  }
   targets = targets.filter(isRelinkDispatchable);
   if (targets.length === 0) return;
-  lastClientControlValues.set(`${clientId}::${controlName}`, value);
-  lastMappedInputAt.set(`${clientId}::${controlName}`, Date.now());
+  const inputKey = `${clientId}::${controlName}`;
+  const inputNow = Date.now();
+  lastClientControlValues.set(inputKey, value);
+  lastMappedInputAt.set(inputKey, inputNow);
 
   if (!isDeactivated && /^sensor\.(?:motion|orient)\./.test(controlName)) {
     const filterKey = `${clientId}::${controlName}`;
@@ -763,6 +873,10 @@ export async function applyMapping(clientId: string, controlName: string, value:
     if (!song) return;
 
     await Promise.all(targets.map(async (target) => {
+      const isCurrent = () => generation === mappingDispatchGeneration
+        && mappingClientSessions.get(clientId) === clientSession
+        && getExtensionContext() === extensionContext
+        && controlMappings.get(controlName) === binding && binding.includes(target);
       const inMin = target.inMin ?? 0;
       const inMax = target.inMax ?? 1;
       let safeInputValue = value;
@@ -795,8 +909,10 @@ export async function applyMapping(clientId: string, controlName: string, value:
 
       if (!isDeactivated && shouldUseTakeover(controlName, target)) {
         const safeKey = `${clientId}::${controlName}::${getTargetKey(target)}`;
-        const neutralValue = target.neutralValue
-          ?? (target.neutralPolicy === 'center' ? 0.5 : 0);
+        const neutralValue = numericNeutral(
+          target.neutralValue,
+          target.neutralPolicy === 'center' ? 0.5 : 0,
+        );
         const preferredMode = target.takeoverMode ?? currentProjectPreferences["globalTakeover"];
         const takeoverMode: TakeoverMode = preferredMode === 'pickup' || preferredMode === 'jump'
           ? preferredMode
@@ -805,6 +921,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
         const targetValue = safeInputRegistry.hasMatchingConfig(safeKey, safeConfig)
           ? null
           : await readTargetNormalizedValue(song, target);
+        if (!isCurrent()) return;
         const hostValue = targetValue === null ? null : targetNormalizedToInputValue(targetValue, target);
         const safeResult = safeInputRegistry.process(
           safeKey,
@@ -817,6 +934,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
         safeInputValue = safeResult.value;
         sendSafeInputFeedback(clientId, controlName, target, safeResult);
       }
+      if (!isCurrent()) return;
       let normalized = 0;
       if (Math.abs(inMax - inMin) > 0.0001) {
         normalized = (safeInputValue - inMin) / (inMax - inMin);
@@ -841,6 +959,10 @@ export async function applyMapping(clientId: string, controlName: string, value:
         smoothFactor = Math.exp(-138 / T);
         smoothFactor = Math.max(0, Math.min(0.99, smoothFactor));
       }
+      // Explicit modulator OFF is a stop, not another smoothed destination.
+      // Retarget the sole writer immediately; an already-sent SDK call cannot
+      // be recalled, but no unsent pulse or ramp may follow the release.
+      if (isDeactivated && /^(?:toggle|button)-\d+$/.test(controlName)) smoothFactor = 0;
       // For trigger_note the modeState must be per-control, not just per-target,
       // because multiple controls can send different notes to the same MIDI track.
       // Including controlName in the key prevents cross-control state sharing.
@@ -870,9 +992,20 @@ export async function applyMapping(clientId: string, controlName: string, value:
         const velocity = target.midiVelocity ?? 100;
 
         if (isPressed && !wasPressed) {
-          sendMidiNote(0x90, midiNum, velocity);
+          const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
+          const held = { voice, isCurrent };
+          heldTriggerNotes.set(key, held);
+          try {
+            if (!await voice.started && heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+          } catch (error) {
+            if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+            modeState.lastInput = 0;
+            throw error;
+          }
         } else if (!isPressed && wasPressed) {
-          sendMidiNote(0x80, midiNum, 0);
+          const held = heldTriggerNotes.get(key);
+          heldTriggerNotes.delete(key);
+          await held?.voice.release();
         }
         skipApply = true;
       } else if (target.mode === 'toggle') {
@@ -905,29 +1038,29 @@ export async function applyMapping(clientId: string, controlName: string, value:
         };
         switch (target.type) {
           case 'tempo': {
-            song.tempo = 20 + scaledVal * 280;
+            song.tempo = scaleTargetValue(scaledVal, 20, 300, false, target.targetScale ?? 'auto', 'Tempo', 'tempo');
             break;
           }
           case 'track_mute': {
             const t = getTrack();
-            if (t) t.mute = scaledVal > 0.5;
+            if (t) t.mute = scaleTargetValue(scaledVal, 0, 1) > 0.5;
             break;
           }
           case 'track_solo': {
             const t = getTrack();
-            if (t) t.solo = scaledVal > 0.5;
+            if (t) t.solo = scaleTargetValue(scaledVal, 0, 1) > 0.5;
             break;
           }
           case 'track_arm': {
             const t = getTrack();
-            if (t && "arm" in t) (t as any).arm = scaledVal > 0.5;
+            if (t && "arm" in t) (t as any).arm = scaleTargetValue(scaledVal, 0, 1) > 0.5;
             break;
           }
           case 'mixer_volume': {
             const t = getTrack();
             if (t && "mixer" in t) {
               const mixer = t.mixer as any;
-              const scaled = mixer.volume.min + scaledVal * (mixer.volume.max - mixer.volume.min);
+              const scaled = scaleTargetValue(scaledVal, mixer.volume.min, mixer.volume.max, mixer.volume.isQuantized, target.targetScale ?? 'auto', mixer.volume.name ?? 'Volume', 'mixer_volume');
               await mixer.volume.setValue(scaled);
             }
             break;
@@ -936,7 +1069,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
             const t = getTrack();
             if (t && "mixer" in t) {
               const mixer = t.mixer as any;
-              const scaled = mixer.panning.min + scaledVal * (mixer.panning.max - mixer.panning.min);
+              const scaled = scaleTargetValue(scaledVal, mixer.panning.min, mixer.panning.max, mixer.panning.isQuantized, target.targetScale ?? 'auto', mixer.panning.name ?? 'Pan', 'mixer_pan');
               await mixer.panning.setValue(scaled);
             }
             break;
@@ -947,7 +1080,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
               const mixer = t.mixer as any;
               const send = mixer.sends[target.sendIndex ?? 0];
               if (send) {
-                const scaled = send.min + scaledVal * (send.max - send.min);
+                const scaled = scaleTargetValue(scaledVal, send.min, send.max, send.isQuantized, target.targetScale ?? 'auto', send.name ?? 'Send', 'mixer_send');
                 await send.setValue(scaled);
               }
             }
@@ -960,7 +1093,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
               if (device) {
                 const param = device.parameters[target.paramIndex ?? 0];
                 if (param) {
-                  const scaled = param.min + scaledVal * (param.max - param.min);
+                  const scaled = scaleTargetValue(scaledVal, param.min, param.max, param.isQuantized, target.targetScale ?? 'auto', param.name ?? '', 'device');
                   await param.setValue(scaled);
                 }
               }
@@ -970,7 +1103,37 @@ export async function applyMapping(clientId: string, controlName: string, value:
         }
       };
 
-      if (smoothFactor > 0) {
+      const isAudioDescriptor = /^sensor\.audio\.(?:transient|kick|snare|brightness|centroid|flux|flatness|spread|rolloff|low|mid|high)$/.test(controlName);
+      const applyIfCurrent = async (nextValue: number) => {
+        if (isCurrent()) await applyFn(nextValue);
+      };
+      // Attack envelopes are momentary for takeover/loss, but a parameter
+      // still needs bounded single-flight writes, not a discrete-event FIFO.
+      // toggle-N/button-N are LFO/stutter output levels, not activation edges.
+      // Stutter pulses driving analog parameters must not replay a FIFO tail.
+      // Boolean destinations and explicit event modes still preserve FIFO.
+      const isModulatorOutput = /^(?:toggle|button)-\d+$/.test(controlName);
+      const isDiscrete = (!isAudioDescriptor && !isModulatorOutput && DISCRETE_CONTROL_RE.test(controlName)) || target.mode === 'toggle' || target.mode === 'trigger_note' || target.type === 'track_mute' || target.type === 'track_solo' || target.type === 'track_arm';
+      if (!isDiscrete) {
+        // Continuous values are routed through one physical-target actuator.
+        // It retains only the newest destination and serializes SDK writes,
+        // while still honoring the user's optional smoothing/release ramp.
+        continuousTargetActuator.request({
+          targetKey: getTargetKey(target),
+          value: finalScaledValue,
+          write: applyIfCurrent,
+          isCurrent,
+          smoothFactor,
+          immediate: true,
+          sourceTimeMs: Date.now(),
+        });
+        // Let the actuator start its non-overlapping SDK write before this
+        // mapping frame returns, without waiting on a slow Live promise.
+        await Promise.resolve();
+        if (isCurrent()) lastMappedValues.set(key, finalScaledValue);
+      } else if (smoothFactor > 0) {
+        // Compatibility path for legacy discrete mappings that explicitly
+        // requested smoothing; ordinary continuous controls never enter it.
         let state = activeSmooths.get(key);
         if (!state) {
           const lastVal = lastMappedValues.get(key) ?? finalScaledValue;
@@ -979,12 +1142,15 @@ export async function applyMapping(clientId: string, controlName: string, value:
             target: finalScaledValue,
             smoothFactor,
             apply: applyFn,
+            isCurrent,
             lastTime: Date.now()
           };
           activeSmooths.set(key, state);
         } else {
           state.target = finalScaledValue;
           state.smoothFactor = smoothFactor;
+          state.apply = applyFn;
+          state.isCurrent = isCurrent;
         }
         // The smooth interval stops itself as soon as the queue drains, and it
         // is otherwise started only once at activation. Without restarting it
@@ -992,8 +1158,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
         // activeSmooths forever and the Live parameter would freeze.
         startSmoothTimer();
       } else {
-        const isDiscrete = DISCRETE_CONTROL_RE.test(controlName) || target.mode === 'toggle' || target.mode === 'trigger_note' || target.type === 'track_mute' || target.type === 'track_solo' || target.type === 'track_arm';
-        await applyMappedValue(key, finalScaledValue, applyFn, isDiscrete);
+        await applyMappedValue(key, finalScaledValue, applyFn, isDiscrete, isCurrent);
       }
     }));
   } catch (err) {
@@ -1001,7 +1166,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
   }
 }
 
-const MOMENTARY_CONTROL_RE = /^(?:pad|button)-|^sensor\.vision\.gesture\.|\.(?:active|fist|pinch|victory|open|gate|transient)$/;
+const MOMENTARY_CONTROL_RE = /^(?:pad|button)-|^sensor\.vision\.gesture\.|^sensor\.audio\.(?:transient|kick|snare)$|\.(?:active|fist|pinch|victory|open|gate|transient)$/;
 
 /**
  * Resolve the INPUT-domain value a target falls back to when its signal is
@@ -1014,6 +1179,16 @@ const MOMENTARY_CONTROL_RE = /^(?:pad|button)-|^sensor\.vision\.gesture\.|\.(?:a
  * applied by the caller (see RELEASE_SMOOTH_FACTOR), which is what separates
  * it from the instant parking modes.
  */
+/**
+ * A neutral value is a number. Mappings saved by older phone builds hold the
+ * slider's string, and a stored `"0.35"` must not travel into a parameter
+ * write; anything unreadable falls back to the policy's own default.
+ */
+function numericNeutral(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 export function resolveNeutralInputValue(
   controlName: string,
   target: Pick<MappingTarget, "neutralPolicy" | "neutralValue">,
@@ -1027,7 +1202,7 @@ export function resolveNeutralInputValue(
     case "center":
       return 0.5;
     case "custom":
-      return target.neutralValue ?? 0;
+      return numericNeutral(target.neutralValue, 0);
     // Retired policies. Both meant "adopt Live's current value", which is
     // indistinguishable from leaving the parameter alone. Saved mappings still
     // load; they behave as hold.
@@ -1038,24 +1213,26 @@ export function resolveNeutralInputValue(
     default:
       // A position axis rests in the middle, a gate rests closed. Treating
       // every control as zero is what slammed lost signals to the minimum.
-      return target.neutralValue ?? defaultNeutralForControl(controlName);
+      return numericNeutral(target.neutralValue, defaultNeutralForControl(controlName));
   }
 }
 
 function defaultNeutralForControl(controlName: string): number {
   if (/sensor\.(?:motion|orient)\./.test(controlName)) return 0.5;
-  if (/sensor\.vision\.(?:x|y)$/.test(controlName)) return 0.5;
-  if (controlName === 'sensor.audio.whistle.bend') return 0.5;
+  if (/sensor\.vision\.(?:x|y|face)$/.test(controlName)) return 0.5;
   return 0;
 }
 
 export async function handleClientDisconnect(clientId: string): Promise<void> {
+  // Retire queued gestures before creating deliberate loss/OFF commands.
+  mappingClientSessions.delete(clientId);
+  const midiReleases = releaseRetiredTriggerNotes();
   const prefix = `${clientId}::`;
   for (const timer of clientReleaseTimers.get(clientId) ?? []) clearTimeout(timer);
   clientReleaseTimers.delete(clientId);
   safeInputRegistry.markLost(prefix, Date.now());
 
-  const momentary: Promise<void>[] = [];
+  const momentary: Promise<void>[] = [midiReleases];
   const timers: NodeJS.Timeout[] = [];
   for (const [key, lastValue] of [...lastClientControlValues.entries()]) {
     if (!key.startsWith(prefix)) continue;
@@ -1070,8 +1247,13 @@ export async function handleClientDisconnect(clientId: string): Promise<void> {
         ?? defaultNeutralForControl(controlName);
       const holdMs = 150;
       const releaseMs = 1200;
+      const binding = controlMappings.get(controlName);
+      const context = getExtensionContext();
+      const generation = mappingDispatchGeneration;
       for (let step = 1; step <= 8; step++) {
         const timer = setTimeout(() => {
+          if (generation !== mappingDispatchGeneration || getExtensionContext() !== context
+            || controlMappings.get(controlName) !== binding) return;
           const progress = step / 8;
           const nextValue = lastValue + (neutral - lastValue) * progress;
           void applyMapping(clientId, controlName, nextValue, true);
@@ -1087,7 +1269,21 @@ export async function handleClientDisconnect(clientId: string): Promise<void> {
   await Promise.all(momentary);
 }
 
-export async function getControlValues(clientId: string): Promise<Record<string, number>> {
+/**
+ * Controls whose mapped parameter is centred rather than bottomed — pan today.
+ * The surface needs this to draw them: 0.5 on a volume fader is half open, and
+ * on a pan it is the middle, and the same rectangle cannot mean both.
+ */
+export function getBipolarControls(): string[] {
+  const nomes: string[] = [];
+  for (const [controlName, targets] of controlMappings) {
+    if (!targets || targets.length === 0) continue;
+    if (targets.some((t) => t.type === "mixer_pan")) nomes.push(controlName);
+  }
+  return nomes;
+}
+
+export async function getControlValues(_clientId: string): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
   const extensionContext = getExtensionContext();
   if (!extensionContext) return result;
@@ -1101,7 +1297,9 @@ export async function getControlValues(clientId: string): Promise<Record<string,
 
   const promises = Array.from(activeTargets.entries()).map(async ([controlName, targets]) => {
     if (!targets || targets.length === 0) return;
-    const target = targets.find(isRelinkDispatchable);
+    const target = targets.find((candidate) => isRelinkDispatchable(candidate)
+      && candidate.mode !== 'trigger_note'
+      && isSupportedMappingMode(candidate));
     if (!target) return;
     try {
       let scaledValue = 0;
@@ -1118,7 +1316,15 @@ export async function getControlValues(clientId: string): Promise<Record<string,
       };
       switch (target.type) {
         case 'tempo': {
-          scaledValue = (song.tempo - 20) / 280;
+          scaledValue = unscaleTargetValue(
+            song.tempo,
+            20,
+            300,
+            false,
+            target.targetScale ?? 'auto',
+            'Tempo',
+            'tempo',
+          );
           break;
         }
         case 'track_mute': {
@@ -1141,9 +1347,15 @@ export async function getControlValues(clientId: string): Promise<Record<string,
           if (t && "mixer" in t) {
             const mixer = t.mixer as any;
             const v = await mixer.volume.getValue();
-            const min = mixer.volume.min;
-            const max = mixer.volume.max;
-            if (max > min) scaledValue = (v - min) / (max - min);
+            scaledValue = unscaleTargetValue(
+              v,
+              mixer.volume.min,
+              mixer.volume.max,
+              mixer.volume.isQuantized,
+              target.targetScale ?? 'auto',
+              mixer.volume.name ?? 'Volume',
+              'mixer_volume',
+            );
           }
           break;
         }
@@ -1152,9 +1364,15 @@ export async function getControlValues(clientId: string): Promise<Record<string,
           if (t && "mixer" in t) {
             const mixer = t.mixer as any;
             const v = await mixer.panning.getValue();
-            const min = mixer.panning.min;
-            const max = mixer.panning.max;
-            if (max > min) scaledValue = (v - min) / (max - min);
+            scaledValue = unscaleTargetValue(
+              v,
+              mixer.panning.min,
+              mixer.panning.max,
+              mixer.panning.isQuantized,
+              target.targetScale ?? 'auto',
+              mixer.panning.name ?? 'Pan',
+              'mixer_pan',
+            );
           }
           break;
         }
@@ -1165,9 +1383,15 @@ export async function getControlValues(clientId: string): Promise<Record<string,
             const send = mixer.sends[target.sendIndex ?? 0];
             if (send) {
               const v = await send.getValue();
-              const min = send.min;
-              const max = send.max;
-              if (max > min) scaledValue = (v - min) / (max - min);
+              scaledValue = unscaleTargetValue(
+                v,
+                send.min,
+                send.max,
+                send.isQuantized,
+                target.targetScale ?? 'auto',
+                send.name ?? 'Send',
+                'mixer_send',
+              );
             }
           }
           break;
@@ -1180,9 +1404,15 @@ export async function getControlValues(clientId: string): Promise<Record<string,
               const param = device.parameters[target.paramIndex ?? 0];
               if (param) {
                 const v = await param.getValue();
-                const min = param.min;
-                const max = param.max;
-                if (max > min) scaledValue = (v - min) / (max - min);
+                scaledValue = unscaleTargetValue(
+                  v,
+                  param.min,
+                  param.max,
+                  param.isQuantized,
+                  target.targetScale ?? 'auto',
+                  param.name ?? '',
+                  'device',
+                );
               }
             }
           }
@@ -1220,10 +1450,19 @@ export type CommandSpec = {
   handler: (args: Record<string, any>) => Promise<any>;
 };
 
+// Module-level flag guarding the live-write bench so two concurrent calls
+// never race on the same DeviceParameter. The bench is admin-only and short
+// (≤ 30 s), so a simple boolean is enough — a queue would just delay the
+// second caller without buying anything.
+let benchInFlight = false;
+
 export const commands: Record<string, CommandSpec> = {
   getTransportLiteState: {
     description: "Get current Transport Lite state from AbletonOSC",
     handler: async () => {
+      // The selection has no listener behind it and is only read here and in
+      // getSelectedLiveContext, so it is fetched on demand instead of polled.
+      await oscTransport.requestSelection();
       return oscTransport.state;
     }
   },
@@ -1283,6 +1522,7 @@ export const commands: Record<string, CommandSpec> = {
     description: "Get currently selected track and device from Ableton Live",
     handler: async () => {
       const { song } = requireCtx();
+      await oscTransport.requestSelection();
       const trackIndex = oscTransport.state.selectedTrackIndex;
       const deviceIndex = oscTransport.state.selectedDeviceIndex;
       let trackName = "";
@@ -1307,6 +1547,22 @@ export const commands: Record<string, CommandSpec> = {
       };
     }
   },
+  getLocale: {
+    description: "Read the interface language every surface follows.",
+    handler: async () => {
+      const { getLocale, SUPPORTED_LOCALES } = await import("../server/locale.js");
+      return { locale: getLocale(), supported: [...SUPPORTED_LOCALES] };
+    }
+  },
+  setLocale: {
+    description: "Set the interface language for the panel, the phone and the QR.",
+    handler: async (args: any) => {
+      const { setLocale, getLocale } = await import("../server/locale.js");
+      const before = getLocale();
+      const locale = setLocale(args?.locale);
+      return { locale, changed: locale !== before };
+    }
+  },
   getServerInfo: {
     description: "Get server state, LAN URLs, cert info, etc.",
     handler: async () => {
@@ -1319,12 +1575,16 @@ export const commands: Record<string, CommandSpec> = {
       const port = serverState.actualPort;
       const httpsPort = serverState.actualHttpsPort;
       const { primary, others } = pickLanIps(getLanAddresses());
-      const phoneProto = serverState.useHttps && httpsPort ? "https" : "http";
-      const phonePort = serverState.useHttps && httpsPort ? httpsPort : port;
-      const adminProto = serverState.useHttps && httpsPort ? "https" : "http";
-      const adminPort = serverState.useHttps && httpsPort ? httpsPort : port;
-      const phoneUrl = isRunning && port !== null ? `${phoneProto}://${primary}:${phonePort}/?token=${ctrlToken}` : null;
-      const adminUrl = isRunning && port !== null ? `${adminProto}://127.0.0.1:${adminPort}/static/admin/?token=${admToken}` : null;
+      const localeModule = await import("../server/locale.js");
+      const { phoneUrl, adminUrl } = buildServerAccessUrls({
+        isRunning,
+        httpPort: port,
+        httpsPort,
+        primaryIp: primary,
+        controllerToken: ctrlToken,
+        adminToken: admToken,
+        locale: localeModule.getLocale(),
+      });
       const statusText = isRunning
         ? port !== null
           ? `Running (HTTP: ${port}${httpsPort ? `, HTTPS: ${httpsPort}` : ""})`
@@ -1498,7 +1758,8 @@ export const commands: Record<string, CommandSpec> = {
       const device = devices[deviceIndex];
       if (!device) throw new Error(`no device at index ${deviceIndex}`);
       const params = await Promise.all(
-        device.parameters.map(async (p, i) => ({
+        device.parameters.map((p, i) => ({ p, i }))
+          .filter(({ p }) => p.name !== MIDI_PACKET_PARAMETER).map(async ({ p, i }) => ({
           index: i,
           name: p.name,
           value: await p.getValue(),
@@ -1550,30 +1811,230 @@ export const commands: Record<string, CommandSpec> = {
     },
   },
 
+  getActuatorStats: {
+    description: "Read live-write counters and latency percentiles from ContinuousTargetActuator. Admin-only diagnostic.",
+    handler: async () => continuousTargetActuator.getStats(),
+  },
+
+  resetActuatorStats: {
+    description: "Clear every counter, ring buffer, and rate window in ContinuousTargetActuator. Admin-only diagnostic.",
+    handler: async () => {
+      continuousTargetActuator.resetStats();
+      return { reset: true };
+    },
+  },
+
+  benchDeviceParamWrites: {
+    description: "Benchmark DeviceParameter.setValue write rate on a real Live parameter. Args: {trackIndex, deviceIndex, paramIndex, seconds (1..30, required), mode: 'single'|'parallel', parallel?: 2|4|8, intervalMs?: number, pattern: 'stairs'|'sine', hz?: number}. Admin-only diagnostic.",
+    handler: async (args) => {
+      if (benchInFlight) throw new Error("bench already running");
+      // Claim the lock synchronously so any concurrent caller observes it
+      // before we yield on `param.getValue()`. Every code path from here
+      // to the return (including validation throws) runs through the
+      // outer try/finally that releases the lock at the end.
+      benchInFlight = true;
+      try {
+        const seconds = Number(args["seconds"]);
+        if (!Number.isFinite(seconds) || !Number.isInteger(seconds) || seconds < 1 || seconds > 30) {
+          throw new Error(`seconds must be an integer in 1..30, got: ${String(args["seconds"])}`);
+        }
+      const modeRaw = args["mode"] ?? "single";
+      if (modeRaw !== "single" && modeRaw !== "parallel") {
+        throw new Error(`mode must be 'single' or 'parallel', got: ${String(modeRaw)}`);
+      }
+      const patternRaw = args["pattern"] ?? "stairs";
+      if (patternRaw !== "stairs" && patternRaw !== "sine") {
+        throw new Error(`pattern must be 'stairs' or 'sine', got: ${String(patternRaw)}`);
+      }
+      let parallel = 1;
+      if (modeRaw === "parallel") {
+        const pRaw = args["parallel"];
+        if (pRaw !== 2 && pRaw !== 4 && pRaw !== 8) {
+          throw new Error(`parallel must be 2, 4 or 8, got: ${String(pRaw)}`);
+        }
+        parallel = pRaw;
+      }
+      let intervalMs = 5;
+      if (modeRaw === "parallel") {
+        const iRaw = args["intervalMs"];
+        if (iRaw !== undefined) {
+          if (typeof iRaw !== "number" || !Number.isFinite(iRaw) || iRaw <= 0) {
+            throw new Error(`intervalMs must be a positive number, got: ${String(iRaw)}`);
+          }
+          intervalMs = iRaw;
+        }
+      }
+      let hz = 1;
+      if (patternRaw === "sine") {
+        const hzRaw = args["hz"];
+        if (hzRaw !== undefined) {
+          if (typeof hzRaw !== "number" || !Number.isFinite(hzRaw) || hzRaw <= 0) {
+            throw new Error(`hz must be a positive number, got: ${String(hzRaw)}`);
+          }
+          hz = hzRaw;
+        }
+      }
+
+      const { song } = requireCtx();
+      const track = requireTrack(song, args["trackIndex"]);
+      const deviceIndex = args["deviceIndex"];
+      const paramIndex = args["paramIndex"];
+      if (typeof deviceIndex !== "number" || deviceIndex < 0) {
+        throw new Error(`deviceIndex must be non-negative, got: ${String(deviceIndex)}`);
+      }
+      if (typeof paramIndex !== "number" || paramIndex < 0) {
+        throw new Error(`paramIndex must be non-negative, got: ${String(paramIndex)}`);
+      }
+      const devices = track.devices;
+      if (deviceIndex >= devices.length) {
+        throw new Error(`deviceIndex ${deviceIndex} out of range; track has ${devices.length} devices`);
+      }
+      const device = devices[deviceIndex];
+      if (!device) throw new Error(`no device at index ${deviceIndex}`);
+      if (paramIndex >= device.parameters.length) {
+        throw new Error(`paramIndex ${paramIndex} out of range; device has ${device.parameters.length} parameters`);
+      }
+      const param = device.parameters[paramIndex];
+      if (!param) throw new Error(`no parameter at index ${paramIndex}`);
+      if (param.isQuantized) {
+        throw new Error("bench refuses quantized parameters; use a continuous one");
+      }
+      const min = typeof param.min === "number" ? param.min : 0;
+      const max = typeof param.max === "number" ? param.max : 1;
+      const range = max - min;
+      const mid = (min + max) / 2;
+      const paramInfo = { name: param.name ?? `param ${paramIndex}`, min, max };
+
+      const initial = await param.getValue();
+      const started = Date.now();
+      let writesStarted = 0;
+      let writesCompleted = 0;
+      let writesFailed = 0;
+      let skipped = 0;
+      const completionMs: number[] = [];
+
+      const stairsValue = (step: number): number => min + range * (0.2 + 0.2 * step);
+      const sineValue = (tMs: number): number => mid + 0.4 * range * Math.sin(2 * Math.PI * hz * (tMs / 1000));
+
+      const recordCompletion = (durationMs: number) => {
+        writesCompleted += 1;
+        completionMs.push(durationMs);
+      };
+      const recordFailure = () => { writesFailed += 1; };
+
+      try {
+        if (modeRaw === "single") {
+          let step = 0;
+          while ((Date.now() - started) / 1000 < seconds) {
+            const value = patternRaw === "stairs" ? stairsValue(step % 4) : sineValue(Date.now() - started);
+            const t0 = nowMs();
+            writesStarted += 1;
+            try {
+              await param.setValue(value);
+              recordCompletion(nowMs() - t0);
+            } catch {
+              recordFailure();
+            }
+            step += 1;
+          }
+        } else {
+          // parallel mode: fire setValue at intervalMs cadence, keep at most
+          // `parallel` promises in flight; skip ticks when at capacity.
+          const inFlight = new Set<Promise<unknown>>();
+          let step = 0;
+          const interval = setInterval(() => {
+            if ((Date.now() - started) / 1000 >= seconds) return;
+            if (inFlight.size >= parallel) {
+              skipped += 1;
+              step += 1;
+              return;
+            }
+            const value = patternRaw === "stairs" ? stairsValue(step % 4) : sineValue(Date.now() - started);
+            step += 1;
+            writesStarted += 1;
+            const t0 = nowMs();
+            const p = param.setValue(value).then(
+              () => recordCompletion(nowMs() - t0),
+              () => recordFailure(),
+            ).finally(() => { inFlight.delete(p); });
+            inFlight.add(p);
+          }, intervalMs);
+          try {
+            await new Promise<void>((resolve) => {
+              const check = () => {
+                if ((Date.now() - started) / 1000 >= seconds && inFlight.size === 0) resolve();
+                else setTimeout(check, 10);
+              };
+              check();
+            });
+          } finally {
+            clearInterval(interval);
+          }
+          // Drain any tail of in-flight writes.
+          while (inFlight.size > 0) await Promise.allSettled(Array.from(inFlight));
+        }
+      } finally {
+        // Always restore the initial value and release the bench flag.
+        try { await param.setValue(initial); } catch { /* swallow */ }
+        benchInFlight = false;
+      }
+
+      const sorted = completionMs.slice().sort((a, b) => a - b);
+      const sum = sorted.reduce((acc, value) => acc + value, 0);
+      const mean = sorted.length > 0 ? sum / sorted.length : 0;
+      const pct = (p: number) => {
+        if (sorted.length === 0) return 0;
+        const rank = Math.max(0, Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p)));
+        return sorted[rank] ?? 0;
+      };
+      const elapsedMs = Date.now() - started;
+      return {
+        started: writesStarted,
+        completed: writesCompleted,
+        failed: writesFailed,
+        skipped,
+        seconds,
+        elapsedMs,
+        ratePerSecond: elapsedMs > 0 ? (writesCompleted * 1000) / elapsedMs : 0,
+        meanMs: mean,
+        p50Ms: pct(0.5),
+        p95Ms: pct(0.95),
+        maxMs: sorted.length > 0 ? (sorted[sorted.length - 1] ?? 0) : 0,
+        mode: modeRaw,
+        parallel,
+        pattern: patternRaw,
+        hz: patternRaw === "sine" ? hz : undefined,
+        param: paramInfo,
+      };
+      } finally {
+        // The inner bench loop's finally restores the initial value and
+        // flips benchInFlight back to false; running it through this outer
+        // try is enough — we only need to guarantee release on validation
+        // errors above, which never reach the inner finally. If a validation
+        // throws, release the lock here before re-throwing.
+        if (benchInFlight) benchInFlight = false;
+      }
+    },
+  },
+
   addUdpReceiverToTrack: {
-    description: "Refresh the RC-Midi-Receiver Max device on a track.",
+    description: "Check that the RC-Midi-Receiver Max device is present on a track.",
     handler: async (args) => {
       const trackIndex = args["trackIndex"];
       if (typeof trackIndex !== "number") throw new Error("trackIndex must be a number");
       const { song } = requireCtx();
       const track = requireTrack(song, trackIndex);
 
-      const existingDevice = track.devices.find(d => d.name === "RC-Midi-Receiver" || d.name === "RC-Midi-Receiver.amxd");
-      if (existingDevice) {
-        return { success: true, existing: true, inserted: false, receiverName: existingDevice.name };
+      const receiver = findMidiReceiver(track);
+      if (receiver.device) {
+        return { success: true, existing: true, inserted: false, receiverName: receiver.device.name };
       }
 
-      try {
-        await track.insertDevice("RC-Midi-Receiver", 0);
-        return { success: true, inserted: true, existing: false, receiverName: "RC-Midi-Receiver" };
-      } catch (err1) {
-        try {
-          await track.insertDevice("RC-Midi-Receiver.amxd", 0);
-          return { success: true, inserted: true, existing: false, receiverName: "RC-Midi-Receiver.amxd" };
-        } catch (err2) {
-          throw new Error(`Failed to insert. Tried 'RC-Midi-Receiver' (Error: ${err1 instanceof Error ? err1.message : String(err1)}) and 'RC-Midi-Receiver.amxd' (Error: ${err2 instanceof Error ? err2.message : String(err2)})`);
-        }
-      }
+      // Track.insertDevice only accepts devices built into Live. A Max for Live
+      // .amxd can therefore be detected here, but not inserted through the
+      // supported Extensions SDK API. Report that state without making a call
+      // that is guaranteed to fail in the host.
+      return { success: false, inserted: false, existing: receiver.reason !== "receiver_missing", reason: receiver.reason };
     }
   },
 
@@ -1615,7 +2076,7 @@ export const commands: Record<string, CommandSpec> = {
           const parameters = Array.isArray(device.parameters) ? device.parameters : [];
           for (let pi = 0; pi < parameters.length; pi++) {
             const p = parameters[pi];
-            if (!p) continue;
+            if (!p || p.name === MIDI_PACKET_PARAMETER) continue;
             params.push({ type: 'device_param', trackIndex: ti, trackKind, deviceIndex: di, paramIndex: pi, label: p.name ?? `Param ${pi + 1}`, min: p.min ?? 0, max: p.max ?? 1 });
           }
           devicesList.push({ index: di, name: device.name ?? `Device ${di + 1}`, params });
@@ -1669,7 +2130,10 @@ export const commands: Record<string, CommandSpec> = {
       } else {
         throw new Error("either target or targets must be specified");
       }
-      
+      if (finalTargets.some((candidate) => !isSupportedMappingMode(candidate))) {
+        throw new Error('Unsupported or retired mapping mode');
+      }
+
       const nextMappings = new Map(controlMappings);
       nextMappings.set(control, finalTargets);
       await saveMappings(nextMappings);
@@ -1858,6 +2322,7 @@ export const commands: Record<string, CommandSpec> = {
       const count = controlMappings.size;
       await saveMappings(new Map());
       controlMappings.clear();
+      await cancelPendingMappingWrites();
       safeInputRegistry.clear();
       // Clear derived state so future mappings don't inherit stale data
       // (e.g. a new trigger_note binding could otherwise re-fire a
@@ -1868,6 +2333,7 @@ export const commands: Record<string, CommandSpec> = {
         activeSmooths.delete(key);
         try { await state.apply(0); } catch {}
       }
+      continuousTargetActuator.cancel();
       await stopAllHostModulators();
       return { cleared: count };
     })
@@ -1892,7 +2358,7 @@ export const commands: Record<string, CommandSpec> = {
 
   savePreset: {
     description: "Save current mappings as a named preset. Args: {name: string}",
-    handler: async (args) => {
+    handler: async (args) => runMappingMutation(async () => {
       const name = args["name"];
       if (typeof name !== "string" || !name) throw new Error("preset name must be a non-empty string");
       if (!presetsDirPath) throw new Error("storage directory not ready");
@@ -1903,11 +2369,11 @@ export const commands: Record<string, CommandSpec> = {
       const obj: Record<string, MappingTarget[]> = {};
       for (const [k, v] of controlMappings.entries()) obj[k] = v;
 
-      await fs.mkdir(presetsDirPath, { recursive: true });
-      await fs.writeFile(filePath, JSON.stringify(obj, null, 2), "utf-8");
+      const staged = await stageTextFile(filePath, JSON.stringify(obj, null, 2));
+      await staged.commit();
       currentPresetName = cleanName;
       return { success: true, name: cleanName };
-    }
+    })
   },
 
   loadPreset: {
@@ -1923,11 +2389,12 @@ export const commands: Record<string, CommandSpec> = {
       const raw = await fs.readFile(filePath, "utf-8");
       const obj = JSON.parse(raw) as Record<string, MappingTarget | MappingTarget[]>;
       const nextMappings = new Map<string, MappingTarget[]>();
-      for (const [k, v] of Object.entries(obj)) {
+      for (const [k, v] of Object.entries(migrateLegacyClientMappings(obj).mappings)) {
         nextMappings.set(k, Array.isArray(v) ? v : [v]);
       }
       await saveMappings(nextMappings);
       controlMappings.clear();
+      await cancelPendingMappingWrites();
       safeInputRegistry.clear();
       // Reset derived state so the new preset starts from a clean slate.
       // Without this, modulators/smooths/eventModes from the old preset
@@ -1938,6 +2405,7 @@ export const commands: Record<string, CommandSpec> = {
         activeSmooths.delete(key);
         try { await state.apply(0); } catch {}
       }
+      continuousTargetActuator.cancel();
       await stopAllHostModulators();
       for (const [k, v] of nextMappings) controlMappings.set(k, v);
       currentPresetName = cleanName;
@@ -1948,7 +2416,7 @@ export const commands: Record<string, CommandSpec> = {
 
   deletePreset: {
     description: "Delete a named mapping preset. Args: {name: string}",
-    handler: async (args) => {
+    handler: async (args) => runMappingMutation(async () => {
       const name = args["name"];
       if (typeof name !== "string" || !name) throw new Error("preset name must be a non-empty string");
       if (!presetsDirPath) throw new Error("storage directory not ready");
@@ -1957,12 +2425,14 @@ export const commands: Record<string, CommandSpec> = {
       const filePath = path.join(presetsDirPath, `${cleanName}.json`);
       try {
         await fs.unlink(filePath);
-      } catch (err) {}
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") throw err;
+      }
       if (currentPresetName === cleanName) {
         currentPresetName = "Default";
       }
       return { success: true, name: cleanName };
-    }
+    })
   },
 };
 

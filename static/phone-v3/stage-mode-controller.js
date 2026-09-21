@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // static/phone-v3/stage-mode-controller.js
@@ -142,6 +142,11 @@ export function createStageModeController(options = {}) {
   async function enter() {
     userExited = false;
     setStageClass(true);
+    // STAGE mode is full-screen performance; surface menus get in the way.
+    if (typeof window !== "undefined" && window && window.RcConfigModeInstance
+        && typeof window.RcConfigModeInstance.off === "function") {
+      window.RcConfigModeInstance.off();
+    }
     if (typeof window !== "undefined" && window && typeof window.dispatchEvent === "function") {
       window.dispatchEvent(new Event("resize"));
     }

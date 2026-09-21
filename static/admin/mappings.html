@@ -44,7 +44,7 @@
     })();
   </script>
   <meta charset="utf-8">
-<title>Ableton RC Mappings</title>
+<title data-i18n="admin.mappingsTitle">Ableton RC Mappings</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}*{margin:0}
 :root{
@@ -193,22 +193,22 @@ body{padding:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
 <body>
 <div class="header">
   <div class="title-section">
-    <h1>Control Mappings</h1>
-    <div class="subtitle">Assign phone controls to track and device parameters</div>
+    <h1 data-i18n="admin.controlMappings">Control Mappings</h1>
+    <div class="subtitle" data-i18n="admin.assignHint">Assign phone controls to track and device parameters</div>
   </div>
   <div class="header-actions">
     <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05)">
-      <span style="font-size:10px;color:var(--text2)">Client:</span>
+      <span style="font-size:10px;color:var(--text2)" data-i18n="admin.client">Client:</span>
       <select id="sel-client" style="background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:10px;padding:2px 4px;outline:none;cursor:pointer;max-width:140px;">
-        <option value="">Waiting for connection...</option>
+        <option value="" data-i18n="admin.waiting">Waiting for connection...</option>
       </select>
     </div>
     <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05)">
-      <span style="font-size:10px;color:var(--text2)">Preset:</span>
+      <span style="font-size:10px;color:var(--text2)" data-i18n="admin.preset">Preset:</span>
       <select id="sel-preset" style="background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:10px;padding:2px 4px;outline:none;cursor:pointer;">
-        <option value="Default">Default</option>
+        <option value="Default" data-i18n="admin.default">Default</option>
       </select>
-      <button class="btn" id="btn-save-preset" style="height:20px;border-radius:4px;padding:0 6px;font-size:9px;">Save As</button>
+      <button class="btn" id="btn-save-preset" style="height:20px;border-radius:4px;padding:0 6px;font-size:9px;" data-i18n="admin.saveAs">Save As</button>
       <button class="btn" id="btn-delete-preset" style="height:20px;border-radius:4px;padding:0 6px;font-size:9px;background:rgba(255,69,58,0.1);color:var(--red);border-color:rgba(255,69,58,0.2);">Delete</button>
     </div>
   </div>
@@ -216,84 +216,44 @@ body{padding:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
 <div class="main">
   <div class="panel left">
     <div class="panel-title-bar">
-      <span class="panel-title">Phone Controls</span>
+      <span class="panel-title" data-i18n="admin.phoneControls">Phone Controls</span>
     </div>
     <div class="panel-scroll" id="controls-list"></div>
   </div>
   
   <div class="panel middle">
     <div class="panel-title-bar">
-      <span class="panel-title">Mapping Settings</span>
+      <span class="panel-title" data-i18n="admin.mappingSettings">Mapping Settings</span>
     </div>
     <div class="settings-panel" id="settings-panel">
-      <div class="no-settings" id="no-settings">Select a control to adjust</div>
+      <div class="no-settings" id="no-settings" data-i18n="admin.selectToAdjust">Select a control to adjust</div>
       <div id="settings-content" style="display:none">
         <div class="settings-header">
           <h3 id="settings-ctrl-name">—</h3>
         </div>
-        <div class="setting-row">
-          <label>Range</label>
-          <div class="range-sliders">
-            <div class="slider-group">
-              <span>Min</span>
-              <input type="range" id="s-min" min="0" max="100" value="0">
-              <span class="val" id="v-min">0%</span>
-            </div>
-            <div class="slider-group">
-              <span>Max</span>
-              <input type="range" id="s-max" min="0" max="100" value="100">
-              <span class="val" id="v-max">100%</span>
-            </div>
-          </div>
-          <button class="btn" id="btn-invert-range" style="margin-left:4px;height:24px;border-radius:4px;padding:0 8px;">Invert</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid rgba(255,255,255,0.03);padding-top:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <label class="checkbox-label" style="font-weight:600;">
-              <input type="checkbox" id="s-bpm-sync">
-              BPM Sync
-            </label>
-          </div>
-          <div id="row-subdiv" style="display:none;align-items:center;gap:8px;width:100%;">
-            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;">Division</span>
-            <select id="s-subdiv" style="background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;height:24px;outline:none;font-size:10px;cursor:pointer;padding:0 4px;">
-              <option value="0.0625">1/16 Beat</option>
-              <option value="0.125">1/8 Beat</option>
-              <option value="0.25">1/4 Beat</option>
-              <option value="0.5">1/2 Beat</option>
-              <option value="1">1 Beat</option>
-              <option value="2">2 Beats</option>
-              <option value="4">4 Beats</option>
-              <option value="8">8 Beats</option>
-            </select>
-          </div>
-          <div id="row-smooth" style="display:flex;align-items:center;gap:8px;width:100%;">
-            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;">Smooth</span>
-            <input type="range" id="s-smooth" min="0" max="95" value="0" step="5" style="flex:1;height:4px;accent-color:var(--accent);cursor:pointer;background:#2d2d2f;border-radius:2px;outline:none;">
-            <span class="val" id="v-smooth" style="font-size:10px;color:var(--accent);width:30px;text-align:right;font-family:monospace;">0%</span>
-          </div>
-        </div>
-      </div>
+        <div class="no-settings" data-i18n="admin.editOnPhone">Curve, range and takeover are edited from MAP on the phone.</div>
     </div>
   </div>
 
   <div class="panel right">
     <div class="panel-title-bar">
-      <span class="panel-title">Ableton Targets</span>
-      <span id="target-hint" style="color:var(--accent);font-weight:600;font-size:10px;">Select a control to map</span>
+      <span class="panel-title" data-i18n="admin.targets">Ableton Targets</span>
+      <span id="target-hint" style="color:var(--accent);font-weight:600;font-size:10px;" data-i18n="admin.selectToMap">Select a control to map</span>
     </div>
     <div class="search-container">
-      <input type="text" id="target-search" placeholder="🔍 Filter targets by name (e.g. Master, Send, Pan)..." autocomplete="off">
+      <input type="text" id="target-search" placeholder="🔍 Filter targets by name (e.g. Master, Send, Pan)..." data-i18n-placeholder="admin.filterTargets" autocomplete="off">
       <button id="btn-clear-search" style="display:none">✕</button>
     </div>
     <div class="panel-scroll" id="targets-tree"></div>
   </div>
 </div>
 <div class="footer">
-  <span class="footer-info" id="status-info">Ready</span>
+  <span class="footer-info" id="status-info" data-i18n="admin.ready">Ready</span>
   <button class="btn" id="btn-clear">Clear All</button>
-  <button class="btn primary" id="btn-done">Done</button>
+  <button class="btn primary" id="btn-done" data-i18n="admin.done">Done</button>
 </div>
+<script src="../phone-v3/mapping-input-contract.js"></script>
+<script src="../shared/audio-descriptor-catalog.js"></script>
 <script src="mappings-core.js"></script>
 <script>
 function send(v){const m={method:"close_and_send",params:[v]};if(window.webkit?.messageHandlers?.live)window.webkit.messageHandlers.live.postMessage(m);else if(window.chrome?.webview)window.chrome.webview.postMessage(m);}
@@ -482,6 +442,16 @@ function targetLabel(t) {
   return window.targetLabel(t, targets);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[char]);
+}
+
 function saveMacroMappings(ctrl) {
   const mapKey = getMappingKey(selectedClient, ctrl);
   sendWS('setMapping', { control: mapKey, targets: mappings[mapKey] }, (res) => {
@@ -554,24 +524,24 @@ function updateSettings() {
     html += `
       <div class="macro-target-card" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;background:rgba(255,255,255,0.02)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:4px;">
-          <strong style="color:var(--accent);font-size:10px;">${targetLabel(m)}</strong>
+          <strong style="color:var(--accent);font-size:10px;">${escapeHtml(targetLabel(m))}</strong>
           <button class="btn" onclick="removeMacroTarget('${selectedControl}', ${idx})" style="height:16px;line-height:12px;padding:0 6px;border-radius:3px;background:rgba(255,69,58,0.1);color:var(--red);border-color:rgba(255,69,58,0.2);">Remove</button>
         </div>
         <div class="setting-row">
-          <label>Range</label>
+          <label data-i18n="admin.range">Range</label>
           <div class="range-sliders">
             <div class="slider-group">
-              <span>Min</span>
+              <span data-i18n="admin.min">Min</span>
               <input type="range" class="m-min" data-idx="${idx}" min="0" max="100" value="${minVal}">
               <span class="val">${minVal}%</span>
             </div>
             <div class="slider-group">
-              <span>Max</span>
+              <span data-i18n="admin.max">Max</span>
               <input type="range" class="m-max" data-idx="${idx}" min="0" max="100" value="${maxVal}">
               <span class="val">${maxVal}%</span>
             </div>
           </div>
-          <button class="btn" onclick="invertMacroTarget('${selectedControl}', ${idx})" style="margin-left:4px;height:24px;border-radius:4px;padding:0 8px;">Invert</button>
+          <button class="btn" onclick="invertMacroTarget('${selectedControl}', ${idx})" style="margin-left:4px;height:24px;border-radius:4px;padding:0 8px;" data-i18n="admin.invert">Invert</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid rgba(255,255,255,0.03);padding-top:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -581,20 +551,20 @@ function updateSettings() {
             </label>
           </div>
           <div class="row-subdiv" style="display:${m.smoothBpmSync ? 'flex' : 'none'};align-items:center;gap:8px;width:100%;">
-            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;">Division</span>
+            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;" data-i18n="admin.division">Division</span>
             <select class="m-subdiv" data-idx="${idx}" style="background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;height:24px;outline:none;font-size:10px;cursor:pointer;padding:0 4px;">
-              <option value="0.0625" ${subdivVal==='0.0625'?'selected':''}>1/16 Beat</option>
-              <option value="0.125" ${subdivVal==='0.125'?'selected':''}>1/8 Beat</option>
-              <option value="0.25" ${subdivVal==='0.25'?'selected':''}>1/4 Beat</option>
-              <option value="0.5" ${subdivVal==='0.5'?'selected':''}>1/2 Beat</option>
-              <option value="1" ${subdivVal==='1'?'selected':''}>1 Beat</option>
-              <option value="2" ${subdivVal==='2'?'selected':''}>2 Beats</option>
-              <option value="4" ${subdivVal==='4'?'selected':''}>4 Beats</option>
-              <option value="8" ${subdivVal==='8'?'selected':''}>8 Beats</option>
+              <option value="0.0625" ${subdivVal==='0.0625'?'selected':''} data-i18n="div.1_16">1/16 Beat</option>
+              <option value="0.125" ${subdivVal==='0.125'?'selected':''} data-i18n="div.1_8">1/8 Beat</option>
+              <option value="0.25" ${subdivVal==='0.25'?'selected':''} data-i18n="div.1_4">1/4 Beat</option>
+              <option value="0.5" ${subdivVal==='0.5'?'selected':''} data-i18n="div.1_2">1/2 Beat</option>
+              <option value="1" ${subdivVal==='1'?'selected':''} data-i18n="div.1">1 Beat</option>
+              <option value="2" ${subdivVal==='2'?'selected':''} data-i18n="div.2">2 Beats</option>
+              <option value="4" ${subdivVal==='4'?'selected':''} data-i18n="div.4">4 Beats</option>
+              <option value="8" ${subdivVal==='8'?'selected':''} data-i18n="div.8">8 Beats</option>
             </select>
           </div>
           <div class="row-smooth" style="display:${m.smoothBpmSync ? 'none' : 'flex'};align-items:center;gap:8px;width:100%;">
-            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;">Smooth</span>
+            <span style="font-size:10px;color:var(--text2);width:45px;flex-shrink:0;" data-i18n="admin.smooth">Smooth</span>
             <input type="range" class="m-smooth" data-idx="${idx}" min="0" max="95" value="${smoothVal}" step="5" style="flex:1;height:4px;accent-color:var(--accent);cursor:pointer;background:#2d2d2f;border-radius:2px;outline:none;">
             <span class="val" style="font-size:10px;color:var(--accent);width:30px;text-align:right;font-family:monospace;">${smoothVal}%</span>
           </div>
@@ -687,7 +657,10 @@ function renderControls() {
       html += '<span class="ctrl-indicator"></span>';
       html += '<span class="ctrl-name">'+name+'</span>';
       html += liveText;
-      if (isMapped) html += '<span class="ctrl-target" title="'+tgtText+'">'+tgtText+'</span>';
+      if (isMapped) {
+        const safeTgtText = escapeHtml(tgtText);
+        html += '<span class="ctrl-target" title="'+safeTgtText+'">'+safeTgtText+'</span>';
+      }
       if (isMapped) html += '<button class="unmap-btn" data-unmap="'+(isMapped ? mInfo.key : name)+'">✕</button>';
       html += '</div>';
     }
@@ -781,9 +754,10 @@ function renderTargets() {
     // Check Song Tempo
     if ('song tempo'.includes(query) || 'bpm'.includes(query)) {
       const mappedCtrl = findMappingForTarget({ type: 'tempo' });
-      const badge = mappedCtrl ? '<span class="mapped-badge">'+mappedCtrl+'</span>' : '';
+      const badge = mappedCtrl ? '<span class="mapped-badge">'+escapeHtml(mappedCtrl)+'</span>' : '';
       matches.push({
-        label: 'Song Tempo (20-300 BPM) ' + badge,
+        label: 'Song Tempo (20-300 BPM)',
+        badge,
         tgt: { type: 'tempo' },
         icon: '🎵'
       });
@@ -798,10 +772,11 @@ function renderTargets() {
           if (matchLabel.includes(query)) {
             const mpTgt = { type: mp.type, trackIndex: mp.trackIndex, sendIndex: mp.sendIndex };
             const mappedCtrl = findMappingForTarget(mpTgt);
-            const badge = mappedCtrl ? '<span class="mapped-badge">'+mappedCtrl+'</span>' : '';
+            const badge = mappedCtrl ? '<span class="mapped-badge">'+escapeHtml(mappedCtrl)+'</span>' : '';
             const icon = mp.type.includes('mute')||mp.type.includes('solo')||mp.type.includes('arm') ? '⚡' : '🎛';
             matches.push({
-              label: t.name + ' → ' + mp.label + ' ' + badge,
+              label: t.name + ' → ' + mp.label,
+              badge,
               tgt: mpTgt,
               icon: icon
             });
@@ -816,9 +791,10 @@ function renderTargets() {
             if (matchLabel.includes(query)) {
               const paramTgt = { type: 'device_param', trackIndex: p.trackIndex, deviceIndex: p.deviceIndex, paramIndex: p.paramIndex };
               const mappedCtrl = findMappingForTarget(paramTgt);
-              const badge = mappedCtrl ? '<span class="mapped-badge">'+mappedCtrl+'</span>' : '';
+              const badge = mappedCtrl ? '<span class="mapped-badge">'+escapeHtml(mappedCtrl)+'</span>' : '';
               matches.push({
-                label: t.name + ' → ' + dev.name + ' → ' + p.label + ' ' + badge,
+                label: t.name + ' → ' + dev.name + ' → ' + p.label,
+                badge,
                 tgt: paramTgt,
                 icon: '⬡'
               });
@@ -830,7 +806,7 @@ function renderTargets() {
 
     if (matches.length > 0) {
       for (const m of matches) {
-        html += '<div class="target-item" data-tgt=\'' + JSON.stringify(m.tgt) + '\'><span class="icon">' + m.icon + '</span><span class="name">' + m.label + '</span></div>';
+        html += '<div class="target-item" data-tgt=\'' + JSON.stringify(m.tgt) + '\'><span class="icon">' + m.icon + '</span><span class="name">' + escapeHtml(m.label) + ' ' + (m.badge || '') + '</span></div>';
       }
     } else {
       html += '<div class="empty-msg">No matching targets found</div>';
@@ -839,32 +815,32 @@ function renderTargets() {
     // Tree rendering
     const tempoTgt = { type: 'tempo' };
     const mappedTempo = findMappingForTarget(tempoTgt);
-    const tempoBadge = mappedTempo ? '<span class="mapped-badge">'+mappedTempo+'</span>' : '';
+    const tempoBadge = mappedTempo ? '<span class="mapped-badge">'+escapeHtml(mappedTempo)+'</span>' : '';
     html += '<div class="target-item" data-tgt=\'{"type":"tempo"}\'><span class="icon">🎵</span><span class="name">Song Tempo (20-300 BPM)'+tempoBadge+'</span></div>';
     
     for (const t of targets) {
       if (typeof t.trackIndex !== 'number') continue;
       html += '<div class="target-section">';
-      html += '<div class="target-header" data-toggle="trk-'+t.trackIndex+'"><span class="arrow" id="arrow-trk-'+t.trackIndex+'">▶</span><span>🎚 '+t.name+'</span></div>';
+      html += '<div class="target-header" data-toggle="trk-'+t.trackIndex+'"><span class="arrow" id="arrow-trk-'+t.trackIndex+'">▶</span><span>🎚 '+escapeHtml(t.name)+'</span></div>';
       html += '<div class="target-children" id="trk-'+t.trackIndex+'">';
       if (t.mixer) {
         for (const mp of t.mixer) {
           const mpTgt = {type:mp.type,trackIndex:mp.trackIndex,sendIndex:mp.sendIndex};
           const mappedCtrl = findMappingForTarget(mpTgt);
-          const badge = mappedCtrl ? '<span class="mapped-badge">'+mappedCtrl+'</span>' : '';
+          const badge = mappedCtrl ? '<span class="mapped-badge">'+escapeHtml(mappedCtrl)+'</span>' : '';
           const icon = mp.type.includes('mute')||mp.type.includes('solo')||mp.type.includes('arm') ? '⚡' : '🎛';
-          html += '<div class="target-item" data-tgt=\''+JSON.stringify(mpTgt)+'\' ><span class="icon">'+icon+'</span><span class="name">'+mp.label+badge+'</span></div>';
+          html += '<div class="target-item" data-tgt=\''+JSON.stringify(mpTgt)+'\' ><span class="icon">'+icon+'</span><span class="name">'+escapeHtml(mp.label)+badge+'</span></div>';
         }
       }
       if (t.devices) {
         for (const dev of t.devices) {
-          html += '<div class="device-header" data-toggle="dev-'+t.trackIndex+'-'+dev.index+'"><span class="arrow" id="arrow-dev-'+t.trackIndex+'-'+dev.index+'">▶</span>🔌 '+dev.name+'</div>';
+          html += '<div class="device-header" data-toggle="dev-'+t.trackIndex+'-'+dev.index+'"><span class="arrow" id="arrow-dev-'+t.trackIndex+'-'+dev.index+'">▶</span>🔌 '+escapeHtml(dev.name)+'</div>';
           html += '<div class="device-children" id="dev-'+t.trackIndex+'-'+dev.index+'">';
           for (const p of dev.params) {
             const paramTgt = {type:'device_param',trackIndex:p.trackIndex,deviceIndex:p.deviceIndex,paramIndex:p.paramIndex};
             const mappedCtrl = findMappingForTarget(paramTgt);
-            const badge = mappedCtrl ? '<span class="mapped-badge">'+mappedCtrl+'</span>' : '';
-            html += '<div class="target-item" data-tgt=\''+JSON.stringify(paramTgt)+'\' ><span class="icon">⬡</span><span class="name">'+p.label+badge+'</span></div>';
+            const badge = mappedCtrl ? '<span class="mapped-badge">'+escapeHtml(mappedCtrl)+'</span>' : '';
+            html += '<div class="target-item" data-tgt=\''+JSON.stringify(paramTgt)+'\' ><span class="icon">⬡</span><span class="name">'+escapeHtml(p.label)+badge+'</span></div>';
           }
           html += '</div>';
         }

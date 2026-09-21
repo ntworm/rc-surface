@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// Test suite for Task 3.4 — Modularized catalog exports
+// Catalog modules: export shape and coverage of the modularized catalogs.
 
 import test from "node:test";
 import assert from "node:assert/strict";

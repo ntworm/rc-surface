@@ -18,6 +18,10 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
+const contractSource = fs.readFileSync(
+  path.join(import.meta.dirname, 'mapping-input-contract.js'),
+  'utf8',
+);
 
 function extractOnControl() {
   // app.js is a large bootstrap; pull out just the onControl assignment so the
@@ -40,9 +44,33 @@ function loadOnControl() {
   context.window = context;
   context.globalThis = context;
   context.currentControlStates = {};
+  vm.runInNewContext(contractSource, context, { filename: 'mapping-input-contract.js' });
   vm.runInNewContext(extractOnControl(), context, { filename: 'app-onControl.js' });
   return context;
 }
+
+test('audio descriptor values stay normalized in shared mapping state', () => {
+  const ctx = loadOnControl();
+  const raw = { name: 'sensor.audio.centroid', value: 0.31 };
+  ctx.onControl(raw);
+
+  const normalized = ctx.currentControlStates['sensor.audio.centroid'];
+  assert.equal(normalized, 0.31);
+  assert.equal(ctx.state.controls[0].value, normalized);
+  assert.equal(raw.value, 0.31, 'the raw event must not be mutated');
+});
+
+test('invalid values enter the existing signal-loss path', () => {
+  const ctx = loadOnControl();
+  ctx.onControl({ name: 'sensor.audio.pitch', value: 440 });
+  const lastReal = ctx.currentControlStates['sensor.audio.pitch'];
+
+  ctx.onControl({ name: 'sensor.audio.pitch', value: Infinity });
+
+  assert.equal(ctx.currentControlLost['sensor.audio.pitch'], true);
+  assert.equal(ctx.currentControlStates['sensor.audio.pitch'], lastReal);
+  assert.equal(ctx.state.controls.at(-1).lost, true);
+});
 
 test('C2: a real reading updates the value shown on the curve', () => {
   const ctx = loadOnControl();

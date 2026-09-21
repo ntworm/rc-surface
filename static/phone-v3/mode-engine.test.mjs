@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -150,4 +150,49 @@ test('mode D runs a short attack-release burst that returns to zero', () => {
     { value: 0, phase: 'burst-end', active: false },
   );
   assert.equal(state.value, 0);
+});
+
+// ---------------------------------------------------------------------------
+// The burst length has to survive the engine.
+
+function burstDe(durationMs, attackMs) {
+  const Modes = loadEngine();
+  const state = Modes.createScalarGestureState();
+  Modes.beginScalarGesture(state, {
+    mode: 'D', pointerId: 1, y: 0, rangePx: 140, now: 0,
+    burstDurationMs: durationMs, burstAttackMs: attackMs,
+  });
+  return state.burst;
+}
+
+test('a synced burst keeps the length it was given', () => {
+  // The engine floored every burst at 80 ms. A subdivision is a musical value
+  // and at a fast tempo it is legitimately shorter than that: one beat at 999
+  // BPM is 60 ms, half a beat is 30. All of them arrived as 80, so the seven
+  // lengths the settings offer collapsed to the same burst and changing the
+  // tempo stopped changing anything.
+  assert.equal(burstDe(60, 8).durationMs, 60);
+  assert.equal(burstDe(500, 68).durationMs, 500);
+  // 1/8 and 1/16 at 120 BPM: two different settings must stay two lengths.
+  assert.notEqual(burstDe(62.5, 8).durationMs, burstDe(31.25, 4).durationMs);
+});
+
+test('the burst floor is one emission frame, not a round number', () => {
+  // Phones restate their controls at 30 Hz, so a burst shorter than one frame
+  // cannot be transmitted whatever the envelope does. That is the only floor
+  // with a reason behind it.
+  const frame = 1000 / 30;
+  assert.ok(burstDe(1, 1).durationMs >= frame - 0.001,
+    'a degenerate length must still be emittable');
+  assert.ok(burstDe(1, 1).durationMs < 80,
+    'the floor must not silently restore the old 80 ms');
+  // Nonsense stays guarded rather than reaching the envelope as NaN.
+  assert.ok(Number.isFinite(burstDe(Number.NaN, Number.NaN).durationMs));
+  assert.ok(Number.isFinite(burstDe(-5, -5).durationMs));
+});
+
+test('the attack stays inside the burst it belongs to', () => {
+  const curto = burstDe(60, 40);
+  assert.ok(curto.attackMs < curto.durationMs, 'attack must leave room for release');
+  assert.ok(curto.attackMs > 0);
 });

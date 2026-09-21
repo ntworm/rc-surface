@@ -60,6 +60,49 @@ function pushNow(client) {
   pushClientUpdate(client);
 }
 
+test("new prototype-named signals reach admin deltas once without losing data", () => {
+  const received = [];
+  attachAdmin(received);
+  try {
+    const client = makeClient();
+    pushClientUpdate(client, { full: true });
+    for (const name of ["__proto__", "constructor", "toString"]) {
+      appendHistory(client, name, 0.5, 100);
+    }
+    pushNow(client);
+    for (const name of ["__proto__", "constructor", "toString"]) {
+      assert.equal(Object.hasOwn(received[1].historyDelta, name), true);
+      assert.deepEqual(received[1].historyDelta[name], [[100, 0.5]]);
+    }
+    pushNow(client);
+    assert.deepEqual(received[2].historyDelta, {});
+  } finally {
+    adminSockets.clear();
+  }
+});
+
+test("history eviction sends a replacement snapshot so dashboards drop old signals", () => {
+  const received = [];
+  attachAdmin(received);
+  try {
+    const client = makeClient();
+    appendHistory(client, "signal-0", 0.5, 100);
+    pushClientUpdate(client, { full: true });
+    for (let i = 1; i <= 2048; i++) appendHistory(client, `signal-${i}`, 0.5, i);
+    pushNow(client);
+    assert.ok(received[1].history, "eviction must replace, not append to, the dashboard's rings");
+    assert.equal(Object.keys(received[1].history).length, 2048);
+    assert.equal(Object.hasOwn(received[1].history, "signal-0"), false);
+    pushNow(client);
+    assert.deepEqual(received[2].historyDelta, {});
+    appendHistory(client, "signal-0", 0.8, 3000);
+    pushNow(client);
+    assert.deepEqual(received[3].history["signal-0"], [[3000, 0.8]]);
+  } finally {
+    adminSockets.clear();
+  }
+});
+
 test("the first update after an admin connects carries the full rings", () => {
   const received = [];
   attachAdmin(received);

@@ -8,6 +8,8 @@
 
 (function () {
   'use strict';
+  const T = (k, fallback) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
+    ? window.RcSurfaceI18n.t(k) : (fallback ?? k);
 
   window.RCSurface = window.RCSurface || {};
 
@@ -81,7 +83,10 @@
 
     window.updateHeaderPlayState = (isPlaying) => {
       if (headerPlay) {
-        headerPlay.textContent = isPlaying ? '⏸' : '▶';
+        const playing = Boolean(isPlaying);
+        headerPlay.classList.toggle('is-playing', playing);
+        headerPlay.setAttribute('aria-pressed', playing ? 'true' : 'false');
+        headerPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
       }
     };
 
@@ -99,22 +104,22 @@
           indicator.hidden = true;
         } else if (available) {
           indicator.hidden = false;
-          indicator.textContent = 'OSC: SDK';
+          indicator.textContent = T('js.oscSdk', 'OSC: SDK');
           indicator.className = 'osc-indicator osc-indicator-sdk';
         } else {
           indicator.hidden = false;
-          indicator.textContent = 'OSC: OFF';
+          indicator.textContent = T('js.oscOff', 'OSC: OFF');
           indicator.className = 'osc-indicator osc-indicator-free';
         }
       }
       if (connected) {
-        statusEl.textContent = 'SYNCED';
+        statusEl.textContent = T('js.synced', 'SYNCED');
         statusEl.className = 'osc-status synced';
       } else if (available) {
-        statusEl.textContent = 'SDK';
+        statusEl.textContent = T('js.sdk', 'SDK');
         statusEl.className = 'osc-status sdk';
       } else {
-        statusEl.textContent = 'FREE';
+        statusEl.textContent = T('js.free', 'FREE');
         statusEl.className = 'osc-status free';
       }
     };
@@ -125,11 +130,19 @@
       renderLocators();
     };
 
-    window.triggerMetronomePulse = (beat) => {
+    window.triggerMetronomePulse = (beat, beatInBar) => {
       if (!btnTrnMode) return;
       btnTrnMode.classList.remove('metronome-pulse-first', 'metronome-pulse-other');
       void btnTrnMode.offsetWidth;
-      const isFirst = (beat === 1);
+      // The beat is an absolute count, so it is the position inside the bar
+      // that says whether this is the downbeat. Older servers do not send it;
+      // derive it from the signature rather than falling back to a fixed 1,
+      // which only ever matched the second pulse of a take.
+      const perBar = Number(window.currentNumerator) > 0 ? Number(window.currentNumerator) : 4;
+      const posicao = Number.isFinite(beatInBar)
+        ? beatInBar
+        : ((Math.round(Number(beat)) % perBar) + perBar) % perBar;
+      const isFirst = (posicao === 0);
       btnTrnMode.classList.add(isFirst ? 'metronome-pulse-first' : 'metronome-pulse-other');
     };
 
@@ -146,7 +159,7 @@
         empty.style.fontSize = '12px';
         empty.style.padding = '12px';
         empty.style.textAlign = 'center';
-        empty.textContent = 'No locators found';
+        empty.textContent = T('js.noLocators', 'No locators found');
         locatorList.appendChild(empty);
         return;
       }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import test from "node:test";
@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 
 const repoRoot = join(import.meta.dirname, "..");
 const scriptPath = join(repoRoot, "scripts", "package-tester-kit.mjs");
+const testerGuidePath = join(repoRoot, "internal", "TESTER-GUIDE.md");
 
 test("tester-kit: script is present and runnable via node", () => {
   const r = spawnSync("node", ["--check", scriptPath], { encoding: "utf8" });
@@ -59,26 +60,132 @@ test("tester-kit: SHA256 helper matches known hash for fixed bytes", async () =>
   }
 });
 
+test("tester-kit: stages and hashes both documented Max devices", async () => {
+  const mod = await import(`${pathToFileURL(scriptPath).href}?devices=${Date.now()}`);
+  const expectedDevices = ["RC-Midi-Receiver.amxd", "RC-Audio-Sender.amxd"];
+  assert.deepEqual(mod.companionDevices, expectedDevices);
+
+  const sourceDir = await mkdtemp(join(tmpdir(), "tester-kit-max-src-"));
+  const stagedDir = await mkdtemp(join(tmpdir(), "tester-kit-max-dst-"));
+  try {
+    for (const name of expectedDevices) {
+      await writeFile(join(sourceDir, name), `fixture:${name}\n`);
+    }
+
+    await mod.stageCompanionDevices(sourceDir, stagedDir);
+
+    for (const name of expectedDevices) {
+      assert.equal(await readFile(join(stagedDir, name), "utf8"), `fixture:${name}\n`);
+      assert.ok(mod.packageFiles.includes(name), `${name} must be covered by SHA256SUMS.txt`);
+    }
+  } finally {
+    await rm(sourceDir, { recursive: true, force: true });
+    await rm(stagedDir, { recursive: true, force: true });
+  }
+});
+
+test("tester guide distinguishes v2 acceptance from previous Audio Sender field tests", async () => {
+  const guide = await readFile(testerGuidePath, "utf8");
+
+  assert.match(guide, /\| `RC-Audio-Sender\.amxd` \| Max for Live audio-track pitch sender/);
+  assert.match(guide, /### 3\. RC-Audio-Sender\.amxd/);
+  assert.match(guide, /v2 must be retested in Live/i);
+  assert.match(guide, /Previous field evidence belongs to the UDP/);
+  assert.match(guide, /Audio Sender input.*OFF at load/);
+  assert.match(guide, /same note again/i);
+  assert.match(guide, /silence/i);
+});
+
 test("tester-kit: stage docs list includes required user-facing files", async () => {
   // read package.json and assert that the script references the docs we ship
   const src = await readFile(scriptPath, "utf8");
   const expected = [
     "README.md",
     "LICENSE",
+    "NOTICE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
-    "docs/README.md",
+    "internal/README.md",
     "docs/INSTALL.md",
     "docs/USER-GUIDE.md",
     "docs/FAQ.md",
     "docs/PRIVACY.md",
     "docs/SECURITY.md",
     "docs/CUSTOMIZATION.md",
-    "docs/TESTER-GUIDE.md",
-    "docs/PESQUISA_CELULAR_GESTUAL.md",
+    "internal/TESTER-GUIDE.md",
+    "internal/PESQUISA_CELULAR_GESTUAL.md",
   ];
   for (const doc of expected) {
     assert.ok(src.includes(doc), `expected ${doc} in stageDocs`);
+  }
+});
+
+test("tester-kit: stages bilingual operator docs with checksum coverage", async () => {
+  const mod = await import(pathToFileURL(scriptPath).href);
+  const stagedDir = await mkdtemp(join(tmpdir(), "tester-kit-docs-"));
+  try {
+    assert.equal(typeof mod.stageDocumentation, "function");
+    await mod.stageDocumentation(repoRoot, stagedDir);
+    for (const name of ["INSTALL", "USER-GUIDE", "FAQ", "PRIVACY", "SECURITY", "CUSTOMIZATION", "AUDIO-AUDIT"]) {
+      for (const suffix of [".md", ".pt-BR.md"]) {
+        const rel = `docs/${name}${suffix}`;
+        assert.deepEqual(await readFile(join(stagedDir, rel)), await readFile(join(repoRoot, rel)));
+        assert.ok(mod.packageFiles.includes(rel), `${rel} needs checksum coverage`);
+      }
+    }
+  } finally {
+    await rm(stagedDir, { recursive: true, force: true });
+  }
+});
+
+test("tester-kit: missing required documentation stops packaging", async () => {
+  const mod = await import(pathToFileURL(scriptPath).href);
+  const sourceDir = await mkdtemp(join(tmpdir(), "tester-kit-missing-"));
+  const stagedDir = await mkdtemp(join(tmpdir(), "tester-kit-incomplete-"));
+  try {
+    assert.equal(typeof mod.stageDocumentation, "function");
+    await assert.rejects(mod.stageDocumentation(sourceDir, stagedDir), /README\.md/);
+  } finally {
+    await rm(sourceDir, { recursive: true, force: true });
+    await rm(stagedDir, { recursive: true, force: true });
+  }
+});
+
+test("tester-kit: checksum generation refuses an incomplete kit", async () => {
+  const mod = await import(pathToFileURL(scriptPath).href);
+  const stagedDir = await mkdtemp(join(tmpdir(), "tester-kit-hashes-"));
+  try {
+    assert.equal(typeof mod.writeChecksums, "function");
+    await assert.rejects(mod.writeChecksums(stagedDir), /RC-Surface-.*\.ablx/);
+    for (const rel of mod.packageFiles) {
+      await mkdir(join(stagedDir, rel, ".."), { recursive: true });
+      await writeFile(join(stagedDir, rel), "hello\n");
+    }
+    await mod.writeChecksums(stagedDir);
+    const sums = await readFile(join(stagedDir, "SHA256SUMS.txt"), "utf8");
+    assert.equal(sums.trim().split("\n").length, mod.packageFiles.length);
+    assert.ok(sums.split("\n").filter(Boolean).every((line) =>
+      line.startsWith("5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03  ")));
+  } finally {
+    await rm(stagedDir, { recursive: true, force: true });
+  }
+});
+
+test("tester-kit: broken relative links stop packaging", async () => {
+  const mod = await import(pathToFileURL(scriptPath).href);
+  const stagedDir = await mkdtemp(join(tmpdir(), "tester-kit-links-"));
+  try {
+    assert.equal(typeof mod.checkMarkdownLinks, "function");
+    for (const rel of mod.stageDocs) {
+      await mkdir(join(stagedDir, rel, ".."), { recursive: true });
+      await writeFile(join(stagedDir, rel), "");
+    }
+    await writeFile(join(stagedDir, "README.md"), "[Guide](docs/USER-GUIDE.md#intro)\n");
+    await mod.checkMarkdownLinks(stagedDir);
+    await rm(join(stagedDir, "docs/USER-GUIDE.md"));
+    await assert.rejects(mod.checkMarkdownLinks(stagedDir), /broken relative link/i);
+  } finally {
+    await rm(stagedDir, { recursive: true, force: true });
   }
 });
 

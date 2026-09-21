@@ -1,0 +1,12 @@
+﻿2544d19 fix(phone): pad-mode-tag inline beside num, badges top-corner, stutter mode override, hide CFG off PERF/MIX
+d6db8e4 fix(phone): amber stutter bar, pad mode letter tag, live LFO shape hot-swap
+5013441 fix(docs): place CFG chapter 9.5 between 9 and 10 in pt-BR USER-GUIDE
+b786fca fix(phone): restore CFG singleton, pointer capture, popover content, stutter matcher and fader 0.85
+4eef73c docs(site): align landing and USER-GUIDE with the 1.0 build
+31980f6 feat(config-mode): badges, Clear-all popover, cfg.* i18n EN+PT
+2bee097 feat(config-mode): MIX+PERF builders with per-instance knob rangePx and fader reset
+c0d874e feat(config-mode): CFG button + per-control mode/shape/subdivision/physics overrides
+e1116f4 test(ui): align lfo button count, fader mid-drag and mobile landscape viewport
+3e39b77 test(ui): align lfo-bandwidth and fader-tracking specs with 4Hz ceiling and fader contract
+2a616f2 test(live-bench): relax meanMs upper bound for Windows timer jitter
+1673c2b test(live-bench): relax throughput lower bound for Windows timer jitter

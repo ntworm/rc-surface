@@ -18,8 +18,9 @@ import {
   stopSmoothTimer,
 } from "../src/live/mappings.ts";
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
+import { continuousTargetActuator } from "../src/live/continuous-target-actuator.ts";
 
-function setup(target, startValue) {
+function setup(target, startValue, parameterOverrides = {}) {
   // getValue() is required: readTargetNormalizedValue() returns null without
   // it, and then takeover initialises believing the host sits wherever the
   // input already is — which silently disables pickup entirely.
@@ -27,7 +28,9 @@ function setup(target, startValue) {
     name: "Dry/Wet", min: 0, max: 1, value: startValue,
     getValue: async () => param.value,
     setValue: async (v) => { param.value = v; },
+    ...parameterOverrides,
   };
+  continuousTargetActuator.cancel();
   controlMappings.clear();
   lastMappedValues.clear();
   activeSmooths.clear();
@@ -131,4 +134,28 @@ test("pickup: a parameter parked where the sensor never reaches freezes forever"
     0.89,
     `expected the documented pickup latch; parameter is at ${param.value}`,
   );
+});
+
+test("pickup: geometric targets compare the input against the inverse target scale", async (t) => {
+  const midpoint = Math.sqrt(20 * 20000);
+  const param = setup(
+    {
+      type: "device_param",
+      trackIndex: 0,
+      deviceIndex: 0,
+      paramIndex: 0,
+      takeoverMode: "pickup",
+      targetScale: "geometric",
+    },
+    midpoint,
+    { name: "Frequency", min: 20, max: 20000 },
+  );
+  t.after(() => { stopSmoothTimer(); clearExtensionContext(); });
+
+  await applyMapping("client-1", "sensor.vision.x", 0.1);
+  await sweep(0.1, 0.6, 40);
+  await continuousTargetActuator.settle("device_param::0::0::0");
+
+  const expected = 20 * Math.pow(20000 / 20, 0.6);
+  assert.ok(Math.abs(param.value - expected) < 0.01, `geometric pickup ended at ${param.value}`);
 });

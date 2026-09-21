@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -40,27 +40,57 @@ test('audio and video have dedicated full pages instead of a cramped shared AVH 
   assert.doesNotMatch(html, /data-page="media"|>AVH</);
 });
 
-test('audio surface removes noisy transient and whistle trigger channels', () => {
+test('audio runtime restores deliberate descriptors while keeping the whistle trigger retired', () => {
   const html = read('index.html');
   const app = read('app.js');
   const mapping = read('mapping-mode.js');
-  for (const retired of ['sensor.audio.transient', 'sensor.audio.whistle.active']) {
+  for (const retired of ['sensor.audio.whistle.active']) {
     assert.doesNotMatch(html, new RegExp(`data-name=["']${retired.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(mapping, new RegExp(`["']${retired.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(app, new RegExp(`name:\\s*["']${retired.replaceAll('.', '\\.')}`));
   }
+  assert.match(html, /shared\/audio-descriptor-catalog\.js/);
+  assert.match(app, /window\.AudioDescriptorCatalog\.map/);
+  assert.match(read('audio-workspace.js'), /card\.dataset\.name = entry\.name/);
+});
+
+test('the AUD strip carries detector knobs, not the retired pitch dials', () => {
+  const html = read('index.html');
+  const app = read('app.js');
+  const workspace = read('audio-workspace.js');
+  const css = read('style.css');
+  for (const retired of ['audio-gate-threshold', 'audio-tone-window', 'audio-bpm-window',
+    'audio-clarity-floor', 'audio-min-note', 'lbl-audio-pitch', 'lbl-audio-note', 'lbl-audio-bpm']) {
+    assert.doesNotMatch(html, new RegExp(`id="${retired}"`), retired + ' belongs to the dormant pitch lane');
+  }
+  assert.match(html, /id="audio-detector-controls"/);
+  assert.match(app, /setDescriptorSettings/);
+  assert.match(app, /connectControls/);
+  assert.match(css, /\.audio-analysis-controls/);
+});
+
+test('detector knobs keep the surface dial treatment and cover every group', () => {
+  const workspace = read('audio-workspace.js');
+  const css = read('style.css');
+  for (const key of ['sensitivity', 'releaseMs', 'curve', 'toneMs', 'textureMs', 'bandsMs']) {
+    assert.match(workspace, new RegExp(`key: '${key}'`), key + ' must have a knob');
+  }
+  assert.match(workspace, /audio-analysis-dial/);
+  assert.match(workspace, /detectorWindow/);
+  assert.match(css, /\.audio-analysis-dial/);
+  assert.doesNotMatch(css, /\.audio-analysis-control input\[type="range"\]\s*\{\s*width:\s*100%/);
 });
 
 test('vision built-ins are opt-in and individual finger noise is not mappable', () => {
   const html = read('index.html');
   const app = read('app.js');
   const mapping = read('mapping-mode.js');
-  // Five opt-in built-in detectors: open / fist / pinch / victory / fingers.
+  // Four opt-in built-in detectors: open / fist / pinch / victory.
   // Wrist rotation rides on the Victory pose; it has no dedicated toggle
   // because the rotation is exposed as an analog value, not a gate.
-  assert.equal((html.match(/data-vision-gesture=/g) || []).length, 5);
-  assert.equal((html.match(/data-vision-gesture=[^>]+aria-pressed="false"/g) || []).length, 5);
-  for (const retired of ['thumb', 'index', 'middle', 'ring', 'pinky']) {
+  assert.equal((html.match(/data-vision-gesture=/g) || []).length, 4);
+  assert.equal((html.match(/data-vision-gesture=[^>]+aria-pressed="false"/g) || []).length, 4);
+  for (const retired of ['thumb', 'index', 'middle', 'ring', 'pinky', 'fingers']) {
     assert.doesNotMatch(mapping, new RegExp(`sensor\\.vision\\.${retired}`));
     assert.doesNotMatch(app, new RegExp(`name:\\s*['"]sensor\\.vision\\.${retired}`));
   }
@@ -110,15 +140,20 @@ test('vision performance layout fits one screen with compact controls and fixed 
     assert.match(block, /min-height:\s*0/, `${shrinkable} needs min-height:0 to actually shrink`);
     assert.doesNotMatch(block, /height:\s*auto/, `${shrinkable} must not opt out with height:auto`);
   }
-  // An individual slot is a flex row, sized by its container's
-  // `repeat(3, minmax(0, 1fr))` grid rows. vision-layout-fit.test.mjs
-  // holds that contract and the containment that keeps a slot's contents
-  // inside its row.
+  // Each slot is a shrinkable flex card. Its container gives the three cards
+  // equal columns, while vision-layout-fit.test.mjs holds the containment
+  // contract that keeps every card inside its column.
   const slot = cssBlock(css, '.vision-gesture-slot');
   assert.match(slot, /min-height:\s*0/);
   assert.match(slot, /display:\s*flex/);
   assert.doesNotMatch(slot, /height:\s*auto/);
-  assert.match(cssBlock(css, '.vision-axis-chips'), /grid-template-columns:\s*repeat\(4,/);
+  // The focused full-width deck gives MAP and CLUTCH explicit track counts.
+  assert.match(cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
+    /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(cssBlock(css, '.vision-readout-card:nth-child(2) .vision-axis-chips'),
+    /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  // The readout cards keep their compact label beside the chips.
+  assert.match(cssBlock(css, '.vision-readout-card'), /flex-direction:\s*row/);
   assert.match(cssBlock(css, '.vision-gesture-list'), /grid-template-columns:\s*repeat\(5,/);
   assert.doesNotMatch(cssBlock(css, '.vision-sensor-deck'), /grid-template-rows:\s*auto\s+1fr/);
   // Slot actions arranged in a 2x2 grid to maximize button touch targets within cards.
@@ -169,8 +204,7 @@ test('camera failures stay inline, explain busy hardware, and can be retried cle
   assert.match(app, /err\?\.message/);
   assert.match(app, /replace\(\/\\s\+\/g,\s*' '\)/);
   assert.match(app, /slice\(0,\s*120\)/);
-  assert.match(app, /chk\.disabled\s*=\s*true/);
-  assert.match(app, /finally\s*\{\s*chk\.disabled\s*=\s*false/);
+  assert.doesNotMatch(app, /chk\.disabled\s*=\s*true/);
   assert.match(app, /pagehide/);
   assert.doesNotMatch(app, /alert\(/);
 });
@@ -246,12 +280,36 @@ test('gesture TEST displays continuous confidence without sending a partial matc
   assert.doesNotMatch(progressHandler, /window\.onControl/);
 });
 
+test('gesture learning waits for stability and teaches variation that survives normalization', () => {
+  const app = read('app.js');
+  assert.match(app, /WAITING FOR STABLE/);
+  assert.match(app, /onGestureLearnReady/);
+  assert.match(app, /looser or tighter curl/i);
+  assert.match(app, /toward or away from the camera/i);
+  assert.doesNotMatch(app, /closer, or further away/i);
+  const finishStart = app.indexOf('const finishGestureCapture =');
+  const finishEnd = app.indexOf('const beginGestureCaptureWindow =', finishStart);
+  const finish = app.slice(finishStart, finishEnd);
+  assert.ok(finish.indexOf('renderVisionControlState()') < finish.indexOf('NO STABLE POSE FOUND'),
+    'the generic slot render must not overwrite the actionable stability error');
+});
+
 test('gesture recognition presets use practical confidence gates while preserving strict modes', () => {
   const app = read('app.js');
   assert.match(app, /precision:\s*\{[^}]*minimumConfidence:\s*0\.66/);
   assert.match(app, /balanced:\s*\{[^}]*minimumConfidence:\s*0\.52/);
   assert.match(app, /flexible:\s*\{[^}]*minimumConfidence:\s*0\.44/);
   assert.match(app, /balanced:\s*\{[^}]*captureStabilityThreshold:\s*0\.10/);
+  assert.match(app, /precision:\s*\{[^}]*releaseRatio:\s*1\.25/);
+  assert.match(app, /balanced:\s*\{[^}]*releaseRatio:\s*1\.4/);
+  assert.match(app, /flexible:\s*\{[^}]*releaseRatio:\s*1\.6/);
+  assert.match(app, /precision:\s*\{[^}]*ambiguityRatio:\s*1\.4/);
+  assert.match(app, /balanced:\s*\{[^}]*ambiguityRatio:\s*1\.25/);
+  assert.match(app, /flexible:\s*\{[^}]*ambiguityRatio:\s*1\.15/);
+  assert.match(app, /precision:\s*\{[^}]*unknownGraceMs:\s*80/);
+  assert.match(app, /balanced:\s*\{[^}]*unknownGraceMs:\s*140/);
+  assert.match(app, /flexible:\s*\{[^}]*unknownGraceMs:\s*200/);
+  assert.doesNotMatch(app, /ambiguityMargin/);
 });
 
 test('gesture TEST tells the recognizer which numbered slot is being validated', () => {
@@ -289,6 +347,15 @@ test('legacy gesture outlier repair is reflected in slot counts before camera st
   assert.match(app, /restoredGestures\s*=\s*migrateGestureConfig/);
 });
 
+test('removing a stored take offline also removes and rebuilds its learned tolerance', () => {
+  const app = read('app.js');
+  const start = app.indexOf('const removeStoredTake =');
+  const end = app.indexOf('const deleteStoredGesture =', start);
+  const removeStoredTake = app.slice(start, end);
+  assert.match(removeStoredTake, /takeSpreads/);
+  assert.match(removeStoredTake, /migrateGestureConfig/);
+});
+
 test('phone header exposes stage mode and MIX no longer exposes performance/debug mode', () => {
   const html = read('index.html');
   const app = read('app.js');
@@ -323,7 +390,7 @@ test('performance UTIL column exposes snapshot and off controls', () => {
     token(82, 50),
   ];
 
-  assert.match(html, /class="section-title">UTIL<\/span>/);
+  assert.match(html, /class="section-title"[^>]*>UTIL<\/span>/);
   assert.match(html, /id="btn-perf-snapshot-capture"/);
   assert.match(html, /id="btn-perf-off"/);
   assert.equal((html.match(/data-perf-snapshot-slot="/g) || []).length, 4);
@@ -374,7 +441,7 @@ test('pads are neutral at rest and fill internally from drag intensity', () => {
     'mode C must not draw zero-value pads as full intensity');
 });
 
-test('Video exposes live vision readouts and keeps advanced mode buttons out of the HUD preview', () => {
+test('Video exposes focused performance controls and keeps diagnostics non-mappable', () => {
   const html = read('index.html');
   const app = read('app.js');
   const css = read('style.css');
@@ -385,10 +452,13 @@ test('Video exposes live vision readouts and keeps advanced mode buttons out of 
   assert.match(html, /id="vision-value-x"/);
   assert.match(html, /id="vision-value-y"/);
   assert.match(html, /id="vision-value-z"/);
-  assert.match(html, /id="vision-card-gesture"/);
-  assert.match(html, /id="vision-card-color"/);
-  assert.match(app, /vision-card-gesture/);
+  assert.match(html, /id="vision-value-palm"/);
+  assert.match(html, /id="vision-value-facing"/);
+  assert.doesNotMatch(html, /id="vision-value-(?:palm-pose|index-curved|other-fingers|handedness)"/);
+  assert.doesNotMatch(html, /id="vision-card-(?:gesture|color)"/);
   assert.match(app, /vision-value-\$\{channel\}/);
+  assert.match(app, /vision-value-facing/);
+  assert.doesNotMatch(app, /vision-value-(?:palm-pose|index-curved|other-fingers|handedness)/);
 
   const modesBlock = cssBlock(css, '.vision-modes-grid');
   assert.match(modesBlock, /\bdisplay\s*:\s*none\b/);
@@ -442,12 +512,12 @@ test('camera preview stays in the Vision grid without drag state', () => {
   assert.match(cssBlock(css, '.vision-hud-container'), /position:\s*absolute/);
 });
 
-test('Performance animation loop resyncs on page changes and avoids hidden-page DOM churn', () => {
+test('Performance animation loop uses current time and avoids hidden-page DOM churn', () => {
   const controls = read('controls.js');
 
   assert.match(controls, /ableton-rc:page-change/);
   assert.match(controls, /performanceVisible/);
-  assert.match(controls, /lastFrameTime\s*=\s*performance\.now\(\)/);
+  assert.match(controls, /const now\s*=\s*performance\.now\(\)/);
 });
 
 test('phone app exposes a command bridge over the existing WebSocket', () => {
@@ -530,17 +600,54 @@ test('mapping mode is a fixed full-viewport overlay, not a body layout class', (
   assert.match(overlayBlock, /z-index:\s*3000/);
 });
 
-test('TRN button and transport overlay exist in markup', () => {
+test('MAP waiting state is a thin non-blocking armed strip', () => {
   const html = read('index.html');
+  const css = read('style.css');
+  const strip = cssBlock(css, '.map-armed-strip');
+  const stripButton = cssBlock(css, '.map-armed-strip .map-mini-btn');
+
+  assert.match(html, /id="map-armed-strip"/);
+  assert.match(html, /MAP ARMED/);
+  assert.match(html, /TAP A CONTROL/);
+  assert.match(strip, /position:\s*absolute/);
+  assert.match(strip, /max-width:\s*360px/);
+  assert.match(strip, /pointer-events:\s*none/,
+    'the waiting message must not steal taps from performance controls below it');
+  assert.match(stripButton, /pointer-events:\s*auto/,
+    'only the Done button should intercept a tap');
+});
+
+test('TRN controls exist with CSS-drawn media icons and no typed transport glyphs', () => {
+  const html = read('index.html');
+  const css = read('style.css');
+  const transport = read('modules/transport.js');
+  const playhead = read('modules/playhead.js');
+  const contract = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'internal', 'THEME_CONTRACT.md'), 'utf8');
+
   assert.match(html, /id="btn-trn-mode"/);
   assert.match(html, /id="transport-lite-overlay"/);
-  assert.match(html, /id="btn-trn-play"/);
-  assert.match(html, /id="btn-trn-stop"/);
-  assert.match(html, /id="btn-trn-prev"/);
-  assert.match(html, /id="btn-trn-next"/);
-  assert.match(html, /id="btn-trn-refresh"/);
+  assert.match(html, /id="btn-header-prev"[^>]*aria-label="Previous Locator"[^>]*>[\s\S]*?transport-symbol-prev/);
+  assert.match(html, /id="btn-header-play"[^>]*aria-label="Play"[^>]*aria-pressed="false"[^>]*>[\s\S]*?transport-symbol-play/);
+  assert.match(html, /id="btn-header-next"[^>]*aria-label="Next Locator"[^>]*>[\s\S]*?transport-symbol-next/);
+  assert.match(html, /id="btn-trn-play"[\s\S]*?transport-symbol-play[\s\S]*?PLAY<\/span>/);
+  assert.match(html, /id="btn-trn-stop"[\s\S]*?transport-symbol-stop[\s\S]*?STOP<\/span>/);
+  assert.match(html, /id="btn-trn-prev"[\s\S]*?transport-symbol-prev[\s\S]*?PREV<\/span>/);
+  assert.match(html, /id="btn-trn-next"[\s\S]*?transport-symbol-next[\s\S]*?NEXT<\/span>/);
+  assert.match(html, /id="btn-trn-refresh"[\s\S]*?transport-symbol-refresh[\s\S]*?REFRESH<\/span>/);
   assert.match(html, /id="locator-search"/);
   assert.match(html, /id="locator-list"/);
+  assert.doesNotMatch(html, /[▶‖⏸⏮⏭◀■↻]/u);
+  assert.doesNotMatch(`${transport}\n${playhead}`, /[▶‖⏸⏮⏭◀■↻]|['"]\|\|['"]/u);
+
+  assert.match(css, /\.transport-symbol\s*\{[^}]*color:\s*currentColor[^}]*border-radius:\s*0/s);
+  assert.match(css, /\.transport-symbol-play::before/);
+  assert.match(css, /\.transport-btn\.is-playing\s+\.transport-symbol-play::after/);
+  assert.match(css, /\.transport-symbol-prev::before/);
+  assert.match(css, /\.transport-symbol-next::before/);
+  assert.match(css, /\.transport-symbol-stop::before/);
+  assert.match(css, /\.transport-symbol-refresh::before/);
+  assert.match(contract, /Departure Mono[^\n]*does not contain media-control glyphs/i);
+  assert.match(contract, /drawn[^\n]*rather than typed/i);
 });
 
 test('controls.js setupTransportLiteUI handles getTransportLiteState and unwraps result', () => {
@@ -592,18 +699,27 @@ test('controls.js loads and updates window.syncSettings, and integrates with LFO
   assert.match(controls, /window\.syncSettings\s*=/);
   assert.match(controls, /'ableton-rc:sync_settings'/);
   assert.match(controls, /clockSource:\s*window\.syncSettings\.clockSource/);
-  assert.match(controls, /syncSubdivisionBeats:\s*window\.syncSettings\.lfoSubdivision/);
-  assert.match(controls, /phaseOffsetBeats:\s*window\.syncSettings\.lfoPhaseOffset/);
-  assert.match(controls, /shape:\s*window\.syncSettings\.lfoShape/);
-  assert.match(controls, /syncSubdivisionBeats:\s*window\.syncSettings\.stutterSubdivision/);
-  assert.match(controls, /phaseOffsetBeats:\s*window\.syncSettings\.stutterPhaseOffset/);
-  assert.match(controls, /swing:\s*window\.syncSettings\.stutterSwing/);
+  assert.match(controls, /syncSubdivisionBeats:\s*(?:window\.syncSettings\.lfoSubdivision|perInstanceSyncSubdivision)/);
+  assert.match(controls, /phaseOffsetBeats:\s*(?:window\.syncSettings\.lfoPhaseOffset|perInstanceStutterPhaseOffset)/);
+  assert.match(controls, /shape:\s*(?:window\.syncSettings\.lfoShape|window\.RcControlConfig.*?lfoShape)/);
+  assert.match(controls, /syncSubdivisionBeats:\s*(?:window\.syncSettings\.stutterSubdivision|perInstanceStutterSubdivision)/);
+  assert.match(controls, /phaseOffsetBeats:\s*(?:window\.syncSettings\.stutterPhaseOffset|perInstanceStutterPhaseOffset)/);
+  assert.match(controls, /swing:\s*(?:window\.syncSettings\.stutterSwing|perInstanceStutterSwing)/);
 });
 
 test('controls.js renders local LFO feedback with the selected shape', () => {
   const controls = read('controls.js');
   assert.match(controls, /function computeLfoWaveValue/);
-  assert.match(controls, /computeLfoWaveValue\(window\.syncSettings\.lfoShape,\s*state\.phase\)/);
+  // After the phase-sync refactor, the call uses lfoPhaseRad (derived from
+  // state.phase in free mode, from beat clock in sync mode). The variable name
+  // changed; the semantic invariant — reading the wave at the current phase
+  // via the selected shape — is preserved.
+  // P03 (rc-surface-modulator-ux-fixes-2026-09-18): CFG mode may override
+  // shape per control via RcControlConfig, so the local read is the per-
+  // control override first and the global syncSettings.lfoShape as fallback.
+  // Either form is acceptable: the legacy global read or the new per-control
+  // read through RcControlConfig.get(name, 'shape', ...).
+  assert.match(controls, /computeLfoWaveValue\((?:window\.syncSettings\.lfoShape|\blfoShape\b),\s*lfoPhaseRad\)/);
   assert.doesNotMatch(controls, /0\.5\s*\+\s*Math\.sin\(state\.phase\)\s*\*\s*0\.5\s*\*\s*state\.depth/);
 });
 

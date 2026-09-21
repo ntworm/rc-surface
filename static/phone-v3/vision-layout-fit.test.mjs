@@ -26,15 +26,17 @@ function cssBlock(css, selector) {
   return match ? match[1] : '';
 }
 
-test('the pose slots get all leftover height — studio is the first grid row', () => {
+test('the top row reserves usable height for the studio and keeps the deck out of its column', () => {
   const css = read('style.css');
+  const workspace = cssBlock(css, '.vision-workspace');
   const column = cssBlock(css, '.vision-right-column');
 
+  assert.match(workspace, /grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto/);
   assert.match(column, /display:\s*grid/, 'right column uses grid for row priority');
   assert.match(
     column,
-    /grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto\s+auto/,
-    'studio (1fr) first, detectors (auto) second, readouts (auto) third',
+    /grid-template-rows:\s*minmax\(136px,\s*1fr\)\s+auto/,
+    'studio has a non-zero floor and only competes with detectors',
   );
   assert.match(column, /min-height:\s*0/);
   assert.match(column, /overflow:\s*hidden/);
@@ -68,37 +70,72 @@ test('the secondary sections cannot squeeze the slots out', () => {
   assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card'), /overflow:\s*hidden/);
 });
 
-test('the three slots share the studio evenly', () => {
+test('the three slots share the studio width instead of splitting its scarce height', () => {
   const css = read('style.css');
   for (const selector of ['.vision-gesture-slots', '.vision-pose-grid']) {
     const block = cssBlock(css, selector);
     assert.match(
       block,
-      /grid-template-rows:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
-      `${selector} must give each slot an equal, shrinkable row`,
+      /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+      `${selector} must give each slot an equal, shrinkable column`,
     );
+    assert.doesNotMatch(block, /grid-template-rows:\s*repeat\(3,/);
   }
 });
 
 test('the four slot actions are arranged in a 2x2 grid to maximize touch targets', () => {
   const css = read('style.css');
   const actions = cssBlock(css, '.vision-slot-actions');
+  const buttons = cssBlock(css, '.vision-slot-actions button');
 
   assert.match(actions, /grid-template-columns:\s*repeat\(2,/);
   assert.match(actions, /grid-template-rows:\s*repeat\(2,/);
   assert.match(actions, /min-width:\s*0/);
+  assert.match(buttons, /min-width:\s*63px/, 'each action preserves the measured phone-width target');
+  assert.match(buttons, /min-height:\s*47px/, 'each action preserves the measured phone-height target');
 });
 
-test('labels are what gets dropped when the screen is short, never the controls', () => {
+test('compact card labels and controls survive the primary short-screen layout', () => {
   const css = read('style.css');
   const shortScreen = css.match(/@media \(max-height: 460px\)\s*\{([\s\S]*?)\n\}/);
 
   assert.ok(shortScreen, 'a short-screen rule must exist');
-  assert.match(shortScreen[1], /\.vision-readout-card em\s*\{\s*display:\s*none/);
+  assert.doesNotMatch(
+    shortScreen[1],
+    /\.vision-readout-card em\s*\{\s*display:\s*none/,
+    'every readout card must remain identifiable on the real device',
+  );
   assert.doesNotMatch(
     shortScreen[1],
     /vision-slot-actions/,
     'the slot action buttons must survive every breakpoint',
+  );
+});
+
+test('the focused readout deck spans the workspace in one two-card row', () => {
+  const css = read('style.css');
+  const deck = cssBlock(css, '.vision-sensor-deck');
+  const grid = cssBlock(css, '.vision-sensor-deck .vision-readout-grid');
+
+  assert.match(deck, /grid-column:\s*1\s*\/\s*-1/);
+  assert.match(deck, /grid-row:\s*2/);
+  assert.match(grid, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(grid, /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
+  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(1)'), /grid-column:\s*1/);
+  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(2)'), /grid-column:\s*2/);
+  assert.equal(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(3)'), '');
+});
+
+test('MAP and CLUTCH use explicit track counts instead of content-driven auto-fit', () => {
+  const css = read('style.css');
+
+  assert.match(
+    cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
+    /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+  );
+  assert.match(
+    cssBlock(css, '.vision-readout-card:nth-child(2) .vision-axis-chips'),
+    /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
   );
 });
 
@@ -127,5 +164,13 @@ test('gesture studio comes before detectors in the right column', () => {
   assert.ok(
     studioPos < detectorPos,
     'gesture studio must come before detector section in DOM order',
+  );
+});
+
+test('the sensor deck is a workspace row, not a child of the right column', () => {
+  const html = read('index.html');
+  assert.match(
+    html,
+    /<div class="vision-right-column">[\s\S]*vision-detector-section[\s\S]*?<\/div>\s*<div class="vision-sensor-deck/,
   );
 });

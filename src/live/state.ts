@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-import { WebSocket } from "ws";
 import { getExtensionContext } from "../context.js";
 import { trackedClients } from "../server/ws.js";
+import { sendWithBackpressure } from "../server/backpressure.js";
 
 export let playheadActive = false;
 export let playheadStartTime = 0;
@@ -96,11 +96,11 @@ export function broadcastPlayheadState(): void {
   };
   const json = JSON.stringify(payload);
   for (const c of trackedClients.values()) {
-    if (!c.isAdmin && c.ws.readyState === WebSocket.OPEN) {
-      try {
-        c.ws.send(json);
-      } catch {}
-    }
+    if (c.isAdmin) continue;
+    // Telemetry: a periodic frame may be replaced by the next one. Above
+    // 512 KiB the frame is skipped; above 2 MiB the slow client is closed
+    // by the shared backpressure guard (code 4008).
+    sendWithBackpressure(c.ws, json, "telemetry");
   }
 }
 
@@ -142,11 +142,13 @@ export function checkAndBroadcastLiveState(): void {
       };
       const json = JSON.stringify(payload);
       for (const c of trackedClients.values()) {
-        if (!c.isAdmin && c.ws.readyState === WebSocket.OPEN) {
-          try {
-            c.ws.send(json);
-          } catch {}
-        }
+        if (c.isAdmin) continue;
+        // Critical: a scale/tempo change can be unique and must not vanish
+        // after the global cache update. It is delivered up to the 2 MiB
+        // ceiling; beyond that the client is closed and hello restores the
+        // current state on reconnect. A dropped send is never treated as
+        // confirmed delivery.
+        sendWithBackpressure(c.ws, json, "critical");
       }
     }
   } catch (err) {

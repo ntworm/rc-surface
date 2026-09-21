@@ -22,7 +22,7 @@ A clear, one-paragraph description of what is broken.
 - Ableton Live version: (e.g. 12.2.5 — required 12+)
 - OS: (Windows / macOS / Linux — also include build if Linux)
 - Phone OS + browser: (e.g. iOS 18 + Safari 18, Android 14 + Chrome 130)
-- Extension version: (Ableton-RC-Surface-X.Y.Z.ablx)
+- Extension version: (RC-Surface-X.Y.Z.ablx)
 - Wi-Fi: 2.4 GHz / 5 GHz
 
 ## Console output

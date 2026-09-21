@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// Tests for Task 3.3 Write Scheduler: coalescing continuous controls per targetKey
+// Write scheduler: coalescing continuous controls per targetKey with strict
+// FIFO execution for discrete events.
 // and preserving strict FIFO ordering for discrete/toggle/note events.
 
 import test from "node:test";

@@ -13,6 +13,13 @@
   window.RCSurface.setupPlayhead = function setupPlayhead() {
     const btn = document.getElementById('btn-play-sim');
     if (!btn) return;
+    const renderState = () => {
+      const playing = Boolean(window.playheadActive);
+      btn.classList.toggle('is-playing', playing);
+      btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    };
+    renderState();
     btn.addEventListener('click', () => {
       if (window.phoneWs && window.phoneWs.readyState === 1) {
         window.phoneWs.send(JSON.stringify({ type: 'toggle_play' }));
@@ -24,8 +31,7 @@
         } else {
           window.playheadBaseTimeMs = (window.playheadBaseTimeMs || 0) + (Date.now() - (window.playheadStartTime || Date.now()));
         }
-        btn.textContent = window.playheadActive ? '||' : '▶';
-        btn.classList.toggle('playing', window.playheadActive);
+        renderState();
       }
     });
   };
