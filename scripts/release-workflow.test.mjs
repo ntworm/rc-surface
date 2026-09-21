@@ -9,8 +9,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile as readFileRaw } from "node:fs/promises";
 import { join } from "node:path";
+
+// Windows checkouts may carry CRLF; every assertion below is written for LF.
+const readFile = async (path, encoding) => (await readFileRaw(path, encoding)).replace(/\r\n/g, "\n");
 
 const repoRoot = join(import.meta.dirname, "..");
 const validatorPath = join(repoRoot, "scripts", "validate-release-tag.mjs");

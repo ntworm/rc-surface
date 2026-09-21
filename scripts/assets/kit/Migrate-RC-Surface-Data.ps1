@@ -27,17 +27,20 @@ Write-Host ""
 $copied = 0
 $skipped = 0
 
-Get-ChildItem -Path $src -Recurse -File | ForEach-Object {
-    $rel = $_.FullName.Substring($src.Length).TrimStart('\', '/')
+# -Name yields paths relative to $src, so an 8.3 short form in LOCALAPPDATA
+# (RUNNER~1) can never desynchronise the relative path from FullName.
+Get-ChildItem -LiteralPath $src -Recurse -File -Name | ForEach-Object {
+    $rel = $_
+    $source = Join-Path $src $rel
     $target = Join-Path $dst $rel
     $targetDir = Split-Path $target -Parent
-    if (-not (Test-Path $targetDir)) {
+    if (-not (Test-Path -LiteralPath $targetDir)) {
         New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
     }
-    if (Test-Path $target) {
+    if (Test-Path -LiteralPath $target) {
         $script:skipped++
     } else {
-        Copy-Item -Path $_.FullName -Destination $target -Force
+        Copy-Item -LiteralPath $source -Destination $target -Force
         $script:copied++
     }
 }
