@@ -1,0 +1,7 @@
+# Tests read YAML, HTML and scripts with LF-only regular expressions; keep
+# checkouts LF everywhere (GitHub Windows runners default to autocrlf).
+* text=auto eol=lf
+*.amxd binary
+*.png binary
+*.woff2 binary
+*.tgz binary
