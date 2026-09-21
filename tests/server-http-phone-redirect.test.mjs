@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Root cause H1: the redirect at "/" used to drop the ?token= query string, so
 // the phone landed on /static/phone-v3/ with no credential, connected as a

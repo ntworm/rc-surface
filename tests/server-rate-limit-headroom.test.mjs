@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // The rate limiter exists to stop a runaway client from starving the Live
 // thread. It must never fire on the traffic this protocol is designed to

@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Contract freeze: the values below are the wire and behavior contract that
 // the phone and host both load from the same source and that the tests

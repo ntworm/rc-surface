@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of

@@ -276,7 +276,7 @@ test('the sheet is set in one face, embedded, with hierarchy from size', () => {
 
   // Attribution lives in NOTICE, linked from the colophon. A face that is no
   // longer shipped must not still be credited as bundled.
-  assert.match(landing, /href="https:\/\/github\.com\/ntworm\/ableton-rc-surface\/blob\/main\/NOTICE"/);
+  assert.match(landing, /href="https:\/\/github\.com\/ntworm\/rc-surface\/blob\/main\/NOTICE"/);
   const notice = fs.readFileSync(path.join(import.meta.dirname, '..', 'NOTICE'), 'utf8');
   assert.ok(notice.includes('Departure Mono'), 'NOTICE must credit Departure Mono');
   assert.ok(!notice.includes('IBM Plex'), 'NOTICE must not credit a face we do not ship');

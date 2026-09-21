@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // queryInitialState registers `start_listen` for tempo, is_playing, metronome,
 // both signature halves, current_song_time, beat and selected_track —

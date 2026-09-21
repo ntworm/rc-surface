@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Headroom benchmarks: the rate limiter must accept the protocol's nominal
 // envelope and the 2× peak envelope without dropping a single frame, and the

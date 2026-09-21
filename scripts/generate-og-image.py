@@ -234,7 +234,7 @@ def render(output_path):
               "PERF PAGE — PLAN, NOT A SCREENSHOT", font=font_11, fill=CLAY)
 
     draw.line([(margin, H - 58), (W - margin, H - 58)], fill=RULE, width=1)
-    draw.text((margin, H - 44), "ntworm.github.io/ableton-rc-surface",
+    draw.text((margin, H - 44), "ntworm.github.io/rc-surface",
               font=font_11, fill=AMBER)
     tail = "INDEPENDENT · NOT AFFILIATED WITH ABLETON AG"
     draw.text((W - margin - draw.textlength(tail, font=font_11), H - 44),

@@ -207,7 +207,7 @@ O probe em modo Worklet observou **19 chamadas YIN em 59 callbacks de análise**
 
 ### F04 — A versão que existe localmente não é a disponível para baixar
 
-**Confirmado na consulta pública desta auditoria:** [site](https://ntworm.github.io/ableton-rc-surface/) respondeu 200 com título 0.6.0; [última release publicada](https://github.com/ntworm/ableton-rc-surface/releases/latest) resolveu para v0.6.0 com asset `Ableton-RC-Surface-0.6.0.ablx`; a consulta à release v1.0.0 retornou 404. São observações daquela consulta, não monitoramento contínuo.
+**Confirmado na consulta pública desta auditoria:** [site](https://ntworm.github.io/rc-surface/) respondeu 200 com título 0.6.0; [última release publicada](https://github.com/ntworm/rc-surface/releases/latest) resolveu para v0.6.0 com asset `Ableton-RC-Surface-0.6.0.ablx`; a consulta à release v1.0.0 retornou 404. São observações daquela consulta, não monitoramento contínuo.
 
 Localmente package, manifest, bootstrap e [landing](../docs/index.html#L904) anunciam 1.0.0. O botão Download 1.0.0 usa `/releases/latest`, que hoje leva à release anterior. O README aponta para uma tag de release ainda indisponível. Não tratar o número local como prova de publicação.
 

@@ -1,5 +1,5 @@
 {
-  "name": "ableton-rc-surface",
+  "name": "rc-surface",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/extension.js",

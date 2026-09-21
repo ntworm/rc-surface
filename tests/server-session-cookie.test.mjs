@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // The phone URL is the one address a user actually handles: it is scanned off
 // a QR code, bookmarked, and pasted into chats. Carrying the controller token
