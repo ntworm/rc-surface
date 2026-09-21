@@ -756,8 +756,8 @@
       'pt-BR': 'Abas de página',
     },
     'lp.map.012': {
-      en: 'PERF, MIX, SNP, SNS, AUD, VID. MAP is the seventh page and opens over the current one.',
-      'pt-BR': 'PERF, MIX, SNP, SNS, AUD, VID. O MAP é a sétima página e abre por cima da atual.',
+      en: 'PERF, MIX, SNP, SNS, AUD, VID. MAP is the seventh page and opens over the current one. CFG opens the settings of the next control you tap; it shows on PERF and MIX only.',
+      'pt-BR': 'PERF, MIX, SNP, SNS, AUD, VID. O MAP é a sétima página e abre por cima da atual. O CFG abre os ajustes do próximo controle tocado; só aparece em PERF e MIX.',
     },
     'lp.map.013': {
       en: 'Pad grid',
@@ -772,8 +772,8 @@
       'pt-BR': 'Modo do pad',
     },
     'lp.map.016': {
-      en: 'A momentary, B hold, C toggle, D burst. Applies to all twelve pads at once. Carries no heading on screen.',
-      'pt-BR': 'A momentâneo, B hold, C toggle, D burst. Vale para os doze pads de uma vez. Não tem título na tela.',
+      en: 'A momentary, B hold, C toggle, D burst. Sets all twelve pads at once; a pad given its own mode in CFG keeps it and shows that letter beside its number.',
+      'pt-BR': 'A momentâneo, B hold, C toggle, D burst. Vale para os doze pads de uma vez; um pad com modo próprio no CFG mantém o dele e mostra a letra ao lado do número.',
     },
     'lp.map.017': {
       en: 'XY pads',
@@ -788,8 +788,8 @@
       'pt-BR': 'LFOs',
     },
     'lp.map.020': {
-      en: 'L1 to L4. Experimental shape ceilings: sine 5 Hz, triangle 8 Hz, ramps 6 Hz, square 15 Hz. Continuous FREE and rhythmic SYNC; Shift+drag for fine adjustment. Rate changes preserve phase. Only rate appears on controls: Hz in FREE, musical notes in SYNC. Shapes are in settings; fidelity in Live still needs testing.',
-      'pt-BR': 'L1 a L4. Tetos experimentais por forma: senoide 5 Hz, triângulo 8 Hz, rampas 6 Hz, quadrada 15 Hz. FREE contínuo e SYNC rítmico; Shift+arrasto para ajuste fino. Mudar a velocidade preserva a fase. Só a velocidade aparece nos controles: Hz em FREE, duração musical em SYNC. Formas ficam nos ajustes; fidelidade no Live ainda precisa de teste.',
+      en: 'L1 to L4. Shape ceilings measured against Live\'s write rate: sine 4 Hz, triangle 3 Hz, ramps 3 Hz, square 12 Hz. Faster settings slow down by octaves and the control shows the effective rate. Continuous FREE and rhythmic SYNC; Shift+drag for fine adjustment. Rate changes preserve phase. Only rate appears on controls: Hz in FREE, musical notes in SYNC. Shape lives in the SYNC settings, or per LFO in CFG.',
+      'pt-BR': 'L1 a L4. Tetos por forma medidos contra a taxa de escrita do Live: senoide 4 Hz, triângulo 3 Hz, rampas 3 Hz, quadrada 12 Hz. Ajustes mais rápidos descem por oitavas e o controle mostra a velocidade efetiva. FREE contínuo e SYNC rítmico; Shift+arrasto para ajuste fino. Mudar a velocidade preserva a fase. Só a velocidade aparece nos controles: Hz em FREE, duração musical em SYNC. A forma fica nos ajustes do SYNC, ou por LFO no CFG.',
     },
     'lp.map.021': {
       en: 'Stutters',
@@ -808,8 +808,8 @@
       'pt-BR': 'Painel do Live',
     },
     'lp.map.025': {
-      en: 'BPM readout plus five buttons: previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>. Header, on every page.',
-      'pt-BR': 'Leitura de BPM mais cinco botões: locator anterior, play e pause, próximo locator, <code>TRN</code>, <code>MAP</code>. Header, em todas as páginas.',
+      en: 'BPM readout plus six buttons: previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>, and <code>CFG</code> on PERF and MIX. Header, on every page.',
+      'pt-BR': 'Leitura de BPM mais seis botões: locator anterior, play e pause, próximo locator, <code>TRN</code>, <code>MAP</code> e <code>CFG</code> em PERF e MIX. Header, em todas as páginas.',
     },
     'lp.map.026': {
       en: 'Sync block',
@@ -848,12 +848,12 @@
       'pt-BR': 'Faders',
     },
     'lp.map.041': {
-      en: "<code>fader-1..8</code>, in one row, with 150 px relative vertical drag. IDs 1–6 and old mappings remain compatible; 7–8 are additional controls.",
-      'pt-BR': "<code>fader-1..8</code>, em uma linha, com arrasto vertical relativo de 150 px. IDs 1–6 e mapeamentos antigos continuam compatíveis; 7–8 são adicionais.",
+      en: '<code>fader-1..8</code>, in one row; the thumb moves exactly as far as the finger, whatever the track height. IDs 1–6 and old mappings remain compatible; 7–8 are additional controls.',
+      'pt-BR': '<code>fader-1..8</code>, em uma linha; o cursor anda exatamente o que o dedo anda, seja qual for a altura da pista. IDs 1–6 e mapeamentos antigos continuam compatíveis; 7–8 são adicionais.',
     },
     'lp.map.043': {
-      en: 'BPM, previous locator, play and pause, next locator, <code>TRN</code>, and <code>MAP</code>. Shared by every page.',
-      'pt-BR': 'BPM, locator anterior, play e pause, próximo locator, <code>TRN</code> e <code>MAP</code>. Compartilhado por todas as páginas.',
+      en: 'BPM, previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>, and <code>CFG</code>. Shared by every page; CFG shows on PERF and MIX.',
+      'pt-BR': 'BPM, locator anterior, play e pause, próximo locator, <code>TRN</code>, <code>MAP</code> e <code>CFG</code>. Compartilhado por todas as páginas; o CFG aparece em PERF e MIX.',
     },
     'lp.map.045': {
       en: "<code>SYNC</code>, settings and <code>STAGE</code>. CALIBRATE appears only on SNS/AUD/VID.",
@@ -1016,8 +1016,8 @@
       'pt-BR': "Detectores de áudio integrados",
     },
     'lp.audio.timing': {
-      en: 'Audio timing: SYNC uses Live BPM with 1/128 through 1/1 notes, including triplets (T) and dotted notes (D); SMOOTH also offers OFF. FREE keeps independent millisecond settings (illustrated here). Bands measure linear RMS, not perceived loudness.',
-      'pt-BR': 'Tempos do áudio: SYNC usa o BPM do Live com notas de 1/128 até 1/1, incluindo tercinas (T) e pontuadas (D); SUAVE também oferece OFF. FREE mantém milissegundos independentes (ilustrados aqui). Bandas medem RMS linear, não loudness percebido.',
+      en: 'Audio timing: SYNC uses Live BPM with 1/128 through 1/1 notes, including triplets (T) and dotted notes (D); SMOOTH also offers OFF. FREE keeps independent millisecond settings (illustrated here). Low, mid and high are K-weighted loudness (ITU-R BS.1770), mapped in LU.',
+      'pt-BR': 'Tempos do áudio: SYNC usa o BPM do Live com notas de 1/128 até 1/1, incluindo tercinas (T) e pontuadas (D); SUAVE também oferece OFF. FREE mantém milissegundos independentes (ilustrados aqui). Low, mid e high são loudness K-weighted (ITU-R BS.1770), mapeados em LU.',
     },
     'lp.audio.detector-note': {
       en: "Twelve 0..1 mapping sources in Attacks, Tone, Texture and Bands: Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%, Low, Mid and High RMS. All twelve cards remain available; compact screens scroll the bank. Graph views select families and the legend toggles individual curves.",
@@ -1201,8 +1201,8 @@
       'pt-BR': 'Modos de pad A–D',
     },
     'lp.controls.014': {
-      en: 'Pad behaviour only',
-      'pt-BR': 'Só o comportamento do pad',
+      en: 'Pad behaviour; CFG can override it per pad',
+      'pt-BR': 'Comportamento do pad; o CFG pode sobrescrever por pad',
     },
     'lp.controls.015': {
       en: 'XY pads',
@@ -1321,8 +1321,8 @@
       'pt-BR': 'header',
     },
     'lp.controls.048': {
-      en: 'BPM, prev locator, play and pause, next locator, TRN, MAP',
-      'pt-BR': 'BPM, locator anterior, play e pause, próximo locator, TRN, MAP',
+      en: 'BPM, prev locator, play and pause, next locator, TRN, MAP, CFG (PERF and MIX)',
+      'pt-BR': 'BPM, locator anterior, play e pause, próximo locator, TRN, MAP, CFG (PERF e MIX)',
     },
     'lp.controls.049': {
       en: 'Header sync block',
@@ -1360,6 +1360,10 @@
       en: 'Opens the mapping picker as an overlay on the current page. It has no tab of its own.',
       'pt-BR': 'Abre o seletor de mapeamento como overlay sobre a página atual. Não tem aba própria.',
     },
+    'lp.controls.148': {
+      en: 'Per-control settings. Tap CFG, then the control: mode for a pad, shape and subdivision for an LFO, swing for a stutter, friction and bounce for XY 2. Each setting sticks to that control only. Long-press CFG to clear every override. PERF and MIX only; on the desktop, right-click the control instead.',
+      'pt-BR': 'Ajustes por controle. Toque CFG e depois o controle: modo de um pad, forma e subdivisão de um LFO, swing de um stutter, atrito e quique do XY 2. Cada ajuste vale só para aquele controle. Segure CFG para limpar todos os ajustes. Só em PERF e MIX; no desktop, use o botão direito no controle.',
+    },
     'lp.controls.059': {
       en: "A two-state toggle: the button itself reads <b>SYNC</b> or <b>FREE</b>. Long-press for Deep Sync Settings. See <a href=\"#clock\">2.1</a>.",
       'pt-BR': "Um toggle de dois estados: o próprio botão diz <b>SYNC</b> ou <b>FREE</b>. Pressione e segure para abrir os Ajustes de Deep Sync. Veja <a href=\"#clock\">2.1</a>.",
@@ -1393,8 +1397,8 @@
       'pt-BR': 'O que cada um faz <span class="tail">— do toque até o Live</span>',
     },
     'lp.controls.067': {
-      en: 'The inventory above names the controls. These small drawings show the gesture that makes each family musical.',
-      'pt-BR': 'O inventário acima nomeia os controles. Estes desenhos mostram o gesto que torna cada família musical.',
+      en: 'Each family below answers the same three questions: what your finger does, what the surface makes of it, and what reaches Live.',
+      'pt-BR': 'Cada família abaixo responde às mesmas três perguntas: o que o dedo faz, o que a superfície faz com isso e o que chega ao Live.',
     },
     'lp.controls.068': {
       en: 'Performance',
@@ -1425,8 +1429,8 @@
       'pt-BR': 'Pads, LFOs, stutters',
     },
     'lp.controls.075': {
-      en: '<code>A</code> starts at zero and returns there on release; <code>B</code> starts from the saved value and holds; <code>C</code> toggles and can still be edited while held; <code>D</code> is a short attack–release burst. The same modes shape LFOs and stutters: AbletonOSC follows Live\'s beat subdivisions, while SDK/FREE runs without beat-phase lock. PERF UTIL recalls bypass the SNP transition.',
-      'pt-BR': '<code>A</code> começa em zero e volta para lá ao soltar; <code>B</code> parte do valor guardado e segura; <code>C</code> alterna e ainda pode ser editado enquanto segurado; <code>D</code> é um burst curto de attack e release. Os mesmos modos moldam LFOs e stutters: o AbletonOSC segue as subdivisões de beat do Live, enquanto SDK/FREE roda sem travar na fase do beat. Os recalls do PERF UTIL ignoram a transição do SNP.',
+      en: '<code>A</code> starts at zero and returns there when the finger leaves; <code>B</code> starts from the saved value and keeps whatever you leave; <code>C</code> latches on a tap and can still be edited while held; <code>D</code> fires one attack–release burst. Choose the mode by what should happen after the touch, and set it per pad in CFG when one pad must behave differently. LFOs and stutters run on the same clock as the pads: locked to Live\'s beat in SYNC (through AbletonOSC or the SDK clock), free-running in FREE. PERF UTIL recalls bypass the SNP transition.',
+      'pt-BR': '<code>A</code> começa em zero e volta para lá quando o dedo sai; <code>B</code> parte do valor guardado e mantém o que você deixar; <code>C</code> trava com um toque e ainda pode ser editado enquanto segurado; <code>D</code> dispara um burst de attack e release. Escolha o modo pelo que deve acontecer depois do toque, e defina por pad no CFG quando um pad precisar se comportar diferente. LFOs e stutters correm no mesmo relógio dos pads: travados no beat do Live em SYNC (via AbletonOSC ou relógio do SDK), livres em FREE. Os recalls do PERF UTIL ignoram a transição do SNP.',
     },
     'lp.controls.076': {
       en: 'VALUE ↑',
@@ -1481,16 +1485,16 @@
       'pt-BR': 'repete na divisão do beat',
     },
     'lp.controls.089': {
-      en: 'Every panel uses the same value-over-time grammar; only the post-touch state changes.',
-      'pt-BR': 'Todos os painéis usam a mesma gramática de valor no tempo; só muda o estado depois do toque.',
+      en: 'Read every panel the same way: value upward, time to the right, the finger lands at ▼ and leaves at △. Only what the control does after the finger leaves changes from panel to panel.',
+      'pt-BR': 'Leia todos os painéis do mesmo jeito: valor para cima, tempo para a direita, o dedo pousa em ▼ e sai em △. Só muda, de painel para painel, o que o controle faz depois que o dedo sai.',
     },
     'lp.controls.090': {
       en: 'XY, knobs, faders',
       'pt-BR': 'XY, knobs, faders',
     },
     'lp.controls.091': {
-      en: 'XY 2 records drag position and velocity, then coasts, rebounds and keeps emitting after release. Knobs and faders are two visual forms of the same vertical relative drag: they start from the current value and never jump to the touch point. They share one bank and the mapping surfaces, but their control keys and mappings remain independent.',
-      'pt-BR': 'O XY 2 registra posição e velocidade do arrasto, e depois desliza, ricocheteia e continua emitindo mesmo depois de soltar. Knobs e faders são duas formas visuais do mesmo arrasto vertical relativo: partem do valor atual e nunca pulam para o ponto tocado. Dividem um banco e as superfícies de mapeamento, mas as chaves de controle e os mapeamentos seguem independentes.',
+      en: 'XY 2 records where and how fast you dragged, then coasts, rebounds off the edges and keeps sending after release; XY 1 stays where you leave it. Knobs and faders follow one rule: the value starts from where it is and tracks the vertical movement of the finger, never jumping to the touch point. A knob crosses its range in 150 px of drag (220 px for a macro); a fader thumb moves exactly as far as the finger does. They share one bank and the mapping surfaces, but each control keeps its own key and mapping.',
+      'pt-BR': 'O XY 2 registra onde e com que velocidade você arrastou, depois desliza, ricocheteia nas bordas e continua enviando depois de soltar; o XY 1 fica onde você deixou. Knobs e faders seguem uma regra só: o valor parte de onde está e acompanha o movimento vertical do dedo, sem nunca pular para o ponto tocado. Um knob atravessa a faixa em 150 px de arrasto (220 px num macro); o cursor do fader anda exatamente o que o dedo anda. Dividem um banco e as superfícies de mapeamento, mas cada controle mantém a própria chave e o próprio mapeamento.',
     },
     'lp.controls.092': {
       en: 'The touch point is never the value',
@@ -1509,8 +1513,8 @@
       'pt-BR': 'dedo',
     },
     'lp.controls.096': {
-      en: 'Touch anywhere — at touch-down <b>dy is 0</b>, so nothing moves. Move 150&nbsp;px and the value crosses its whole range.',
-      'pt-BR': 'Toque em qualquer lugar — no instante do toque <b>dy é 0</b>, então nada se move. Percorra 150&nbsp;px e o valor atravessa a faixa inteira.',
+      en: 'Touch anywhere — at touch-down <b>dy is 0</b>, so nothing moves. Drag the knob\'s 150&nbsp;px and the value crosses its whole range; a fader travels as far as the finger.',
+      'pt-BR': 'Toque em qualquer lugar — no instante do toque <b>dy é 0</b>, então nada se move. Percorra os 150&nbsp;px do knob e o valor atravessa a faixa inteira; o fader anda o que o dedo anda.',
     },
     'lp.controls.097': {
       en: 'value = start + dy / rangePx',
@@ -1541,28 +1545,28 @@
       'pt-BR': 'Snapshots e morph vetorial',
     },
     'lp.controls.104': {
-      en: 'A recall moves the mapped state across the chosen transition interval. Vector XY bilinearly blends the four corner states instead of crossfading only two.',
-      'pt-BR': 'Um recall move o estado mapeado ao longo do intervalo de transição escolhido. O Vetor XY mistura de forma bilinear os quatro estados dos cantos, em vez de fazer crossfade entre dois.',
+      en: 'Capture stores every mapped control at once into one of eight slots. Recall does not jump: it moves each mapped value from where it is to the stored state across the transition, set in seconds (Free) or as a musical length that follows Live\'s tempo (Sync). Vector XY blends slots 1–4 by the position of one finger, weighting the four corners, and applies as you drag.',
+      'pt-BR': 'Capturar guarda todos os controles mapeados de uma vez em um dos oito slots. Recall não salta: leva cada valor mapeado de onde está até o estado guardado ao longo da transição, em segundos (Free) ou numa duração musical que segue o andamento do Live (Sync). O Vetor XY mistura os slots 1–4 pela posição de um dedo, pesando os quatro cantos, e aplica enquanto você arrasta.',
     },
     'lp.controls.105': {
-      en: "RECALL = timed interpolation · 0.1–5.0 s",
-      'pt-BR': "RECALL = interpolação cronometrada · 0.1–5.0 s",
+      en: 'RECALL = timed interpolation · Free 0.1–5.0 s or Sync in beats',
+      'pt-BR': 'RECALL = interpolação cronometrada · Free 0.1–5.0 s ou Sync em beats',
     },
     'lp.controls.106': {
       en: 'four corner states → weighted blend',
       'pt-BR': 'quatro estados de canto → mistura ponderada',
     },
     'lp.controls.107': {
-      en: 'A snapshot is a complete mapped state, not a screenshot and not a two-point crossfade.',
-      'pt-BR': 'Um snapshot é um estado mapeado completo, não uma captura de tela nem um crossfade entre dois pontos.',
+      en: 'A snapshot is the whole mapped state, not a screenshot and not a crossfade between two points; a recall restores only what was captured.',
+      'pt-BR': 'Um snapshot é o estado mapeado completo, não uma captura de tela nem um crossfade entre dois pontos; um recall restaura só o que foi capturado.',
     },
     'lp.controls.108': {
       en: 'Motion, orientation, audio',
       'pt-BR': 'Movimento, orientação, áudio',
     },
     'lp.controls.109': {
-      en: 'CALIBRATE makes the phone\'s current position the reference; every motion axis maps independently. AUD provides RMS, envelope and twelve descriptors for amplitude, attacks and spectral changes; its graph shows selectable curves over time.',
-      'pt-BR': 'CALIBRAR usa a posição atual do celular como referência; cada eixo de movimento pode ser mapeado. AUD oferece RMS, envelope e doze descritores de amplitude, ataques e mudanças espectrais; o gráfico mostra curvas selecionáveis ao longo do tempo.',
+      en: 'CALIBRATE makes the phone\'s current position the reference; from then on tilt and motion on each axis map on their own. AUD turns sound into control: level, envelope, gate and attacks, plus twelve descriptors for attacks, tone, texture and K-weighted loudness bands. The graph shows the curves you pick over the last 2.5 seconds, so you see what a parameter will receive before you map it.',
+      'pt-BR': 'CALIBRAR usa a posição atual do celular como referência; daí em diante inclinação e movimento em cada eixo mapeiam por conta própria. AUD transforma som em controle: nível, envelope, gate e ataques, mais doze descritores de ataques, timbre, textura e bandas de loudness K-weighted. O gráfico mostra as curvas que você escolher nos últimos 2.5 segundos, para ver o que um parâmetro vai receber antes de mapear.',
     },
     'lp.controls.110': {
       en: "SIGNAL / 2.5s",
@@ -1593,8 +1597,8 @@
       'pt-BR': 'Visão: mão, poses, clutch',
     },
     'lp.controls.117': {
-      en: 'Direct hand X/Y/Z stays available for continuous control. A held, camera-facing pinch engages the clutch; hand displacement then drives its relative axes, and release freezes them. G1–G3 and the four built-in detectors are intentional outputs. PALM and FACE remain local camera diagnostics, not mapping traffic.',
-      'pt-BR': 'O X/Y/Z direto da mão segue disponível para controle contínuo. Uma pinça segurada, com a palma virada para a câmera, engata o clutch; o deslocamento da mão passa a acionar os eixos relativos, e soltar congela tudo. G1–G3 e os quatro detectores nativos são saídas intencionais. PALM e FACE seguem como diagnóstico local da câmera, não como tráfego de mapeamento.',
+      en: 'Direct hand X/Y/Z stays available for continuous control. A held, camera-facing pinch engages the clutch; hand displacement then drives its relative axes, and release freezes them. G1–G3 and the four built-in detectors are intentional outputs; a learned pose belongs to the hand that taught it, so teach with the hand you will perform with. PALM and FACE remain local camera diagnostics, not mapping traffic.',
+      'pt-BR': 'O X/Y/Z direto da mão segue disponível para controle contínuo. Uma pinça segurada, com a palma virada para a câmera, engata o clutch; o deslocamento da mão passa a acionar os eixos relativos, e soltar congela tudo. G1–G3 e os quatro detectores nativos são saídas intencionais; uma pose aprendida pertence à mão que a ensinou, então ensine com a mão que vai usar na performance. PALM e FACE seguem como diagnóstico local da câmera, não como tráfego de mapeamento.',
     },
     'lp.controls.118': {
       en: 'the two tips touch',
@@ -1673,16 +1677,16 @@
       'pt-BR': 'Trigger notes MIDI',
     },
     'lp.controls.137': {
-      en: 'Map a phone control to a note on a MIDI track. The bundled <code>RC-Midi-Receiver.amxd</code> is reused when already on the track; otherwise place it manually because Live cannot insert Max for Live devices through its Extensions SDK. Pads, LFOs, stutters, XY axes, knobs, faders, detectors, and learned poses support trigger-note targets.',
-      'pt-BR': 'Mapeie um controle do celular numa nota de uma track MIDI. O <code>RC-Midi-Receiver.amxd</code> incluído é reaproveitado quando já está na track; senão coloque-o manualmente, pois o Live não insere devices Max for Live pelo SDK de Extensions. Pads, LFOs, stutters, eixos de XY, knobs, faders, detectores e poses aprendidas aceitam alvo de trigger note.',
+      en: 'Map a phone control to a note on a MIDI track. The bundled <code>RC-Midi-Receiver.amxd</code> is reused when already on the track; otherwise place it manually because Live cannot insert Max for Live devices through its Extensions SDK. The Receiver arms SDK Notes by itself once it has loaded; Panic turns it off until clicked. Pads, LFOs, stutters, XY axes, knobs, faders, detectors, and learned poses support trigger-note targets.',
+      'pt-BR': 'Mapeie um controle do celular numa nota de uma track MIDI. O <code>RC-Midi-Receiver.amxd</code> incluído é reaproveitado quando já está na track; senão coloque-o manualmente, pois o Live não insere devices Max for Live pelo SDK de Extensions. O Receiver arma o SDK Notes sozinho depois de carregar; Panic desliga até o clique. Pads, LFOs, stutters, eixos de XY, knobs, faders, detectores e poses aprendidas aceitam alvo de trigger note.',
     },
     'lp.controls.138': {
       en: "Audio descriptors",
       'pt-BR': "Descritores de áudio",
     },
     'lp.controls.139': {
-      en: "AUD offers twelve descriptors plus amplitude controls. Kick/Snare are heuristics, bands are linear RMS, not perceptual loudness. Native Track and measured end-to-end latency remain pending; the independent Max Audio Sender does not feed browser descriptors.",
-      'pt-BR': "AUD oferece doze descritores e amplitude. Kick/Snare são heurísticas; bandas são RMS linear, não loudness perceptual. Track nativo e medição ponta a ponta seguem pendentes; o Max Audio Sender independente não alimenta os descritores do navegador.",
+      en: 'AUD offers twelve descriptors plus amplitude controls. Kick and snare are attack-weighted heuristics inside their own bands, not instrument classifiers; low, mid and high are K-weighted loudness in LU. Microphone-to-Live latency depends on the phone and has not been measured end to end; Native Track is not part of 1.0, and the Max Audio Sender feeds the Receiver, not the browser descriptors.',
+      'pt-BR': 'AUD oferece doze descritores e amplitude. Kick e snare são heurísticas ponderadas por ataque dentro das próprias bandas, não classificadores de instrumento; low, mid e high são loudness K-weighted em LU. A latência do microfone até o Live depende do celular e não foi medida ponta a ponta; o Native Track não faz parte da 1.0, e o Max Audio Sender alimenta o Receiver, não os descritores do navegador.',
     },
     'lp.controls.140': {
       en: 'TRN transport',

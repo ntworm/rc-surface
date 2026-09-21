@@ -1110,6 +1110,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="512" y="40" width="26" height="22"/>
     <rect x="546" y="40" width="38" height="22"/>
     <rect x="590" y="40" width="38" height="22"/>
+    <rect x="634" y="40" width="38" height="22"/>
   </g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
     <text x="459" y="55">&#9198;</text>
@@ -1117,17 +1118,18 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <text x="519" y="55">&#9197;</text>
     <text x="552" y="55">TRN</text>
     <text x="596" y="55">MAP</text>
+    <text x="640" y="55">CFG</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="642" y="40" width="48" height="22"/>
-    <rect x="696" y="40" width="26" height="22"/>
-    <rect x="728" y="40" width="52" height="22"/>
+    <rect x="686" y="40" width="48" height="22"/>
+    <rect x="740" y="40" width="26" height="22"/>
+    <rect x="772" y="40" width="52" height="22"/>
   </g>
-  <rect x="642" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
+  <rect x="686" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="648" y="55" fill="#141414">SYNC</text>
-    <text x="704" y="55" fill="#c0c0c0">&#9881;</text>
-    <text x="736" y="55" fill="#c0c0c0">STAGE</text>
+    <text x="692" y="55" fill="#141414">SYNC</text>
+    <text x="748" y="55" fill="#c0c0c0">&#9881;</text>
+    <text x="780" y="55" fill="#c0c0c0">STAGE</text>
   </g>
   <text x="878" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c8be50">&#9889; &#8230;</text>
   <text x="940" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#4a4a4a">OSC: SDK</text>
@@ -1288,14 +1290,14 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP is the seventh page and opens over the current one.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP is the seventh page and opens over the current one. CFG opens the settings of the next control you tap; it shows on PERF and MIX only.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.013">Pad grid</td><td class="c2">12</td><td data-i18n="lp.map.014">Four across, three down. Behaviour comes from the pad mode, not from the pad.</td></tr>
-              <tr><td class="c1">3</td><td data-i18n="lp.map.015">Pad mode</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentary, B hold, C toggle, D burst. Applies to all twelve pads at once. Carries no heading on screen.</td></tr>
+              <tr><td class="c1">3</td><td data-i18n="lp.map.015">Pad mode</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentary, B hold, C toggle, D burst. Sets all twelve pads at once; a pad given its own mode in CFG keeps it and shows that letter beside its number.</td></tr>
               <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Captioned <code>XY 1</code> and <code data-i18n="lp.fig.016">XY 2 (Physics)</code>, each with a live <code>0.50 / 0.50</code> readout. Each axis maps on its own.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">4</td><td data-i18n="lp.map.020">L1 to L4. Experimental shape ceilings: sine 5 Hz, triangle 8 Hz, ramps 6 Hz, square 15 Hz. Continuous FREE and rhythmic SYNC; Shift+drag for fine adjustment. Rate changes preserve phase. Only rate appears on controls: Hz in FREE, musical notes in SYNC. Shapes are in settings; fidelity in Live still needs testing.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">4</td><td data-i18n="lp.map.020">L1 to L4. Shape ceilings measured against Live's write rate: sine 4 Hz, triangle 3 Hz, ramps 3 Hz, square 12 Hz. Faster settings slow down by octaves and the control shows the effective rate. Continuous FREE and rhythmic SYNC; Shift+drag for fine adjustment. Rate changes preserve phase. Only rate appears on controls: Hz in FREE, musical notes in SYNC. Shape lives in the SYNC settings, or per LFO in CFG.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.021">Stutters</td><td class="c2">4</td><td data-i18n="lp.map.022">S1 to S4. Horizontal speed, vertical amplitude. Only rate is shown: Hz in FREE, musical notes in SYNC; up to 15 Hz including ratchet. Flashing follows the local gate. Horizontal drag releases a fixed division; unavailable rhythmic choices are disabled for the current tempo and swing.</td></tr>
               <tr><td class="c1">7</td><td>PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.023">CAP captures, slots 1 to 4 recall, OFF exits. Six cells, two across.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n-html="lp.map.025">BPM readout plus five buttons: previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>. Header, on every page.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n-html="lp.map.025">BPM readout plus six buttons: previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>, and <code>CFG</code> on PERF and MIX. Header, on every page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.027"><code>SYNC</code>, settings and <code>STAGE</code>. CALIBRATE appears only on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1346,6 +1348,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="512" y="40" width="26" height="22"/>
     <rect x="546" y="40" width="38" height="22"/>
     <rect x="590" y="40" width="38" height="22"/>
+    <rect x="634" y="40" width="38" height="22"/>
   </g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
     <text x="459" y="55">&#9198;</text>
@@ -1353,17 +1356,18 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <text x="519" y="55">&#9197;</text>
     <text x="552" y="55">TRN</text>
     <text x="596" y="55">MAP</text>
+    <text x="640" y="55">CFG</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="642" y="40" width="48" height="22"/>
-    <rect x="696" y="40" width="26" height="22"/>
-    <rect x="728" y="40" width="52" height="22"/>
+    <rect x="686" y="40" width="48" height="22"/>
+    <rect x="740" y="40" width="26" height="22"/>
+    <rect x="772" y="40" width="52" height="22"/>
   </g>
-  <rect x="642" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
+  <rect x="686" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="648" y="55" fill="#141414">SYNC</text>
-    <text x="704" y="55" fill="#c0c0c0">&#9881;</text>
-    <text x="736" y="55" fill="#c0c0c0">STAGE</text>
+    <text x="692" y="55" fill="#141414">SYNC</text>
+    <text x="748" y="55" fill="#c0c0c0">&#9881;</text>
+    <text x="780" y="55" fill="#c0c0c0">STAGE</text>
   </g>
   <text x="878" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c8be50">&#9889; &#8230;</text>
   <text x="940" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#444444">OSC: SDK</text>
@@ -1425,8 +1429,8 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tbody>
               <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.037">PERF, MIX, SNP, SNS, AUD, VID. MIX is active in this plan.</td></tr>
               <tr><td class="c1">2</td><td>Knobs</td><td class="c2">8</td><td data-i18n-html="lp.map.039"><code>knob-1..8</code>, four across by two down, with flat arcs. Vertical relative drag, keyboard arrows and Home/End use the same normalized range.</td></tr>
-              <tr><td class="c1">3</td><td>Faders</td><td class="c2">8</td><td data-i18n-html="lp.map.041"><code>fader-1..8</code>, in one row, with 150 px relative vertical drag. IDs 1–6 and old mappings remain compatible; 7–8 are additional controls.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n-html="lp.map.043">BPM, previous locator, play and pause, next locator, <code>TRN</code>, and <code>MAP</code>. Shared by every page.</td></tr>
+              <tr><td class="c1">3</td><td>Faders</td><td class="c2">8</td><td data-i18n-html="lp.map.041"><code>fader-1..8</code>, in one row; the thumb moves exactly as far as the finger, whatever the track height. IDs 1–6 and old mappings remain compatible; 7–8 are additional controls.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n-html="lp.map.043">BPM, previous locator, play and pause, next locator, <code>TRN</code>, <code>MAP</code>, and <code>CFG</code>. Shared by every page; CFG shows on PERF and MIX.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.045"><code>SYNC</code>, settings and <code>STAGE</code>. CALIBRATE appears only on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1849,7 +1853,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           </thead>
           <tbody>
             <tr><td class="c1">00</td><td data-i18n="lp.controls.010">Performance pads</td><td class="c2">12</td><td>PERF</td><td class="c2">MIDI</td><td data-i18n="lp.controls.011">Clip, scene, or a trigger note</td></tr>
-            <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Pad modes A&#8211;D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Pad behaviour only</td></tr>
+            <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Pad modes A&#8211;D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Pad behaviour; CFG can override it per pad</td></tr>
             <tr><td class="c1">02</td><td>XY pads</td><td class="c2">2</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.016">Two parameters per pad</td></tr>
             <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs L1&#8211;L4</td><td class="c2">4</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Any mapped parameter</td></tr>
             <tr><td class="c1">04</td><td data-i18n="lp.controls.019">Stutters S1&#8211;S4</td><td class="c2">4</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Any mapped parameter</td></tr>
@@ -1864,7 +1868,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tr><td class="c1">0D</td><td data-i18n="lp.map.098">Audio input</td><td class="c2">1</td><td>AUD</td><td class="c2">SDK</td><td data-i18n="lp.controls.040">RMS, envelope, gate, attack; Transient, Kick, Snare, Brightness, Centroid, Rolloff95, Flux, Flatness, Spread, Low, Mid, High</td></tr>
             <tr><td class="c1">0E</td><td data-i18n="lp.controls.041">Single-hand vision</td><td class="c2">1</td><td>VID</td><td class="c2">SDK</td><td data-i18n-html="lp.controls.042">Hand <code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory plus Victory rotation; learned G1&#8211;G3. PALM, FACE, finger diagnostics, and whole-frame color stay local and do not enter mapping traffic.</td></tr>
             <tr><td class="c1">0F</td><td data-i18n="lp.controls.043">Map picker</td><td class="c2" data-i18n="lp.controls.146">3 surfaces</td><td>MAP</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.045">Phone overlay, panel Mapping tab, and the separate administrative window; each stores bindings, but only emitted phone channels can drive them</td></tr>
-            <tr><td class="c1">10</td><td data-i18n="lp.controls.046">Header live panel</td><td class="c2">6</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.048">BPM, prev locator, play and pause, next locator, TRN, MAP</td></tr>
+            <tr><td class="c1">10</td><td data-i18n="lp.controls.046">Header live panel</td><td class="c2">7</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.048">BPM, prev locator, play and pause, next locator, TRN, MAP, CFG (PERF and MIX)</td></tr>
             <tr><td class="c1">11</td><td data-i18n="lp.controls.049">Header sync block</td><td class="c2">4</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.051">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID</td></tr>
           </tbody>
         </table>
@@ -1884,6 +1888,9 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-target"/></svg></span><span class="bd">
           <h4>MAP</h4><p data-i18n="lp.controls.058">Opens the mapping picker as an overlay on the current page. It has no tab of its own.</p></span></div>
 
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
+          <h4>CFG</h4><p data-i18n="lp.controls.148">Per-control settings. Tap CFG, then the control: mode for a pad, shape and subdivision for an LFO, swing for a stutter, friction and bounce for XY 2. Each setting sticks to that control only. Long-press CFG to clear every override. PERF and MIX only; on the desktop, right-click the control instead.</p></span></div>
+
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-wave"/></svg></span><span class="bd">
           <h4>SYNC</h4><p data-i18n-html="lp.controls.059">A two-state toggle: the button itself reads <b>SYNC</b> or <b>FREE</b>. Long-press for Deep Sync Settings. See <a href="#clock">2.1</a>.</p></span></div>
 
@@ -1900,7 +1907,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4 data-i18n="lp.controls.064">Status</h4><p data-i18n="lp.controls.065">Link state and the phone's name. Tap to rename.</p></span></div>
       </div>
       <h3 id="functions" data-i18n-html="lp.controls.066">What each one does <span class="tail">— from touch to Live</span></h3>
-      <p class="muted" style="margin-bottom:14px" data-i18n="lp.controls.067">The inventory above names the controls. These small drawings show the gesture that makes each family musical.</p>
+      <p class="muted" style="margin-bottom:14px" data-i18n="lp.controls.067">Each family below answers the same three questions: what your finger does, what the surface makes of it, and what reaches Live.</p>
 
       <fieldset class="control-viewer" data-control-viewer>
         <legend class="visually-hidden" data-i18n="lp.a11y.002">Choose a control family</legend>
@@ -1924,7 +1931,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.074">Pads, LFOs, stutters</h3>
-          <p data-i18n-html="lp.controls.075"><code>A</code> starts at zero and returns there on release; <code>B</code> starts from the saved value and holds; <code>C</code> toggles and can still be edited while held; <code>D</code> is a short attack&#8211;release burst. The same modes shape LFOs and stutters: AbletonOSC follows Live's beat subdivisions, while SDK/FREE runs without beat-phase lock. PERF UTIL recalls bypass the SNP transition.</p>
+          <p data-i18n-html="lp.controls.075"><code>A</code> starts at zero and returns there when the finger leaves; <code>B</code> starts from the saved value and keeps whatever you leave; <code>C</code> latches on a tap and can still be edited while held; <code>D</code> fires one attack&#8211;release burst. Choose the mode by what should happen after the touch, and set it per pad in CFG when one pad must behave differently. LFOs and stutters run on the same clock as the pads: locked to Live's beat in SYNC (through AbletonOSC or the SDK clock), free-running in FREE. PERF UTIL recalls bypass the SNP transition.</p>
         </div>
         <div class="feature-figure">
                     <div class="pf-wrap" data-control-illustration="performance">
@@ -1961,7 +1968,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <div class="pf-foot"><b>SYNC / FREE</b><span data-i18n="lp.controls.088">repeat at beat division</span></div>
             </div>
             </div>
-            <p class="pf-note" data-i18n="lp.controls.089">Every panel uses the same value-over-time grammar; only the post-touch state changes.</p>
+            <p class="pf-note" data-i18n="lp.controls.089">Read every panel the same way: value upward, time to the right, the finger lands at &#9660; and leaves at &#9651;. Only what the control does after the finger leaves changes from panel to panel.</p>
           </div>
         </div>
       </div>
@@ -1971,7 +1978,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.090">XY, knobs, faders</h3>
-          <p data-i18n="lp.controls.091">XY 2 records drag position and velocity, then coasts, rebounds and keeps emitting after release. Knobs and faders are two visual forms of the same vertical relative drag: they start from the current value and never jump to the touch point. They share one bank and the mapping surfaces, but their control keys and mappings remain independent.</p>
+          <p data-i18n="lp.controls.091">XY 2 records where and how fast you dragged, then coasts, rebounds off the edges and keeps sending after release; XY 1 stays where you leave it. Knobs and faders follow one rule: the value starts from where it is and tracks the vertical movement of the finger, never jumping to the touch point. A knob crosses its range in 150 px of drag (220 px for a macro); a fader thumb moves exactly as far as the finger does. They share one bank and the mapping surfaces, but each control keeps its own key and mapping.</p>
         </div>
         <div class="feature-figure">
           <div class="gm" data-control-illustration="continuous">
@@ -1985,7 +1992,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                   <b class="rd-same" data-i18n-html="lp.controls.094">same<br>length</b>
                   <div class="rd-col rd-low"><i class="rd-bar rd-f"></i><span data-i18n="lp.controls.095">finger</span></div>
                 </div>
-                <p class="rd-say" data-i18n-html="lp.controls.096">Touch anywhere &#8212; at touch-down <b>dy is 0</b>, so nothing moves. Move 150&#160;px and the value crosses its whole range.</p>
+                <p class="rd-say" data-i18n-html="lp.controls.096">Touch anywhere &#8212; at touch-down <b>dy is 0</b>, so nothing moves. Drag the knob's 150&#160;px and the value crosses its whole range; a fader travels as far as the finger.</p>
               </div>
               <div class="gm-foot">
                 <b data-i18n="lp.controls.097">value = start + dy / rangePx</b>
@@ -2016,7 +2023,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.103">Snapshots and vector morph</h3>
-          <p data-i18n="lp.controls.104">A recall moves the mapped state across the chosen transition interval. Vector XY bilinearly blends the four corner states instead of crossfading only two.</p>
+          <p data-i18n="lp.controls.104">Capture stores every mapped control at once into one of eight slots. Recall does not jump: it moves each mapped value from where it is to the stored state across the transition, set in seconds (Free) or as a musical length that follows Live's tempo (Sync). Vector XY blends slots 1&#8211;4 by the position of one finger, weighting the four corners, and applies as you drag.</p>
         </div>
         <div class="feature-figure">
                     <div class="snp-wrap" data-control-illustration="snapshots">
@@ -2045,7 +2052,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                     <line x1="332" y1="210" x2="332" y2="220" class="ui-line"/>
                   </svg>
                 </div>
-                <p class="snp-foot" data-i18n="lp.controls.105">RECALL = timed interpolation &#183; 0.1&#8211;5.0 s</p>
+                <p class="snp-foot" data-i18n="lp.controls.105">RECALL = timed interpolation &#183; Free 0.1&#8211;5.0 s or Sync in beats</p>
               </div>
 
               <div class="snp-panel" data-concept="vector-morph">
@@ -2067,7 +2074,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               </div>
 
             </div>
-            <p class="snp-note" data-i18n="lp.controls.107">A snapshot is a complete mapped state, not a screenshot and not a two-point crossfade.</p>
+            <p class="snp-note" data-i18n="lp.controls.107">A snapshot is the whole mapped state, not a screenshot and not a crossfade between two points; a recall restores only what was captured.</p>
           </div>
         </div>
       </div>
@@ -2077,7 +2084,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.108">Motion, orientation, audio</h3>
-          <p data-i18n-html="lp.controls.109">CALIBRATE makes the phone's current position the reference; every motion axis maps independently. AUD provides RMS, envelope and twelve descriptors for amplitude, attacks and spectral changes; its graph shows selectable curves over time.</p>
+          <p data-i18n-html="lp.controls.109">CALIBRATE makes the phone's current position the reference; from then on tilt and motion on each axis map on their own. AUD turns sound into control: level, envelope, gate and attacks, plus twelve descriptors for attacks, tone, texture and K-weighted loudness bands. The graph shows the curves you pick over the last 2.5 seconds, so you see what a parameter will receive before you map it.</p>
         </div>
         <div class="feature-figure">
                     <div class="sn-wrap" data-control-illustration="sensors">
@@ -2117,7 +2124,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               </div>
 
             </div>
-            <p data-i18n="lp.audio.timing">Audio timing: SYNC uses Live BPM with 1/128 through 1/1 notes, including triplets (T) and dotted notes (D); SMOOTH also offers OFF. FREE keeps independent millisecond settings (illustrated here). Bands measure linear RMS, not perceived loudness.</p>
+            <p data-i18n="lp.audio.timing">Audio timing: SYNC uses Live BPM with 1/128 through 1/1 notes, including triplets (T) and dotted notes (D); SMOOTH also offers OFF. FREE keeps independent millisecond settings (illustrated here). Low, mid and high are K-weighted loudness (ITU-R BS.1770), mapped in LU.</p>
             <div class="sn-title" data-i18n="lp.audio.detectors">Built-in audio detectors</div>
 <div class="sn-detectors" data-audio-descriptors="transient kick snare brightness centroid flux flatness spread rolloff low mid high">
               <section class="sn-detector-family" style="--family-color:#ff375f"><h4>ATTACKS</h4>
@@ -2152,7 +2159,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.116">Vision: hand, poses, clutch</h3>
-          <p data-i18n="lp.controls.117">Direct hand X/Y/Z stays available for continuous control. A held, camera-facing pinch engages the clutch; hand displacement then drives its relative axes, and release freezes them. G1&#8211;G3 and the four built-in detectors are intentional outputs. PALM and FACE remain local camera diagnostics, not mapping traffic.</p>
+          <p data-i18n="lp.controls.117">Direct hand X/Y/Z stays available for continuous control. A held, camera-facing pinch engages the clutch; hand displacement then drives its relative axes, and release freezes them. G1&#8211;G3 and the four built-in detectors are intentional outputs; a learned pose belongs to the hand that taught it, so teach with the hand you will perform with. PALM and FACE remain local camera diagnostics, not mapping traffic.</p>
         </div>
         <div class="feature-figure">
                     <div class="vs-wrap" data-control-illustration="vision">
@@ -2277,10 +2284,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
       <dl class="split2 tight" style="margin-top:20px">
         <dt data-i18n="lp.controls.136">MIDI trigger notes</dt>
-        <dd data-i18n-html="lp.controls.137">Map a phone control to a note on a MIDI track. The bundled <code>RC-Midi-Receiver.amxd</code> is reused when already on the track; otherwise place it manually because Live cannot insert Max for Live devices through its Extensions SDK. Pads, LFOs, stutters, XY axes, knobs, faders, detectors, and learned poses support trigger-note targets.</dd>
+        <dd data-i18n-html="lp.controls.137">Map a phone control to a note on a MIDI track. The bundled <code>RC-Midi-Receiver.amxd</code> is reused when already on the track; otherwise place it manually because Live cannot insert Max for Live devices through its Extensions SDK. The Receiver arms SDK Notes by itself once it has loaded; Panic turns it off until clicked. Pads, LFOs, stutters, XY axes, knobs, faders, detectors, and learned poses support trigger-note targets.</dd>
 
         <dt data-i18n="lp.controls.138">Audio descriptors</dt>
-        <dd data-i18n-html="lp.controls.139">AUD offers twelve descriptors plus amplitude controls. Kick/Snare are heuristics, bands are linear RMS, not perceptual loudness. Native Track and measured end-to-end latency remain pending; the independent Max Audio Sender does not feed browser descriptors.</dd>
+        <dd data-i18n-html="lp.controls.139">AUD offers twelve descriptors plus amplitude controls. Kick and snare are attack-weighted heuristics inside their own bands, not instrument classifiers; low, mid and high are K-weighted loudness in LU. Microphone-to-Live latency depends on the phone and has not been measured end to end; Native Track is not part of 1.0, and the Max Audio Sender feeds the Receiver, not the browser descriptors.</dd>
 
         <dt data-i18n="lp.controls.140">TRN transport</dt>
         <dd data-i18n="lp.controls.141">A full-screen transport overlay reached from the header: play, stop, previous and next locator, refresh, locator search, and the SYNCED / SDK / FREE clock readout.</dd>
