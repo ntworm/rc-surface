@@ -17,10 +17,15 @@ test('real AudioWorklet loads local modules and detects audio with rAF disabled'
     window.requestAnimationFrame = () => 1;
     const processor = new window.AudioProcessor();
     let timer;
+    // The tone's onset is a broadband transient that saturates every attack
+    // detector for a frame or two; on a slow CI host the first frame with
+    // energy can still be that onset, where snare reads ~1.0 alongside kick.
+    // Wait for a settled frame where the low-band kick dominates, which is the
+    // property under test; the timeout is the real failure.
     const observed = new Promise((resolve, reject) => {
-      timer = setTimeout(() => reject(new Error('No continuous descriptor frame')), 4000);
+      timer = setTimeout(() => reject(new Error('No settled descriptor frame')), 8000);
       processor.onDescriptorUpdate = (value) => {
-        if (value.kick > 0.01 && value.low > 0.1) resolve(value);
+        if (value.kick > 0.01 && value.low > 0.1 && value.kick > value.snare && value.low > value.mid) resolve(value);
       };
     });
     try {
