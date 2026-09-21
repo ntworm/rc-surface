@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Spectral descriptors: K-weighted loudness per band (ITU-R BS.1770-4),
 // dB-mapped flatness, and the unchanged centroid/spread/rolloff/flux family.

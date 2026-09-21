@@ -510,7 +510,7 @@ tracking loss; release debounce must not turn hand repositioning into a jump.
 ## Report a bug
 
 Open a focused report in the project issue tracker:
-`https://github.com/ntworm/ableton-rc-surface/issues`.
+`https://github.com/ntworm/rc-surface/issues`.
 Security problems must use the private process in `docs/SECURITY.md`.
 
 Please include:

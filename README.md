@@ -1,11 +1,11 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ntworm/ableton-rc-surface/releases)
-[![CI](https://github.com/ntworm/ableton-rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/ableton-rc-surface/actions/workflows/ci.yml)
-[![stars](https://img.shields.io/github/stars/ntworm/ableton-rc-surface?style=social)](https://github.com/ntworm/ableton-rc-surface/stargazers)
+[![v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
+[![stars](https://img.shields.io/github/stars/ntworm/rc-surface?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
-[**:globe_with_meridians: Live landing page**](https://ntworm.github.io/ableton-rc-surface/) — visual overview, install walkthrough, and feature showcase in your browser.
+[**:globe_with_meridians: Live landing page**](https://ntworm.github.io/rc-surface/) — visual overview, install walkthrough, and feature showcase in your browser.
 
 RC Surface is a source-available Ableton Live extension that turns a phone browser into a performance, mix, mapping, and sensor controller.
 
@@ -71,7 +71,7 @@ and measured end-to-end latency remain pending owner validation.
 ## Quick Start
 
 1. Install Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support.
-2. Obtain the local test candidate or an asset from [Releases](https://github.com/ntworm/ableton-rc-surface/releases), or build it with
+2. Obtain the local test candidate or an asset from [Releases](https://github.com/ntworm/rc-surface/releases), or build it with
    `npm run build:prod-ablx`.
 3. Install the `.ablx` in Live.
 4. Open RC Surface from the Extensions menu.
@@ -229,7 +229,7 @@ see `internal/TESTER-GUIDE.md`.
 PolyForm Noncommercial 1.0.0 — free for noncommercial use, redistribution,
 and modification; commercial sale of this software or modified versions is
 not permitted. See [LICENSE](LICENSE) for the full text and Required Notice.
-© Gabriel Worm · <https://github.com/ntworm/ableton-rc-surface>.
+© Gabriel Worm · <https://github.com/ntworm/rc-surface>.
 
 Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
 project, not affiliated with, endorsed by, or sponsored by Ableton AG.

@@ -32,6 +32,11 @@ intermediate release records are intentionally not published.
   a trigger note plays without clicking the device first. Device Off/On
   disarms and re-arms; Panic still disarms until clicked. Audio Sender input
   stays an explicit opt-in.
+- Repository renamed from `ntworm/ableton-rc-surface` to `ntworm/rc-surface`
+  and the npm package name follows; GitHub redirects the old repository URL,
+  the landing page now lives at https://ntworm.github.io/rc-surface/. The data
+  folder name, the `ableton-rc:*` browser storage keys, the log prefix, the
+  certificate common name and the project file format id are unchanged.
 - The Live context-menu entry reads "RC Surface: Panel" instead of
   "RC Surface: RC Surface: Panel" (Live prefixes the extension name itself).
 - The Live selection is no longer polled twice a second. AbletonOSC raises

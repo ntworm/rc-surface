@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Owner bench 2026-09-21: changing an active LFO's shape in the CFG popover
 // reached Ableton Live only after re-touching the control. controls.js

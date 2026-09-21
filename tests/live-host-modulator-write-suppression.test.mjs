@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // The requested generator timer is4ms; this is not measured SDK throughput.
 // Suppress near-identical values but retain the useful samples of a4Hz LFO.

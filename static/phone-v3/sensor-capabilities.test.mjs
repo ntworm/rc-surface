@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Contract tests for RcSensorCapabilities. Pure state machine: the tracker
 // never reads the DOM, the wire or Date.now — every transition is driven by

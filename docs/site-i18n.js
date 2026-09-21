@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 
 /**
  * Operator sheet copy, in English and Brazilian Portuguese.
@@ -51,8 +51,8 @@
     'lp.top.015': { en: 'No telemetry', 'pt-BR': 'Sem telemetria' },
     'lp.top.016': { en: 'No tracking', 'pt-BR': 'Sem rastreamento' },
     'lp.top.017': {
-      en: '<a href="https://github.com/ntworm/ableton-rc-surface/blob/main/NOTICE">Credits and licences</a>',
-      'pt-BR': '<a href="https://github.com/ntworm/ableton-rc-surface/blob/main/NOTICE">Créditos e licenças</a>',
+      en: '<a href="https://github.com/ntworm/rc-surface/blob/main/NOTICE">Credits and licences</a>',
+      'pt-BR': '<a href="https://github.com/ntworm/rc-surface/blob/main/NOTICE">Créditos e licenças</a>',
     },
     'lp.top.018': {
       en: 'Independent project · not affiliated with Ableton AG',

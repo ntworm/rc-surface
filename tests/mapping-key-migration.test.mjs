@@ -1,6 +1,6 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// Source: https://github.com/ntworm/ableton-rc-surface
+// Source: https://github.com/ntworm/rc-surface
 //
 // Mappings used to be keyable per phone (`<uuid>::fader-1`) as well as
 // globally (`fader-1`). That is what made the panel unable to say which phone
