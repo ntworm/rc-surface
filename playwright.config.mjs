@@ -3,7 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/ui',
   testMatch: '**/*.spec.mjs',
-  timeout: 30000,
+  // Hosted macOS runners take about four times longer than Linux on the
+  // calibration specs; CI gets the headroom, local runs keep the tighter bound.
+  timeout: process.env.CI ? 90000 : 30000,
   use: {
     headless: true,
     baseURL: 'http://localhost:9880',
