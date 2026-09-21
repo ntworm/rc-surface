@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // admin-observer — connects to /admin/ws and prints what the server broadcasts.
@@ -43,7 +43,6 @@ const start = Date.now();
 const ws = new WebSocket(url, { rejectUnauthorized: false });
 
 const counts = { client_update: 0, hello: 0, transport_state: 0, live_state: 0, playhead_state: 0, other: 0 };
-let lastClientUpdate = null;
 
 function log(...m) {
   const t = ((Date.now() - start) / 1000).toFixed(3);
@@ -69,7 +68,6 @@ ws.on("message", (data) => {
       "lastData.kind=", lastData.type || "none",
       "history total entries=", histLen,
     );
-    lastClientUpdate = msg;
   } else if (msg.type === "hello") {
     counts.hello++;
     log("hello from peer (skip)", msg.client_id?.slice(0,12));

@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-> Answers to the most common questions about **Ableton RC Surface**.
+> Answers to the most common questions about **RC Surface**.
 > Last updated: July 2026.
 
 ## Contents
@@ -48,7 +48,10 @@ build as public-release validated.
 
 ### What is the latency? Is it usable for live performance?
 
-The phone client targets a 30 Hz control stream and is designed for
+On the current candidate, gestures and audio share a realtime path: first frame
+immediate, subsequent batches spaced by at least 8 ms. MAP's visual snapshots
+cannot delay those commands. Smooth 0 adds no mapping ramp. This is not a measured
+end-to-end latency; older hosts use the legacy snapshot path. The client is designed for
 low-latency local Wi-Fi. Actual latency depends on the host, phone,
 browser, router, and network congestion. Use 5 GHz Wi-Fi for the most
 consistent results, and test the exact setup before a show.
@@ -62,7 +65,7 @@ consistent results, and test the exact setup before a show.
 1. Install Ableton Live 12.4.5+ Suite/Beta with Extensions SDK support.
 2. Use the `.ablx` from the tester kit or release package you received.
 3. Double-click the `.ablx`; Live offers to install it.
-4. Open Ableton RC Surface from Live's Extensions menu.
+4. Open RC Surface from Live's Extensions menu.
 5. Scan the QR code with your phone.
 6. Accept the self-signed certificate warning once.
 
@@ -103,28 +106,69 @@ inspection and troubleshooting.
 ### Can I create mappings from the phone?
 
 Yes. Tap **MAP** near the BPM display, select a highlighted control, then
-choose one of the two main actions:
+choose the action that matches the source:
 
 - **Bind** maps the selected phone control to song tempo, main/master,
   normal track, return track, mixer, device, or parameter targets.
 - **Trigger Note** maps the selected phone control to a MIDI note on a
   chosen MIDI track through `RC-Midi-Receiver.amxd`.
 
-If Trigger Note cannot add the receiver automatically, place
-`RC-Midi-Receiver.amxd` on the MIDI track manually and retry.
+Follow Detected Note was removed. Unsupported mapping modes are discarded on
+load; supported bindings, including fixed Trigger Note, are retained.
+
+Use Receiver v2 (**SDK / LOCAL MAX — NO UDP**) and replace old Set instances;
+only one compatible Receiver is accepted per destination track.
+The Extensions SDK cannot add a Max for Live receiver automatically. If the
+track does not already contain it, place `RC-Midi-Receiver.amxd` from your User
+Library on the MIDI track in Live and retry.
 
 ### How many phones can connect at the same time?
 
-Multiple browser clients can connect on the same LAN and are isolated by
-client ID. There is no fixed server-side phone limit, but practical limits
-depend on CPU, browser load, and Wi-Fi quality. Reference testing has not
-validated a public maximum, so do not advertise a specific phone count
-until real multi-device tests are complete.
+RC Surface 1.0 supports one controller at a time. Control performance either
+from the phone or desktop, never both simultaneously. While multiple browser
+windows can open the page on the LAN and receive isolated client IDs, simultaneous
+control from multiple devices is not supported and will cause conflicting control
+states.
 
 ### Does the phone vibrate when I hit a pad?
 
-No. Haptics/vibration are retired in the current test series to keep the UI
+No. Haptics/vibration are retired in v1.0.0 to keep the UI
 predictable across iOS and Android.
+
+### Can it turn what I play into MIDI notes?
+
+No. **Follow Detected Note** and its tonal analysis were removed after repeated
+musical tests did not produce reliable results. Fixed **Trigger Note** mappings
+remain; they do not estimate the note being played.
+
+### What can I map from audio instead?
+
+The AUD page contains twelve descriptors in Attacks, Tone, Texture and Bands:
+Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%,
+and low/mid/high RMS. The graph selector and colored legend isolate their curves.
+Tap **MAP**, select a detector card and **Bind** it to a Live parameter.
+For kick-to-synth modulation, begin with a small target range and Smooth at zero.
+
+Transient measures attacks; Kick and Snare weight those attacks by low and
+mid/high spectral energy. Brightness describes the dark-to-bright spectrum.
+All twelve mapping values are normalized to 0–1. Kick/Snare are heuristics: a full mix,
+room noise or another instrument can activate them. They do not separate drums.
+
+The descriptors use the browser audio input. `RC-Audio-Sender.amxd` retains its
+existing track-analysis role; it does not supply these browser descriptors.
+
+### Does the browser process the audio before I get it?
+
+The application requests echo cancellation, noise suppression and automatic
+gain control off, to preserve amplitude and spectral descriptors. That does not
+guarantee bit-perfect capture: the browser, operating system or input driver may
+still resample/process audio. Select the intended loopback/interface in AUD.
+
+### Can I stop it starting with Live?
+
+Yes, with the **Start automatically with Live** switch at the bottom of the
+panel. Useful when another RC extension shares the machine. The panel's Start
+button is unaffected, and the panel opens even with nothing listening.
 
 ### Can I customize the phone controller UI?
 
@@ -133,15 +177,15 @@ See `docs/CUSTOMIZATION.md`.
 
 ### Can I save and share mappings?
 
-Save and load local mapping presets, yes. Export/import of shareable
-mapping bundles is not implemented yet.
+Save and load local mapping presets, yes. v1.0.0 does not include
+export/import of shareable mapping bundles; presets remain local to the
+extension storage.
 
 ### How do I update to a new version?
 
-For tester builds, use the newest kit shared by the maintainer. Download
-the new `.ablx`, double-click it, and let Live replace the old version.
-Public release/update instructions will be finalized when the repository is
-published.
+Download the newest `.ablx` from the project Releases page, double-click it,
+and let Live replace the installed extension. Restart Live if it was open
+during the update.
 
 ---
 
@@ -150,9 +194,9 @@ published.
 ### Does the data go to the cloud?
 
 No telemetry, analytics, or project data is sent to a cloud service. The
-bridge traffic stays between the host and browser clients on your network
-unless you intentionally set up a tunnel. Camera and microphone streams are
-processed in the browser and are not sent as raw media to the extension.
+supported bridge traffic stays between the host and browser clients on your
+trusted LAN. Camera and microphone streams are processed in the browser and
+are not sent as raw media to the extension.
 MediaPipe runtime/model files are served by the extension over the same local
 connection; camera hand tracking does not require a public CDN.
 
@@ -166,8 +210,8 @@ Yes, in the same way any local control surface has risk. The bridge opens a
 LAN-reachable port and accepts supported WebSocket commands from browser
 clients that can reach the bridge URL. Run it only on trusted home/studio
 Wi-Fi, and close it when you are done. Do not expose it to public networks
-or tunnels unless you understand the risk. The full threat model is in
-`docs/SECURITY.md`.
+through tunnels, reverse proxies, or port forwarding; those deployments are
+outside the v1.0 threat model. The full threat model is in `docs/SECURITY.md`.
 
 ### Do I have to pay? Is there a Pro version?
 
@@ -184,15 +228,16 @@ this repository's README and release notes.
 
 ### Is there a Discord or community to talk about it?
 
-No dedicated community exists yet. Once public, use the official Ableton
-Discord `#extensions` channel only if its current rules allow sharing the
-project there.
+No dedicated community exists. Use the project issue tracker for reproducible
+bugs. The official Ableton Discord `#extensions` channel is independent from
+this project; follow its current rules if discussing the extension there.
 
 ### How do I contribute?
 
-For pre-public builds, send bugs and patches directly to the maintainer who
-shared the kit. Once the repository is public, contributions should move to
-issues and pull requests.
+Open a focused issue or pull request in the project repository. Read
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) before changing code, and report
+security problems through the private channel in `docs/SECURITY.md` instead
+of a public issue.
 
 ## See also
 

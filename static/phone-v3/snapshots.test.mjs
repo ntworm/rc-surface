@@ -89,7 +89,7 @@ test('RCSurface.snapshots loads, captures, and persists 8 snapshot slots', () =>
   assert.deepEqual(parsed[0], { 'pad-1': 0.8 });
 });
 
-test('Structural Check: controls.js has no morphRafId, no direct snapshots[n] indexing, and single startLinearMorph', () => {
+test('snapshot state and morph ownership stay in the snapshots module', () => {
   const controlsSource = fs.readFileSync(path.join(import.meta.dirname, 'controls.js'), 'utf8');
 
   // 1. morphRafId must not be in controls.js
@@ -100,9 +100,11 @@ test('Structural Check: controls.js has no morphRafId, no direct snapshots[n] in
   const directSnapshotMatches = controlsSource.match(/snapshots\s*\[\s*\d+\s*\]/g);
   assert.equal(directSnapshotMatches, null, 'controls.js must not directly index snapshots[n]');
 
-  // 3. Exactly one startLinearMorph function declaration in controls.js
-  const morphMatches = controlsSource.match(/function\s+startLinearMorph\b/g);
-  assert.ok(morphMatches !== null && morphMatches.length === 1, 'controls.js must have exactly 1 startLinearMorph declaration (the delegator)');
+  // The real methods live in the module; unused local wrappers are not a contract.
+  assert.doesNotMatch(controlsSource, /function\s+(?:startLinearMorph|handleSnapshotSlot)\b/);
+  const snapshots = loadModule().window.RCSurface.snapshots;
+  assert.equal(typeof snapshots.startLinearMorph, 'function');
+  assert.equal(typeof snapshots.handleSnapshotSlot, 'function');
 });
 
 function loadFullEnvironment() {
@@ -295,4 +297,135 @@ test('Vector Pad Interpolation with 4 snapshots without ReferenceError', () => {
       env.context.window.setupVectorPad();
     }
   }, 'setupVectorPad must access snapshots via getSnapshots() without ReferenceError');
+});
+
+test('stutter depth, rate, count captured including zero and recalled without 0.5 fallback', () => {
+  const stutters = new Map();
+  for (let i = 1; i <= 4; i++) {
+    stutters.set(`button-${i}`, {
+      pressed: false,
+      rate: 0,
+      depth: 0,
+      count: 0,
+    });
+  }
+  const emittedStutters = [];
+  const env = loadModule({
+    window: {
+      currentControlStates: {},
+      stutterStates: stutters,
+      sendStutterState(name, state, extra) {
+        emittedStutters.push({ name, ...state, ...extra });
+      },
+    },
+  });
+  const snaps = env.window.RCSurface.snapshots;
+  snaps.loadSnapshots();
+
+  // Capture slot 0 with S1-S4 at depth=0, rate=0, count=0
+  snaps.setSnapshotCaptureMode(true);
+  snaps.handleSnapshotSlot(0);
+
+  const captured = snaps.getSnapshots()[0];
+  assert.ok(captured, 'Snapshot slot 0 must be captured');
+  assert.equal(captured['button-1.depth'], 0, 'S1 depth=0 must be captured');
+  assert.equal(captured['button-1.rate'], 0, 'S1 rate=0 must be captured');
+  assert.equal(captured['button-1.count'], 0, 'S1 count=0 must be captured');
+  assert.equal(captured['button-1'], 0, 'S1 pressed=0 must be captured');
+
+  // Change current states to non-zero values
+  for (let i = 1; i <= 4; i++) {
+    const s = stutters.get(`button-${i}`);
+    s.pressed = true;
+    s.depth = 0.8;
+    s.rate = 0.5;
+    s.count = 3;
+  }
+
+  // Recall slot 0
+  emittedStutters.length = 0;
+  snaps.handleSnapshotSlot(0);
+
+  const recalledS1 = emittedStutters.find((e) => e.name === 'button-1');
+  assert.ok(recalledS1, 'Recall must emit stutter target for button-1');
+  assert.equal(recalledS1.depth, 0, 'Recalled depth must remain 0, not fallback to 0.5');
+  assert.equal(recalledS1.rate, 0, 'Recalled rate must remain 0');
+  assert.equal(recalledS1.count, 0, 'Recalled count must remain 0');
+  assert.equal(recalledS1.pressed, false, 'Recalled pressed must be false');
+});
+
+test('stutter non-zero finite values are captured and restored correctly', () => {
+  const stutters = new Map([
+    ['button-1', { pressed: true, depth: 0.72, rate: 0.44, count: 5 }],
+  ]);
+  const emittedStutters = [];
+  const env = loadModule({
+    window: {
+      currentControlStates: {},
+      stutterStates: stutters,
+      sendStutterState(name, state, extra) {
+        emittedStutters.push({ name, ...state, ...extra });
+      },
+    },
+  });
+  const snaps = env.window.RCSurface.snapshots;
+  snaps.loadSnapshots();
+
+  snaps.setSnapshotCaptureMode(true);
+  snaps.handleSnapshotSlot(0);
+
+  const captured = snaps.getSnapshots()[0];
+  assert.equal(captured['button-1.depth'], 0.72);
+  assert.equal(captured['button-1.rate'], 0.44);
+  assert.equal(captured['button-1.count'], 5);
+
+  stutters.get('button-1').depth = 0.1;
+  stutters.get('button-1').rate = 0.2;
+  stutters.get('button-1').count = 1;
+
+  emittedStutters.length = 0;
+  snaps.handleSnapshotSlot(0);
+
+  const emitted = emittedStutters.find((e) => e.name === 'button-1');
+  assert.ok(emitted);
+  assert.equal(emitted.depth, 0.72);
+  assert.equal(emitted.rate, 0.44);
+  assert.equal(emitted.count, 5);
+});
+
+test('legacy snapshot without depth/rate/count preserves current values and never injects 0.5 fallback', () => {
+  const stutters = new Map([
+    ['button-1', { pressed: false, depth: 0.25, rate: 0.15, count: 2 }],
+    ['button-2', { pressed: false }],
+  ]);
+  const emittedStutters = [];
+  const env = loadModule({
+    window: {
+      currentControlStates: {},
+      stutterStates: stutters,
+      sendStutterState(name, state, extra) {
+        emittedStutters.push({ name, ...state, ...extra });
+      },
+    },
+  });
+  const snaps = env.window.RCSurface.snapshots;
+  snaps.loadSnapshots();
+
+  // Legacy snapshot containing only pressed state for button-1 and button-2
+  const legacySnap = { 'button-1': 1.0, 'button-2': 0.0 };
+  snaps.getSnapshots()[0] = legacySnap;
+
+  emittedStutters.length = 0;
+  snaps.handleSnapshotSlot(0);
+
+  const emitted1 = emittedStutters.find((e) => e.name === 'button-1');
+  assert.ok(emitted1, 'Recall must emit for button-1');
+  assert.equal(emitted1.pressed, true, 'Pressed state should be true');
+  assert.equal(stutters.get('button-1').depth, 0.25, 'Current stutter depth must be preserved');
+  assert.notEqual(emitted1.depth, 0.5, 'Must never inject fallback 0.5 for button-1');
+
+  const emitted2 = emittedStutters.find((e) => e.name === 'button-2');
+  assert.ok(emitted2, 'Recall must emit for button-2');
+  assert.equal(emitted2.pressed, false, 'Pressed state should be false');
+  assert.equal(emitted2.depth, undefined, 'Must not inject fallback 0.5 when depth is absent from both snapshot and state');
 });

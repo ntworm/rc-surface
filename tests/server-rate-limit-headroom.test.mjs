@@ -9,8 +9,9 @@
 //
 // The phone's own designed output, per second:
 //   ~30  snapshots        (app.js TICK_MS = 33)
-//   ~60  modulator frames (LFO/stutter drag, coalesced to one animation frame)
-//   0.2  pings            (session.js PING_MS = 5000)
+//  ~120  descriptor frames (short audio analysis, one batch per display frame)
+//  ~120  modulator frames (LFO/stutter drag, one per 120 Hz display frame)
+//   0.2  pings             (session.js PING_MS = 5000)
 // Anything at or below that budget must pass untouched.
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -22,12 +23,19 @@ import {
 } from "../src/server/ws-bounds.ts";
 
 const SNAPSHOTS_PER_SEC = 30; // app.js TICK_MS = 33
-const MODULATOR_FRAMES_PER_SEC = 60; // one coalesced emit per animation frame
-const PROTOCOL_PEAK_PER_SEC = SNAPSHOTS_PER_SEC + MODULATOR_FRAMES_PER_SEC + 1;
+const DESCRIPTOR_FRAMES_PER_SEC = 120; // one immediate four-control batch per audio rAF
+const MODULATOR_FRAMES_PER_SEC = 120; // one coalesced emit per 120 Hz animation frame
+const PROTOCOL_PEAK_PER_SEC = SNAPSHOTS_PER_SEC
+  + DESCRIPTOR_FRAMES_PER_SEC
+  + MODULATOR_FRAMES_PER_SEC
+  + 1;
+const REALTIME_PROTOCOL_PEAK_PER_SEC = 31 + 125 + MODULATOR_FRAMES_PER_SEC + 20 + 1;
+// v1: 125 shared control/audio/pad frames, <=120 coalesced modulator config
+// frames, 31 visual snapshots, 20 gate transitions/commands, 1 heartbeat.
 
 test("the sustained rate leaves headroom above the phone's own peak output", () => {
   assert.ok(
-    RATE_SUSTAINED_PER_SEC > PROTOCOL_PEAK_PER_SEC,
+    RATE_SUSTAINED_PER_SEC > Math.max(PROTOCOL_PEAK_PER_SEC, REALTIME_PROTOCOL_PEAK_PER_SEC),
     `sustained rate ${RATE_SUSTAINED_PER_SEC}/s must exceed the protocol peak of ` +
       `${PROTOCOL_PEAK_PER_SEC}/s, otherwise legitimate frames are dropped in silence`,
   );
@@ -46,8 +54,8 @@ test("ten seconds of peak protocol traffic is never rate-limited", () => {
   try {
     let dropped = 0;
     for (let second = 0; second < 10; second++) {
-      for (let i = 0; i < PROTOCOL_PEAK_PER_SEC; i++) {
-        now += Math.floor(1000 / PROTOCOL_PEAK_PER_SEC);
+      for (let i = 0; i < REALTIME_PROTOCOL_PEAK_PER_SEC; i++) {
+        now += 1000 / REALTIME_PROTOCOL_PEAK_PER_SEC;
         if (!consumeToken(state)) dropped++;
       }
     }

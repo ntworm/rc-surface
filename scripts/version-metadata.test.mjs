@@ -23,5 +23,20 @@ test("production ablx script derives its filename from package metadata", () => 
   const packageJson = readJson("package.json");
 
   assert.match(packageJson.scripts["build:prod-ablx"], /package\.json/);
-  assert.doesNotMatch(packageJson.scripts["build:prod-ablx"], /Ableton-RC-Surface-0\.\d/);
+  assert.doesNotMatch(packageJson.scripts["build:prod-ablx"], /RC-Surface-0\.\d/);
+});
+
+test("production build propagates static-copy failures instead of packaging stale files", () => {
+  const build = fs.readFileSync(path.join(root, "build.ts"), "utf8");
+
+  assert.match(build, /catch \(err\) \{\s*console\.error\("Error copying static:", err\);\s*throw err;\s*\}/s);
+});
+
+test("production build removes a stale development sourcemap", () => {
+  const build = fs.readFileSync(path.join(root, "build.ts"), "utf8");
+
+  assert.match(
+    build,
+    /if \(production\)\s*\{\s*fs\.rmSync\(`\$\{manifest\.entry\}\.map`,\s*\{ force: true \}\);\s*\}/s,
+  );
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -215,6 +215,7 @@ const PANEL_DOM_IDS = [
   'map-detail-spark',
   'map-detail-targets',
   'btn-bind',
+  'btn-trigger',
   'range-bar',
   'range-fill',
   'range-min',
@@ -323,6 +324,18 @@ test('isSameTarget treats missing indices as 0 (consistent with server getTarget
   const b = { type: 'tempo' };
   assert.equal(context.window.isSameTarget(a, b), true);
 });
+
+test('isSameTarget distinguishes normal, return, and main track families', () => {
+  const { context } = loadMappingsModule();
+  const normal = { type: 'mixer_volume', trackIndex: 0, trackKind: 'track' };
+  const returned = { type: 'mixer_volume', trackIndex: 0, trackKind: 'return' };
+  const main = { type: 'mixer_volume', trackIndex: 0, trackKind: 'main' };
+  assert.equal(context.window.isSameTarget(normal, returned), false);
+  assert.equal(context.window.isSameTarget(normal, main), false);
+  assert.equal(context.window.isSameTarget(returned, main), false);
+});
+
+
 
 test('findMappingConflict returns null when no other control binds the same target', () => {
   const { context } = loadMappingsModule();
@@ -733,7 +746,37 @@ test('clicking Bind to... reveals the inline picker and renders targets', () => 
   assert.ok(list);
   // Should render at least the track row and the tempo row.
   assert.ok(list.children.length > 0, 'picker list must populate from allTargetsRaw');
-  assert.match(list.children[0]._innerHTML, /Song Tempo/);
+  assert.match(collectText(list.children[0]), /Song Tempo/);
+});
+
+test('target pickers render Live names as text instead of executable markup', () => {
+  const { context, document } = loadMappingsModule();
+  const attack = '<img src=x onerror="globalThis.__pickerXss=1">';
+  context.window.selectedControl = 'pad-1';
+  context.window.allTargetsRaw = [{
+    trackIndex: 0,
+    trackKind: 'track',
+    name: `Track ${attack}`,
+    isMidi: true,
+    mixer: [{ type: 'mixer_volume', trackIndex: 0, trackKind: 'track', label: `Volume ${attack}` }],
+    devices: [{
+      index: 0,
+      name: `Device ${attack}`,
+      params: [{ type: 'device_param', trackIndex: 0, trackKind: 'track', deviceIndex: 0, paramIndex: 0, label: `Param ${attack}` }],
+    }],
+  }];
+
+  context.window.openPicker();
+  const search = document.getElementById('map-picker-search');
+  search.value = 'img';
+  search.oninput();
+  const list = document.getElementById('map-picker-list');
+  assert.doesNotMatch(list.children.map((row) => row.innerHTML).join('\n'), /<img\b/i);
+  assert.match(collectText(list), /<img src=x/);
+
+  context.window.openMidiTrackPicker();
+  assert.doesNotMatch(list.children.map((row) => row.innerHTML).join('\n'), /<img\b/i);
+  assert.match(collectText(list), /<img src=x/);
 });
 
 test('clicking a parameter in the picker commits with defaults and hides the picker', () => {
@@ -950,6 +993,89 @@ test('changing a target curve select in the detail persists the new curve via se
 
   assert.equal(context.window.currentMappings['pad-1'][0].curve, 's-curve');
   assert.ok(calls.some((c) => c.cmd === 'setMapping' && c.args.control === 'pad-1'));
+});
+
+test('desktop target editor defaults target scale to Auto and persists Geometric', () => {
+  const { context, document } = loadMappingsModule();
+  context.window.selectedControl = 'pad-1';
+  context.window.currentMappings = {
+    'pad-1': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 0, label: 'Frequency' }],
+  };
+  const calls = [];
+  context.window.sendWS = (cmd, args, cb) => {
+    calls.push({ cmd, args });
+    if (cb) cb({ ok: true, result: {} });
+  };
+
+  context.window.renderMappingDetail();
+  const targets = document.getElementById('map-detail-targets');
+  const scale = queryByClass(targets, 'target-scale')[0];
+  assert.ok(scale, 'target scale select should render');
+  assert.deepEqual(Array.from(scale.children, (option) => option.value), ['auto', 'linear', 'geometric']);
+  assert.equal(scale.value, 'auto');
+
+  for (const option of scale.children) option.selected = option.value === 'geometric';
+  scale.listeners.get('change')();
+  assert.equal(context.window.currentMappings['pad-1'][0].targetScale, 'geometric');
+  assert.equal(calls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets[0].targetScale, 'geometric');
+});
+
+test('desktop audio note target does not offer withheld Follow Detected Note mode', () => {
+  const { context, document } = loadMappingsModule();
+  context.window.selectedControl = 'sensor.audio.note';
+  context.window.currentMappings = {
+    'sensor.audio.note': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 0, mode: 'continuous', midiVelocity: 88 }],
+  };
+  const calls = [];
+  context.window.sendWS = (cmd, args, cb) => {
+    calls.push({ cmd, args });
+    if (cb) cb({ ok: true, result: {} });
+  };
+
+  context.window.renderMappingDetail();
+  const targets = document.getElementById('map-detail-targets');
+  const mode = queryByClass(targets, 'target-mode')[0];
+  assert.deepEqual(Array.from(mode.children, (option) => option.value), [
+    'continuous', 'toggle', 'trigger_note',
+  ]);
+});
+
+
+
+test('desktop MIDI picker explains a missing Receiver and stays open', () => {
+  const { context, document } = loadMappingsModule();
+  const alerts = [];
+  context.alert = (message) => alerts.push(message);
+  context.window.selectedControl = 'sensor.audio.note';
+  context.window.currentMappings = { 'sensor.audio.note': [] };
+  context.window.allTargetsRaw = [{ name: 'MIDI Track', trackIndex: 4, isMidi: true }];
+  context.window.alert = (message) => alerts.push(message);
+  context.window.sendWS = (cmd, args, cb) => {
+    if (cmd === 'addUdpReceiverToTrack') cb({
+      ok: true,
+      result: { success: false, existing: false, inserted: false, reason: 'receiver_missing' },
+    });
+  };
+  context.window.renderMappingDetail();
+  document.getElementById('btn-trigger').onclick();
+  document.getElementById('map-picker-list').children[0].onclick();
+
+  assert.equal(context.window.pickerOpen, true, 'failed installation should leave the picker available for retry');
+  assert.match(alerts.at(-1), /RC-Midi-Receiver\.amxd/);
+  assert.match(alerts.at(-1), /manualmente|manual/i);
+  assert.doesNotMatch(alerts.at(-1), /Unknown|automaticamente/i);
+});
+
+test('desktop non-audio targets do not offer Follow Detected Note', () => {
+  const { context, document } = loadMappingsModule();
+  context.window.selectedControl = 'pad-1';
+  context.window.currentMappings = {
+    'pad-1': [{ type: 'mixer_volume', trackIndex: 0, mode: 'continuous' }],
+  };
+
+  context.window.renderMappingDetail();
+  const mode = queryByClass(document.getElementById('map-detail-targets'), 'target-mode')[0];
+  assert.deepEqual(Array.from(mode.children, (option) => option.value), ['continuous', 'toggle', 'trigger_note']);
 });
 
 test('typing a Trigger Note value persists the MIDI note without waiting for blur', () => {
@@ -1257,7 +1383,7 @@ test('All mappings test IDs exist in index.html (A1 regression guard)', () => {
     'map-clear-category', 'btn-bind', 'map-conflict-banner', 'map-conflict-replace',
     'map-conflict-cancel', 'map-picker', 'map-picker-toolbar',
     'map-picker-search', 'map-picker-cancel', 'map-picker-list',
-    'map-detail-targets',
+    'map-detail-targets', 'btn-trigger',
   ];
   const missing = ids.filter((id) => !html.includes(`id="${id}"`));
   assert.deepEqual(missing, [], 'Mappings IDs missing from index.html: ' + missing.join(', '));
@@ -1399,7 +1525,7 @@ test('A5: renderMappingsTab hides the .map-list-empty banner once any mapping is
   const listEl = document.getElementById('map-list');
   const empty = listEl.children.find((c) => c.classList && c.classList.contains('map-list-empty'));
   assert.equal(empty, undefined,
-    'the empty-state banner must NOT render once a mapping exists');
+    'the map-list-empty banner must NOT render once a mapping exists');
 });
 
 test('A5: renderPickerList shows a .picker-empty notice when nothing matches', () => {

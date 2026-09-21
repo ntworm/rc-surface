@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// WebSocket bounds, rate-limiting & backpressure stress tests (Task 3.2 / ADR-004)
+// WebSocket bounds, rate-limiting and backpressure stress tests.
 
 // Test files run in parallel and every one that starts a server competes
 // for DEFAULT_PREFERRED_PORT; the loser silently falls back to an
@@ -20,12 +20,14 @@ import { setExtensionContext, clearExtensionContext } from "../src/context.ts";
 import {
   MAX_PAYLOAD_BYTES,
   MAX_CONTROLS_PER_SNAPSHOT,
+  MAX_CONTROLS_PER_IMMEDIATE_BATCH,
   MAX_CLIENT_NAME_LENGTH,
   RATE_BURST,
   BACKPRESSURE_DROP_THRESHOLD,
   BACKPRESSURE_DISCONNECT_THRESHOLD,
   sanitizeNumber,
   sanitizeClientName,
+  boundImmediateControls,
 } from "../src/server/ws-bounds.ts";
 import { checkBackpressure } from "../src/server/backpressure.ts";
 
@@ -213,6 +215,28 @@ test("NaN and Infinity control values are sanitized to 0", async () => {
   assert.ok(client, "client should be tracked");
 
   ws.close();
+});
+
+test("legacy immediate batches retain their exact four-control compatibility shape", () => {
+  const valid = [
+    { name: "sensor.audio.transient", value: 1 },
+    { name: "sensor.audio.kick", value: 0.75 },
+    { name: "sensor.audio.snare", value: 0.25 },
+    { name: "sensor.audio.brightness", value: 0 },
+  ];
+  assert.equal(MAX_CONTROLS_PER_IMMEDIATE_BATCH, 12);
+  assert.deepEqual(boundImmediateControls(valid), valid);
+  assert.equal(boundImmediateControls(valid.slice(0, 3)), null, "partial batch is ambiguous");
+  assert.equal(boundImmediateControls([...valid, valid[0]]), null, "oversized batch is rejected");
+  assert.equal(boundImmediateControls(valid.map((control, index) => (
+    index === 0 ? { ...control, value: Infinity } : control
+  ))), null, "non-finite batch is rejected instead of sanitized into a trigger");
+  assert.equal(boundImmediateControls(valid.map((control, index) => (
+    index === 0 ? { ...control, value: 1.01 } : control
+  ))), null, "descriptor values are already normalized on this path");
+  assert.equal(boundImmediateControls(valid.map((control, index) => (
+    index === 0 ? { ...control, name: "knob-1" } : control
+  ))), null, "the high-rate batch cannot be repurposed for unrelated controls");
 });
 
 // ── (e) 10,000 rapid messages activate rate limiting ─────────────────────────

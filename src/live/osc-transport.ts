@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import dgram from 'node:dgram';
@@ -16,6 +16,7 @@ import { TextDecoder, TextEncoder } from 'node:util';
 // (resolved at runtime by the host's module loader) instead of the wrapper.
 import * as osc from 'osc-min';
 import { EventEmitter } from 'node:events';
+import { LISTEN, GET, CMD, RESPONSE, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
 
 if (typeof (globalThis as any).TextEncoder === 'undefined') {
   (globalThis as any).TextEncoder = TextEncoder;
@@ -28,8 +29,25 @@ if (typeof (globalThis as any).TextDecoder === 'undefined') {
  * How long the push stream may be silent before polling takes over. Long
  * enough that ordinary gaps between pushes do not trigger it, short enough
  * that a dropped listener registration is picked up within one heartbeat.
+ * Canonical constant lives in src/osc-tokens.ts so the contract-freeze test
+ * sees the same value as the runtime.
  */
-export const LISTENER_QUIET_MS = 1_500;
+export const LISTENER_QUIET_MS = OSC_LISTENER_QUIET_MS;
+
+/**
+ * While the push stream is quiet, re-register the listeners this often.
+ * Live builds the AbletonOSC control surface once before the document loads
+ * and again after it ("Disconnecting..." then a second "Started AbletonOSC"
+ * a few seconds later). Listeners registered with the first instance die with
+ * it, while the second instance still answers probes, so the link looks alive
+ * and nothing else would ever re-register (owner bench, 2026-09-21: no beat
+ * flash, stale play state). Re-registering is idempotent on AbletonOSC's side
+ * and costs eight messages, so a quiet link pays that once per interval.
+ */
+export const LISTENER_REREGISTER_MS = 10_000;
+
+const GET_ADDRESSES: ReadonlySet<string> = new Set(Object.values(GET));
+const PENDING_REPLY_CAP = 8;
 
 export type TransportLiteState = {
   available: boolean;
@@ -78,6 +96,18 @@ export class OSCTransport extends EventEmitter {
   };
 
   public lastSongTimeUpdateAt: number = Date.now();
+
+  /** When the start_listen set was last sent; null until the first registration. */
+  public lastListenerRegistrationAt: number | null = null;
+
+  /**
+   * When an unsolicited message last arrived. Replies to our own GET polls
+   * share the reply addresses with listener pushes, so they are accounted
+   * for in `pendingReplies` and never refresh this; only a genuine push may
+   * prove that the listeners are alive.
+   */
+  public lastPushAt: number | null = null;
+  private readonly pendingReplies = new Map<string, number>();
 
   constructor() {
     super();
@@ -241,6 +271,7 @@ export class OSCTransport extends EventEmitter {
     // listener port is selected alongside RC Setlist.
     const socket = this.server ?? this.client;
     if (!socket) return;
+    this.expectReply(address);
     try {
       const oscMsg = {
         oscType: 'message',
@@ -266,13 +297,27 @@ export class OSCTransport extends EventEmitter {
     }
   }
 
-  private handleIncoming(oscMsg: any): void {
+  /** A GET poll expects one reply on its own address; cap so unanswered polls cannot mask pushes forever. */
+  public expectReply(address: string): void {
+    if (!GET_ADDRESSES.has(address)) return;
+    const pending = this.pendingReplies.get(address) ?? 0;
+    this.pendingReplies.set(address, Math.min(pending + 1, PENDING_REPLY_CAP));
+  }
+
+  public handleIncoming(oscMsg: any): void {
     if (oscMsg.oscType !== 'message') return;
 
     const wasConnected = this.state.connected;
+    const now = Date.now();
     this.state.connected = true;
-    this.state.lastSeenAt = Date.now();
+    this.state.lastSeenAt = now;
     this.state.error = null;
+    const pending = this.pendingReplies.get(oscMsg.address) ?? 0;
+    if (pending > 0) {
+      this.pendingReplies.set(oscMsg.address, pending - 1);
+    } else {
+      this.lastPushAt = now;
+    }
 
     if (!wasConnected && this.requeryOnNextConnection) {
       this.requeryOnNextConnection = false;
@@ -284,53 +329,53 @@ export class OSCTransport extends EventEmitter {
 
     let updated = false;
 
-    if (address === '/live/song/get/tempo') {
+    if (address === RESPONSE.tempo) {
       const bpm = args[0]?.value;
       if (typeof bpm === 'number') {
         this.state.tempo = bpm;
         updated = true;
       }
-    } else if (address === '/live/song/get/is_playing') {
+    } else if (address === RESPONSE.isPlaying) {
       const val = args[0]?.value;
       const isPlaying = val === 1 || val === true || val === 'true';
       if (this.state.isPlaying !== isPlaying) {
         this.state.isPlaying = isPlaying;
         updated = true;
       }
-    } else if (address === '/live/song/get/current_song_time') {
+    } else if (address === RESPONSE.currentSongTime) {
       const time = args[0]?.value;
       if (typeof time === 'number') {
         this.state.currentSongTimeBeats = time;
         this.lastSongTimeUpdateAt = Date.now();
         updated = true;
       }
-    } else if (address === '/live/song/get/metronome') {
+    } else if (address === RESPONSE.metronome) {
       const val = args[0]?.value;
       const metronome = val === 1 || val === true || val === 'true';
       if (this.state.metronome !== metronome) {
         this.state.metronome = metronome;
         updated = true;
       }
-    } else if (address === '/live/song/get/signature_numerator') {
+    } else if (address === RESPONSE.signatureNumerator) {
       const val = args[0]?.value;
       if (typeof val === 'number' && this.state.signatureNumerator !== val) {
         this.state.signatureNumerator = val;
         updated = true;
       }
-    } else if (address === '/live/song/get/signature_denominator') {
+    } else if (address === RESPONSE.signatureDenominator) {
       const val = args[0]?.value;
       if (typeof val === 'number' && this.state.signatureDenominator !== val) {
         this.state.signatureDenominator = val;
         updated = true;
       }
-    } else if (address === '/live/song/get/beat') {
+    } else if (address === RESPONSE.beat) {
       const val = args[0]?.value;
       if (typeof val === 'number') {
         this.state.beat = val;
         this.emit('beat', val);
         updated = true;
       }
-    } else if (address === '/live/song/get/cue_points') {
+    } else if (address === RESPONSE.cuePoints) {
       const cues: Array<{ name: string; time: number }> = [];
       for (let i = 0; i < args.length; i += 2) {
         const name = args[i]?.value;
@@ -342,13 +387,13 @@ export class OSCTransport extends EventEmitter {
       cues.sort((a, b) => a.time - b.time);
       this.state.locators = cues;
       updated = true;
-    } else if (address === '/live/view/get/selected_track') {
+    } else if (address === RESPONSE.selectedTrack) {
       const idx = args[0]?.value;
       if (typeof idx === 'number' && this.state.selectedTrackIndex !== idx) {
         this.state.selectedTrackIndex = idx;
         updated = true;
       }
-    } else if (address === '/live/view/get/selected_device') {
+    } else if (address === RESPONSE.selectedDevice) {
       const trackIdx = args[0]?.value;
       const deviceIdx = args[1]?.value;
       if (typeof trackIdx === 'number' && typeof deviceIdx === 'number') {
@@ -358,6 +403,7 @@ export class OSCTransport extends EventEmitter {
           updated = true;
         }
       }
+      this.emit('selection', this.state);
     }
 
     if (updated) {
@@ -366,18 +412,23 @@ export class OSCTransport extends EventEmitter {
   }
 
   private queryInitialState(): void {
-    // Register listeners
-    this.send('/live/song/start_listen/is_playing');
-    this.send('/live/song/start_listen/tempo');
-    this.send('/live/song/start_listen/metronome');
-    this.send('/live/song/start_listen/signature_numerator');
-    this.send('/live/song/start_listen/signature_denominator');
-    this.send('/live/song/start_listen/current_song_time');
-    this.send('/live/song/start_listen/beat');
-    this.send('/live/view/start_listen/selected_track');
+    this.registerListeners();
 
     // Get cue points once
-    this.send('/live/song/get/cue_points');
+    this.send(GET.cuePoints);
+  }
+
+  /** Send the start_listen set. Safe to repeat: AbletonOSC replaces a listener it already has. */
+  public registerListeners(now: number = Date.now()): void {
+    this.send(LISTEN.isPlaying);
+    this.send(LISTEN.tempo);
+    this.send(LISTEN.metronome);
+    this.send(LISTEN.signatureNumerator);
+    this.send(LISTEN.signatureDenominator);
+    this.send(LISTEN.currentSongTime);
+    this.send(LISTEN.beat);
+    this.send(LISTEN.selectedTrack);
+    this.lastListenerRegistrationAt = now;
   }
 
   /**
@@ -393,26 +444,50 @@ export class OSCTransport extends EventEmitter {
    * recover from.
    */
   public isListenerStreamQuiet(now: number = Date.now()): boolean {
-    return this.state.lastSeenAt === null
-      || now - this.state.lastSeenAt > LISTENER_QUIET_MS;
+    return this.lastPushAt === null
+      || now - this.lastPushAt > LISTENER_QUIET_MS;
+  }
+
+  /**
+   * Ask AbletonOSC for the current selection. Only MAP mode's "use selected"
+   * button reads it, and AbletonOSC raises inside Live (and logs a traceback)
+   * whenever selected_device is asked while no device is selected, so this is
+   * never polled on a cadence: it is sent when someone needs the answer.
+   */
+  public refreshSelection(): void {
+    this.send(GET.selectedTrack);
+    this.send(GET.selectedDevice);
+  }
+
+  /** refreshSelection() and wait for the device reply, or give up after `timeoutMs`. */
+  public requestSelection(timeoutMs: number = 300): Promise<void> {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        this.off('selection', finish);
+        resolve();
+      };
+      const timer = setTimeout(finish, timeoutMs);
+      this.on('selection', finish);
+      this.refreshSelection();
+    });
   }
 
   /** One polling turn. Public so the cadence can be tested without timers. */
   public pollTick(now: number = Date.now()): void {
-    // Selection is the one thing with no listener behind it, so it is the one
-    // thing that genuinely has to be asked for on a cadence.
-    this.send('/live/view/get/selected_device');
-
     if (!this.isListenerStreamQuiet(now)) return;
 
     // Quiet stream: either AbletonOSC restarted and dropped our listener
     // registrations, or Live is idle. Re-ask for the listener-backed state.
-    this.send('/live/song/get/tempo');
-    this.send('/live/song/get/is_playing');
-    this.send('/live/song/get/metronome');
-    this.send('/live/view/get/selected_track');
+    this.send(GET.tempo);
+    this.send(GET.isPlaying);
+    this.send(GET.metronome);
+    this.send(GET.selectedTrack);
     if (this.state.isPlaying) {
-      this.send('/live/song/get/current_song_time');
+      this.send(GET.currentSongTime);
     }
   }
 
@@ -430,9 +505,18 @@ export class OSCTransport extends EventEmitter {
     }
     // Liveness probe. Anything arriving on the socket already refreshes
     // lastSeenAt, so while the push stream is flowing the link is proven and
-    // the probe is pure noise.
+    // the probe is pure noise. is_playing rides along because play() and
+    // stopPlayback() set it optimistically and only a reply can correct it
+    // once the listeners are gone.
     if (this.isListenerStreamQuiet(now)) {
-      this.send('/live/song/get/tempo');
+      this.send(GET.tempo);
+      this.send(GET.isPlaying);
+      if (
+        this.lastListenerRegistrationAt === null ||
+        now - this.lastListenerRegistrationAt > LISTENER_REREGISTER_MS
+      ) {
+        this.registerListeners(now);
+      }
     }
   }
 
@@ -446,12 +530,12 @@ export class OSCTransport extends EventEmitter {
 
   // Transport Command Helpers
   public play(): void {
-    this.send('/live/song/start_playing');
+    this.send(CMD.startPlaying);
     this.state.isPlaying = true;
   }
 
   public stopPlayback(): void {
-    this.send('/live/song/stop_playing');
+    this.send(CMD.stopPlaying);
     this.state.isPlaying = false;
   }
 
@@ -464,17 +548,17 @@ export class OSCTransport extends EventEmitter {
   }
 
   public prevLocator(): void {
-    this.send('/live/song/jump_to_prev_cue');
+    this.send(CMD.jumpToPrevCue);
   }
 
   public nextLocator(): void {
-    this.send('/live/song/jump_to_next_cue');
+    this.send(CMD.jumpToNextCue);
   }
 
   public jumpToLocator(indexOrName: number | string): void {
     if (indexOrName === undefined || indexOrName === null) return;
     const type = typeof indexOrName === 'number' ? 'integer' : 'string';
-    this.send('/live/song/cue_point/jump', [{ type, value: indexOrName }]);
+    this.send(CMD.cuePointJump, [{ type, value: indexOrName }]);
   }
 
   public refreshLocators(): void {

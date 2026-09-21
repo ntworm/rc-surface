@@ -59,6 +59,38 @@ test("semantic signature includes mixer parameters and sends", () => {
   assert.equal(signature.parameterSessionId, "22");
 });
 
+test("Song Tempo exports and relinks as a global target independent of tracks", () => {
+  const target = { type: "tempo", outMin: 70, outMax: 150 };
+  const config = buildProjectConfig(song(), { "knob-1": [target] });
+  const restored = relinkProjectConfig(JSON.parse(JSON.stringify(config)), { tracks: [], tempo: 120 });
+  assert.equal(restored.report.loaded, 1);
+  assert.equal(restored.report.missing, 0);
+  assert.equal(restored.mappings.get("knob-1")[0].outMax, 150);
+  assert.equal(config.mappings["knob-1"][0].signature.trackName, undefined);
+});
+
+test("Song Tempo repairs old track-scoped signatures on import and re-export without mutating input", () => {
+  const config = buildProjectConfig(song(), { "knob-1": [{ type: "tempo" }] });
+  config.mappings["knob-1"][0].signature = {
+    targetType: "tempo", trackName: "Deleted", trackIndex: 0,
+    trackKind: "track", trackSessionId: "old", deviceName: "Old device",
+  };
+  const before = JSON.stringify(config);
+  const result = relinkProjectConfig(config, song());
+  assert.equal(result.report.loaded, 1);
+  assert.equal(result.mappings.get("knob-1")[0].relinkConfidence, 1);
+  assert.equal(JSON.stringify(config), before);
+  const exported = buildProjectConfig(song(), config.mappings);
+  assert.equal(exported.mappings["knob-1"][0].signature.trackName, undefined);
+});
+
+test("version zero Song Tempo without a signature still resolves the global target", () => {
+  const config = buildProjectConfig(song(), { "knob-1": [{ type: "tempo" }] });
+  config.version = 0;
+  delete config.mappings["knob-1"][0].signature;
+  assert.equal(relinkProjectConfig(config, song()).report.loaded, 1);
+});
+
 test("semantic scoring prefers persistent identity but survives simple reordering", () => {
   const expected = captureTargetSignature(song(), {
     type: "device_param", trackIndex: 0, deviceIndex: 0, paramIndex: 0,
@@ -101,6 +133,69 @@ test("relink never trusts candidate targets embedded in an imported profile", ()
   assert.equal(target.relinkCandidates, undefined);
 });
 
+test("MIDI note modes relink by track identity and preserve articulation settings", () => {
+  const originalSong = song();
+  originalSong.tracks[0].isMidi = true;
+  originalSong.tracks[0].devices = [];
+  const mapping = {
+    type: "device_param",
+    trackIndex: 0,
+    trackKind: "track",
+    mode: "trigger_note",
+    targetScale: "geometric",
+    midiVelocityMode: "audio_rms",
+    midiVelocityMin: 24,
+    midiVelocityMax: 118,
+  };
+  const config = buildProjectConfig(originalSong, new Map([
+    ["sensor.audio.note", [mapping]],
+  ]), {});
+
+  const movedSong = song();
+  movedSong.tracks[0].isMidi = true;
+  movedSong.tracks[0].devices = [];
+  movedSong.tracks.reverse();
+  const target = relinkProjectConfig(config, movedSong).mappings.get("sensor.audio.note")[0];
+
+  assert.equal(target.relinkStatus, "relinked");
+  assert.equal(target.trackIndex, 1);
+  assert.equal(target.mode, "trigger_note");
+  assert.equal(target.targetScale, "geometric");
+  assert.equal(target.midiVelocityMode, "audio_rms");
+  assert.equal(target.midiVelocityMin, 24);
+  assert.equal(target.midiVelocityMax, 118);
+});
+
+test("MIDI note relink accepts profiles saved before track-only signatures", () => {
+  const config = buildProjectConfig(song(), new Map(), {});
+  config.mappings["sensor.audio.note"] = [{
+    type: "device_param",
+    mode: "trigger_note",
+    trackIndex: 0,
+    signature: {
+      targetType: "device_param",
+      trackSessionId: "1",
+      trackName: "Bass",
+      trackType: "Object",
+      trackKind: "track",
+      trackIndex: 0,
+      deviceSessionId: "2",
+      deviceName: "RC-Midi-Receiver",
+      parameterSessionId: "3",
+      parameterName: "Legacy Parameter",
+      parameterIndex: 0,
+    },
+  }];
+  const movedSong = song();
+  movedSong.tracks[0].isMidi = true;
+  movedSong.tracks.reverse();
+
+  const target = relinkProjectConfig(config, movedSong).mappings.get("sensor.audio.note")[0];
+  assert.equal(target.relinkStatus, "relinked");
+  assert.equal(target.trackIndex, 1);
+  assert.equal(target.signature.targetType, "midi_track");
+});
+
 test("validation rejects corrupt shapes and accepts current version", () => {
   assert.throws(() => validateProjectConfig({ nope: true }), /Invalid .rcsurface/);
   const config = buildProjectConfig(song(), new Map(), {});
@@ -126,6 +221,12 @@ test("version zero project files migrate without dropping mappings", () => {
   assert.equal(migrated.mappings["knob-1"].length, 1);
   assert.equal(migrated.preferences.globalTakeover, "scale");
 });
+
+
+
+
+
+
 
 test("legacy phone UUID mapping keys collapse into stable global controls", () => {
   const config = buildProjectConfig(song(), new Map(), {});

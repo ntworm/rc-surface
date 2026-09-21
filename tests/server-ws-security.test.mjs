@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// Security authorization & capability token test suite (Task 3.1)
+// Security authorization and capability-token test suite.
 
 // Test files run in parallel and every one that starts a server competes
 // for DEFAULT_PREFERRED_PORT; the loser silently falls back to an
@@ -18,8 +18,13 @@ import { trackedClients } from "../src/server/ws.ts";
 import { playheadActive } from "../src/live/state.js";
 import { getControllerToken, getAdminToken } from "../src/server/session-auth.ts";
 import { setExtensionContext, clearExtensionContext } from "../src/context.ts";
+import { controlMappings } from "../src/live/mappings.ts";
+
+const parameterWrites = [];
 
 test.beforeEach(async () => {
+  parameterWrites.length = 0;
+  controlMappings.clear();
   setExtensionContext({
     application: {
       song: {
@@ -36,15 +41,13 @@ test.beforeEach(async () => {
             devices: [
               {
                 name: "Device 1",
-                parameters: [
-                  {
-                    name: "Param 1",
+                parameters: Array.from({ length: 12 }, (_, index) => ({
+                    name: "Param " + index,
                     min: 0,
                     max: 1,
                     getValue: async () => 0.5,
-                    setValue: async () => {},
-                  },
-                ],
+                    setValue: async (value) => { parameterWrites.push(value); },
+                  })),
               },
             ],
           },
@@ -58,6 +61,7 @@ test.beforeEach(async () => {
 
 test.afterEach(async () => {
   await stopServer();
+  controlMappings.clear();
   clearExtensionContext();
 });
 
@@ -82,6 +86,15 @@ async function openWs(url) {
   const helloMsg = messages.find((m) => m && m.type === "hello") || null;
   return { ws, helloMsg };
 }
+
+const descriptorControls = [
+  { name: "sensor.audio.transient", value: 0.9 },
+  { name: "sensor.audio.kick", value: 0.7 },
+  { name: "sensor.audio.snare", value: 0.2 },
+  { name: "sensor.audio.brightness", value: 0.6 },
+  ...['centroid', 'flux', 'flatness', 'spread', 'rolloff', 'low', 'mid', 'high']
+    .map((field, index) => ({ name: 'sensor.audio.' + field, value: (index + 1) / 10 })),
+];
 
 test("viewer WS connection (unauthenticated): reads allowed, BLOCKED on Live write, config write, server admin, control, toggle_play", async () => {
   const port = actualPort;
@@ -187,6 +200,13 @@ test("viewer WS connection (unauthenticated): reads allowed, BLOCKED on Live wri
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(client.history["knob1"], undefined, "typed control message must be blocked for viewer");
 
+  ws.send(JSON.stringify({ type: "controls", controls: descriptorControls }));
+  ws.send(JSON.stringify({ type: "control_frame", controls: [{ name: 'knob-frame', value: 1 }] }));
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(client.history["sensor.audio.transient"], undefined,
+    "typed descriptor batch must be blocked for viewer");
+  assert.equal(client.history['knob-frame'], undefined, 'realtime frames remain controller-only');
+
   // 7. Typed toggle_play message should be BLOCKED
   const initialPlayheadState = playheadActive;
   ws.send(JSON.stringify({ type: "toggle_play" }));
@@ -245,6 +265,47 @@ test("controller WS connection: allowed in Live write and reading; BLOCKED in co
   }));
   await new Promise((r) => setTimeout(r, 60));
   assert.ok(client.history["knob1"], "typed control message is allowed for controller");
+
+  ws.send(JSON.stringify({
+    type: "snapshot",
+    data: { controls: [{ name: "fader-1", value: 0.4 }], marker: "fallback-state" },
+  }));
+  await new Promise((r) => setTimeout(r, 60));
+  const fallbackState = JSON.parse(JSON.stringify(client.lastData));
+  for (const [index, { name }] of descriptorControls.entries()) {
+    controlMappings.set(name, [{
+      type: "device_param",
+      trackIndex: 0,
+      deviceIndex: 0,
+      paramIndex: index,
+      takeoverMode: "jump",
+    }]);
+  }
+  ws.send(JSON.stringify({ type: "controls", controls: descriptorControls }));
+  await new Promise((r) => setTimeout(r, 60));
+
+  const descriptorHistory = descriptorControls.map(({ name }) => client.history[name]?.at(-1));
+  assert.ok(descriptorHistory.every(Boolean), "controller descriptor batch must apply all twelve controls");
+  assert.equal(new Set(descriptorHistory.map(([timestamp]) => timestamp)).size, 1,
+    "one batch must apply every mapped value with the same receive timestamp");
+  assert.deepEqual(client.lastData, fallbackState,
+    "the immediate batch must not replace the ordinary snapshot fallback state");
+  assert.deepEqual(parameterWrites.toSorted(), descriptorControls.map(({ value }) => value).toSorted(),
+    "all twelve values in one batch must reach independent mapped parameters");
+
+  assert.equal(helloMsg.controlStreamVersion, 1);
+  controlMappings.set('xy-1.x', [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 0, takeoverMode: 'jump' }]);
+  parameterWrites.length = 0;
+  ws.send(JSON.stringify({ type: 'control_frame', controls: [{ name: 'xy-1', x: 0.37, y: 0.6 }, { name: 'pad-1', value: 1 }, { name: 'pad-1', value: 0 }] }));
+  await new Promise(r => setTimeout(r, 40));
+  assert.deepEqual(parameterWrites, [0.37]);
+  assert.deepEqual(client.history['pad-1'].map(row => row[1]), [1, 0]);
+  ws.send(JSON.stringify({ type: 'snapshot', data: { controlsRealtime: true, controls: [{ name: 'xy-1', x: 0.01, y: 0.01 }], motion: { ax: 20 }, marker: 'visual-only' } }));
+  ws.send(JSON.stringify({ type: 'control_frame', controls: [{ name: 'xy-1', x: 0.9, y: 0.2 }, { name: 'bad', value: 5 }] }));
+  await new Promise(r => setTimeout(r, 40));
+  assert.deepEqual(parameterWrites, [0.37], 'visual snapshots and invalid frames never actuate Live');
+  assert.equal(client.lastData.marker, 'visual-only');
+  assert.equal(client.history['sensor.motion.ax'], undefined, 'no snapshot motion fallback on the realtime path');
 
   // 4a. Mapping write (savePreset) ALLOWED — the MAP panel lives in the phone
   // UI and the phone is a controller, so managing its own mappings and presets

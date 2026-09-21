@@ -8,20 +8,24 @@ import os from "node:os";
 import path from "node:path";
 
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
+import { continuousTargetActuator } from "../src/live/continuous-target-actuator.ts";
 import {
   activeSmooths,
   commands,
   configureMappingStorage,
   controlMappings,
   eventModesState,
+  getTargetKey,
   hostModulators,
   lastMappedValues,
   runMappingMutation,
   safeInputRegistry,
   setMappingsFilePath,
+  setPresetsDirPath,
 } from "../src/live/mappings.ts";
 
 function resetMappingState() {
+  continuousTargetActuator.stop();
   controlMappings.clear();
   safeInputRegistry.clear();
   lastMappedValues.clear();
@@ -29,6 +33,7 @@ function resetMappingState() {
   activeSmooths.clear();
   hostModulators.clear();
   setMappingsFilePath(null);
+  setPresetsDirPath(null);
 }
 
 function fakeSong() {
@@ -77,6 +82,7 @@ test("clearMappings persists an empty mapping set before resetting derived state
   controlMappings.set("fader-1", [{ type: "tempo" }]);
   lastMappedValues.set("fader-1::tempo", 0.42);
   eventModesState.set("fader-1::tempo", { lastInput: 0.42, active: true });
+  continuousTargetActuator.request({ targetKey: "tempo", value: 0.42, write: async () => {} });
   activeSmooths.set("fader-1::tempo", {
     current: 0.42,
     target: 0.9,
@@ -92,6 +98,7 @@ test("clearMappings persists an empty mapping set before resetting derived state
     assert.equal(lastMappedValues.size, 0);
     assert.equal(eventModesState.size, 0);
     assert.equal(activeSmooths.size, 0);
+    assert.equal(continuousTargetActuator.pendingCount(), 0);
     assert.deepEqual(applied, [0]);
     assert.deepEqual(JSON.parse(await fs.readFile(mappingFile, "utf8")), {});
   } finally {
@@ -99,6 +106,12 @@ test("clearMappings persists an empty mapping set before resetting derived state
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+
+
+
+
+
 
 test("clearMappings leaves mappings.json intact when the project profile write fails", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "rcsurface-clear-project-fail-"));
@@ -171,6 +184,41 @@ test("mapping mutations execute serially", async () => {
   releaseFirst();
   await Promise.all([first, second]);
   assert.deepEqual(order, ["first:start", "first:end", "second:start", "second:end"]);
+});
+
+test("setMapping rejects creating a withheld Follow Detected Note target", async () => {
+  resetMappingState();
+  try {
+    await assert.rejects(
+      commands.setMapping.handler({
+        control: "sensor.audio.note",
+        targets: [{ type: "device_param", trackIndex: 0, mode: "follow_detected_note" }],
+      }),
+      /Unsupported or retired mapping mode/,
+    );
+    assert.equal(controlMappings.has("sensor.audio.note"), false);
+  } finally {
+    resetMappingState();
+  }
+});
+
+test("setMapping rejects singular Follow targets and preserves a stored Follow target on update", async () => {
+  resetMappingState();
+  const stored = { type: "device_param", trackIndex: 0, mode: "follow_detected_note", midiVelocity: 91 };
+  controlMappings.set("sensor.audio.note", [stored]);
+  try {
+    await assert.rejects(
+      commands.setMapping.handler({ control: "sensor.audio.note", target: stored }),
+      /Unsupported or retired mapping mode/,
+    );
+    await assert.rejects(
+      commands.setMapping.handler({ control: "sensor.audio.note", targets: [{ ...stored, midiVelocity: 100 }] }),
+      /Unsupported or retired mapping mode/,
+    );
+    assert.deepEqual(controlMappings.get("sensor.audio.note"), [stored]);
+  } finally {
+    resetMappingState();
+  }
 });
 
 test("project client state saves wait for mapping mutations", async () => {

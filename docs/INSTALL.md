@@ -1,6 +1,6 @@
 # Install and first-run guide
 
-This document walks you through installing **Ableton RC Surface** on
+This document walks you through installing **RC Surface** on
 Windows or macOS, scanning the QR code from your phone, and getting
 your first pad-to-Live mapping working.
 
@@ -8,6 +8,26 @@ your first pad-to-Live mapping working.
 > **Security Notice**: This extension runs a WebSocket server on your local network. Controller and admin actions require session tokens, but the bridge should still be used only on trusted networks. Do not share QR or admin URLs. See [SECURITY.md](./SECURITY.md) for the threat model.
 
 If you only want the short version: see the [Quick start](../README.md#quick-start)
+
+## Upgrading from Ableton-RC-Surface (1.0.0)
+
+The product was previously distributed as "Ableton-RC-Surface". Live derives the
+data folder identity from the manifest's `name` field, so installing the renamed
+`RC-Surface-1.0.0.ablx` creates a fresh data folder at
+`%LOCALAPPDATA%\Ableton\Extensions Data\worm.rc-surface\` (Windows) or
+`~/Library/Application Support/Ableton/Extensions Data/worm.rc-surface/` (macOS).
+Your previous mappings, presets, certificates, locale, autostart, and projects
+stay in `worm.ableton-rc-surface`.
+
+To move that data into the new folder without overwriting anything, run the
+migrator from the tester kit **before** installing the new `.ablx`:
+
+- Windows: double-click `Migrate-RC-Surface-Data.cmd` (or run `Migrate-RC-Surface-Data.ps1`)
+- macOS: double-click `Migrate RC Surface Data.command`
+
+The script copies every file and skips anything that already exists in the
+destination. It never moves or deletes the source. If the source folder does not
+exist (fresh install), it exits cleanly with a message.
 in the README.
 
 ## 1. Prerequisites
@@ -29,11 +49,13 @@ The extension itself is built on the
 
 ## 2. Download and install
 
-### From a release (recommended)
+### From a test candidate or published release
 
-1. Download the latest `Ableton-RC-Surface-X.Y.Z.ablx` from the
+1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.
-   The current release is **v0.6.0**.
+   The source version is **1.0.0**; the local candidate is not a declaration
+   that a public release exists. Use the version and verification instructions
+   supplied with the actual package.
 2. Double-click the file. Live's extension installer opens.
 3. Click *Install*. Live places the file under
    `User Library / Extensions`.
@@ -62,15 +84,45 @@ To enable beat-accurate sync for LFO/Stutter, the flashing metronome header, and
 
 To let pads or other controls trigger MIDI notes on a selected MIDI track:
 
+Use **Receiver v2**, labelled **SDK / LOCAL MAX — NO UDP**. Back up your Set,
+then replace old Receiver instances; a library update alone does not replace
+loaded devices. Keep only one v2 Receiver per destination track. See the
+[v2 migration](./SECURITY.md#bundled-max-devices--v2-migration). Old UDP
+Receivers are rejected; there is no insecure compatibility fallback.
+
 1. Locate the `RC-Midi-Receiver.amxd` file (included in the root of the release ZIP kit, or under the `static/` directory in the repository source).
 2. Copy this file into your Ableton **User Library** so that Live can find it:
    - Place it under `User Library/Presets/MIDI Effects/Max MIDI Effect/` (or anywhere else in your indexed User Library).
-3. The extension will automatically insert the receiver device when you choose **Trigger Note** on a MIDI track. If automatic insertion fails, you can drag the device manually from your User Library onto the target MIDI track.
+3. Drag the Receiver from your User Library onto each target MIDI track. The
+   extension reuses it once present, but Live's Extensions SDK cannot insert a
+   Max for Live device automatically. Trigger Note tells you to place the
+   copy from your User Library.
+
+### Optional: RC-Audio-Sender.amxd (to listen to a Live track)
+
+The extension cannot hear a Live track — the Extensions SDK exposes no audio at
+all — so listening to one is done by a Max device inside Live's audio path.
+
+1. Find `RC-Audio-Sender.amxd` in the release kit, or under `static/` in the
+   source.
+2. Drop it on the **audio track you want to listen to**.
+3. Put `RC-Midi-Receiver.amxd` on the **MIDI track that should play**.
+
+4. Enable **Audio Sender input** on the intended Receiver v2. It starts OFF.
+Both devices must be v2: they use an internal Max bus, not UDP. All Receivers
+with that input enabled hear the Sender; leave the others OFF. Trigger Note
+from the phone uses the SDK and does not need that input enabled.
+
+Requires Max for Live, which is included with Live Suite.
+
+> **Transport v2 awaits a new Live test.** Earlier field results refer to the
+> old UDP version, not this replacement. Verify loading, stereo pass-through,
+> notes/OFF and measured latency before performance use.
 
 ## 3. Start the bridge
 
 1. In Live, open the **Extensions** menu (or `Cmd-Shift-A` / `Ctrl-Shift-A`).
-2. Look for **Ableton RC Surface** and click *Show panel* (or *Open*,
+2. Look for **RC Surface** and click *Show panel* (or *Open*,
    depending on your Live version).
 3. A modal window appears with the **Performance QR** for the phone
    client (the pads / knobs / sensors / **MIX** tab controller at `/`).
@@ -80,12 +132,33 @@ To let pads or other controls trigger MIDI notes on a selected MIDI track:
    Performance QR; the admin dashboard at `/static/admin/` shows
    live mappings.
 
-The server picks a random free port and binds to `0.0.0.0`, so any
-device on the same LAN can reach it. Use a trusted studio/home LAN only.
+The server keeps plain HTTP on loopback at **8730** and exposes the phone over
+LAN HTTPS/WSS, normally at **8731**. Stable ports let a phone find the server
+after a restart, but its old session is read-only until you scan the new QR.
+This also applies to Stop/Start in the panel. If a port
+is already occupied, Surface falls back to an OS-assigned port and the panel
+shows the one actually in use. Set `RC_SURFACE_PORT` to override the preferred
+HTTP port. LAN access is available only through the generated HTTPS URL, so
+use a trusted studio/home network.
 The generated QR URL grants the controller role through a rotating session
 token, so treat the QR code and copied controller/admin URLs as credentials.
 
+### Start automatically with Live
+
+At the bottom of the panel there is a **Start automatically with Live** switch.
+It is on by default, which is what every install did before it existed.
+
+Turn it off when another RC extension shares the machine and you want to choose
+which one takes the ports for a session rather than have them race at load.
+Only the automatic start is affected: the panel's **Start** button still works,
+and the panel renders from disk when nothing is listening, so the switch is
+always reachable — including in the state it creates. The choice persists
+between sessions.
+
 ## 4. Connect your phone
+
+> [!IMPORTANT]
+> **Single controller policy**: RC Surface 1.0 supports one controller at a time. Control your session from the phone or desktop, never both simultaneously. While multiple browser windows can technically connect on the LAN, simultaneous inputs are not supported and will conflict.
 
 Pick one:
 
@@ -94,7 +167,8 @@ Pick one:
 - Or **type the phone URL manually** in the phone's browser address
   bar.
 
-The URL looks like `https://192.168.x.y:12345/`.
+By default, the URL looks like `https://192.168.x.y:8731/`. If the preferred
+port was overridden or unavailable, use the actual URL shown in the panel.
 
 ### The "Your connection is not private" warning
 
@@ -142,8 +216,8 @@ To test MIDI note triggering instead:
 1. Add or select a MIDI track in Live.
 2. On the phone, enter **MAP**, select a control, and tap **Trigger Note**.
 3. Pick the MIDI track.
-4. If the extension cannot insert `RC-Midi-Receiver.amxd` automatically,
-   place that Max for Live device on the MIDI track manually and retry.
+4. If `RC-Midi-Receiver.amxd` is not already on the track, place the copy from
+   your User Library on that MIDI track and retry.
 5. Choose the note with the Pitch/Octave selectors, set Velocity, leave
    MAP mode, and trigger the selected phone control.
 
@@ -151,6 +225,18 @@ If the Live parameter or MIDI note responds, the bridge and mapping engine
 are working. The admin dashboard at `/static/admin/` remains useful for
 inspection and troubleshooting, but day-to-day mappings can be created from
 the phone.
+
+To test audio modulation, enable **Audio input** in **AUD**. Enter **MAP**,
+choose the **Kick** detector card, then Bind a synth parameter with a small
+output range and **Smooth = 0**. Leave MAP and play isolated kicks, then snares
+and silence. Compare the sound with the actual Live parameter, not only the
+meter. Repeat with Transient, Snare, and Brightness. Kick/snare are spectral
+heuristics; microphone, network, and Live latency still require a physical test.
+
+Follow Detected Note and its tonal analysis were removed. Unsupported mapping
+modes are discarded on load; supported bindings remain. The twelve descriptors
+analyze the selected browser audio input (microphone, interface or loopback
+where available). The optional Max Audio Sender does not feed these controls.
 
 ## 6. OS-specific notes
 
@@ -174,43 +260,13 @@ the phone.
   Right-click the file, choose *Open*, then *Open* again in the
   confirmation prompt.
 
-## 7. Tunneling (optional, advanced)
+## 7. Network boundary
 
-The bridge binds to your local network only. To use the phone over the
-internet (different WiFi, 4G/5G, etc.) you need a tunnel. The bridge
-speaks plain HTTPS, so any TCP tunnel works.
-
-Only expose the bridge through a tunnel when you understand the risk. A
-tunnel makes the control surface reachable through the public tunnel URL,
-so treat that URL like a temporary secret and close the tunnel when the
-session ends.
-
-### Cloudflared (free, recommended)
-
-```bash
-# install once: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
-cloudflared tunnel --url http://localhost:<port>
-```
-
-Cloudflared prints a `https://*.trycloudflare.com` URL. Open that URL
-on your phone. Camera and microphone work because the cert is publicly
-trusted.
-
-### ngrok
-
-```bash
-ngrok http <port>
-```
-
-`ngrok http` gives a `https://*.ngrok.io` URL with a trusted cert.
-Free tier is fine for personal use.
-
-### Self-hosted reverse proxy
-
-If you have a VPS and a domain, point a subdomain at it and reverse
-proxy to the bridge's port. Add `proxy_set_header Upgrade $http_upgrade;`
-and `proxy_set_header Connection "upgrade";` for the WebSocket
-upgrade to work.
+The v1.0 supported deployment is a trusted studio/home LAN with the phone and
+computer on the same network. Do not expose the bridge with port forwarding,
+a public tunnel, or a public reverse proxy. Those deployments are outside the
+tested threat model, even when the public endpoint supplies a trusted
+certificate.
 
 ## 8. Certificate lifecycle
 
@@ -239,9 +295,8 @@ To force a new cert, stop Live, delete the `certs/` folder under
 
 ### Phone shows "Your connection is not private" and there's no bypass
 
-- iOS 14.5 and below cannot accept self-signed certs for HTTPS
-  websites. Use a tunnel (see [Tunneling](#tunneling-optional)) or
-  upgrade your phone.
+- iOS 14.5 and below cannot accept self-signed certs for HTTPS websites.
+  Upgrade the phone or use another supported browser/device on the same LAN.
 - Some corporate-managed phones have admin policies that block
   certificate bypass. Use a personal phone.
 
@@ -274,3 +329,8 @@ To force a new cert, stop Live, delete the `certs/` folder under
 In Live: *Extensions* menu → *Manage Extensions* → remove the entry.
 Then delete the cert folder under
 `Preferences/Extensions/<extension-id>/` if you want a clean slate.
+
+## Trademarks
+
+Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
+project, not affiliated with, endorsed by, or sponsored by Ableton AG.

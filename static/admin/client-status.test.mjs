@@ -11,5 +11,6 @@ test('stale clients receive a high-contrast visual state', () => {
   assert.match(read('app.js'), /classList\.toggle\(['"]stale['"]/);
   const css = read('style.css');
   assert.match(css, /\.client-item\.stale/);
-  assert.match(css, /#ff453a/i);
+  assert.match(css, /--red:\s*hsl\(4,100%,62%\)/);
+  assert.match(css, /\.client-item\.stale\s*\{[^}]*var\(--red-bg\)[^}]*var\(--red\)/);
 });

@@ -28,6 +28,7 @@ import {
   getRequiredRoleForSideEffect,
   dispatchCommand,
 } from "../src/server/command-dispatch.ts";
+import { commands } from "../src/live/mappings.ts";
 
 const PHONE_MAP_PANEL_COMMANDS = [
   "setMapping",
@@ -46,6 +47,24 @@ const ADMIN_ONLY_COMMANDS = [
   "rollbackProjectConfig",
   "getServerInfo",
 ];
+
+test("every registered command has an explicit side-effect classification", () => {
+  assert.deepEqual(
+    Object.keys(COMMAND_SIDE_EFFECTS).sort(),
+    Object.keys(commands).sort(),
+    "an unclassified command silently falls back to admin-only config-write",
+  );
+});
+
+test("a viewer can read the shared locale without gaining a write role", async () => {
+  assert.equal(COMMAND_SIDE_EFFECTS.getLocale, "read");
+  const result = await dispatchCommand("viewer", {
+    id: "locale-read",
+    cmd: "getLocale",
+  });
+  assert.equal(result.ok, true, result.error);
+  assert.ok(["en", "pt-BR"].includes(result.result?.locale));
+});
 
 test("R7: a controller may run every command the phone MAP panel needs", () => {
   for (const cmd of PHONE_MAP_PANEL_COMMANDS) {

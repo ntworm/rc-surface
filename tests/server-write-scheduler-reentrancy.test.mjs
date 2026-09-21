@@ -17,6 +17,23 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { WriteScheduler } from "../src/server/write-scheduler.ts";
 
+test('clear invalidates the queue held across an await, but drains newly enqueued work', async () => {
+  const scheduler = new WriteScheduler();
+  const applied = [];
+  let release;
+  const blocked = new Promise((resolve) => { release = resolve; });
+  const enqueue = (value) => scheduler.enqueue({ targetKey: 'pad', value, isDiscrete: true,
+    execute: async () => { applied.push(value); if (value === 1) await blocked; } });
+  enqueue(1);
+  const flushing = scheduler.flush();
+  enqueue(0); enqueue(1);
+  scheduler.clear();
+  enqueue(0.25); enqueue(0);
+  release(); await flushing;
+  assert.deepEqual(applied, [1, 0.25, 0]);
+  assert.equal(scheduler.pendingCount(), 0);
+});
+
 test("flush drains keys enqueued while it was already running", async () => {
   const scheduler = new WriteScheduler();
   const executed = [];
@@ -96,4 +113,18 @@ test("a value enqueued mid-flush for a key already drained is not lost", async (
   await inFlight;
 
   assert.deepEqual(applied, [0.4, 1], "the last value of the gesture must reach Live");
+});
+
+test('a slow SDK target never holds an independent discrete control behind it', async () => {
+  const scheduler = new WriteScheduler();
+  let release;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const applied = [];
+  scheduler.enqueue({ targetKey: 'slow', value: 1, isDiscrete: true, execute: async () => { applied.push('slow'); await blocked; } });
+  const first = scheduler.flush();
+  await Promise.resolve();
+  scheduler.enqueue({ targetKey: 'independent', value: 1, isDiscrete: true, execute: async () => { applied.push('independent'); } });
+  await scheduler.flush();
+  try { assert.deepEqual(applied, ['slow', 'independent'], 'independent target must start before slow target resolves'); }
+  finally { release(); await first; }
 });

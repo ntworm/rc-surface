@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -364,6 +364,7 @@ function loadPanelApp(extraIds = []) {
   vm.createContext(context);
 
   const source = fs.readFileSync(path.join(staticRoot, 'panel', 'app.js'), 'utf8');
+  vm.runInContext(fs.readFileSync(path.join(staticRoot, 'shared', 'audio-descriptor-catalog.js'), 'utf8'), context);
   vm.runInContext(source, context, { filename: 'panel/app.js' });
   return { context, document, qrCalls };
 }
@@ -401,14 +402,16 @@ test('Connect control groups render expanded controls as sensor cells with corre
   const groups = document.getElementById('ctrl-groups').children;
   const byGroup = new Map(groups.map(group => [group.dataset.group, group]));
   assert.equal(byGroup.get('SENSORS')?.dataset.count, '6');
-  assert.equal(byGroup.get('AUDIO')?.dataset.count, '8');
-  assert.equal(byGroup.get('HANDS')?.dataset.count, '13');
+  // Four legacy channels (rms, envelope, gate, attack) plus the twelve
+  // descriptors; the pitch lane is dormant and no longer offered.
+  assert.equal(byGroup.get('AUDIO')?.dataset.count, '16');
+  assert.equal(byGroup.get('HANDS')?.dataset.count, '14');
   assert.equal(byGroup.get('PADS')?.dataset.count, '12');
   assert.equal(byGroup.get('XY PADS')?.dataset.count, '4');
   assert.equal(byGroup.get('STUTTERS')?.dataset.count, '4');
   assert.equal(byGroup.has('RIB' + 'BONS'), false);
-  assert.equal(byGroup.get('KNOBS')?.dataset.count, '6');
-  assert.equal(byGroup.get('FADERS')?.dataset.count, '6');
+  assert.equal(byGroup.get('KNOBS')?.dataset.count, '8');
+  assert.equal(byGroup.get('FADERS')?.dataset.count, '8');
 
   const padsList = byGroup.get('PADS').querySelector('.ctrl-group-list');
   assert.equal(padsList.children.length, 12);
@@ -416,6 +419,12 @@ test('Connect control groups render expanded controls as sensor cells with corre
   assert.equal(padsList.children[0].querySelector('.cell-name').textContent, 'PAD 1');
   assert.equal(padsList.children[0].querySelector('.cell-value').textContent, '0.00');
   assert.equal(padsList.children[0].querySelector('.off-badge').textContent, 'OFF');
+
+  const audioList = byGroup.get('AUDIO').querySelector('.ctrl-group-list');
+  const audioLabels = audioList.children.map((child) => child.querySelector('.cell-name').textContent);
+  for (const label of ['AUDIO ATTACK', 'AUDIO TRANSIENT', 'AUDIO KICK', 'AUDIO SNARE', 'AUDIO BRIGHTNESS', 'AUDIO FLATNESS', 'AUDIO CENTROID']) {
+    assert.ok(audioLabels.includes(label), `${label} must be registered in the panel catalog`);
+  }
 });
 
 test('Connect group cells receive live updates for non-dashboard controls', () => {
@@ -616,8 +625,11 @@ test('Connect AUDIO group stays inactive for neutral audio defaults', () => {
     },
   });
 
-  const bend = document.getElementById('ctrl-cell-AUDIO-sensor-audio-whistle-bend');
-  assert.equal(bend.querySelector('.cell-value').textContent, '0.50');
+  // Bend went dormant with the pitch lane; the level is what a neutral frame
+  // still reports, and it must not light the group up.
+  assert.equal(document.getElementById('ctrl-cell-AUDIO-sensor-audio-whistle-bend'), null);
+  const rms = document.getElementById('ctrl-cell-AUDIO-sensor-audio-rms');
+  assert.equal(rms.querySelector('.cell-value').textContent, '0.00');
   assert.equal(audioGroup.dataset.active, '0');
   assert.equal(audioGroup.querySelector('.ctrl-group-status').textContent, 'Inactive');
 });
@@ -770,23 +782,33 @@ test('buildControlCell sets data-control-key so CSS attribute selectors can scop
   assert.ok(found >= 3, `expected at least 3 physical sensor cells with data-control-key, got ${found}`);
 });
 
-test('dashboard catalog keeps only useful audio/vision channels and stable gesture slots', () => {
+test('dashboard catalog keeps public audio descriptors and only stable vision gesture slots', () => {
   const source = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
   for (const retired of [
-    'sensor.audio.transient', 'sensor.audio.whistle.active',
+    'sensor.audio.whistle.active',
     'sensor.vision.thumb', 'sensor.vision.index', 'sensor.vision.middle',
     'sensor.vision.ring', 'sensor.vision.pinky',
   ]) {
     assert.doesNotMatch(source, new RegExp(retired.replaceAll('.', '\\.')));
   }
+  const { context, document } = loadPanelApp();
+  context.buildCtrlGroups();
+  const audio = document.getElementById('ctrl-groups').children.find((g) => g.dataset.group === 'AUDIO');
+  const keys = audio.querySelector('.ctrl-group-list').children.map((cell) => cell.dataset.controlKey);
+  for (const descriptor of ['transient', 'kick', 'snare', 'brightness', 'centroid', 'flux', 'flatness', 'spread', 'rolloff', 'low', 'mid', 'high']) {
+    assert.ok(keys.includes('sensor.audio.' + descriptor));
+  }
   for (const slot of [1, 2, 3]) assert.match(source, new RegExp(`sensor\\.vision\\.gesture\\.${slot}`));
-  assert.match(source, /name: "Bend"/);
+  for (const dormant of ['sensor.audio.pitch', 'sensor.audio.note', 'sensor.audio.bpm',
+    'sensor.audio.clarity', 'sensor.audio.whistle.bend']) {
+    assert.ok(!keys.includes(dormant), dormant + ' is dormant and must not be offered for mapping');
+  }
 });
 
 // The VID page streams a live hand position (DIRECT MAP X/Y/Z) but the panel's
 // HANDS group never listed those three channels, so they could not be seen or
 // mapped from the Ableton panel even though the phone was emitting them.
-test('Connect HANDS group exposes the hand X/Y/Z position read from the camera', () => {
+test('Connect HANDS group exposes only intentional camera controls', () => {
   const { context, document } = loadPanelApp();
   context.buildCtrlGroups();
 
@@ -795,12 +817,19 @@ test('Connect HANDS group exposes the hand X/Y/Z position read from the camera',
   assert.ok(hands, 'HANDS group must render');
   assert.equal(
     hands.dataset.count,
-    '13',
-    'HANDS must carry the 10 existing channels plus hand X, Y and Z',
+    '14',
+    'HANDS must carry hand X/Y/Z, opt-in detectors, rotate, pinch clutch, and learned gestures',
   );
+  for (const retired of ['sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers']) {
+    assert.equal(
+      document.getElementById(`ctrl-cell-HANDS-${retired.replace(/\./g, '-')}`),
+      null,
+      `${retired} is diagnostic-only and must not render as a mapping tile`,
+    );
+  }
 });
 
-test('panel knows the metadata for the hand X/Y/Z channels', () => {
+test('panel knows metadata for public hand position channels only', () => {
   const { context } = loadPanelApp();
   for (const [key, name] of [
     ['sensor.vision.x', 'Hand X'],

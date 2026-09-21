@@ -15,7 +15,7 @@ const source = fs.readFileSync(path.join(import.meta.dirname, 'modules/playhead.
 function loadModule(mockElements = {}) {
   const listeners = new Map();
   const classes = new Set();
-  let textContent = '';
+  const attributes = new Map();
 
   const mockBtn = {
     textContent: '',
@@ -30,7 +30,9 @@ function loadModule(mockElements = {}) {
     },
     addEventListener(event, fn) {
       listeners.set(event, fn);
-    }
+    },
+    setAttribute(name, value) { attributes.set(name, String(value)); },
+    getAttribute(name) { return attributes.get(name); },
   };
 
   const context = {
@@ -84,12 +86,16 @@ test('playhead module toggles offline playhead state when WebSocket is disconnec
   // First click: start playhead
   env.click();
   assert.equal(env.window.playheadActive, true);
-  assert.equal(env.mockBtn.textContent, '||');
-  assert.equal(env.mockBtn.classList.contains('playing'), true);
+  assert.equal(env.mockBtn.textContent, '');
+  assert.equal(env.mockBtn.classList.contains('is-playing'), true);
+  assert.equal(env.mockBtn.getAttribute('aria-pressed'), 'true');
+  assert.equal(env.mockBtn.getAttribute('aria-label'), 'Pause');
 
   // Second click: pause playhead
   env.click();
   assert.equal(env.window.playheadActive, false);
-  assert.equal(env.mockBtn.textContent, '▶');
-  assert.equal(env.mockBtn.classList.contains('playing'), false);
+  assert.equal(env.mockBtn.textContent, '');
+  assert.equal(env.mockBtn.classList.contains('is-playing'), false);
+  assert.equal(env.mockBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(env.mockBtn.getAttribute('aria-label'), 'Play');
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -25,6 +25,7 @@ function loadApp() {
         classList: {
           add: () => {},
           remove: () => {},
+          toggle: () => {},
         },
         style: {},
         addEventListener: () => {},
@@ -124,6 +125,9 @@ function loadApp() {
   windowContext.sendPhoneCommand = () => false;
 
   // Run App script
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
+  // Capability tracker must load before app.js (script order in index.html).
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'sensor-capabilities.js'), 'utf8'), windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
   
   return windowContext;
@@ -195,6 +199,44 @@ test('Modulator state sends an immediate host-modulator message after handshake'
   assert.equal(typeof socket.sent.at(-1).ts, 'number');
 });
 
+test('LFO and Stutter Auto clear survives actual modulator WebSocket serialization', () => {
+  const context = loadApp();
+  const socket = completeHandshake(context);
+  const config = { kind: 'lfo', name: 'toggle-1', active: true, rate: 1,
+    depth: 1, syncMode: 'sync', clockSource: 'osc' };
+  context.onModulatorState({ ...config, syncSubdivisionBeats: 4 });
+  assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, 4);
+  context.onModulatorState({ ...config, syncSubdivisionBeats: null });
+  assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
+  context.onModulatorState(config);
+  assert.equal(Object.hasOwn(socket.sent.at(-1).modulator, 'syncSubdivisionBeats'), false);
+  context.onModulatorState({ ...config, kind: 'stutter', name: 'button-1', syncSubdivisionBeats: null });
+  assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
+});
+
+test('all incoming playhead state messages keep the header transport in sync', () => {
+  const context = loadApp();
+  const renderedStates = [];
+  context.window.updateHeaderPlayState = (isPlaying) => {
+    renderedStates.push(Boolean(isPlaying));
+  };
+  const socket = completeHandshake(context);
+
+  for (const message of [
+    { type: 'hello', client_id: 'client-1', playheadActive: true, playheadTimeMs: 10 },
+    { type: 'live_state', playheadActive: false, playheadTimeMs: 20 },
+    { type: 'playhead_state', playheadActive: true, playheadTimeMs: 30 },
+  ]) {
+    socket.onmessage({ data: JSON.stringify(message) });
+  }
+
+  assert.deepEqual(
+    renderedStates,
+    [true, false, true],
+    'hello, live_state, and playhead_state must all render the play/pause icon',
+  );
+});
+
 test('Direct Orientation: deviceorientation event writes raw values to state.orient directly', () => {
   const context = loadApp();
   const rc = context.window.__abletonRc;
@@ -246,7 +288,7 @@ test('Direct Motion: devicemotion event writes raw acceleration and rotationRate
   assert.equal(rc.state.sensors.motion, 'available');
 });
 
-test('Calibration: zero button click triggers calibrateHorizon and sets offsets on the next deviceorientation event', () => {
+test('Calibration delegates to the contextual collector; one event cannot set neutral', () => {
   const context = loadApp();
   const rc = context.window.__abletonRc;
 
@@ -260,11 +302,17 @@ test('Calibration: zero button click triggers calibrateHorizon and sets offsets 
 
   assert.equal(rc.state.orient.alpha, 260);
 
-  // Trigger calibration
+  let requested = null, measured = null;
+  context.PageCalibration = {
+    start: (page) => { requested = page; },
+    feed: (page, sample) => { measured = sample; },
+  };
+  // The stable-window behavior and timeout are exercised by calibration tests.
   rc.calibrateHorizon();
+  assert.equal(requested, 'sensors');
   assert.equal(context.__getVibrateCalls(), 0);
 
-  // Next event sets the offsets
+  // Only the raw reading is passed to the collector; no one-frame success.
   context.__triggerWindowEvent('deviceorientation', {
     alpha: 110,
     beta: 25,
@@ -272,7 +320,14 @@ test('Calibration: zero button click triggers calibrateHorizon and sets offsets 
     absolute: true,
   });
 
-  // Since we calibrated at (110, 25, -5), the values should offset to (0, 0, 0)
+  assert.equal(rc.state.calibration.active, false);
+  assert.equal(rc.state.calibration.offsets.alpha, 0);
+  assert.equal(measured.alpha, 250);
+  rc.state.calibration.offsets = measured;
+  rc.state.calibration.active = true;
+  context.__triggerWindowEvent('deviceorientation', {
+    alpha: 110, beta: 25, gamma: -5, absolute: true,
+  });
   assert.equal(rc.state.calibration.offsets.alpha, 250);
   assert.equal(rc.state.calibration.offsets.beta, 25);
   assert.equal(rc.state.calibration.offsets.gamma, -5);
@@ -375,3 +430,116 @@ test('XY pads, knobs, and faders are queued into state.controls and do not send 
   assert.equal(fader.value, 0.88);
 });
 
+// ---- Capability-tracker integration regressions (P02) ----
+
+test('no events never turns sensors into permission-denied', () => {
+  const context = loadApp();
+  const rc = context.window.__abletonRc;
+
+  // With the old timeout->denied heuristic and this harness's immediate
+  // setTimeout, this used to become 'permission-denied'. Silence is now
+  // no-readings; denial only follows an explicit permission('denied').
+  assert.notEqual(rc.state.sensors.motion, 'permission-denied');
+  assert.notEqual(rc.state.sensors.orientation, 'permission-denied');
+
+  rc.__sensorTrackers.motion.permission('denied');
+  rc.__syncSensorTrackers();
+  assert.equal(rc.state.sensors.motion, 'permission-denied');
+  assert.equal(rc.state.sensors.orientation, 'unknown');
+});
+
+test('ready->lost emits exactly one lost frame per previously active axis and stops replay', () => {
+  const context = loadApp();
+  const rc = context.window.__abletonRc;
+  const emitted = [];
+  const originalOnControl = context.window.onControl;
+  context.window.onControl = (ctrl) => { emitted.push(ctrl); originalOnControl(ctrl); };
+
+  // A real reading makes the tracker ready and feeds the emission path.
+  context.__triggerWindowEvent('devicemotion', {
+    accelerationIncludingGravity: { x: 1.2, y: -2.3, z: 9.8 },
+    acceleration: { x: 0, y: 0, z: 0 },
+    rotationRate: { alpha: 1, beta: 2, gamma: 3 },
+    interval: 16.6,
+  });
+  assert.equal(rc.state.sensors.motion, 'available');
+
+  // Mark previously-active axes the same way the rAF loop does.
+  rc.state.controls = [];
+  rc.__emitSensorControls();
+  const before = emitted.length;
+  // Suspend: ready -> lost, values discarded.
+  rc.__sensorTrackers.motion.suspend();
+  rc.__syncSensorTrackers();
+
+  const lostFrames = emitted.slice(before).filter((c) => c.lost === true);
+  assert.ok(lostFrames.length >= 1, 'expected lost frames for previously active axes');
+  const lostNames = new Set(lostFrames.map((c) => c.name));
+  assert.ok(lostNames.has('sensor.motion.ax'));
+  assert.equal(rc.state.motion, null, 'stale motion samples must be discarded');
+  assert.equal(rc.state.sensors.motion, 'unknown');
+
+  // No duplicate lost emission on the next sync.
+  const beforeSecond = emitted.length;
+  rc.__syncSensorTrackers();
+  const secondLost = emitted.slice(beforeSecond).filter((c) => c.lost === true);
+  assert.equal(secondLost.length, 0, 'lost frames must be emitted exactly once');
+});
+
+test('resume waits for real readings instead of replaying or re-prompting', () => {
+  const context = loadApp();
+  const rc = context.window.__abletonRc;
+
+  context.__triggerWindowEvent('deviceorientation', {
+    alpha: 100, beta: 20, gamma: -10, absolute: true,
+  });
+  assert.equal(rc.state.sensors.orientation, 'available');
+
+  rc.__sensorTrackers.orientation.suspend();
+  rc.__syncSensorTrackers();
+  assert.equal(rc.state.orient, null);
+
+  rc.__sensorTrackers.orientation.resume();
+  rc.__syncSensorTrackers();
+  assert.equal(rc.state.sensors.orientation, 'unknown', 'resume waits, does not replay');
+  assert.equal(rc.state.orient, null);
+});
+
+test('legacy snapshot vocabulary maps the tracker statuses', () => {
+  const context = loadApp();
+  const rc = context.window.__abletonRc;
+
+  context.__triggerWindowEvent('devicemotion', {
+    accelerationIncludingGravity: { x: 0, y: 0, z: 0 },
+    acceleration: { x: 0, y: 0, z: 0 },
+    rotationRate: { alpha: 0, beta: 0, gamma: 0 },
+    interval: 16.6,
+  });
+  // Zero is a valid reading.
+  assert.equal(rc.state.sensors.motion, 'available');
+});
+
+test('denied after ready never replays stale values from emitSensorControls', () => {
+  const context = loadApp();
+  const rc = context.window.__abletonRc;
+  const emitted = [];
+  const originalOnControl = context.window.onControl;
+  context.window.onControl = (ctrl) => { emitted.push(ctrl); originalOnControl(ctrl); };
+
+  context.__triggerWindowEvent('devicemotion', {
+    accelerationIncludingGravity: { x: 1, y: 0, z: 9.8 },
+    acceleration: { x: 0, y: 0, z: 0 },
+    rotationRate: { alpha: 0, beta: 0, gamma: 0 },
+    interval: 16.6,
+  });
+  rc.__emitSensorControls();
+  const realFrames = () => emitted.filter((c) => !c.lost && c.name.startsWith('sensor.motion.')).length;
+  const before = realFrames();
+  assert.ok(before > 0, 'ready values reach the wire');
+
+  // Explicit deny while state.motion still holds the last reading: the
+  // tracker is no longer ready, so emitSensorControls must not replay it.
+  rc.__sensorTrackers.motion.permission('denied');
+  rc.__emitSensorControls();
+  assert.equal(realFrames(), before, 'stale motion values must not be replayed after deny');
+});

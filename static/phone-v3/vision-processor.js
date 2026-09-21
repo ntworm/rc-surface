@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // vision-processor.js
@@ -234,39 +234,308 @@
   // Pure helper: derive the 14 scalar features for one hand from its 21
   // MediaPipe landmarks. Pulled out of processResults so unit tests can
   // exercise it without spinning up MediaPipe or a canvas.
-  function computeHandData(landmarks) {
+  // The pinch clutch.
+  //
+  // Pinching engages it; the hand's travel while the pinch is held becomes
+  // three mappable channels. Releasing freezes them where they were, so the
+  // next pinch continues from there rather than snapping — the same way a
+  // mouse can be lifted and replaced without the cursor jumping.
+  //
+  // Three details are what make it usable rather than merely working, and all
+  // three are measured, not guessed:
+  //
+  //  - The anchor is captured on the FIRST frame the gate rises, but only
+  //    committed once the gate has held for ENGAGE_FRAMES. Engaging on a
+  //    single frame makes it jump: a pinch gate flips far more often than a
+  //    hand actually leaves a pinch. Waiting without buffering would instead
+  //    plant the origin wherever the hand had drifted to by then, so both
+  //    halves are needed.
+  //  - Release waits RELEASE_FRAMES, about half a second, because the gaps
+  //    the detector leaves mid-pinch are longer than they feel.
+  //  - X is reference-minus-current while Y and Z are the other way round,
+  //    because computeHandData already mirrors x and flips y, and z grows as
+  //    the hand comes closer. The asymmetry is what makes all three travel
+  //    with the movement.
+  // Depth window, in palmSize units, measured at the owner's farthest and
+  // closest performing positions on the actual phone rather than a webcam.
+  const Z_PALM_FAR = 0.12;
+  const Z_PALM_NEAR = 0.30;
+  // A relaxed pinch needs only partial extension of all three support fingers.
+  // The deeper index curl remains valid without this extra pose allowance.
+  const PINCH_SUPPORT_FINGER_FLOOR = 0.20;
+  // Only positive, palm-facing readings may start a labelled-hand pinch.
+  // Brief pose noise while held is handled by the existing drop tolerance.
+  const BACK_OF_HAND_LIMIT = 0;
+
+  const CLUTCH_EMA = 0.35;
+  const CLUTCH_SENS_XY = 4.0;
+  const CLUTCH_SENS_Z = 4.0;
+  const CLUTCH_ENGAGE_FRAMES = 4;
+  const CLUTCH_RELEASE_FRAMES = 15;
+  // The clutch consumes the continuous fingertip-contact signal, like the
+  // RC MediaPipe bank it was ported from. Once contact crosses HIGH it stays
+  // latched through the middle band until it crosses LOW, so camera noise
+  // cannot freeze movement while the performer is still holding the pinch.
+  // Quantos frames de pose reprovada tolerar enquanto os dedos seguem
+  // encostados, antes de zerar o sinal do clutch. Quatro frames a 60 FPS sao
+  // cerca de 66 ms: o suficiente para atravessar um piscar do gate ao
+  // inclinar a mao, curto demais para segurar uma pose de fato errada.
+  const POSE_DROP_PATIENCE = 4;
+  // So vale segurar enquanto ha contato de verdade. Abaixo disto o performer
+  // ja abriu a mao, e ai soltar e o comportamento certo.
+  const POSE_DROP_CONTACT_FLOOR = 0.55;
+  const CLUTCH_GATE_HIGH = 0.75;
+  const CLUTCH_GATE_LOW = 0.55;
+
+  class PinchClutch {
+    constructor() { this.reset(); }
+
+    reset() {
+      this.active = false;
+      this.gateLatched = false;
+      this.riseFrames = 0;
+      this.dropFrames = 0;
+      this.smoothX = null; this.smoothY = null; this.smoothZ = null;
+      this.refX = 0; this.refY = 0; this.refZ = 0;
+      this.candX = 0; this.candY = 0; this.candZ = 0;
+      // Output lives in -1..1 internally and is published as 0..1 so it maps
+      // like every other vision channel, with 0.5 as the untouched centre.
+      this.outX = 0; this.outY = 0; this.outZ = 0;
+      this.heldX = 0; this.heldY = 0; this.heldZ = 0;
+    }
+
+    update(pinchSignal, x, y, z) {
+      const strength = typeof pinchSignal === 'boolean'
+        ? (pinchSignal ? 1 : 0)
+        : Number(pinchSignal);
+      if (Number.isFinite(strength)) {
+        if (strength >= CLUTCH_GATE_HIGH) this.gateLatched = true;
+        else if (strength < CLUTCH_GATE_LOW) this.gateLatched = false;
+      }
+      const gate = this.gateLatched;
+      const has = Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z);
+      if (has) {
+        if (this.smoothX === null) { this.smoothX = x; this.smoothY = y; this.smoothZ = z; }
+        else {
+          this.smoothX += CLUTCH_EMA * (x - this.smoothX);
+          this.smoothY += CLUTCH_EMA * (y - this.smoothY);
+          this.smoothZ += CLUTCH_EMA * (z - this.smoothZ);
+        }
+      }
+
+      if (gate && has) {
+        const reanchoring = this.active && this.dropFrames > 0;
+        this.dropFrames = 0;
+        this.riseFrames += 1;
+        if (this.riseFrames === 1) {
+          this.candX = this.smoothX; this.candY = this.smoothY; this.candZ = this.smoothZ;
+        }
+        if (!this.active && this.riseFrames >= CLUTCH_ENGAGE_FRAMES) {
+          this.active = true;
+          this.refX = this.candX; this.refY = this.candY; this.refZ = this.candZ;
+          this.heldX = this.outX; this.heldY = this.outY; this.heldZ = this.outZ;
+        }
+        if (reanchoring) {
+          // Discard release travel so the smoothing tail cannot move a held value.
+          this.smoothX = x; this.smoothY = y; this.smoothZ = z;
+          this.refX = this.smoothX; this.refY = this.smoothY; this.refZ = this.smoothZ;
+          this.heldX = this.outX; this.heldY = this.outY; this.heldZ = this.outZ;
+        }
+      } else if (this.active) {
+        this.riseFrames = 0;
+        this.dropFrames += 1;
+        if (this.dropFrames > CLUTCH_RELEASE_FRAMES) {
+          this.active = false;
+          this.gateLatched = false;
+          this.heldX = this.outX; this.heldY = this.outY; this.heldZ = this.outZ;
+        }
+      } else {
+        this.riseFrames = 0;
+      }
+
+      if (gate && this.active && has) {
+        const clamp11 = (v) => Math.max(-1, Math.min(1, v));
+        this.outX = clamp11(this.heldX + (this.refX - this.smoothX) * CLUTCH_SENS_XY);
+        this.outY = clamp11(this.heldY + (this.smoothY - this.refY) * CLUTCH_SENS_XY);
+        this.outZ = clamp11(this.heldZ + (this.smoothZ - this.refZ) * CLUTCH_SENS_Z);
+      }
+      return this.snapshot();
+    }
+
+    // A frame with no hand is a dropped frame, not a release: the detector
+    // losing the hand for a moment must not zero a held clutch.
+    missing() {
+      if (this.active) {
+        this.dropFrames += 1;
+        if (this.dropFrames > CLUTCH_RELEASE_FRAMES) {
+          this.active = false;
+          // The gate is hysteretic: it only unlatches below CLUTCH_GATE_LOW.
+          // Timing out here without clearing it leaves the latch set, so the
+          // hand can come back anywhere in the 0.55..0.75 dead band — a
+          // half-closed hand — and re-engage the clutch on the fourth frame
+          // without the performer ever pinching. update() clears it here too.
+          this.gateLatched = false;
+          this.heldX = this.outX; this.heldY = this.outY; this.heldZ = this.outZ;
+        }
+      }
+      this.riseFrames = 0;
+      this.smoothX = null; this.smoothY = null; this.smoothZ = null;
+      return this.snapshot();
+    }
+
+    snapshot() {
+      const pub = (v) => parseFloat((0.5 + v / 2).toFixed(3));
+      return {
+        pinch_engaged: this.active,
+        pinch_x: pub(this.outX),
+        pinch_y: pub(this.outY),
+        pinch_z: pub(this.outZ),
+      };
+    }
+  }
+
+  function computeHandData(landmarks, handedness = null) {
     const palmSize = dist3D(landmarks[0], landmarks[9]) || 0.1;
+    const palmSize2D = Math.hypot(
+      landmarks[0].x - landmarks[9].x,
+      landmarks[0].y - landmarks[9].y,
+    ) || 0.1;
 
     const rawX = (landmarks[0].x + landmarks[5].x + landmarks[17].x) / 3;
     const rawY = (landmarks[0].y + landmarks[5].y + landmarks[17].y) / 3;
     const x = parseFloat((1.0 - rawX).toFixed(3));
     const y = parseFloat((1.0 - rawY).toFixed(3));
-    const z = parseFloat(Math.min(1.0, Math.max(0.0, (palmSize - 0.1) * 4.0)).toFixed(3));
+    // Depth, from how large the palm reads. The window is the pair of
+    // palmSize values that map to the near and far ends of the travel, and it
+    // is optics-dependent: a phone lens at arm's length does not produce the
+    // same palmSize as a webcam at desk distance. The owner measured 0.12 at
+    // the farthest performing position and 0.30 at the closest on this phone,
+    // so those endpoints map the whole physical travel to the whole channel.
+    // The raw palmSize remains published on the VID readout beside Z so a
+    // future device-specific recalibration can be based on measured optics.
+    const z = parseFloat(Math.min(1.0, Math.max(0.0,
+      (palmSize - Z_PALM_FAR) / (Z_PALM_NEAR - Z_PALM_FAR))).toFixed(3));
 
-    const stretch = (dist, base, span) => {
-      const ratio = dist / palmSize;
-      return parseFloat(Math.max(0.0, Math.min(1.0, (ratio - base) / span)).toFixed(3));
+    // Finger extension, measured tip-to-its-own-MCP over palmSize.
+    //
+    // It used to be tip-to-WRIST, and that saturates. A finger does not
+    // shorten when it closes, it curls: the tip arcs back over the palm and
+    // stays roughly a palm away from the wrist the whole way, so the ratio
+    // barely moves. Simulated on a curling hand, a fully closed fist reported
+    // FOUR raised fingers, with the pinky reading 1.000 — fully extended —
+    // while completely folded. That is the "there is always one finger up"
+    // the performer sees, and the rock reads five instead of three.
+    //
+    // Tip-to-MCP collapses when the finger closes, because the tip really
+    // does return to its own knuckle. Windows are per finger because reach
+    // relative to palm size differs between them. The sibling windows came
+    // from RC MediaPipe takes of this hand; the index ceiling now comes from
+    // the owner's measured range on the actual phone.
+    const stretch = (tip, mcp, lo, hi) => {
+      const ratio = dist3D(landmarks[tip], landmarks[mcp]) / palmSize;
+      return parseFloat(Math.max(0.0, Math.min(1.0, (ratio - lo) / (hi - lo))).toFixed(3));
     };
-    // Thumb uses tip↔wrist (same reference as the other fingers) so that
-    // collapsing the tip onto the wrist also collapses the stretch to 0.
-    // tip↔MCP kept the ratio high even on a closed fist because the thumb
-    // MCP stays planted in the palm.
-    const thumb  = stretch(dist3D(landmarks[4],  landmarks[0]),  0.55, 0.5);
-    const index  = stretch(dist3D(landmarks[8],  landmarks[0]),  0.8,  0.85);
-    const middle = stretch(dist3D(landmarks[12], landmarks[0]),  0.85, 0.95);
-    const ring   = stretch(dist3D(landmarks[16], landmarks[0]),  0.8,  0.85);
-    const pinky  = stretch(dist3D(landmarks[20], landmarks[0]),  0.75, 0.75);
+    // Thumb reach varies far more with camera angle than the four fingers:
+    // on the phone, an open outward thumb can project to only half a palm
+    // from its MCP. The sibling RC MediaPipe project's 0.35..0.70 window
+    // was cut on one desktop rig and put that real open pose below the raised-finger gate. Widen the
+    // usable window while keeping the curled fixture (about 0.22) below it.
+    // The thumb is not measured like the others, because it does not move
+    // like the others. The four fingers curl, so tip-to-own-knuckle collapses
+    // as they close. The thumb OPPOSES: it swings across the palm at its base
+    // while the knuckle stays planted, so tip-to-knuckle barely moves — the
+    // original code said exactly this before we changed it, and tucking the
+    // thumb went back to reading as raised about half the time.
+    //
+    // Opposition is the thumb's actual degree of freedom, so measure that:
+    // how far the tip has travelled toward the far side of the hand. Against
+    // an extended, half-open and tucked thumb this separated 1.30 / 0.96 /
+    // 0.55, roughly twice the spread of tip-to-knuckle, and monotonic.
+    //
+    // Opposition is shortened by perspective too, when the thumb points at
+    // the lens, so the window has to clear a foreshortened-but-open thumb
+    // while still rejecting a tucked one. The three states measure 0.44
+    // tucked, 0.78 foreshortened-open and 1.16 fully open, and the gate sits
+    // between the first two rather than splitting the difference.
+    //
+    // These are simulated values and want confirming on a real hand; the
+    // per-finger numbers are on the VID readout for exactly that.
+    const thumb = parseFloat(Math.max(0.0, Math.min(1.0,
+      (dist3D(landmarks[4], landmarks[17]) / palmSize - 0.42) / 0.31)).toFixed(3));
+    const index  = stretch(8,  5,  0.45, 0.80);
+    const middle = stretch(12, 9,  0.45, 0.90);
+    const ring   = stretch(16, 13, 0.42, 0.92);
+    const pinky  = stretch(20, 17, 0.33, 0.72);
 
-    const pinchRatio = palmSize > 0 ? dist3D(landmarks[4], landmarks[8]) / palmSize : 1;
-    // Analog pinch intensity: 0 when fingers are spread (ratio ~1), 1 when
-    // tips touch (ratio ~0.1). The (0.60, 0.50) window maps the usable
-    // pinch travel so the curve stays smooth across hand sizes.
-    const pinchVal = parseFloat(Math.max(0.0, Math.min(1.0, (0.60 - pinchRatio) / 0.50)).toFixed(3));
-    // Boolean gate for downstream trigger-style consumers. Threshold 0.75
-    // keeps accidental near-pinches from flipping the gate.
-    const pinch = pinchVal > 0.75;
-
+    // MediaPipe landmark z is too noisy to use for fingertip contact. Keep
+    // both the gap and its palm scale in image space so depth noise cannot
+    // manufacture or break a pinch.
+    const pinchRatio = Math.hypot(
+      landmarks[4].x - landmarks[8].x,
+      landmarks[4].y - landmarks[8].y,
+    ) / palmSize2D;
+    // Nearby tips need not overlap: a gap of 0.35 palm lengths reaches the
+    // clutch's 0.75 engage threshold; opening beyond 0.47 drops below 0.55.
+    // Normalize by palm size so this allowance scales with the visible hand.
+    const pinchContact = parseFloat(Math.max(0.0, Math.min(1.0, (0.80 - pinchRatio) / 0.60)).toFixed(3));
+    // Signed area of the wrist/index-MCP/pinky-MCP triangle distinguishes the
+    // palm from the back of the hand while naturally crossing zero edge-on.
+    // Geometry stays in raw image space; only published X is mirrored.
+    //
+    // The sign below is CALIBRATED, not assumed. Measured on the owner's phone
+    // on 27/08/2026, with the hand fully open in front of the camera:
+    //
+    //   real hand   pose    HAND chip   correct facing
+    //   left        palm    "Right"     positive
+    //   left        back    "Right"     negative
+    //   right       palm    "Left"      positive
+    //   right       back    "Left"      negative
+    //
+    // Two facts come out of that table. First, MediaPipe's label is the
+    // opposite of the real hand on this path, which sends the unmirrored
+    // camera frame. Second, the raw triangle is already positive for a real
+    // left palm and negative for a real right palm, so the label whose value
+    // is "Right" is the one that must keep the sign.
+    //
+    // An earlier revision had this branch the other way round. It made the
+    // palm read negative on BOTH hands, `palmPoseOk` reject every palm, and
+    // pinch and clutch die outright — which is how the inversion was found.
+    const aX = landmarks[5].x - landmarks[0].x;
+    const aY = landmarks[5].y - landmarks[0].y;
+    const bX = landmarks[17].x - landmarks[0].x;
+    const bY = landmarks[17].y - landmarks[0].y;
+    const rawFacing = (aX * bY - aY * bX) / (palmSize2D * palmSize2D);
+    const handLabel = typeof handedness === 'string' ? handedness : handedness?.label;
+    const facingKnown = handLabel === 'Right' || handLabel === 'Left';
+    const facingSign = handLabel === 'Right' ? 1 : -1;
+    const facing = parseFloat((rawFacing * facingSign).toFixed(3));
+    // Without a handedness label the raw triangle is unsigned information: the
+    // same shape is a left palm or a right back. Guessing a sign there would
+    // reject half the poses at random, so an unknown label disables the gate
+    // instead of deciding it. Losing the back-of-hand rejection is a smaller
+    // failure than losing pinch entirely, which is what a wrong sign does.
+    const palmPoseOk = facingKnown ? facing > BACK_OF_HAND_LIMIT : true;
+    const segment2D = (a, b) => Math.hypot(
+      landmarks[a].x - landmarks[b].x,
+      landmarks[a].y - landmarks[b].y,
+    );
+    const indexPath = segment2D(5, 6) + segment2D(6, 7) + segment2D(7, 8);
+    const indexStraightness = indexPath > 1e-6 ? segment2D(5, 8) / indexPath : 1;
     const fist    = index < 0.35 && middle < 0.35 && ring < 0.35 && pinky < 0.35;
+    // A confirmed palm with three partly extended fingers allows a gentler
+    // index bend. Without that evidence keep the existing deliberate-curl
+    // requirement; a straight pointing finger or fist must not gain a shortcut.
+    const otherFingersExtended = middle > PINCH_SUPPORT_FINGER_FLOOR
+      && ring > PINCH_SUPPORT_FINGER_FLOOR && pinky > PINCH_SUPPORT_FINGER_FLOOR;
+    const relaxedPinchPose = facingKnown && palmPoseOk && otherFingersExtended;
+    const indexCurved = indexStraightness < (relaxedPinchPose ? 0.95 : 0.80);
+    const pinchPoseOk = palmPoseOk && indexCurved && !fist;
+    // Keep the contact signal continuous for the public sensor channel. A
+    // separate gated signal feeds the clutch so a rejected pose cannot arm it.
+    const pinchVal = pinchContact;
+    const pinchSignal = pinchPoseOk ? pinchContact : 0;
+    const pinch = pinchPoseOk && pinchVal > 0.75;
+
     const victory = index > 0.65 && middle > 0.65 && ring < 0.35 && pinky < 0.35;
     const open    = thumb > 0.65 && index > 0.65 && middle > 0.65 && ring > 0.65 && pinky > 0.65;
     // Wrist rotation reading from the palm base anchors (MCP joints).
@@ -310,7 +579,23 @@
     // The PC panel multiplies back by 5 for display purposes.
     const fingersNorm = parseFloat((fingers / 5).toFixed(3));
 
-    return { x, y, z, thumb, index, middle, ring, pinky, fist, pinch, pinchVal, victory, open, rotateVal, fingers: fingersNorm };
+    return {
+      x, y, z,
+      palmSize: parseFloat(palmSize.toFixed(4)),
+      facing,
+      handedness: handLabel || null,
+      // A mao REAL, ja desfeita a troca do MediaPipe. O chip mostra esta, e
+      // nao a etiqueta crua: a etiqueta serviu para calibrar o sinal, o que
+      // ja esta feito e registrado acima, e continuar exibindo-a so faz o
+      // performer ler "Right" ao levantar a esquerda.
+      handReal: facingKnown ? (handLabel === 'Right' ? 'Left' : 'Right') : null,
+      palmPoseOk,
+      indexCurved,
+      otherFingersExtended,
+      thumb, index, middle, ring, pinky,
+      fist, pinch, pinchVal, pinchSignal,
+      victory, open, rotateVal, fingers: fingersNorm,
+    };
   }
 
   class VisionProcessor {
@@ -327,6 +612,9 @@
       this.onVisionStatus = null; // Callback: (visionStatus) => {}
       this.active = false;
       this.wasHandPresent = false;
+      this.pinchClutch = new PinchClutch();
+      this.poseDropFrames = 0;
+      this.lastPinchSignal = 0;
       // Observable pipeline state. "Camera shows video" and "MediaPipe is
       // actually running" are independent: the preview can look perfect while
       // inference is dead. Each stage is tracked separately so the UI can say
@@ -341,6 +629,8 @@
         resultsReceived: 0,
         lastError: null,
       };
+      this.visionStatusPublishIntervalMs = 100;
+      this.lastVisionStatusPublishAt = -Infinity;
       const safe = global.SafeInputLayer;
       // Spatial tracking was retired: x/y/z no longer exist and there is
       // no need for an inertial prediction buffer. Static hand-shape
@@ -349,6 +639,8 @@
       this.gestureLearnName = null;
       this.gestureTestName = null;
       this.gestureLearnFrames = [];
+      this.gestureLearnPreparationFrames = [];
+      this.gestureLearnReady = false;
       this.colorSampleIntervalMs = 120;
       this.lastColorSampleAt = -Infinity;
       this.lastGestureProgressAt = -Infinity;
@@ -379,9 +671,16 @@
 
     /** Merge a patch into visionStatus and publish it to the UI. */
     setVisionStatus(patch) {
+      const previousStage = this.visionStatus.stage;
+      const previousError = this.visionStatus.lastError;
       Object.assign(this.visionStatus, patch);
       if (typeof this.onVisionStatus === 'function') {
-        try { this.onVisionStatus(this.visionStatus); } catch (e) { /* UI must never break the pipeline */ }
+        const publishAt = nowMs();
+        const changed = previousStage !== this.visionStatus.stage
+          || !Object.is(previousError, this.visionStatus.lastError);
+        if (!changed && publishAt - this.lastVisionStatusPublishAt < this.visionStatusPublishIntervalMs) return;
+        this.lastVisionStatusPublishAt = publishAt;
+        try { this.onVisionStatus(this.visionStatus); } catch { /* UI must never break the pipeline */ }
       }
     }
 
@@ -416,10 +715,12 @@
     setGestureOptions(options = {}) {
       if (!this.gestures) return;
       if (Number.isFinite(options.threshold)) this.gestures.threshold = Math.max(0.01, Number(options.threshold));
-      if (Number.isFinite(options.ambiguityMargin)) this.gestures.ambiguityMargin = Math.max(0, Number(options.ambiguityMargin));
+      if (Number.isFinite(options.ambiguityRatio)) this.gestures.ambiguityRatio = Math.max(1, Number(options.ambiguityRatio));
       if (Number.isFinite(options.minimumConfidence)) this.gestures.minimumConfidence = Math.max(0, Math.min(1, Number(options.minimumConfidence)));
       if (Number.isFinite(options.holdMs)) this.gestures.holdMs = Math.max(0, Number(options.holdMs));
       if (Number.isFinite(options.releaseMs)) this.gestures.releaseMs = Math.max(0, Number(options.releaseMs));
+      if (Number.isFinite(options.releaseRatio)) this.gestures.releaseRatio = Math.max(1, Number(options.releaseRatio));
+      if (Number.isFinite(options.unknownGraceMs)) this.gestures.unknownGraceMs = Math.max(0, Number(options.unknownGraceMs));
       if (Number.isFinite(options.captureStabilityThreshold)) {
         this.gestures.captureStabilityThreshold = Math.max(0.01, Number(options.captureStabilityThreshold));
       }
@@ -430,6 +731,8 @@
       this.clearGestureHistory();
       this.gestureLearnName = name.trim();
       this.gestureLearnFrames = [];
+      this.gestureLearnPreparationFrames = [];
+      this.gestureLearnReady = false;
     }
 
     clearGestureHistory() {
@@ -442,8 +745,17 @@
       const frames = this.gestureLearnFrames;
       this.gestureLearnName = null;
       this.gestureLearnFrames = [];
+      this.gestureLearnPreparationFrames = [];
+      this.gestureLearnReady = false;
       if (!name || frames.length < 5 || !this.gestures) return 0;
       return this.gestures.learn(name, frames);
+    }
+
+    cancelGestureLearn() {
+      this.gestureLearnName = null;
+      this.gestureLearnFrames = [];
+      this.gestureLearnPreparationFrames = [];
+      this.gestureLearnReady = false;
     }
 
     gestureSampleCount(name) {
@@ -491,9 +803,63 @@
         trackingState: 'active',
         confidence: rawData.confidence ?? 1,
       };
+      // The clutch reads the filtered position, so it travels on the same
+      // steady value the HUD and the wire see. computeHandData supplies a
+      // gated analog signal for real frames; direct callers without that field
+      // retain the legacy pinchVal fallback used by the unit-level contract.
+      let pinchSignal = Number.isFinite(rawData.pinchSignal)
+        ? rawData.pinchSignal
+        : Number.isFinite(rawData.pinchVal)
+          ? rawData.pinchVal
+        : Boolean(rawData.pinch);
+
+      // O clutch tem histerese propria, de 0.75 para engatar e 0.55 para
+      // soltar, e ela funciona bem. So que a pose zera o sinal de uma vez, e
+      // zero passa por baixo dos 0.55 de qualquer jeito — um unico frame em
+      // que `palmPoseOk` pisca solta o latch e o performer sente o clutch
+      // largar sozinho ao inclinar a mao.
+      //
+      // Aqui os dedos continuam encostados; so a pose reprovou. Segurar o
+      // ultimo sinal por alguns frames devolve a decisao a histerese do
+      // clutch, em vez de atropela-la. E o mesmo principio que ja governa
+      // frame sem mao: perder a deteccao por um instante nao e soltar.
+      //
+      // Essa tolerancia so preserva um clutch ja engatado. O inicio exige
+      // frames de pose valida consecutivos, sem reaproveitar um contato antigo.
+      const dedosAindaEncostados = Number.isFinite(rawData.pinchVal)
+        && rawData.pinchVal >= POSE_DROP_CONTACT_FLOOR;
+      if (pinchSignal > 0) {
+        // Frame bom: a paciencia so se renova aqui. Zerar o contador no ramo
+        // de baixo faria a espera reiniciar dentro de uma sequencia ruim.
+        this.poseDropFrames = 0;
+        this.lastPinchSignal = pinchSignal;
+      } else if (this.pinchClutch.active
+        && dedosAindaEncostados && this.poseDropFrames < POSE_DROP_PATIENCE) {
+        this.poseDropFrames += 1;
+        pinchSignal = this.lastPinchSignal;
+      } else {
+        this.lastPinchSignal = 0;
+      }
+
+      Object.assign(output, this.pinchClutch.update(
+        pinchSignal, output.x, output.y, output.z));
+
       const descriptor = global.SafeInputLayer?.normalizeHandPose?.(landmarks) || [];
       if (this.gestureLearnName && descriptor.length) {
-        this.gestureLearnFrames.push(descriptor);
+        if (!this.gestureLearnReady) {
+          this.gestureLearnPreparationFrames.push(descriptor);
+          this.gestureLearnPreparationFrames = this.gestureLearnPreparationFrames.slice(-5);
+          if (this.gestures?.isStableCapture?.(this.gestureLearnPreparationFrames)) {
+            this.gestureLearnReady = true;
+            // These frames only prove that the hand has settled. The timed
+            // capture starts now, so the transition into the pose cannot
+            // become part of the learned example.
+            this.gestureLearnFrames = [];
+            try { this.onGestureLearnReady?.(this.gestureLearnName); } catch { /* UI callback */ }
+          }
+        } else {
+          this.gestureLearnFrames.push(descriptor);
+        }
       } else if (descriptor.length) {
         const evaluation = this.gestures?.evaluate(descriptor, this.gestureTestName);
         if (evaluation && this.onGestureProgress
@@ -509,9 +875,18 @@
 
     processMissing(timestamp = Date.now()) {
       // Spatial tracking was retired, so the inertial predictor is gone.
-      // Mark the gesture library as having seen a missing frame so its
-      // hold/release logic can reset, but emit nothing on the wire.
+      // Mark the gesture library as UNKNOWN. Its short grace window absorbs
+      // detector dropouts, then the normal hold/release state can reset if the
+      // hand does not return. Nothing synthetic is emitted on the wire.
       this.gestures?.recognize(null, timestamp, this.gestureTestName);
+      if (this.gestureLearnName && !this.gestureLearnReady) {
+        this.gestureLearnPreparationFrames = [];
+      }
+      // Pose patience only bridges a noisy gate while the same contact stays
+      // visible. Once the hand is gone there is no contact to carry forward.
+      this.poseDropFrames = 0;
+      this.lastPinchSignal = 0;
+      this.pinchClutch.missing();
       return null;
     }
 
@@ -521,11 +896,13 @@
         confidence: this.confidence,
         gestureOptions: this.gestures ? {
           threshold: this.gestures.threshold,
-          ambiguityMargin: this.gestures.ambiguityMargin,
+          ambiguityRatio: this.gestures.ambiguityRatio,
           minimumConfidence: this.gestures.minimumConfidence,
           captureStabilityThreshold: this.gestures.captureStabilityThreshold,
           holdMs: this.gestures.holdMs,
           releaseMs: this.gestures.releaseMs,
+          releaseRatio: this.gestures.releaseRatio,
+          unknownGraceMs: this.gestures.unknownGraceMs,
         } : {},
         gestures: this.gestures?.toJSON() || { version: 8, templates: [] },
       };
@@ -546,7 +923,7 @@
           const s = document.createElement('script');
           s.src = resolveAssetUrl(url);
           s.onload = resolve;
-          s.onerror = (e) => reject(new Error(`Failed to load script: ${url}`));
+          s.onerror = () => reject(new Error(`Failed to load script: ${url}`));
           document.head.appendChild(s);
         });
       };
@@ -576,7 +953,7 @@
       this.video = videoElement;
       this.canvas = canvasElement;
       if (this.canvas) {
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
       }
 
       try {
@@ -630,7 +1007,7 @@
         // lose the browser's transient activation and leave CAMERA OFF.
         if (hasNativeCapture) {
           await startCamera(ManagedCameraSession);
-          this.setVisionStatus({ cameraActive: true });
+          this.setVisionStatus({ stage: 'camera-ready', cameraActive: true });
         }
 
         await this.loadDependencies();
@@ -658,7 +1035,7 @@
         // bundled camera_utils fallback, after its constructor has loaded.
         if (!hasNativeCapture) {
           await startCamera(global.Camera);
-          this.setVisionStatus({ cameraActive: true });
+          this.setVisionStatus({ stage: 'camera-ready', cameraActive: true });
         }
         this.setVisionStatus({ stage: 'waiting-hand' });
       } catch (error) {
@@ -673,6 +1050,7 @@
 
     stop() {
       this.active = false;
+      this.cancelGestureLearn();
       this.setVisionStatus({ stage: 'idle', cameraActive: false, mediapipeLoaded: false });
       if (this.camera) {
         this.camera.stop();
@@ -685,6 +1063,11 @@
       // Drop filter history: resuming later must not ease out of a stale
       // position recorded before the camera was switched off.
       for (const filter of Object.values(this.positionFilters)) filter.reset();
+      // Stopping the camera drops the clutch too: resuming should start
+      // from centre, not from wherever the last set left it.
+      this.pinchClutch.reset();
+      this.poseDropFrames = 0;
+      this.lastPinchSignal = 0;
       if (this.ctx && this.canvas) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       }
@@ -753,7 +1136,8 @@
         if (canRender) this.drawLandmarks(landmarks);
         // Filter the position before anything downstream reads it, so the
         // gesture layer, the HUD and the wire all see the same steady value.
-        const raw = this.filterHandPosition(computeHandData(landmarks), frameTimestamp);
+        const handedness = results.multiHandedness?.[0] ?? null;
+        const raw = this.filterHandPosition(computeHandData(landmarks, handedness), frameTimestamp);
         handData = this.processHandData(raw, frameTimestamp, landmarks);
       } else {
         this.wasHandPresent = false;
@@ -774,7 +1158,7 @@
       let imgData;
       try {
         imgData = this.ctx.getImageData(0, 0, width, height);
-      } catch (e) {
+      } catch {
         return { r: 0, g: 0, b: 0 };
       }
       
@@ -838,5 +1222,6 @@
   global.VisionProcessor = VisionProcessor;
   global.dist3D = dist3D;
   global.computeHandData = computeHandData;
+  global.PinchClutch = PinchClutch;
 
 })(typeof window !== 'undefined' ? window : globalThis);

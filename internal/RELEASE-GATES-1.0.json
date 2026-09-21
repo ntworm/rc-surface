@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "packagePath": "release-kits/RC-Surface-1.0.0-test/RC-Surface-1.0.0.ablx",
+    "sha256": "520c0746e2e233419a1e11385623d4386986353a6c312f71da06bc869d344dbf",
+    "sourceDigest": null,
+    "expectedVersion": "1.0.0",
+    "expectedCompanions": [
+      "RC-Audio-Sender.amxd",
+      "RC-Midi-Receiver.amxd"
+    ]
+  },
+  "gates": [
+    {
+      "id": "physical-hardware",
+      "phase": "P09",
+      "stage": "local",
+      "status": "passed",
+      "owner": "responsible-party",
+      "rationale": "Passed on 2026-09-21 by the responsible party (Gabriel Worm) on the installed candidate: Live 12.4.15b3 Beta on Windows 11, desktop Chrome and Android phone on the same Wi-Fi. Owner acceptance sessions 2026-09-19 (F-001..F-010 recorded in Workflow Main task rc-surface-v1-stage-acceptance-2026-09-18) and 2026-09-21 (all ten findings re-verified fixed; seven further defects found and fixed the same day: hand-specific gestures, CFG shape hot-swap, bench client/host, AbletonOSC listener re-registration x2, on-demand selection, Receiver v2.2 auto-arm; sine/triangle/ramp_up/ramp_down/square accepted in recorded automation; SYNC 1/4 at 120 and 60 BPM; TRN beat flash and play/stop after a full Live restart; trigger note through Receiver v2.2 without clicking; CFG/MAP/PERF/MIX/SNP/SNS/AUD/VID smoke). Write-ceiling bench P04 measured (internal/LIVE-WRITE-CEILING-1.0.md section 3): 48 writes/s single-flight, 181/s with 4 in flight, 0 failures in 12 cells, LFO_SHAPE_MAX_HZ unchanged. Terminal checks: no UDP 9000 listener; panel 403 without/with controller token and 200 with admin token; panel assets public and token-free; /diag/echo over LAN originCheck.ok, role controller, token valid. Not executed, by owner decision: automation point count per bar, LFO actuator-stats window, 20-30 min long session, mixer-volume bench target (not exposed by getDeviceParams). Scope accepted as 'functional for a public 1.0'; field reports will drive follow-ups."
+    },
+    {
+      "id": "distribution-publication",
+      "phase": "P10",
+      "stage": "publish",
+      "status": "passed",
+      "owner": "responsible-party",
+      "rationale": "Route 1 chosen by the responsible party on 2026-09-21 (Workflow Main task rc-surface-release-prep-2026-09-21): the Ableton Extensions SDK/CLI tarballs are no longer tracked (vendor/*.tgz in .gitignore, git rm --cached), vendor/manifest.json records their names, sizes and SHA256, `npm run check:vendor` (scripts/check-vendor-sdk.mjs) verifies local copies, and both GitHub workflows stage the tarballs from the private repository ntworm/rc-surface-vendor through a read-only deploy key (secret VENDOR_SDK_KEY) before npm ci; the private repository, deploy key and secret were created on 2026-09-21 on the owner's order. The SDK stays tree-shaken inside the .ablx, which the licence permits. Known limitation recorded in internal/DISTRIBUTION-REVIEW-1.0.md section 6: commits reachable from origin/main since 0ea728c (v0.6.0, 2026-08-01) still contain the tarballs; a history repair is a separate owner decision and is not required by this gate."
+    },
+    {
+      "id": "source-r13-baseline",
+      "phase": "P00",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "Source r13 consolidated onto the worktree; SHA256 verified across all 367 files; internal/RELEASE-BASELINE-1.0.md documents the baseline."
+    },
+    {
+      "id": "distribution-licensing-inventory",
+      "phase": "P01",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "Bundle inventory closed; internal/DISTRIBUTION-REVIEW-1.0.md plus docs/THIRD-PARTY-NOTICES{.md,.pt-BR.md} match the bundle; npm audit --omit=dev reports 0 vulnerabilities."
+    },
+    {
+      "id": "sensor-capabilities",
+      "phase": "P02",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "RcSensorCapabilities module enforces capability, permission, and freshness checks; suspension/resume never prompts; calibration requires 3 finite axes within the freshness window. Mutation tests confirmed the guards."
+    },
+    {
+      "id": "live-broadcast-backpressure",
+      "phase": "P03",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "sendWithBackpressure replaces ws.send for telemetry/critical frames; admins preserved; per-client exceptions isolated; tests cover limits 512 KiB+1, OPEN/CLOSING, fast+slow coexistence, 600 KiB critical, 3 MiB disconnect, reconnect restores state."
+    },
+    {
+      "id": "code-hygiene",
+      "phase": "P04",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "noUnusedLocals + noUnusedParameters in tsconfig; ESLint strict block for ~22 encapsulated modules; 35 -> 7 unused-vars warnings removed; internal/CODE-HYGIENE-1.0.md documents removals."
+    },
+    {
+      "id": "contract-freeze",
+      "phase": "P05",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "src/osc-tokens.ts registers all LISTEN/GET/CMD/RESPONSE OSC addresses; src/live/osc-transport.ts imports the registry rather than string-literal addresses; 14 new tests cover wire bounds, OSC registry, transport-clock ceilings, controls.js tables, hello tolerance, unknown keys, rate limiter, hello field preservation."
+    },
+    {
+      "id": "performance-benchmarks",
+      "phase": "P06",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "8 perf tests pass: snapshot payload, broadcast rate 2 Hz, 16-client fan-out, backpressure headroom, 2x envelope peak, refill after sustained overload, bucket capacity, nominal envelope + sustained ~300/s."
+    },
+    {
+      "id": "docs-landing-coherence",
+      "phase": "P07",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "Zero drift markers (MIX 6+6, Follow Action, mock-server, sim-phone, test-commands, test-admin-broadcast, udp-midi) across docs/{index.html,USER-GUIDE{,.pt-BR}.md,FAQ{,.pt-BR}.md,INSTALL{,.pt-BR}.md,CONTRACTS{,.pt-BR}.md,internal/TESTER-GUIDE.md}. USER-GUIDE describes current XR/12-pad/dual-stick pattern. Landing parity 27/27."
+    },
+    {
+      "id": "local-only-pipeline",
+      "phase": "P08",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "scripts/sync-tester-kit.mjs (slices A/B/R), scripts/build-host-locally.sh, scripts/lima-{audio-sender,midi-receiver}.sh. Slice R is opt-in (only writes local AppData when ABLETON_RC_DEV_SYNC is set); neither git nor the ableton-store is touched."
+    },
+    {
+      "id": "release-verifier",
+      "phase": "P08b",
+      "stage": "local",
+      "status": "passed",
+      "owner": "argos-main-2ecffebf-20260914",
+      "rationale": "scripts/verify-release.mjs runs the local-only release verification flow (CI + package + gates). The package verifier accepts --package, --build-dir, --report and refuses packagePath with '..'. The gates document records every gate with explicit status; unknown statuses cannot be converted into pass."
+    }
+  ]
+}

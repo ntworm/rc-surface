@@ -6,12 +6,10 @@
 // so it can paint the phone URL and the QR code without a round trip. That
 // makes it the single most sensitive response the server produces.
 //
-// The server binds 0.0.0.0 (the phone has to reach it) and the Same-Origin
-// check deliberately passes requests with no Origin header, because curl, the
-// CLI and Live's own WebView all send none. Together those two facts meant a
-// plain `GET /static/panel/index.html` from any device on the same network
-// returned 200 with the admin token in the body — and the admin token opens
-// /admin/ws and the /test command console.
+// Plaintext HTTP is loopback-only, and the route still keeps its own
+// authorization gate as defense in depth. The Same-Origin check deliberately
+// accepts requests without Origin for top-level navigation, curl and Live's
+// embedded WebView.
 //
 // The real load presents the token: src/ui/panel.ts opens
 // `http://127.0.0.1:<port>/static/panel/index.html?token=<adminToken>`.
@@ -20,7 +18,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 // Own port: see the note in server-http-phone-redirect.test.mjs.
-process.env.RC_SURFACE_PORT = "16120";
+process.env.RC_SURFACE_PORT = "16124";
 
 // The bundle defines __dirname; running the sources under tsx does not.
 if (typeof globalThis.__dirname === "undefined") {

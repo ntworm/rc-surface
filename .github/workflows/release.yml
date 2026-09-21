@@ -8,80 +8,139 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
-  build-assets:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ windows-latest, macos-latest ]
+  validate-tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ inputs.tag }}
+          ref: refs/tags/${{ inputs.tag }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.16.0
+
+      - name: Match tag to package version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node scripts/validate-release-tag.mjs "$RELEASE_TAG"
+
+  ci-multiplatform:
+    name: CI (${{ matrix.os }})
+    needs: validate-tag
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24.16.0
           cache: 'npm'
 
+      - name: Fetch Ableton Extensions SDK tarballs (private vendor repository)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ntworm/rc-surface-vendor
+          ssh-key: ${{ secrets.VENDOR_SDK_KEY }}
+          path: .vendor-private
+
+      - name: Stage and verify SDK tarballs
+        run: node scripts/check-vendor-sdk.mjs --from .vendor-private
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and Package Extension
+      - name: Install Playwright browser and Linux dependencies
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright browser
+        if: runner.os != 'Linux'
+        run: npx playwright install chromium
+
+      - name: Run full CI
+        run: npm run ci
+
+  build-asset:
+    name: Build release asset
+    needs: ci-multiplatform
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.16.0
+          cache: 'npm'
+
+      - name: Fetch Ableton Extensions SDK tarballs (private vendor repository)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ntworm/rc-surface-vendor
+          ssh-key: ${{ secrets.VENDOR_SDK_KEY }}
+          path: .vendor-private
+
+      - name: Stage and verify SDK tarballs
+        run: node scripts/check-vendor-sdk.mjs --from .vendor-private
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Read package version
+        id: package
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build and package extension
         run: npm run build:prod-ablx
 
-      - name: Rename artifact to include platform
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          ORIGINAL="Ableton-RC-Surface-${VERSION}.ablx"
-          PLATFORM=""
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            PLATFORM="Windows"
-          else
-            PLATFORM="macOS"
-          fi
-          NEW_NAME="Ableton-RC-Surface-${VERSION}-${PLATFORM}.ablx"
-          mv "$ORIGINAL" "$NEW_NAME"
-          echo "NEW_NAME=$NEW_NAME" >> $GITHUB_ENV
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload release asset
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ablx-${{ matrix.os }}
-          path: Ableton-RC-Surface-*.ablx
+          name: ablx
+          path: RC-Surface-${{ steps.package.outputs.version }}.ablx
+          if-no-files-found: error
 
   create-release:
-    name: Create Release
-    needs: build-assets
+    name: Create draft release
+    needs: build-asset
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Download release asset
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          ref: ${{ inputs.tag }}
+          name: ablx
+          path: dist-release
 
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Flatten artifacts directory
-        run: |
-          mkdir dist-release
-          find artifacts -name "*.ablx" -exec cp {} dist-release/ \;
-          ls -la dist-release/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Create draft release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ inputs.tag }}
-          files: dist-release/*.ablx
+          files: dist-release/RC-Surface-${{ needs.build-asset.outputs.version }}.ablx
           draft: true
           generate_release_notes: true
         env:

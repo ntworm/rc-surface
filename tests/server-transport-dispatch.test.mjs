@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// Tests for Blocker C: Classification and authorization of the 6 transport commands (Task 3.1 / Blocker C)
+// Classification and authorization of the six transport commands.
 
 import test from "node:test";
 import assert from "node:assert/strict";

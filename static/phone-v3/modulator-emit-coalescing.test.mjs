@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// A drag over an LFO toggle or a stutter button fires one touchmove per
+// A drag over an LFO toggle or a stutter button fires one pointermove per
 // display refresh. Each of those used to become its own WebSocket frame, which
 // put a single finger well past the server's per-client budget — and a
 // rate-limited frame is dropped without a reply, so the only symptom was a
@@ -36,6 +36,7 @@ function loadControls() {
       }
       byEvent[evt] = cb;
     },
+    setPointerCapture() {},
     setAttribute() {},
     clientHeight: 100,
     getBoundingClientRect: () => ({ top: 0, left: 0, width: 100, height: 100 }),
@@ -104,6 +105,7 @@ function loadControls() {
   context.window = context;
 
   vm.runInNewContext(read('mode-engine.js'), context, { filename: 'mode-engine.js' });
+  vm.runInNewContext(read('../shared/audio-descriptor-catalog.js'), context);
   vm.runInNewContext(read('app.js'), context, { filename: 'app.js' });
   vm.runInNewContext(read('modules/snapshots.js'), context, { filename: 'snapshots.js' });
   vm.runInNewContext(read('controls.js'), context, { filename: 'controls.js' });
@@ -113,36 +115,35 @@ function loadControls() {
   return { context, emitted };
 }
 
-function touch(identifier, clientX, clientY) {
-  return { identifier, clientX, clientY, force: 1 };
-}
-
-function touchEvent(touches) {
+function pointer(pointerId, clientX, clientY) {
   return {
+    pointerId,
+    clientX,
+    clientY,
+    button: 0,
+    pressure: 1,
     preventDefault() {},
-    touches,
-    changedTouches: touches,
   };
 }
 
-test('an LFO drag emits one modulator frame per animation frame, not per touchmove', () => {
+test('an LFO drag emits one modulator frame per animation frame, not per pointermove', () => {
   const { context, emitted } = loadControls();
 
-  context.__fire('toggle-1', 'touchstart', touchEvent([touch(1, 100, 100)]));
+  context.__fire('toggle-1', 'pointerdown', pointer(1, 100, 100));
   context.__flushFrame();
   emitted.length = 0;
 
-  // Ten touchmoves inside a single frame — what a 120 Hz digitiser delivers
+  // Ten pointermoves inside a single frame — what a 120 Hz digitiser delivers
   // between two 60 Hz repaints, twice over.
   for (let i = 1; i <= 10; i++) {
-    context.__fire('toggle-1', 'touchmove', touchEvent([touch(1, 100 + i, 100 - i * 3)]));
+    context.__fire('toggle-1', 'pointermove', pointer(1, 100 + i, 100 - i * 3));
   }
 
   assert.equal(emitted.length, 0, 'drag frames must wait for the animation frame');
 
   context.__flushFrame();
 
-  assert.equal(emitted.length, 1, 'ten touchmoves must coalesce into one emit');
+  assert.equal(emitted.length, 1, 'ten pointermoves must coalesce into one emit');
   assert.equal(emitted[0].name, 'toggle-1');
   // The coalesced frame carries the newest value, not the first one.
   const state = context.window.lfoStates.get('toggle-1');
@@ -154,34 +155,34 @@ test('an LFO drag emits one modulator frame per animation frame, not per touchmo
 test('a stutter drag coalesces the same way', () => {
   const { context, emitted } = loadControls();
 
-  context.__fire('button-1', 'touchstart', touchEvent([touch(1, 100, 100)]));
+  context.__fire('button-1', 'pointerdown', pointer(1, 100, 100));
   context.__flushFrame();
   emitted.length = 0;
 
   for (let i = 1; i <= 8; i++) {
-    context.__fire('button-1', 'touchmove', touchEvent([touch(1, 100 + i * 2, 100 - i)]));
+    context.__fire('button-1', 'pointermove', pointer(1, 100 + i * 2, 100 - i));
   }
   assert.equal(emitted.length, 0);
 
   context.__flushFrame();
-  assert.equal(emitted.length, 1, 'eight touchmoves must coalesce into one emit');
+  assert.equal(emitted.length, 1, 'eight pointermoves must coalesce into one emit');
   assert.equal(emitted[0].name, 'button-1');
 });
 
 test('the gate transition at the end of a gesture is emitted immediately', () => {
   const { context, emitted } = loadControls();
 
-  context.__fire('toggle-1', 'touchstart', touchEvent([touch(1, 100, 100)]));
+  context.__fire('toggle-1', 'pointerdown', pointer(1, 100, 100));
   context.__flushFrame();
   emitted.length = 0;
 
-  context.__fire('toggle-1', 'touchmove', touchEvent([touch(1, 110, 60)]));
-  context.__fire('toggle-1', 'touchend', touchEvent([touch(1, 110, 60)]));
+  context.__fire('toggle-1', 'pointermove', pointer(1, 110, 60));
+  context.__fire('toggle-1', 'pointerup', pointer(1, 110, 60));
 
   assert.ok(emitted.length >= 1, 'the release must reach the wire without waiting for a frame');
   const release = emitted[emitted.length - 1];
   assert.equal(release.name, 'toggle-1');
-  assert.equal(release.active, false, 'mode A releases the gate on touchend');
+  assert.equal(release.active, false, 'mode A releases the gate on pointerup');
 
   // The superseded drag frame must not resurface after the release and
   // re-open a gate the performer just closed.

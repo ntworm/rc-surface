@@ -48,53 +48,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a0c">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>ableton-rc v3</title>
+  <title data-i18n="app.title">ableton-rc v3</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="performance" data-pad-mode="A" data-orient-locked="false">
   <header class="topbar">
-    <div class="tabs" role="tablist" aria-label="Pages">
-      <button class="tab on" data-page="performance" role="tab" aria-selected="true">PERF</button>
-      <button class="tab" data-page="mixer" role="tab" aria-selected="false">MIX</button>
-      <button class="tab" data-page="snapshots" role="tab" aria-selected="false">SNP</button>
-      <button class="tab" data-page="sensors" role="tab" aria-selected="false">SNS</button>
-      <button class="tab" data-page="audio" role="tab" aria-selected="false">AUD</button>
-      <button class="tab" data-page="video" role="tab" aria-selected="false">VID</button>
+    <div class="tabs" role="tablist" aria-label="Pages" data-i18n-aria-label="app.pages">
+      <button class="tab on" data-page="performance" role="tab" aria-selected="true" data-i18n="tabs.perf">PERF</button>
+      <button class="tab" data-page="mixer" role="tab" aria-selected="false" data-i18n="tabs.mix">MIX</button>
+      <button class="tab" data-page="snapshots" role="tab" aria-selected="false" data-i18n="tabs.snp">SNP</button>
+      <button class="tab" data-page="sensors" role="tab" aria-selected="false" data-i18n="tabs.sns">SNS</button>
+      <button class="tab" data-page="audio" role="tab" aria-selected="false" data-i18n="tabs.aud">AUD</button>
+      <button class="tab" data-page="video" role="tab" aria-selected="false" data-i18n="tabs.vid">VID</button>
     </div>
 
     <!-- Ableton Live Info Panel -->
     <div class="ableton-panel" id="live-state-panel">
       <span class="ablt-val bpm" id="live-bpm">120.0 BPM</span>
-      <button id="btn-header-prev" class="ablt-map-btn transport-btn" type="button" title="Previous Locator">⏮</button>
-      <button id="btn-header-play" class="ablt-map-btn transport-btn" type="button" title="Play/Pause">▶</button>
-      <button id="btn-header-next" class="ablt-map-btn transport-btn" type="button" title="Next Locator">⏭</button>
-      <button id="btn-trn-mode" class="ablt-map-btn" type="button">TRN</button>
-      <button id="btn-map-mode" class="ablt-map-btn" type="button" aria-pressed="false">MAP</button>
+      <button id="btn-header-prev" class="ablt-map-btn transport-btn" type="button" title="Previous Locator" aria-label="Previous Locator" data-i18n-title="trn.prevLocator" data-i18n-aria-label="trn.prevLocator"><span class="transport-symbol transport-symbol-prev" aria-hidden="true"></span></button>
+      <button id="btn-header-play" class="ablt-map-btn transport-btn" type="button" title="Play/Pause" aria-label="Play" aria-pressed="false" data-i18n-title="trn.playPause"><span class="transport-symbol transport-symbol-play" aria-hidden="true"></span></button>
+      <button id="btn-header-next" class="ablt-map-btn transport-btn" type="button" title="Next Locator" aria-label="Next Locator" data-i18n-title="trn.nextLocator" data-i18n-aria-label="trn.nextLocator"><span class="transport-symbol transport-symbol-next" aria-hidden="true"></span></button>
+      <button id="btn-trn-mode" class="ablt-map-btn" type="button" data-i18n="hdr.trn">TRN</button>
+      <button id="btn-map-mode" class="ablt-map-btn" type="button" aria-pressed="false" data-i18n="hdr.map">MAP</button>
+      <button id="btn-cfg-mode" class="ablt-map-btn" type="button" aria-pressed="false" data-i18n="hdr.cfg">CFG</button>
     </div>
 
     <div class="sync-mode-block" style="gap: 6px;">
-      <button id="btn-sync-mode" class="sync-mode-btn sync">SYNC</button>
+      <button id="btn-sync-mode" class="sync-mode-btn sync" data-i18n="hdr.sync">SYNC</button>
       <button id="btn-sync-settings" class="sync-mode-btn" style="min-width: 32px; padding: 0 4px;">⚙</button>
-      <button id="btn-calibrate-sensors-header" class="sync-mode-btn" style="min-width: 65px;">CALIBRATE</button>
-      <button id="btn-stage-mode" class="sync-mode-btn stage" aria-pressed="false">STAGE</button>
+      <button id="btn-calibrate-sensors-header" class="sync-mode-btn" style="min-width: 65px;" hidden aria-describedby="calibration-message">CALIBRATE</button>
+      <button id="btn-stage-mode" class="sync-mode-btn stage" aria-pressed="false" data-i18n="hdr.stage">STAGE</button>
     </div>
 
     <div class="status-block">
       <span id="osc-indicator" class="osc-indicator" hidden></span>
-      <span id="status" class="status" title="Tap to rename" style="cursor: pointer;">⚡ …</span>
+      <span id="status" class="status" title="Tap to rename" style="cursor: pointer;" data-i18n-title="map.rename">⚡ …</span>
     </div>
   </header>
 
+  <div id="calibration-strip" class="calibration-strip" hidden>
+    <span id="calibration-message" role="status" aria-live="polite"></span>
+    <button id="calibration-reset" hidden></button>
+    <button id="calibration-close" aria-label="Close">×</button>
+  </div>
+
   <div id="orientation-warning" class="orient-warn hidden">
     <div class="orient-msg">
-      <strong>Rotate your phone to landscape</strong>
-      <p>The controller is designed for landscape mode. Live performance requires both thumbs free.</p>
+      <strong data-i18n="app.rotate">Rotate your phone to landscape</strong>
+      <p data-i18n="app.rotateBody">The controller is designed for landscape mode. Live performance requires both thumbs free.</p>
     </div>
   </div>
 
   <div id="permission-banner" class="banner hidden">
-    <span>Ativar sensores</span>
-    <button id="permission-activate">OK</button>
+    <span data-i18n="app.enableSensors">Ativar sensores</span>
+    <button id="permission-activate" data-i18n="app.ok">OK</button>
   </div>
 
 
@@ -106,7 +113,7 @@
     <section class="col col-pads">
       <div class="pads-section">
         <header class="section-head">
-          <span class="section-title">PADS</span>
+          <span class="section-title" data-i18n="perf.pads">PADS</span>
         </header>
         <div class="grid-pads">
           <div class="pad" data-name="pad-1"><span class="num">1</span></div>
@@ -128,14 +135,14 @@
     <section class="col col-xy">
       <div class="xy-block">
         <div class="xy-pad" data-name="xy-1">
-          <span class="xy-label">XY 1</span>
+          <span class="xy-label" data-i18n="perf.xy1">XY 1</span>
           <div class="xy-dot"></div>
         </div>
         <div class="xy-readout" data-readout="xy-1">0.50 / 0.50</div>
       </div>
       <div class="xy-block physics">
         <div class="xy-pad-physics" id="xy-physics-pad" data-name="xy-2">
-          <span class="xy-label">XY 2 (Physics)</span>
+          <span class="xy-label" data-i18n="perf.xy2">XY 2 (Physics)</span>
           <canvas id="xy-physics-canvas"></canvas>
         </div>
         <div class="xy-readout" data-readout="xy-2">0.50 / 0.50</div>
@@ -156,41 +163,41 @@
           <!-- LFOs Column -->
           <div class="perf-sub-col">
             <header class="section-head">
-              <span class="section-title">LFOS</span>
+              <span class="section-title" data-i18n="perf.lfos">LFOS</span>
             </header>
             <div class="grid-toggles-perf">
-              <div class="toggle" data-name="toggle-1"><span class="num">L1</span><div class="mod-val-bar"></div></div>
-              <div class="toggle" data-name="toggle-2"><span class="num">L2</span><div class="mod-val-bar"></div></div>
-              <div class="toggle" data-name="toggle-3"><span class="num">L3</span><div class="mod-val-bar"></div></div>
-              <div class="toggle" data-name="toggle-4"><span class="num">L4</span><div class="mod-val-bar"></div></div>
+              <div class="toggle" data-name="toggle-1"><span class="num">L1</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-2"><span class="num">L2</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-3"><span class="num">L3</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-4"><span class="num">L4</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
             </div>
           </div>
           
           <!-- Stutters Column -->
           <div class="perf-sub-col">
             <header class="section-head">
-              <span class="section-title">STUT</span>
+              <span class="section-title" data-i18n="perf.stut">STUT</span>
             </header>
             <div class="grid-buttons-perf">
-              <div class="button" data-name="button-1"><span class="num">S1</span></div>
-              <div class="button" data-name="button-2"><span class="num">S2</span></div>
-              <div class="button" data-name="button-3"><span class="num">S3</span></div>
-              <div class="button" data-name="button-4"><span class="num">S4</span></div>
+              <div class="button" data-name="button-1"><span class="num">S1</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
+              <div class="button" data-name="button-2"><span class="num">S2</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
+              <div class="button" data-name="button-3"><span class="num">S3</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
+              <div class="button" data-name="button-4"><span class="num">S4</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
             </div>
           </div>
           
           <!-- Utility Column -->
           <div class="perf-sub-col">
             <header class="section-head">
-              <span class="section-title">UTIL</span>
+              <span class="section-title" data-i18n="perf.util">UTIL</span>
             </header>
             <div class="grid-util-perf">
-              <button id="btn-perf-snapshot-capture" class="perf-util-btn perf-util-capture" type="button" aria-pressed="false">CAP</button>
-              <button id="btn-perf-off" class="perf-util-btn perf-util-off" type="button">OFF</button>
-              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="1"><span class="num">1</span><span class="status-indicator">Empty</span></button>
-              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="2"><span class="num">2</span><span class="status-indicator">Empty</span></button>
-              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="3"><span class="num">3</span><span class="status-indicator">Empty</span></button>
-              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="4"><span class="num">4</span><span class="status-indicator">Empty</span></button>
+              <button id="btn-perf-snapshot-capture" class="perf-util-btn perf-util-capture" type="button" aria-pressed="false" data-i18n="perf.cap">CAP</button>
+              <button id="btn-perf-off" class="perf-util-btn perf-util-off" type="button" data-i18n="perf.off">OFF</button>
+              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="1"><span class="num">1</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="2"><span class="num">2</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="3"><span class="num">3</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+              <button class="perf-util-btn perf-snapshot-slot empty" type="button" data-perf-snapshot-slot="4"><span class="num">4</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
             </div>
           </div>
         </div>
@@ -199,16 +206,16 @@
   </main>
 
   <!--
-    Page: Mixer -- six knobs and six faders for performance control.
+    Page: Mixer -- eight knobs and eight faders for performance control.
   -->
   <main class="page page-mixer hidden" data-page="mixer">
     <div class="mixer-layout-container">
-      <!-- Column 1: Knobs (6 in 3x2 grid) -->
+      <!-- Column 1: Knobs (8 in 4x2 grid) -->
       <div class="mixer-col col-knobs">
         <section class="mixer-section knobs-section">
           <header class="section-head">
-            <span class="section-title">KNOBS</span>
-            <span class="section-hint">knob-1..6</span>
+            <span class="section-title" data-i18n="mix.knobs">KNOBS</span>
+            <span class="section-hint" data-i18n="mix.knobRange">knob-1..8</span>
           </header>
           <div class="grid-knobs">
             <div class="knob" data-name="knob-1"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">1</span><span class="sub-label">—</span></div>
@@ -217,16 +224,18 @@
             <div class="knob" data-name="knob-4"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">4</span><span class="sub-label">—</span></div>
             <div class="knob" data-name="knob-5"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">5</span><span class="sub-label">—</span></div>
             <div class="knob" data-name="knob-6"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">6</span><span class="sub-label">—</span></div>
+            <div class="knob" data-name="knob-7"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">7</span><span class="sub-label">—</span></div>
+            <div class="knob" data-name="knob-8"><div class="knob-face"><div class="knob-dial"></div></div><span class="num">8</span><span class="sub-label">—</span></div>
           </div>
         </section>
       </div>
 
-      <!-- Column 2: Faders (6 in 1x6 layout) -->
+      <!-- Column 2: Faders (8 in 1x8 layout) -->
       <div class="mixer-col col-faders">
         <section class="mixer-section faders-section">
           <header class="section-head">
-            <span class="section-title">FADERS</span>
-            <span class="section-hint">fader-1..6</span>
+            <span class="section-title" data-i18n="mix.faders">FADERS</span>
+            <span class="section-hint" data-i18n="mix.faderRange">fader-1..8</span>
           </header>
           <div class="row-faders">
             <div class="fader" data-name="fader-1"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">1</span><span class="sub-label">—</span></div>
@@ -235,6 +244,8 @@
             <div class="fader" data-name="fader-4"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">4</span><span class="sub-label">—</span></div>
             <div class="fader" data-name="fader-5"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">5</span><span class="sub-label">—</span></div>
             <div class="fader" data-name="fader-6"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">6</span><span class="sub-label">—</span></div>
+            <div class="fader" data-name="fader-7"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">7</span><span class="sub-label">—</span></div>
+            <div class="fader" data-name="fader-8"><div class="fader-track"><div class="fader-fill"></div><div class="fader-thumb"></div></div><span class="num">8</span><span class="sub-label">—</span></div>
           </div>
         </section>
       </div>
@@ -246,39 +257,43 @@
   -->
   <main class="page page-snapshots hidden" data-page="snapshots">
     <div class="snapshots-container">
-      <section class="snapshots-section grid-section">
+      <section class="snapshots-section grid-section" id="snp-grid-container">
         <header class="section-head">
-          <span class="section-title">SNAP SHOTS</span>
-          <span class="section-hint">morph presets</span>
+          <span class="section-title" data-i18n="snp.title">SNAP SHOTS</span>
+          <span class="section-hint" data-i18n="snp.morphPresets">morph presets</span>
         </header>
         <div class="grid-snapshots">
-          <button class="snapshot-slot empty" data-slot="1"><span class="num">1</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="2"><span class="num">2</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="3"><span class="num">3</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="4"><span class="num">4</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="5"><span class="num">5</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="6"><span class="num">6</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="7"><span class="num">7</span><span class="status-indicator">Empty</span></button>
-          <button class="snapshot-slot empty" data-slot="8"><span class="num">8</span><span class="status-indicator">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="1"><span class="num">1</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="2"><span class="num">2</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="3"><span class="num">3</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="4"><span class="num">4</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="5"><span class="num">5</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="6"><span class="num">6</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="7"><span class="num">7</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
+          <button class="snapshot-slot empty" data-slot="8"><span class="num">8</span><span class="status-indicator" data-i18n="perf.empty">Empty</span></button>
         </div>
       </section>
 
       <section class="snapshots-section control-section">
         <header class="section-head">
-          <span class="section-title">PERFORMANCE CONTROLS</span>
+          <span class="section-title" data-i18n="snp.controls">PERFORMANCE CONTROLS</span>
         </header>
         <div class="snapshot-perf-controls">
           <div class="control-group">
-            <span class="group-label">Mechanism</span>
-            <button id="btn-snapshot-capture" class="snapshot-capture-btn">
+            <span class="group-label" data-i18n="snp.mechanism">Mechanism</span>
+            <button id="btn-snapshot-capture" class="snapshot-capture-btn" data-i18n="snp.capture">
               <span class="rec-dot"></span>
               CAPTURE
             </button>
-            <button id="btn-snapshot-clear" class="snapshot-clear-btn">Clear Slots</button>
+            <button id="btn-snapshot-clear" class="snapshot-clear-btn" data-i18n="snp.clearSlots">Clear Slots</button>
           </div>
 
-          <div class="control-group">
-            <span class="group-label">Transition Time</span>
+          <div class="control-group" id="morph-transition-group">
+            <span class="group-label" data-i18n="snp.transitionTime">Transition Time</span>
+            <div class="morph-sync-selector">
+              <button class="morph-sync-btn on" data-morph-sync="free" data-i18n="snp.free">Free</button>
+              <button class="morph-sync-btn" data-morph-sync="sync" data-i18n="snp.sync">Sync</button>
+            </div>
             <div class="morph-time-control">
               <span id="morph-time-val">1.0s</span>
               <input type="range" id="slider-morph-time" min="0.1" max="5.0" step="0.1" value="1.0" class="morph-slider">
@@ -286,10 +301,10 @@
           </div>
 
           <div class="control-group mode-select-group">
-            <span class="group-label">Morph Mode</span>
+            <span class="group-label" data-i18n="snp.morphMode">Morph Mode</span>
             <div class="morph-mode-selector">
-              <button class="morph-mode-btn on" data-morph-mode="grid">Grid (1-8)</button>
-              <button class="morph-mode-btn" data-morph-mode="vector">Vector XY (1-4)</button>
+              <button class="morph-mode-btn on" data-morph-mode="grid" data-i18n="snp.grid">Grid (1-8)</button>
+              <button class="morph-mode-btn" data-morph-mode="vector" data-i18n="snp.vector">Vector XY (1-4)</button>
             </div>
           </div>
         </div>
@@ -297,8 +312,8 @@
 
       <section class="snapshots-section vector-section hidden" id="snp-vector-container">
         <header class="section-head">
-          <span class="section-title">VECTOR MORPH PAD (1-4)</span>
-          <span class="section-hint">1:TL · 2:TR · 3:BL · 4:BR</span>
+          <span class="section-title" data-i18n="snp.vectorPad">VECTOR MORPH PAD (1-4)</span>
+          <span class="section-hint" data-i18n="snp.corners">1:TL · 2:TR · 3:BL · 4:BR</span>
         </header>
         <div class="vector-pad-wrapper">
           <div class="xy-pad-vector" id="xy-vector-pad">
@@ -315,7 +330,7 @@
   <main class="page page-sensors hidden" data-page="sensors">
     <section class="sensor-panel sensor-panel-motion">
       <header class="sensor-panel-head">
-        <span class="sensor-panel-title">MOTION</span>
+        <span class="sensor-panel-title" data-i18n="sns.motion">MOTION</span>
         <span class="sensor-status-pill" data-sensor-status="motion">...</span>
       </header>
       <div class="sensor-matrix">
@@ -348,7 +363,7 @@
 
     <section class="sensor-panel sensor-panel-orientation">
       <header class="sensor-panel-head">
-        <span class="sensor-panel-title">ORIENTATION</span>
+        <span class="sensor-panel-title" data-i18n="sns.orientation">ORIENTATION</span>
         <span class="sensor-status-pill" data-sensor-status="orientation">...</span>
       </header>
       <div class="sensor-matrix orientation-matrix">
@@ -369,17 +384,17 @@
 
     <section class="sensor-panel sensor-panel-controls">
       <header class="sensor-panel-head">
-        <span class="sensor-panel-title">LOCAL VIEW</span>
-        <span class="section-hint">UI only</span>
+        <span class="sensor-panel-title" data-i18n="sns.localView">LOCAL VIEW</span>
+        <span class="section-hint" data-i18n="sns.uiOnly">UI only</span>
       </header>
       <div class="sensor-toggle-list">
         <label class="sensor-toggle-row">
-          <span>Motion visible</span>
+          <span data-i18n="sns.motionVisible">Motion visible</span>
           <input class="switch-input" type="checkbox" data-sensor-enable="motion" checked>
           <span class="switch-rail" aria-hidden="true"></span>
         </label>
         <label class="sensor-toggle-row">
-          <span>Orientation visible</span>
+          <span data-i18n="sns.orientationVisible">Orientation visible</span>
           <input class="switch-input" type="checkbox" data-sensor-enable="orientation" checked>
           <span class="switch-rail" aria-hidden="true"></span>
         </label>
@@ -390,32 +405,43 @@
   <!-- Page: Audio analysis and mapping controls -->
   <main class="page page-audio hidden" data-page="audio">
     <section class="media-card media-card-audio">
-      <header class="media-card-head">
-        <span class="media-card-title">AUDIO</span>
-        <span class="section-hint">pitch / rms / bpm</span>
-      </header>
-      <label class="media-switch-row">
-        <span>Audio input</span>
-        <input class="switch-input" type="checkbox" id="chk-audio-enable">
-        <span class="switch-rail" aria-hidden="true"></span>
-      </label>
-      <div class="audio-stats">
-        <span data-name="sensor.audio.pitch" style="cursor: pointer;">Pitch <strong id="lbl-audio-pitch">--</strong> Hz</span>
-        <span data-name="sensor.audio.note" style="cursor: pointer;">Note <strong id="lbl-audio-note">--</strong></span>
-        <span data-name="sensor.audio.bpm" style="cursor: pointer;">BPM <strong id="lbl-audio-bpm">--</strong></span>
+      <div class="audio-input-head">
+        <header class="media-card-head">
+          <span class="media-card-title" data-i18n="aud.title">AUDIO</span>
+          <span class="section-hint" data-i18n="aud.hint">pitch / rms / bpm</span>
+        </header>
+        <select id="audio-input-device" aria-label="Audio input device" data-i18n-aria-label="aud.inputDevice">
+          <option value="" data-i18n="aud.browserDefault">Browser default</option>
+        </select>
+        <label class="media-switch-row">
+          <span data-i18n="aud.input">Audio input</span>
+          <input class="switch-input" type="checkbox" id="chk-audio-enable">
+          <span class="switch-rail" aria-hidden="true"></span>
+        </label>
       </div>
-      <div class="media-meter" data-name="sensor.audio.rms" style="cursor: pointer;" aria-label="RMS level">
-        <div id="bar-audio-rms" class="media-meter-fill"></div>
-        <strong id="lbl-audio-rms" class="media-meter-value">0.000</strong>
+      <div class="audio-analysis-grid">
+        <div class="audio-analysis-readouts">
+          <div class="media-meter" data-name="sensor.audio.rms" style="cursor: pointer;" aria-label="RMS level" data-i18n-aria-label="aud.rmsLevel">
+            <div id="bar-audio-rms" class="media-meter-fill"></div>
+            <strong id="lbl-audio-rms" class="media-meter-value">0.000</strong>
+          </div>
+          <div class="audio-analysis-controls" id="audio-detector-controls" aria-label="Detector controls" data-i18n-aria-label="aud.detectorControls"></div>
+        </div>
+        <div class="audio-timeline" id="audio-timeline" data-state="off" data-gate="off" aria-label="Live 2.5 second audio history with selectable curves" data-i18n-aria-label="aud.history">
+          <div class="audio-timeline-plot"><canvas id="audio-timeline-canvas" aria-hidden="true"></canvas></div>
+          <div class="audio-timeline-head">
+            <div id="audio-graph-views" class="audio-graph-views" role="group" aria-label="Audio graph view" data-i18n-aria-label="aud.graphView"></div>
+            <output id="audio-graph-scale" class="audio-graph-scale" aria-label="Graph ceiling" data-i18n-aria-label="aud.graphScale">0–1</output>
+            <strong id="audio-timeline-status" data-i18n="aud.off">AUDIO OFF</strong>
+          </div>
+          <div class="audio-timeline-legend" id="audio-graph-legend" aria-label="Visible curves" data-i18n-aria-label="aud.curves"></div>
+        </div>
       </div>
       
-      <!-- Extra audio parameters for mapping -->
-      <div class="audio-extra-grid">
-        <span class="audio-extra-btn" data-name="sensor.audio.envelope">Envelope <strong id="lbl-audio-envelope">0.000</strong></span>
-        <span class="audio-extra-btn" data-name="sensor.audio.gate">Gate <strong id="lbl-audio-gate">OFF</strong></span>
-        <span class="audio-extra-btn" data-name="sensor.audio.clarity">Clarity <strong id="lbl-audio-clarity">0.00</strong></span>
-        <span class="audio-extra-btn" data-name="sensor.audio.whistle.bend">Bend <strong id="lbl-audio-bend">0.50</strong></span>
-      </div>
+      <section class="audio-detectors" aria-labelledby="audio-detectors-title">
+        <h2 id="audio-detectors-title" class="audio-detectors-title"><span data-i18n="aud.detectors">AUDIO DETECTORS</span><small id="lbl-audio-path"></small></h2>
+        <div id="audio-detector-bank"></div>
+      </section>
     </section>
   </main>
 
@@ -423,41 +449,45 @@
   <main class="page page-video hidden" data-page="video">
     <section class="media-card media-card-vision vision-performance-console">
       <header class="media-card-head">
-        <span class="media-card-title">VISION</span>
-        <span class="section-hint">hand / color</span>
+        <span class="media-card-title" data-i18n="vid.title">VISION</span>
+        <span class="section-hint" data-i18n="vid.hint">hand / color</span>
       </header>
       <div class="vision-workspace vision-overview vision-console-main">
       <div class="vision-left-column">
         <div class="vision-camera-sidebar">
           <div class="vision-command-bar">
             <label class="vision-camera-toggle">
-              <span>CAMERA</span>
+              <span data-i18n="vid.camera">CAMERA</span>
               <input class="switch-input" type="checkbox" id="chk-vision-enable">
               <span class="switch-rail" aria-hidden="true"></span>
             </label>
-            <label class="vision-confidence-field" aria-label="Vision confidence">
-              <span>CONF</span>
+            <label class="vision-confidence-field" aria-label="Vision confidence" data-i18n-aria-label="vid.confidence">
+              <span data-i18n="vid.conf">CONF</span>
               <select id="vision-confidence">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
+                <option value="low" data-i18n="vid.low">Low</option>
+                <option value="medium" selected data-i18n="vid.medium">Medium</option>
+                <option value="high" data-i18n="vid.high">High</option>
               </select>
             </label>
-            <label class="vision-confidence-field" aria-label="Recognition">
-              <span>REC</span>
+            <label class="vision-confidence-field" aria-label="Recognition" data-i18n-aria-label="vid.recognition">
+              <span data-i18n="vid.rec">REC</span>
               <select id="vision-recognition-preset">
-                <option value="precision">Precision</option>
-                <option value="balanced" selected>Balanced</option>
-                <option value="flexible">Flexible</option>
+                <option value="precision" data-i18n="vid.precision">Precision</option>
+                <option value="balanced" selected data-i18n="vid.balanced">Balanced</option>
+                <option value="flexible" data-i18n="vid.flexible">Flexible</option>
               </select>
             </label>
           </div>
-          <aside class="vision-camera-stage" aria-label="Camera preview status">
-            <header><strong>CAMERA</strong><span>LIVE CHECK</span></header>
+          <aside class="vision-camera-stage" aria-label="Camera preview status" data-i18n-aria-label="vid.previewStatus">
+            <header><strong data-i18n="vid.camera">CAMERA</strong><span data-i18n="vid.liveCheck">LIVE CHECK</span></header>
+            <div class="vision-camera-diagnostics" aria-label="Camera calibration readings" data-i18n-aria-label="vid.calibration">
+              <span title="Raw palm size used to check the Z depth window." data-i18n-title="vid.palmSizeTip">PALM <b id="vision-value-palm">0.00</b></span>
+              <span title="Signed palm-facing reading used to distinguish palm from back of hand." data-i18n-title="vid.facingTip">FACE <b id="vision-value-facing">+0.00</b></span>
+            </div>
             <div class="vision-camera-placeholder">
-              <strong id="vision-camera-state-title">CAMERA OFF</strong>
-              <span id="vision-camera-state-detail">Enable Camera to begin</span>
-              <div class="vision-camera-error">Tap CAMERA to retry.</div>
+              <strong id="vision-camera-state-title" data-i18n="vid.cameraOff">CAMERA OFF</strong>
+              <span id="vision-camera-state-detail" data-i18n="vid.enableToBegin">Enable Camera to begin</span>
+              <div class="vision-camera-error" data-i18n="vid.retry">Tap CAMERA to retry.</div>
             </div>
           </aside>
         </div>
@@ -465,90 +495,88 @@
       <div class="vision-right-column">
         <section class="vision-gesture-studio">
           <header class="vision-studio-head">
-            <div><strong>LEARNED POSES</strong><span>3 examples each · momentary 0 → 1</span></div>
+            <div><strong data-i18n="vid.learnedPoses">LEARNED POSES</strong><span><span data-i18n="vid.examplesEach">3 examples each</span> <span data-i18n="vid.momentary">· momentary 0 → 1</span></span></div>
           </header>
           <div class="vision-gesture-slots vision-pose-grid">
             <article class="vision-gesture-slot" data-gesture-slot="1" data-name="sensor.vision.gesture.1">
               <header><span>G1</span><strong>0 / 3</strong></header>
               <div class="vision-slot-actions">
-                <button type="button" class="vision-slot-learn">CAP</button>
-                <button type="button" class="vision-slot-test" aria-pressed="false">TEST</button>
-                <button type="button" class="vision-slot-retake" title="Remove last capture">DEL LAST</button>
-                <button type="button" class="vision-slot-delete" title="Clear all captures">CLR</button>
+                <button type="button" class="vision-slot-learn" data-i18n="js.capturePose">CAPTURE&#10;POSE</button>
+                <button type="button" class="vision-slot-test" aria-pressed="false" data-i18n="vid.test">TEST</button>
+                <button type="button" class="vision-slot-retake" title="Remove last capture" data-i18n="vid.delLast" data-i18n-title="vid.removeLast">DEL LAST</button>
+                <button type="button" class="vision-slot-delete" title="Clear all captures" data-i18n="vid.clr" data-i18n-title="vid.clearAll">CLR</button>
               </div>
-              <span class="vision-workflow-status vision-slot-status">Empty</span>
+              <span class="vision-workflow-status vision-slot-status" data-i18n="perf.empty">Empty</span>
             </article>
             <article class="vision-gesture-slot" data-gesture-slot="2" data-name="sensor.vision.gesture.2">
               <header><span>G2</span><strong>0 / 3</strong></header>
               <div class="vision-slot-actions">
-                <button type="button" class="vision-slot-learn">CAP</button>
-                <button type="button" class="vision-slot-test" aria-pressed="false">TEST</button>
-                <button type="button" class="vision-slot-retake" title="Remove last capture">DEL LAST</button>
-                <button type="button" class="vision-slot-delete" title="Clear all captures">CLR</button>
+                <button type="button" class="vision-slot-learn" data-i18n="js.capturePose">CAPTURE&#10;POSE</button>
+                <button type="button" class="vision-slot-test" aria-pressed="false" data-i18n="vid.test">TEST</button>
+                <button type="button" class="vision-slot-retake" title="Remove last capture" data-i18n="vid.delLast" data-i18n-title="vid.removeLast">DEL LAST</button>
+                <button type="button" class="vision-slot-delete" title="Clear all captures" data-i18n="vid.clr" data-i18n-title="vid.clearAll">CLR</button>
               </div>
-              <span class="vision-workflow-status vision-slot-status">Empty</span>
+              <span class="vision-workflow-status vision-slot-status" data-i18n="perf.empty">Empty</span>
             </article>
             <article class="vision-gesture-slot" data-gesture-slot="3" data-name="sensor.vision.gesture.3">
               <header><span>G3</span><strong>0 / 3</strong></header>
               <div class="vision-slot-actions">
-                <button type="button" class="vision-slot-learn">CAP</button>
-                <button type="button" class="vision-slot-test" aria-pressed="false">TEST</button>
-                <button type="button" class="vision-slot-retake" title="Remove last capture">DEL LAST</button>
-                <button type="button" class="vision-slot-delete" title="Clear all captures">CLR</button>
+                <button type="button" class="vision-slot-learn" data-i18n="js.capturePose">CAPTURE&#10;POSE</button>
+                <button type="button" class="vision-slot-test" aria-pressed="false" data-i18n="vid.test">TEST</button>
+                <button type="button" class="vision-slot-retake" title="Remove last capture" data-i18n="vid.delLast" data-i18n-title="vid.removeLast">DEL LAST</button>
+                <button type="button" class="vision-slot-delete" title="Clear all captures" data-i18n="vid.clr" data-i18n-title="vid.clearAll">CLR</button>
               </div>
-              <span class="vision-workflow-status vision-slot-status">Empty</span>
+              <span class="vision-workflow-status vision-slot-status" data-i18n="perf.empty">Empty</span>
             </article>
           </div>
         </section>
         <section class="vision-detector-section">
-          <header><strong>BUILT-IN DETECTORS</strong><span>Tap to enable output</span></header>
+          <header><strong data-i18n="vid.builtinDetectors">BUILT-IN DETECTORS</strong><span><span data-i18n="vid.tapToEnable">Tap to enable output</span></span></header>
           <div class="vision-gesture-list" aria-label="Built-in gesture detectors">
-            <button type="button" data-vision-gesture="open" data-name="sensor.vision.open" aria-pressed="false">Open</button>
-            <button type="button" data-vision-gesture="fist" data-name="sensor.vision.fist" aria-pressed="false">Fist</button>
-            <button type="button" data-vision-gesture="pinch" data-name="sensor.vision.pinch" aria-pressed="false">Pinch</button>
-            <button type="button" data-vision-gesture="victory" data-name="sensor.vision.victory" aria-pressed="false">Victory</button>
-            <button type="button" data-vision-gesture="fingers" data-name="sensor.vision.fingers" aria-pressed="false">Fingers</button>
+            <button type="button" data-vision-gesture="open" data-name="sensor.vision.open" aria-pressed="false" data-i18n="vid.open">Open</button>
+            <button type="button" data-vision-gesture="fist" data-name="sensor.vision.fist" aria-pressed="false" data-i18n="vid.fist">Fist</button>
+            <button type="button" data-vision-gesture="pinch" data-name="sensor.vision.pinch" aria-pressed="false" data-i18n="vid.pinch">Pinch</button>
+            <button type="button" data-vision-gesture="victory" data-name="sensor.vision.victory" aria-pressed="false" data-i18n="vid.victory">Victory</button>
           </div>
         </section>
+      </div>
         <div class="vision-sensor-deck vision-signal-strip">
           <div class="vision-hint-grid vision-readout-grid">
             <span class="vision-readout-card vision-axis-card">
-              <em>DIRECT MAP</em>
+              <em data-i18n="hdr.map">MAP</em>
               <strong class="vision-axis-chips">
-                <span data-name="sensor.vision.active">ACTIVE <b id="vision-value-active">OFF</b></span>
                 <span data-name="sensor.vision.x">X <b id="vision-value-x">0.50</b></span>
                 <span data-name="sensor.vision.y">Y <b id="vision-value-y">0.50</b></span>
                 <span data-name="sensor.vision.z">Z <b id="vision-value-z">0.00</b></span>
               </strong>
             </span>
             <span class="vision-readout-card vision-axis-card">
-              <em>GESTURE</em>
-              <strong class="vision-axis-chips" id="vision-card-gesture">No hand</strong>
-            </span>
-            <span class="vision-readout-card vision-color-card">
-              <em>AMBIENT</em>
-              <strong class="vision-control-chips">
-                <span data-name="sensor.vision.color.r">R</span>
-                <span data-name="sensor.vision.color.g">G</span>
-                <span data-name="sensor.vision.color.b">B</span>
+              <em data-i18n="vid.clutch">CLUTCH</em>
+              <strong class="vision-axis-chips">
+                <span id="vision-clutch-state" title="Pinch and hold for four frames to engage. Release freezes the axes where they are." data-i18n="perf.off">OFF</span>
+                <span data-name="sensor.vision.pinch_x">X <b id="vision-value-pinch-x">0.50</b></span>
+                <span data-name="sensor.vision.pinch_y">Y <b id="vision-value-pinch-y">0.50</b></span>
+                <span data-name="sensor.vision.pinch_z">Z <b id="vision-value-pinch-z">0.50</b></span>
               </strong>
-              <i id="vision-card-color" class="swatch"></i>
             </span>
           </div>
         </div>
       </div>
-      </div>
     </section>
   </main>
 
-  <main id="mapping-mode" class="mapping-mode hidden" data-page="mapping" aria-label="Mappings">
+  <main id="mapping-mode" class="mapping-mode hidden" data-page="mapping" aria-label="Mappings" data-i18n-aria-label="panel.tabMappings">
+    <section id="map-armed-strip" class="map-armed-strip" role="status" aria-live="polite">
+      <span><strong data-i18n="map.armed">MAP ARMED</strong><small data-i18n="map.tapControl">TAP A CONTROL</small></span>
+      <button id="btn-map-back" class="map-mini-btn" type="button" data-i18n="map.done">DONE</button>
+    </section>
+
     <section class="map-pane map-pane-left">
       <header class="map-mode-head">
-        <button id="btn-map-back" class="map-mini-btn" type="button">Back</button>
-        <strong>MAP</strong>
-        <button id="btn-map-refresh" class="map-mini-btn" type="button">Refresh</button>
+        <strong data-i18n="hdr.map">MAP</strong>
+        <button id="btn-map-refresh" class="map-mini-btn" type="button" data-i18n="map.refresh">Refresh</button>
       </header>
-      <div id="map-mobile-status" class="map-mobile-status">Not loaded</div>
+      <div id="map-mobile-status" class="map-mobile-status" data-i18n="map.notLoaded">Not loaded</div>
       <div id="map-mobile-presets" class="map-mobile-presets"></div>
       <input id="map-mobile-search" class="map-mobile-search" type="search" aria-label="Search controls" autocomplete="off">
       <div id="map-mobile-controls" class="map-mobile-controls"></div>
@@ -563,7 +591,7 @@
   <div id="vision-hud" class="vision-hud-container hidden">
     <canvas id="vision-canvas" width="320" height="240"></canvas>
     <div class="hud-stats">
-      <div>Gesture: <span id="lbl-vision-gesture">--</span></div>
+      <div><span data-i18n="vid.gesture">Gesture:</span> <span id="lbl-vision-gesture">--</span></div>
     </div>
     <!-- Per-channel gesture/position modes: A = momentary (default), B = hold
          the last value when the hand leaves the frame, C = toggle on rising
@@ -586,17 +614,17 @@
         <button type="button" class="vision-mode-btn" data-mode="B">B</button>
       </div>
       <div class="vision-mode-row" data-channel="fist">
-        <span class="vision-mode-label">Fist</span>
+        <span class="vision-mode-label" data-i18n="vid.fist">Fist</span>
         <button type="button" class="vision-mode-btn" data-mode="A">A</button>
         <button type="button" class="vision-mode-btn" data-mode="C">C</button>
       </div>
       <div class="vision-mode-row" data-channel="pinch">
-        <span class="vision-mode-label">Pinch</span>
+        <span class="vision-mode-label" data-i18n="vid.pinch">Pinch</span>
         <button type="button" class="vision-mode-btn" data-mode="A">A</button>
         <button type="button" class="vision-mode-btn" data-mode="C">C</button>
       </div>
       <div class="vision-mode-row" data-channel="victory">
-        <span class="vision-mode-label">Victory</span>
+        <span class="vision-mode-label" data-i18n="vid.victory">Victory</span>
         <button type="button" class="vision-mode-btn" data-mode="A">A</button>
         <button type="button" class="vision-mode-btn" data-mode="C">C</button>
       </div>
@@ -612,22 +640,22 @@
   <div id="transport-lite-overlay" class="modal-overlay hidden" aria-label="Transport Control">
     <div class="transport-modal">
       <header class="transport-head">
-        <span class="transport-title">TRANSPORT LITE</span>
-        <span id="osc-status" class="osc-status free">FREE</span>
+        <span class="transport-title" data-i18n="trn.title">TRANSPORT LITE</span>
+        <span id="osc-status" class="osc-status free" data-i18n="trn.free">FREE</span>
         <button id="btn-trn-close" class="trn-close-btn" type="button">&times;</button>
       </header>
       
       <div class="transport-main-controls">
-        <button id="btn-trn-play" class="trn-ctrl-btn play" type="button">▶ PLAY</button>
-        <button id="btn-trn-stop" class="trn-ctrl-btn stop" type="button">■ STOP</button>
-        <button id="btn-trn-prev" class="trn-ctrl-btn prev" type="button">◀ PREV</button>
-        <button id="btn-trn-next" class="trn-ctrl-btn next" type="button">NEXT ▶</button>
-        <button id="btn-trn-refresh" class="trn-ctrl-btn refresh" type="button">↻ REFRESH</button>
+        <button id="btn-trn-play" class="trn-ctrl-btn play" type="button" aria-label="Play"><span class="transport-symbol transport-symbol-play" aria-hidden="true"></span><span data-i18n="trn.play">PLAY</span></button>
+        <button id="btn-trn-stop" class="trn-ctrl-btn stop" type="button" aria-label="Stop" data-i18n-aria-label="common.stop"><span class="transport-symbol transport-symbol-stop" aria-hidden="true"></span><span data-i18n="trn.stop">STOP</span></button>
+        <button id="btn-trn-prev" class="trn-ctrl-btn prev" type="button" aria-label="Previous Locator" data-i18n-aria-label="trn.prevLocator"><span class="transport-symbol transport-symbol-prev" aria-hidden="true"></span><span data-i18n="trn.prev">PREV</span></button>
+        <button id="btn-trn-next" class="trn-ctrl-btn next" type="button" aria-label="Next Locator" data-i18n-aria-label="trn.nextLocator"><span class="transport-symbol transport-symbol-next" aria-hidden="true"></span><span data-i18n="trn.next">NEXT</span></button>
+        <button id="btn-trn-refresh" class="trn-ctrl-btn refresh" type="button"><span class="transport-symbol transport-symbol-refresh" aria-hidden="true"></span><span data-i18n="trn.refresh">REFRESH</span></button>
       </div>
       
       <div class="locator-section">
         <header class="locator-head">
-          <span class="locator-title">LOCATORS</span>
+          <span class="locator-title" data-i18n="trn.locators">LOCATORS</span>
           <input id="locator-search" class="locator-search" type="search" placeholder="Search locators..." autocomplete="off">
         </header>
         <div id="locator-list" class="locator-list">
@@ -641,54 +669,67 @@
   <div id="sync-settings-overlay" class="modal-overlay hidden" aria-label="Sync Settings">
     <div class="transport-modal sync-settings-modal">
       <header class="transport-head">
-        <span class="transport-title">DEEP SYNC SETTINGS</span>
+        <span class="transport-title" data-i18n="sync.title">DEEP SYNC SETTINGS</span>
         <button id="btn-sync-settings-close" class="trn-close-btn" type="button">&times;</button>
       </header>
       
       <div class="sync-settings-body">
         <!-- Clock Source -->
         <div class="setting-group">
-          <label class="setting-label">CLOCK SOURCE</label>
+          <label class="setting-label" data-i18n="sync.clockSource">CLOCK SOURCE</label>
           <div class="setting-row">
             <select id="select-clock-source" class="setting-select">
-              <option value="osc">AbletonOSC</option>
-              <option value="sdk">SDK BPM Simulator</option>
-              <option value="free">Free / Internal</option>
+              <option value="osc" data-i18n="sync.osc">AbletonOSC</option>
+              <option value="sdk" data-i18n="sync.sdk">SDK BPM Simulator</option>
+              <option value="free" data-i18n="sync.internal">Free / Internal</option>
             </select>
           </div>
         </div>
 
         <!-- LFO Settings -->
         <div class="setting-group-section">
-          <span class="section-divider-label">LFO CONFIG</span>
+          <span class="section-divider-label" data-i18n="sync.lfoConfig">LFO CONFIG</span>
+          <p class="setting-label" data-i18n="sync.lfoBandwidth">Experimental ceilings: sine 5 Hz, triangle 8 Hz, ramps 6 Hz, square 15 Hz. FREE is continuous; SYNC stays rhythmic within the shape ceiling. Live fidelity still needs testing.</p>
+          <p class="setting-label" data-i18n="sync.rateNotation">SYNC: 1/4 = one beat, 1/8 = half a beat. T = triplet; D = dotted. FREE uses Hz. Stutter shows the effective rate including ratchet; swing alternates spacing.</p>
+          <div class="readout-val" id="lfo-effective-rate">AUTO · 1 → 1/8</div>
           
           <div class="setting-group">
-            <label class="setting-label">Rate (Subdivision)</label>
+            <label class="setting-label" data-i18n="sync.rate">Rate (Subdivision)</label>
             <div class="setting-row rate-grid" id="lfo-rate-grid">
-              <button class="grid-btn" data-val="auto">Auto</button>
-              <button class="grid-btn" data-val="4">4</button>
-              <button class="grid-btn" data-val="2">2</button>
-              <button class="grid-btn" data-val="1">1</button>
-              <button class="grid-btn" data-val="0.5">1/2</button>
-              <button class="grid-btn" data-val="0.25">1/4</button>
-              <button class="grid-btn" data-val="0.125">1/8</button>
-              <button class="grid-btn" data-val="0.0625">1/16</button>
+              <button class="grid-btn" data-val="auto" data-i18n="sync.auto">Auto</button>
+              <button class="grid-btn" data-val="32">8</button>
+              <button class="grid-btn" data-val="16">4</button>
+              <button class="grid-btn" data-val="8">2</button>
+              <button class="grid-btn" data-val="4">1</button>
+              <button class="grid-btn" data-val="3">1/2 D</button>
+              <button class="grid-btn" data-val="2.6666666666666665">1 T</button>
+              <button class="grid-btn" data-val="2">1/2</button>
+              <button class="grid-btn" data-val="1.5">1/4 D</button>
+              <button class="grid-btn" data-val="1.3333333333333333">1/2 T</button>
+              <button class="grid-btn" data-val="1">1/4</button>
+              <button class="grid-btn" data-val="0.75">1/8 D</button>
+              <button class="grid-btn" data-val="0.6666666666666666">1/4 T</button>
+              <button class="grid-btn" data-val="0.5">1/8</button>
+              <button class="grid-btn" data-val="0.25">1/16</button>
+              <button class="grid-btn" data-val="0.125">1/32</button>
+              <button class="grid-btn" data-val="0.0625">1/64</button>
             </div>
           </div>
           
           <div class="setting-group">
-            <label class="setting-label">Shape</label>
+            <label class="setting-label" data-i18n="sync.shape">Shape</label>
+            <div id="lfo-shape-limit" class="readout-val">sine · MAX 4 Hz</div>
             <div class="setting-row shape-grid" id="lfo-shape-grid">
-              <button class="grid-btn" data-val="sine">Sine</button>
-              <button class="grid-btn" data-val="triangle">Triangle</button>
-              <button class="grid-btn" data-val="ramp_up">Ramp Up</button>
-              <button class="grid-btn" data-val="ramp_down">Ramp Dn</button>
-              <button class="grid-btn" data-val="square">Square</button>
+              <button class="grid-btn" data-val="sine" data-i18n="sync.sine">Sine</button>
+              <button class="grid-btn" data-val="triangle" data-i18n="sync.triangle">Triangle</button>
+              <button class="grid-btn" data-val="ramp_up" data-i18n="sync.rampUp">Ramp Up</button>
+              <button class="grid-btn" data-val="ramp_down" data-i18n="sync.rampDn">Ramp Dn</button>
+              <button class="grid-btn" data-val="square" data-i18n="sync.square">Square</button>
             </div>
           </div>
           
           <div class="setting-group">
-            <label class="setting-label">Phase Offset (Beats)</label>
+            <label class="setting-label" data-i18n="sync.phaseOffset">Phase Offset (Beats)</label>
             <div class="setting-row slider-row">
               <input type="range" id="lfo-phase-offset" min="-4" max="4" step="0.25" value="0">
               <span id="lfo-phase-offset-val" class="readout-val">0.0</span>
@@ -698,23 +739,25 @@
 
         <!-- Stutter Settings -->
         <div class="setting-group-section">
-          <span class="section-divider-label">STUTTER CONFIG</span>
+          <span class="section-divider-label" data-i18n="sync.stutterConfig">STUTTER CONFIG</span>
+          <p class="setting-label" data-i18n="sync.stutterBandwidth">Up to 15 Hz including ratchet. Unavailable base divisions are disabled for the current BPM, swing and ratchet. Horizontal drag returns to Auto; vertical drag changes amplitude. Flashing follows the local gate, not confirmed Live delivery; the screen can miss fast pulses.</p>
           
           <div class="setting-group">
-            <label class="setting-label">Rate (Subdivision)</label>
+            <label class="setting-label" data-i18n="sync.rate">Rate (Subdivision)</label>
             <div class="setting-row rate-grid" id="stutter-rate-grid">
-              <button class="grid-btn" data-val="auto">Auto</button>
-              <button class="grid-btn" data-val="1">1</button>
-              <button class="grid-btn" data-val="0.5">1/2</button>
-              <button class="grid-btn" data-val="0.25">1/4</button>
-              <button class="grid-btn" data-val="0.125">1/8</button>
-              <button class="grid-btn" data-val="0.0625">1/16</button>
-              <button class="grid-btn" data-val="0.03125">1/32</button>
+              <button class="grid-btn" data-val="auto" data-i18n="sync.auto">Auto</button>
+              <button class="grid-btn" data-val="1">1/4</button>
+              <button class="grid-btn" data-val="0.5">1/8</button>
+              <button class="grid-btn" data-val="0.25">1/16</button>
+              <button class="grid-btn" data-val="0.125">1/32</button>
+              <button class="grid-btn" data-val="0.0625">1/64</button>
+              <button class="grid-btn" data-val="0.03125">1/128</button>
             </div>
+            <div id="stutter-effective-rate" class="readout-val"></div>
           </div>
           
           <div class="setting-group">
-            <label class="setting-label">Swing</label>
+            <label class="setting-label" data-i18n="sync.swing">Swing</label>
             <div class="setting-row slider-row">
               <input type="range" id="stutter-swing" min="0" max="0.66" step="0.05" value="0">
               <span id="stutter-swing-val" class="readout-val">0.00</span>
@@ -722,23 +765,69 @@
           </div>
           
           <div class="setting-group">
-            <label class="setting-label">Phase Offset (Beats)</label>
+            <label class="setting-label" data-i18n="sync.phaseOffset">Phase Offset (Beats)</label>
             <div class="setting-row slider-row">
               <input type="range" id="stutter-phase-offset" min="-2" max="2" step="0.125" value="0">
               <span id="stutter-phase-offset-val" class="readout-val">0.0</span>
             </div>
           </div>
+
+          <span class="section-divider-label" data-i18n="sync.burstConfig">BURST CONFIG (PAD MODE D)</span>
+
+          <div class="setting-group">
+            <label class="setting-label" data-i18n="sync.length">Length (Subdivision)</label>
+            <div class="setting-row rate-grid" id="burst-rate-grid">
+              <button class="grid-btn" data-val="4" data-i18n="sync.bar">4 beats</button>
+              <button class="grid-btn" data-val="2" data-i18n="sync.halfBar">2 beats</button>
+              <button class="grid-btn on" data-val="1" data-i18n="sync.beat">1 beat</button>
+              <button class="grid-btn" data-val="0.5">1/2</button>
+              <button class="grid-btn" data-val="0.25">1/4</button>
+              <button class="grid-btn" data-val="0.125">1/8</button>
+              <button class="grid-btn" data-val="0.0625">1/16</button>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="burst-attack" data-i18n="sync.attack">Attack</label>
+            <div class="setting-row burst-env-row">
+              <svg id="burst-env" class="burst-env" viewBox="0 0 240 96"
+                   role="img" aria-hidden="true">
+                <line class="burst-env-floor" x1="0" y1="84" x2="240" y2="84"/>
+                <polyline id="burst-env-line" class="burst-env-line" points="0,84 32,12 240,84"/>
+                <circle id="burst-env-peak" class="burst-env-peak" cx="32" cy="12" r="6"/>
+              </svg>
+              <input type="range" id="burst-attack" class="visually-hidden"
+                     min="0.05" max="0.5" step="0.005" value="0.135">
+              <div class="burst-env-readout">
+                <span id="burst-env-len">&mdash;</span>
+                <span id="burst-attack-val" class="readout-val">14%</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="setting-note" data-i18n="sync.appliesInSync">Applies while SYNC is on. In FREE the burst stays at its fixed 520&#160;ms with a 70&#160;ms attack.</p>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/i18n-catalog.js"></script>
   <script src="mode-engine.js"></script>
   <script src="phone-identity.js"></script>
   <script src="safe-input-layer.js"></script>
+  <script src="mapping-input-contract.js"></script>
   <script src="vision-control-state.js"></script>
   <script src="audio-smoothing.js"></script>
+  <script src="audio-analysis-controls.js"></script>
+  <script src="../shared/audio-descriptor-catalog.js"></script>
+  <script src="audio-workspace.js"></script>
+  <script src="audio-descriptors.js"></script>
+  <script src="audio-detector-timing.js"></script>
+  <script src="audio-spectral-descriptors.js"></script>
   <script src="audio-processor.js"></script>
+  <script src="audio-input-selector.js"></script>
+  <script src="audio-timeline.js"></script>
   <script src="camera-lifecycle.js"></script>
   <script src="vision-processor.js"></script>
   <script src="modules/layout.js"></script>
@@ -746,10 +835,17 @@
   <script src="modules/sync.js"></script>
   <script src="modules/playhead.js"></script>
   <script src="modules/snapshots.js"></script>
+  <script src="control-config.js"></script>
   <script src="controls.js"></script>
   <script src="modules/session.js"></script>
   <script src="modules/wake-lock.js"></script>
+  <script src="control-stream.js"></script>
+  <script src="calibration.js"></script>
+  <script src="modules/calibration.js"></script>
+  <script src="sensor-capabilities.js"></script>
+  <script src="config-mode.js"></script>
   <script src="app.js"></script>
   <script src="mapping-mode.js"></script>
+  <div id="control-config-menu" class="cfg-menu hidden" role="dialog" aria-modal="false"></div>
 </body>
 </html>

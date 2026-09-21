@@ -1,0 +1,63 @@
+/* Copyright © 2026 Gabriel Worm
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Static operator-sheet diagrams; no live controls or simulated telemetry. */
+
+.surface-sheet > .bar { border-top:2px solid var(--amber); background:#151515; }
+.surface-sheet > .bar > span:first-child { color:var(--amber); }
+.surface-sheet > .figwrap { padding:14px 8px; background:#101010; border-color:#393939; }
+.surface-deck { align-items:start; }
+.surface-sheet[aria-hidden="true"] { display:none; }
+.surface-diagram { font-family:var(--mono); shape-rendering:geometricPrecision; }
+.surface-diagram text { font-family:var(--mono); }
+.surface-diagram > g:first-of-type > rect { stroke:#454545; fill:#151515; }
+.surface-diagram [stroke="#666666"] { stroke:#454545; }
+.surface-diagram [fill="#222222"] { fill:#191919; }
+.surface-diagram [fill="#6c6c58"] { fill:#999991; }
+.surface-diagram path, .surface-diagram circle { stroke-linejoin:round; }
+.surface-diagram .diagram-panel { fill:#141414; stroke:#353535; }
+.surface-diagram .diagram-cell { fill:#191919; stroke:#353535; }
+.surface-diagram .diagram-heading { fill:#ffa133; font-size:13px; }
+.surface-diagram .diagram-label { fill:#d6d6d6; font-size:12px; }
+.surface-diagram .diagram-value { fill:#eeeeee; font-size:13px; }
+.surface-diagram .diagram-meta { fill:#a5a5a5; font-size:10px; }
+.surface-diagram .diagram-trace { fill:none; stroke-width:1.6; stroke-linejoin:round; }
+.surface-diagram .diagram-legend { font-size:10px; }
+.dial-face { fill:#181818; stroke:#3a3a3a; stroke-width:1; }
+.dial-track { fill:none; stroke:#414141; stroke-width:2; }
+.dial-value { fill:none; stroke:var(--dial-color); stroke-width:2; }
+.dial-pointer { stroke:var(--dial-color); stroke-width:2.5; }
+
+/* One framing language for all six behavioral families. Keep their distinct
+   diagrams: gesture, envelope, axes, mapping curve and capture are not widgets. */
+.control-sheet .feature { border-color:#424242; }
+.control-sheet .feature-copy { background:#181818; border-top:2px solid var(--amber); }
+.control-sheet .feature-figure { background:#111111; padding:24px; }
+.control-sheet .feature-figure svg { shape-rendering:geometricPrecision; }
+.control-sheet :is(.gm-panel,.sm-panel,.sn-panel,.mp-panel) { border-color:#3c3c3c; background:#161616; }
+.control-sheet :is(.gm-head,.sn-title,.sm-title,.mp-title) { letter-spacing:.05em; }
+.sn-dials { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.sn-dial { border-top-color:#ff375f; padding:10px; }
+.sn-dial .sn-dial-head b { color:#ffb3c3; }
+.sn-dial .ui-line-hot { stroke:#ff375f; }
+.sn-window { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid #393939; }
+.sn-window > span { color:#b4b4b4; font-size:12px; margin-right:auto; }
+.sn-window > b { font-size:12px; font-weight:normal; padding:5px 8px; border:1px solid #454545; color:#c0c0c0; }
+.sn-window > b.is-selected { color:#ffa133; border-color:#ffa133; background:#241b12; }
+.sn-detectors { grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.sn-detector-family { min-width:0; display:grid; gap:7px; align-content:start; }
+.sn-detector-family > h4 { font-size:12px; font-weight:normal; color:var(--family-color); letter-spacing:.04em; border-bottom:1px solid var(--family-color); padding-bottom:6px; margin:0; }
+.sn-detector { padding:10px; border-color:#363636; }
+.sn-detector .sn-read { white-space:normal; flex-wrap:wrap; gap:4px; color:#d2d2d2; font-size:12px; line-height:16px; }
+.sn-detector .sn-read b { color:var(--descriptor-color); font-size:12px; margin-left:auto; }
+.sn-detector .sn-fill { background:var(--descriptor-color); }
+.sn-detector .sn-track { height:4px; }
+.sn-note { font-size:12px; line-height:18px; }
+@media (max-width:1000px) {
+  .sn-detectors { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:560px) {
+  .surface-sheet > .figwrap { padding:10px 0; }
+  .control-sheet .feature-figure { padding:12px; }
+  .sn-dials { grid-template-columns:minmax(0,1fr); }
+  .sn-detectors { grid-template-columns:minmax(0,1fr); }
+}

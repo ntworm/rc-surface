@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 /**
@@ -58,12 +58,15 @@ import {
   stopHostReconcileTimer,
   loadMappings,
   configureMappingStorage,
+  cancelPendingMappingWrites,
 } from "./live/mappings.js";
-import { startServer, stopServer } from "./server/state.js";
-import { closeUdpSocket } from "./live/udp-midi.js";
+import { continuousTargetActuator } from "./live/continuous-target-actuator.js";
+import { startServer, stopServer, getServerGeneration } from "./server/state.js";
+import { configureAutostartStorage, DEFAULT_AUTOSTART } from "./server/autostart.js";
 import { oscTransport } from "./live/osc-transport.js";
 
 let activated = false;
+let activationGeneration = 0;
 
 /**
  * Idempotent: repeated calls only re-run `startServer()`. Each
@@ -79,6 +82,9 @@ function activate(activation: ActivationContext): void {
     return;
   }
   activated = true;
+  const generation = ++activationGeneration;
+  const isCurrentActivation = () => activated && generation === activationGeneration;
+  const serverGeneration = getServerGeneration();
 
   // 1. Top-level safety nets so a stray rejection / exception doesn't
   // tear down the entire Extension Host. Idempotent.
@@ -87,30 +93,53 @@ function activate(activation: ActivationContext): void {
   // 2. Initialise the SDK context and register it as the module-global
   // so any module can reach the application + ui surface without a
   // long prop-drilling chain.
-  const context = initialize(activation, "1.0.0");
-  setExtensionContext(context);
+  let context: ReturnType<typeof initialize>;
+  try {
+    context = initialize(activation, "1.0.0");
+    setExtensionContext(context);
 
-  // 3. Wire the unified panel modal into Live's menu + scene context.
-  registerPanelCommand(context);
+    // 3. Wire the unified panel modal into Live's menu + scene context.
+    registerPanelCommand(context);
+  } catch (error) {
+    deactivate();
+    throw error;
+  }
 
   // 4. Configure mapping + preset storage paths and load any persisted
   // mappings. Best-effort: a missing storageDir just skips persistence.
   const storageDir = context.environment.storageDirectory;
+  void import("./server/locale.js")
+    .then((m) => { if (isCurrentActivation()) return m.configureLocaleStorage(storageDir, isCurrentActivation); })
+    .catch(() => { /* language falls back to the default */ });
   configureMappingStorage(storageDir).then(() => {
-    return loadMappings();
+    if (!isCurrentActivation()) return;
+    return loadMappings(isCurrentActivation);
   }).catch((err) => {
     console.error(`[ableton-rc-surface] configureMappingStorage/loadMappings failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 
-  // 5. Start the HTTP+WS server. Has its own idempotency guard.
-  startServer().catch((err) => {
-    console.error(`[ableton-rc-surface] initial startServer failed: ${err instanceof Error ? err.message : String(err)}`);
-  });
+  // 5. Start the HTTP+WS server, unless the operator asked us not to take the
+  // network at launch — the case when another RC extension is sharing this
+  // machine. Only this automatic start is gated; the panel's Start button
+  // still works, and the panel renders from disk when nothing is listening.
+  void configureAutostartStorage(storageDir, isCurrentActivation)
+    .catch(() => DEFAULT_AUTOSTART)
+    .then((enabled) => {
+      if (!isCurrentActivation() || getServerGeneration() !== serverGeneration) return;
+      if (!enabled) {
+        console.log("[ableton-rc-surface] autostart is off; waiting for Start from the panel");
+        return;
+      }
+      return startServer().catch((err) => {
+        console.error(`[ableton-rc-surface] initial startServer failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    });
 
   // 6. Background loops: live-state broadcast and smooth-timer
   // interpolation. Both are idempotent.
   startLiveStateBroadcastLoop();
   startSmoothTimer();
+  continuousTargetActuator.start();
   startHostReconcileTimer();
 
   // 7. Start OSC Transport
@@ -133,10 +162,15 @@ function deactivate(): void {
     return;
   }
   activated = false;
+  activationGeneration++;
 
-  // stopServer first closes HTTP + WS + tears down the snapshot loop;
-  // doing it last would race with the other stops' cleanup hooks.
+  // Invalidate queued writes before stopping loops; deliberate note releases
+  // still run while the old SDK context and MIDI transport are available.
+  void cancelPendingMappingWrites().catch((err) => {
+    console.error(`[ableton-rc-surface] cancelPendingMappingWrites failed: ${err instanceof Error ? err.message : String(err)}`);
+  });
   try { stopSmoothTimer(); } catch (err) { console.error(`[ableton-rc-surface] stopSmoothTimer failed: ${err instanceof Error ? err.message : String(err)}`); }
+  try { continuousTargetActuator.stop(); } catch (err) { console.error(`[ableton-rc-surface] continuousTargetActuator.stop failed: ${err instanceof Error ? err.message : String(err)}`); }
   try { stopHostReconcileTimer(); } catch (err) { console.error(`[ableton-rc-surface] stopHostReconcileTimer failed: ${err instanceof Error ? err.message : String(err)}`); }
   try { stopLiveStateBroadcastLoop(); } catch (err) { console.error(`[ableton-rc-surface] stopLiveStateBroadcastLoop failed: ${err instanceof Error ? err.message : String(err)}`); }
 
@@ -149,7 +183,6 @@ function deactivate(): void {
   // returns null.
   clearExtensionContext();
 
-  try { closeUdpSocket(); } catch (err) { console.error(`[ableton-rc-surface] closeUdpSocket failed: ${err instanceof Error ? err.message : String(err)}`); }
   try { oscTransport.dispose(); } catch (err) { console.error(`[ableton-rc-surface] oscTransport.dispose failed: ${err instanceof Error ? err.message : String(err)}`); }
 
   // Drop the process-level safety listeners so a subsequent activate()

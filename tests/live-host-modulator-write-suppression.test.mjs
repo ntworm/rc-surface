@@ -2,16 +2,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// The host motor ticks at 250 Hz because a 20 Hz LFO needs that resolution to
-// stay smooth — that is correct and must not regress. What was wrong is that
-// every tick wrote to Live regardless of what the value was doing: a stutter
-// gate holding 1 across its whole open phase was written 250 times a second to
-// say "still 1", and a slow LFO moving ~0.0001 per tick was written just as
-// often.
-//
-// Writes below the perceptual floor are now skipped. That is lossless by
-// construction, and these tests pin both halves of it: the fast LFO still
-// writes on every tick, the redundant cases collapse.
+// The requested generator timer is4ms; this is not measured SDK throughput.
+// Suppress near-identical values but retain the useful samples of a4Hz LFO.
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -73,7 +65,7 @@ async function runForOneSecond() {
   }
 }
 
-test("a 20 Hz LFO at full depth still writes on every tick", async () => {
+test("a 4 Hz LFO at full depth retains at least90 percent of generator samples", async () => {
   resetState();
   const applied = setupParam("toggle-1");
   try {
@@ -81,7 +73,7 @@ test("a 20 Hz LFO at full depth still writes on every tick", async () => {
       kind: "lfo",
       name: "toggle-1",
       active: true,
-      rate: 1, // free mode max = 20 Hz
+      rate: 1, // free mode max = 4 Hz
       depth: 1,
       syncMode: "free",
       shape: "sine",
@@ -108,6 +100,7 @@ test("a stutter gate writes on its edges, not on every tick", async () => {
       active: true,
       rate: 0, // free mode floor = 1 Hz base
       count: 0, // ratchet 1
+      depth: 1, // gate-open value = 1 (full amplitude)
       syncMode: "free",
     });
 

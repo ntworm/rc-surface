@@ -1,4 +1,4 @@
-Ableton RC Surface
+RC Surface
 Copyright © 2026 Gabriel Worm
 
 This product includes software developed by
@@ -25,7 +25,79 @@ For attribution requirements and related inquiries:
 Third-party components
 ----------------------
 
+The following components are bundled inside the application (host bundle
+`dist/extension.js`):
+
+ws
+Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+
+selfsigned
+Copyright (c) 2013 Jose F. Romaniello <jfromaniello@gmail.com>
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+
+@peculiar/x509
+Copyright (c) Peculiar Ventures, LLC
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+
+@peculiar/asn1-schema
+Copyright (c) Peculiar Ventures, LLC
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+
+asn1js
+Copyright (c) 2014, GMO GlobalSign, Inc. All rights reserved.
+Licensed under the BSD 3-Clause License:
+    https://opensource.org/license/bsd-3-clause
+
+pvutils
+Copyright (c) Peculiar Ventures, LLC
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+
+tslib
+Copyright (c) Microsoft Corporation.
+Licensed under the 0BSD License:
+    https://opensource.org/license/0bsd
+
+osc-min
+Copyright (c) Russell McClellan <russell.mcclellan@gmail.com>
+Licensed under the zlib/libpng License:
+    https://opensource.org/license/zlib
+
+Ableton Extensions SDK (1.0.0-beta.0)
+Bundled inside the application under the Ableton Extensions SDK License.
+The SDK or parts of it are not distributed outside of this application.
+See docs/THIRD-PARTY-NOTICES.md and internal/DISTRIBUTION-REVIEW-1.0.md.
+
 MediaPipe Hands and Camera Utilities
 Copyright 2019 The MediaPipe Authors
 Licensed under the Apache License 2.0:
     https://www.apache.org/licenses/LICENSE-2.0
+
+Departure Mono
+Copyright © 2024 Helena Zhang & Tobias Fried
+Licensed under the MIT License:
+    https://opensource.org/license/mit
+Project:
+    https://departuremono.com
+Bundled at:
+    static/fonts/ and docs/index.html (embedded)
+
+
+OpenMoji
+Copyright the OpenMoji authors
+Licensed under CC BY-SA 4.0:
+    https://creativecommons.org/licenses/by-sa/4.0/
+Project:
+    https://openmoji.org
+Used in:
+    docs/index.html (pinching-hand and raised-hand glyphs, Vision illustration)
+
+Trademarks
+----------
+Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
+project, not affiliated with, endorsed by, or sponsored by Ableton AG.

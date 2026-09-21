@@ -5,7 +5,7 @@
 (function (global) {
   'use strict';
 
-  const DETECTORS = ['open', 'fist', 'pinch', 'victory', 'fingers'];
+  const DETECTORS = ['open', 'fist', 'pinch', 'victory'];
   const SLOT_COUNT = 3;
 
   function cleanName(value) {
@@ -65,7 +65,6 @@
       if (this.detectorEnabled('pinch') && hand.pinch) return 'Pinch';
       if (this.detectorEnabled('victory') && hand.victory) return 'Victory';
       if (this.detectorEnabled('open') && hand.open) return 'Open hand';
-      if (this.detectorEnabled('fingers')) return `${Math.round((hand.fingers || 0) * 5)} fingers`;
       return 'Hand tracked';
     }
 

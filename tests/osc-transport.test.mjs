@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from "node:assert/strict";
@@ -12,8 +12,35 @@ import dgram from "node:dgram";
 import * as osc from 'osc-min';
 import { OSCTransport } from "../src/live/osc-transport.ts";
 
-test("OSCTransport state is updated correctly by incoming OSC messages", () => {
+// Never contend with or query the user's running OSC extensions. Allocate a
+// loopback-only test port pool and a private destination for each case.
+let testPorts = [], testDestination;
+const transports = [];
+test.beforeEach(async () => {
+  const sockets = [];
+  for (let i = 0; i < 3; i++) {
+    const socket = dgram.createSocket('udp4');
+    await new Promise(resolve => socket.bind(0, '127.0.0.1', resolve));
+    sockets.push(socket);
+  }
+  testPorts = sockets.slice(0, 2).map(socket => socket.address().port);
+  testDestination = sockets[2];
+  await Promise.all(sockets.slice(0, 2).map(socket => new Promise(resolve => socket.close(resolve))));
+});
+test.afterEach(async () => {
+  for (const transport of transports.splice(0)) transport.dispose();
+  await new Promise(resolve => testDestination.close(resolve));
+});
+function createTestTransport() {
   const transport = new OSCTransport();
+  transport.listenPortCandidates = testPorts;
+  transport.targetPort = testDestination.address().port;
+  transports.push(transport);
+  return transport;
+}
+
+test("OSCTransport state is updated correctly by incoming OSC messages", () => {
+  const transport = createTestTransport();
 
   // Initially connected is false
   assert.equal(transport.state.connected, false);
@@ -65,7 +92,7 @@ test("OSCTransport state is updated correctly by incoming OSC messages", () => {
 });
 
 test("OSCTransport starts and stops without crash", async () => {
-  const transport = new OSCTransport();
+  const transport = createTestTransport();
   
   // Start transport
   transport.start();
@@ -86,12 +113,12 @@ test("OSCTransport falls back when the preferred OSC port is occupied", async ()
     occupier.on("error", () => {
       resolve();
     });
-    occupier.bind(11001, "127.0.0.1", () => {
+    occupier.bind(testPorts[0], "127.0.0.1", () => {
       resolve();
     });
   });
 
-  const transport = new OSCTransport();
+  const transport = createTestTransport();
   
   // Try starting the transport. A sibling RC extension can own 11001, so the
   // surface should recover on its deterministic fallback port instead of
@@ -103,7 +130,7 @@ test("OSCTransport falls back when the preferred OSC port is occupied", async ()
 
   assert.equal(transport.state.available, true);
   assert.equal(transport.state.error, null);
-  assert.notEqual(transport.listenPort, 11001);
+  assert.equal(transport.listenPort, testPorts[1]);
 
   // Cleanup
   transport.dispose();
@@ -117,7 +144,7 @@ test("OSCTransport falls back when the preferred OSC port is occupied", async ()
 });
 
 test("OSCTransport stopPlayback changes isPlaying state but keeps socket open", async () => {
-  const transport = new OSCTransport();
+  const transport = createTestTransport();
   
   // Start transport
   transport.start();
@@ -135,10 +162,9 @@ test("OSCTransport stopPlayback changes isPlaying state but keeps socket open", 
 
 test("OSCTransport sends from its bound listener endpoint", async () => {
   const target = dgram.createSocket("udp4");
-  const targetPort = 17999;
-  await new Promise((resolve) => target.bind(targetPort, "127.0.0.1", resolve));
-  const transport = new OSCTransport();
-  transport.targetPort = targetPort;
+  await new Promise((resolve) => target.bind(0, "127.0.0.1", resolve));
+  const transport = createTestTransport();
+  transport.targetPort = target.address().port;
   transport.start();
   await new Promise((resolve) => setTimeout(resolve, 80));
 

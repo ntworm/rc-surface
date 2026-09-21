@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import test from "node:test";
@@ -16,6 +16,7 @@ import {
   eventModesState,
 } from "../src/live/mappings.ts";
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
+import { continuousTargetActuator } from '../src/live/continuous-target-actuator.ts';
 
 test("mappings correctly respect idleValue when deactivated", async () => {
   const applied = [];
@@ -58,14 +59,17 @@ test("mappings correctly respect idleValue when deactivated", async () => {
   try {
     // 1. Normal active tick (value = 0) -> should scale to outMin (0.1)
     await applyMapping("client-1", "toggle-1", 0, false);
+    await continuousTargetActuator.settle();
     assert.equal(applied[applied.length - 1], 0.1);
 
     // 2. Normal active tick (value = 1) -> should scale to outMax (0.9)
     await applyMapping("client-1", "toggle-1", 1, false);
+    await continuousTargetActuator.settle();
     assert.equal(applied[applied.length - 1], 0.9);
 
     // 3. Deactivated tick with value=0 -> should apply idleValue (0.5)
     await applyMapping("client-1", "toggle-1", 0, true);
+    await continuousTargetActuator.settle();
     assert.equal(applied[applied.length - 1], 0.5);
 
     // Now let's test Target 2: NO idleValue configured (should fallback to scaled value at 0, i.e., outMin = 0.1)
@@ -74,9 +78,11 @@ test("mappings correctly respect idleValue when deactivated", async () => {
     ]);
 
     await applyMapping("client-1", "toggle-1", 0, true);
+    await continuousTargetActuator.settle();
     assert.equal(applied[applied.length - 1], 0.1);
 
   } finally {
+    continuousTargetActuator.cancel();
     controlMappings.clear();
     lastMappedValues.clear();
     activeSmooths.clear();

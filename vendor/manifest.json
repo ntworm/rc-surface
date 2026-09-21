@@ -1,0 +1,13 @@
+{
+  "description": "Ableton Extensions SDK/CLI tarballs required by package.json (file:./vendor/...). Not tracked in Git; obtain them from Ableton and verify with `npm run check:vendor`.",
+  "files": {
+    "ableton-extensions-sdk-1.0.0-beta.0.tgz": {
+      "sha256": "a10ec4d85d1b3af32de924ff77454b05bf3cfd5a0bfcd3b8a6c2bd74069d7a6c",
+      "size": 54121
+    },
+    "ableton-extensions-cli-1.0.0-beta.0.tgz": {
+      "sha256": "ffbfcc18c65f1debe6ab368a53d7313aa1c8f746faed42da5178e793cbaf0bfc",
+      "size": 13326
+    }
+  }
+}

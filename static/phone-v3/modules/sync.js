@@ -17,7 +17,6 @@
       window.syncMode = (window.syncMode === 'sync') ? 'free' : 'sync';
       btn.textContent = window.syncMode.toUpperCase();
       btn.className = `sync-mode-btn ${window.syncMode}`;
-
       // Restore session BPM if toggling back to sync
       if (window.syncMode === 'sync') {
         const bpmEl = document.getElementById('live-bpm');
@@ -29,6 +28,8 @@
           if (bpmEl) bpmEl.textContent = `120.0 BPM`;
         }
       }
+      // Resolve AUD only after restoring Live's BPM, never the old FREE clock.
+      window.refreshAudioDetectorTiming?.();
       if (typeof window.emitAllModulatorStates === 'function') {
         window.emitAllModulatorStates();
       }

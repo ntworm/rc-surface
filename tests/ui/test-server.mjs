@@ -4,7 +4,7 @@ import path from "node:path";
 import { WebSocketServer } from "ws";
 
 const PORT = 9880;
-const staticDir = path.resolve(process.cwd(), "static/phone-v3");
+const staticDir = path.resolve(process.cwd(), "static");
 
 const mimeTypes = {
   ".html": "text/html",
@@ -14,14 +14,17 @@ const mimeTypes = {
   ".json": "application/json",
   ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".woff2": "font/woff2",
 };
 
 const server = http.createServer((req, res) => {
   let reqPath = req.url?.split("?")[0] ?? "/";
-  if (reqPath === "/") reqPath = "/index.html";
-  const filePath = path.join(staticDir, reqPath);
+  if (reqPath.startsWith('/static/')) reqPath = reqPath.slice('/static'.length);
+  else if (!reqPath.startsWith('/shared/') && !reqPath.startsWith('/fonts/')) reqPath = `/phone-v3${reqPath}`;
+  if (reqPath.endsWith('/')) reqPath += 'index.html';
+  const filePath = path.resolve(staticDir, `.${reqPath}`);
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  if (!filePath.startsWith(`${staticDir}${path.sep}`) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("Not Found");
     return;
@@ -55,6 +58,6 @@ wss.on("connection", (ws) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`Surface Playwright Test Server running on port ${PORT}`);
 });

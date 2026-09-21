@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// End-to-End Suite Integration Tests for RC Surface & RC Mixer (Task 6.3 / ADR-004)
+// End-to-end suite integration for RC Surface and RC Mixer.
 
 // Test files run in parallel and every one that starts a server competes
 // for DEFAULT_PREFERRED_PORT; the loser silently falls back to an

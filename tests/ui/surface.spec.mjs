@@ -6,6 +6,88 @@
 
 import { test, expect } from '@playwright/test';
 
+const LANDSCAPE_PHONE_VIEWPORTS = [
+  { width: 568, height: 320 },
+  { width: 851, height: 393 },
+];
+
+async function measurePageFit(page, pageSelector, requiredSelectors) {
+  return page.evaluate(({ pageSelector, requiredSelectors }) => {
+    const root = document.querySelector(pageSelector);
+    if (!root) throw new Error(`Missing page ${pageSelector}`);
+
+    const rootRect = root.getBoundingClientRect();
+    const rootStyle = getComputedStyle(root);
+    const missing = [];
+    const targets = [];
+
+    for (const selector of requiredSelectors) {
+      const elements = [...root.querySelectorAll(selector)];
+      if (elements.length === 0) missing.push(selector);
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        targets.push({
+          selector,
+          id: element.id,
+          className: typeof element.className === 'string' ? element.className : '',
+          display: style.display,
+          visibility: style.visibility,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+    }
+
+    return {
+      root: {
+        left: rootRect.left,
+        right: rootRect.right,
+        top: rootRect.top,
+        bottom: rootRect.bottom,
+        clientWidth: root.clientWidth,
+        clientHeight: root.clientHeight,
+        scrollWidth: root.scrollWidth,
+        scrollHeight: root.scrollHeight,
+        overflowX: rootStyle.overflowX,
+        overflowY: rootStyle.overflowY,
+      },
+      missing,
+      targets,
+    };
+  }, { pageSelector, requiredSelectors });
+}
+
+function expectPageFit(metrics, label) {
+  expect(metrics.missing, `${label}: required controls`).toEqual([]);
+  expect(['hidden', 'clip'], `${label}: horizontal scrolling`).toContain(metrics.root.overflowX);
+  expect(['hidden', 'clip'], `${label}: vertical scrolling`).toContain(metrics.root.overflowY);
+  expect(
+    metrics.root.scrollWidth - metrics.root.clientWidth,
+    `${label}: horizontal overflow`,
+  ).toBeLessThanOrEqual(1);
+  expect(
+    metrics.root.scrollHeight - metrics.root.clientHeight,
+    `${label}: vertical overflow`,
+  ).toBeLessThanOrEqual(1);
+
+  for (const target of metrics.targets) {
+    const name = target.id || target.className || target.selector;
+    expect(target.display, `${label}: ${name} is rendered`).not.toBe('none');
+    expect(target.visibility, `${label}: ${name} is visible`).not.toBe('hidden');
+    expect(target.width, `${label}: ${name} has width`).toBeGreaterThan(0);
+    expect(target.height, `${label}: ${name} has height`).toBeGreaterThan(0);
+    expect(target.left, `${label}: ${name} left edge`).toBeGreaterThanOrEqual(metrics.root.left - 1);
+    expect(target.right, `${label}: ${name} right edge`).toBeLessThanOrEqual(metrics.root.right + 1);
+    expect(target.top, `${label}: ${name} top edge`).toBeGreaterThanOrEqual(metrics.root.top - 1);
+    expect(target.bottom, `${label}: ${name} bottom edge`).toBeLessThanOrEqual(metrics.root.bottom + 1);
+  }
+}
+
 test.describe('RC Surface UI & E2E Suite', () => {
 
   // Suppress the orientation-warning overlay AND any pointer-intercepting overlays.
@@ -216,5 +298,131 @@ test.describe('RC Surface UI & E2E Suite', () => {
 
     const recalledVal = await page.evaluate(() => window.currentControlStates?.['pad-1']);
     expect(recalledVal).toBeCloseTo(0.95, 2);
+  });
+
+  test('VID camera controls remain usable at 568px landscape width', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.locator('.tabs .tab[data-page="video"]').evaluate((el) => el.click());
+    await page.waitForTimeout(100);
+
+    const geometry = await page.evaluate(() => {
+      const left = document.querySelector('.vision-left-column').getBoundingClientRect();
+      const bar = document.querySelector('.vision-command-bar');
+      const controls = [
+        document.querySelector('.vision-camera-toggle'),
+        document.getElementById('vision-confidence'),
+        document.getElementById('vision-recognition-preset'),
+      ].map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, left: rect.left, right: rect.right };
+      });
+      return {
+        left: { left: left.left, right: left.right, width: left.width },
+        barOverflow: bar.scrollWidth - bar.clientWidth,
+        controls,
+      };
+    });
+
+    expect(geometry.barOverflow).toBeLessThanOrEqual(1);
+    for (const control of geometry.controls) {
+      expect(control.width).toBeGreaterThanOrEqual(44);
+      expect(control.left).toBeGreaterThanOrEqual(geometry.left.left - 1);
+      expect(control.right).toBeLessThanOrEqual(geometry.left.right + 1);
+    }
+  });
+
+  test('AUD keeps every active control inside landscape phone viewports after Follow is withheld', async ({ page }) => {
+    const requiredSelectors = [
+      '.media-switch-row',
+      '.audio-window-control',
+      '.audio-timeline',
+      // Twelve descriptor rows cannot all fit a 320px-tall phone: the bank
+      // itself must fit the page and scroll internally, never the page.
+      '#audio-detector-bank',
+      '#audio-detector-controls',
+    ];
+
+    await page.locator('.tabs .tab[data-page="audio"]').evaluate((element) => element.click());
+
+    const expectDecisionViewFit = async (label) => {
+      await expect(page.locator('#audio-timeline-mode-decisions, .audio-diagnostic-footer')).toHaveCount(0);
+      const metrics = await measurePageFit(page, '.page-audio', [
+        '#audio-timeline-canvas', '#audio-timeline-status', '#audio-detector-bank',
+      ]);
+      expectPageFit(metrics, label + ' detectors');
+    };
+
+    for (const viewport of LANDSCAPE_PHONE_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => document.body.classList.remove('stage-mode'));
+
+      await expect(page.locator('#follow-note')).toHaveCount(0);
+
+      expectPageFit(
+        await measurePageFit(page, '.page-audio', requiredSelectors),
+        `AUD ${viewport.width}x${viewport.height} permanent`,
+      );
+      await expectDecisionViewFit(`AUD ${viewport.width}x${viewport.height} permanent`);
+
+      await page.evaluate(() => document.body.classList.add('stage-mode'));
+      expectPageFit(
+        await measurePageFit(page, '.page-audio', requiredSelectors),
+        `AUD ${viewport.width}x${viewport.height} permanent stage`,
+      );
+      await expectDecisionViewFit(`AUD ${viewport.width}x${viewport.height} permanent stage`);
+
+    }
+  });
+
+  test('VID remains fully contained at landscape phone viewports', async ({ page }) => {
+    const requiredSelectors = [
+      '.vision-camera-toggle',
+      '#vision-confidence',
+      '#vision-recognition-preset',
+      '.vision-gesture-slot',
+      '.vision-signal-strip',
+    ];
+
+    await page.locator('.tabs .tab[data-page="video"]').evaluate((element) => element.click());
+
+    for (const viewport of LANDSCAPE_PHONE_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      for (const stageMode of [false, true]) {
+        await page.evaluate((active) => document.body.classList.toggle('stage-mode', active), stageMode);
+        expectPageFit(
+          await measurePageFit(page, '.page-video', requiredSelectors),
+          `VID ${viewport.width}x${viewport.height}${stageMode ? ' stage' : ''}`,
+        );
+      }
+    }
+  });
+
+  test('detector knobs render as custom dials and remain keyboard accessible', async ({ page }) => {
+    await page.locator('.tabs .tab[data-page="audio"]').evaluate((el) => el.click());
+    // Amplitude has no detector of its own: only the shared window picker.
+    await expect(page.locator('.audio-analysis-control')).toHaveCount(0);
+    await expect(page.locator('[data-detector-knob="window"]')).toHaveCount(1);
+
+    // Attacks: sensitivity, release, curve and the group's output gain.
+    await page.locator('[data-audio-view="attacks"]').click();
+    await expect(page.locator('.audio-analysis-dial')).toHaveCount(4);
+    await expect(page.locator('.audio-analysis-control')).toHaveCount(4);
+
+    const release = page.locator('[data-detector-knob="releaseMs"] input');
+    await release.focus();
+    const before = await page.locator('[data-detector-knob="releaseMs"] output').textContent();
+    await release.press('ArrowUp');
+    const after = await page.locator('[data-detector-knob="releaseMs"] output').textContent();
+    expect(after).not.toBe(before);
+    await expect(release).toHaveCSS('pointer-events', 'none');
+
+    // A reading group shows its smoothing and its gain; the combined view
+    // shows every group's knobs under four shared group headings.
+    await page.locator('[data-audio-view="bands"]').click();
+    await expect(page.locator('.audio-analysis-dial')).toHaveCount(2);
+    await expect(page.locator('[data-detector-knob="bandsGain"]')).toHaveCount(1);
+    await page.locator('[data-audio-view="all"]').click();
+    await expect(page.locator('.audio-analysis-dial')).toHaveCount(10);
+    await expect(page.locator('.audio-control-group h3')).toHaveCount(4);
   });
 });

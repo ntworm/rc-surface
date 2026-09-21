@@ -1,7 +1,7 @@
 {
-  "name": "Ableton RC Surface",
+  "name": "RC Surface",
   "author": "worm",
   "entry": "dist/extension.js",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "minimumApiVersion": "1.0.0"
 }

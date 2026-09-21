@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as esbuild from "esbuild";
@@ -21,6 +21,10 @@ function copyDir(src: string, dst: string): void {
   }
   fs.mkdirSync(dst, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    // Preserve experiments in source, not in the Browser release payload.
+    if (src === "static" && entry.name === "audio-lab") continue;
+    if (path.normalize(src) === path.normalize("static/shared")
+      && entry.name.startsWith("native-audio-contract.")) continue;
     const s = path.join(src, entry.name);
     const d = path.join(dst, entry.name);
     if (entry.isDirectory()) {
@@ -33,10 +37,24 @@ function copyDir(src: string, dst: string): void {
   }
 }
 
+function clearDirContents(dir: string): void {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    fs.rmSync(path.join(dir, entry.name), { recursive: true, force: true });
+  }
+}
+
 function copyStatic() {
   try {
-    fs.rmSync(staticDst, { recursive: true, force: true });
+    // Keep the destination directory itself in place. Ableton's extension
+    // host can hold a directory handle while it serves the current build;
+    // clearing its children still gives us a clean tree without an EPERM on
+    // the root directory.
+    clearDirContents(staticDst);
     copyDir("static", staticDst);
+    const legalDst = path.join(staticDst, "legal");
+    fs.mkdirSync(legalDst, { recursive: true });
+    for (const name of ["LICENSE", "NOTICE"]) fs.copyFileSync(name, path.join(legalDst, name));
     const mediaPipeDst = path.join(staticDst, "phone-v3", "vendor", "mediapipe");
     copyDir(
       path.join("node_modules", "@mediapipe", "camera_utils"),
@@ -49,6 +67,7 @@ function copyStatic() {
     console.log(`copied static/* → ${staticDst}`);
   } catch (err) {
     console.error("Error copying static:", err);
+    throw err;
   }
 }
 
@@ -120,6 +139,9 @@ if (watch) {
   });
   console.log("node-watcher is watching static/ for changes...");
 } else {
+  if (production) {
+    fs.rmSync(`${manifest.entry}.map`, { force: true });
+  }
   await esbuild.build({
     entryPoints: ["src/extension.ts"],
     outfile: manifest.entry,

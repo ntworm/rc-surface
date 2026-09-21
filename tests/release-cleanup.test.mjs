@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // Test files run in parallel and every one that starts a server competes
@@ -102,7 +102,7 @@ test("getServerInfo exposes only local phone/admin URLs and no legacy QR fields"
 
     assert.equal(info.isRunning, true);
     assert.match(info.phoneUrl, new RegExp(`^https://[^:]+:${info.httpsPort}/(?:\\?token=.+)?$`));
-    assert.match(info.adminUrl, new RegExp(`^https://127\\.0\\.0\\.1:${info.httpsPort}/static/admin/(?:\\?token=.+)?$`));
+    assert.match(info.adminUrl, new RegExp(`^http://127\\.0\\.0\\.1:${info.port}/static/admin/(?:\\?token=.+)?$`));
     assert.equal(Object.hasOwn(info, "mixUrl"), false);
     assert.equal(Object.hasOwn(info, "mixQrSrc"), false);
     assert.equal(Object.hasOwn(info, "qrSrc"), false);
@@ -246,11 +246,11 @@ test("release docs and control catalogs use current names only", () => {
   const releaseDocs = [
     "README.md",
     "docs/INSTALL.md",
-    "docs/TESTER-GUIDE.md",
+    "internal/TESTER-GUIDE.md",
   ];
   for (const rel of releaseDocs) {
     const text = read(rel);
-    assert.doesNotMatch(text, /0\.5\.1|Ableton-RC-Surface-0\.5\.1|Ableton-RC-Bridge-0\.5\.1/);
+    assert.doesNotMatch(text, /0\.5\.1|RC-Surface-0\.5\.1|Ableton-RC-Bridge-0\.5\.1/);
     assert.match(text, new RegExp(version.replaceAll(".", "\\.")));
   }
 
@@ -278,7 +278,7 @@ test("release docs and control catalogs use current names only", () => {
   ];
   const removedPerfFiles = [
     "README.md",
-    "docs/README.md",
+    "internal/README.md",
     "docs/CUSTOMIZATION.md",
     "docs/USER-GUIDE.md",
     "docs/INSTALL.md",

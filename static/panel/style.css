@@ -1,4 +1,4 @@
-/* ── Ableton RC Surface — Panel v0.4 ────────────────────────── */
+/* ── RC Surface — Panel v0.4 ────────────────────────── */
 /* Dark theme, compact density, WebKit-safe (no color-mix).    */
 
 *,*::before,*::after{box-sizing:border-box}
@@ -596,8 +596,8 @@ body{
   transition: background 80ms, box-shadow 80ms;
 }
 .map-item .led.on {
-  background: #4f4;
-  box-shadow: 0 0 6px #4f4;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
 }
 .map-item.mapped .led.on {
   background: var(--accent);
@@ -787,7 +787,7 @@ body{
 .picker-track .picker-kind,
 .picker-track[data-kind="tempo"] .picker-kind{
   background:rgba(255,160,60,0.15);    /* orange — track header / tempo */
-  color:#ffa03c;
+  color: var(--accent);
 }
 .picker-track:hover .picker-kind{
   background:rgba(255,255,255,0.2);
@@ -964,28 +964,33 @@ body{
   border:1px solid var(--border);
   border-radius:0;
   padding:10px 12px;
+  /* Two columns on the container, not a fixed width on each label: the label
+     column then measures the longest label in whatever language is loaded,
+     and the rows still line up with each other. CERT is four characters and
+     CERTIFICADO is eleven. */
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr);
+  gap:4px 10px;
+  align-items:center;
 }
 .conn-mode-row{
-  display:flex;
-  align-items:center;
-  gap:8px;
+  display:contents;
   font-size:11px;
-  margin-bottom:4px;
 }
-.conn-mode-row:last-child{margin-bottom:0}
 .conn-mode-label{
   font-size:10px;
   font-weight:700;
   text-transform:uppercase;
   letter-spacing:0.3px;
   color:var(--text2);
-  width:55px;
-  flex-shrink:0;
+  white-space:nowrap;
 }
 .conn-mode-val{
   font-family:var(--mono);
   font-size:11px;
   color:var(--text);
+  min-width:0;
+  overflow-wrap:anywhere;
 }
 
 /* ── Footer ─────────────────────────────────────────────────── */
@@ -1017,7 +1022,7 @@ body{
 .footer .server-dot.on{background:var(--ok)}
 .footer .server-dot.off{background:var(--text3)}
 .footer .server-dot.starting{
-  background:#f59e0b;
+  background: var(--accent);
   animation:dot-pulse 0.8s ease-in-out infinite alternate;
 }
 @keyframes dot-pulse{
@@ -1120,94 +1125,6 @@ body{
 }
 .map-item.mapped .live-val { color: var(--accent, #4af); }
 
-/* Bind modal — hierarchical tree (track → mixer / devices → params) */
-#bind-list {
-  padding: 4px;
-}
-.bind-track, .bind-device {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  cursor: pointer;
-  border-radius:0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  user-select: none;
-  transition: background 80ms;
-}
-.bind-track:hover, .bind-device:hover {
-  background: rgba(255,255,255,0.05);
-}
-.bind-track .bind-chev, .bind-device .bind-chev {
-  font-size:10px;
-  color: var(--text2);
-  width: 10px;
-  flex-shrink: 0;
-}
-.bind-track-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bind-device {
-  padding-left: 22px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text);
-}
-.bind-device-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bind-param {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  cursor: pointer;
-  border-radius:0;
-  font-size: 11px;
-  color: var(--text);
-  user-select: none;
-  transition: background 80ms;
-}
-.bind-param:hover {
-  background: rgba(74,170,255,0.10);
-}
-.bind-mixer {
-  padding-left: 22px;
-  color: var(--text2);
-}
-.bind-device-param {
-  padding-left: 36px;
-  color: var(--text2);
-}
-.bind-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bind-kind {
-  font-size:10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--text3);
-  background: rgba(255,255,255,0.04);
-  padding: 1px 5px;
-  border-radius:0;
-  flex-shrink: 0;
-}
-
 /* Custom styling for range inputs inside mapping chips */
 .bound-chip input[type="range"] {
   -webkit-appearance: none;
@@ -1253,15 +1170,16 @@ body{
 .bound-chip {
   position: relative;
   display: flex;
-  flex-direction: row;
+  /* Column, matching what mappings.js sets inline and what has always shipped.
+     This said `row` and was overridden, so the rule never took effect. */
+  flex-direction: column;
   gap: 16px;
   padding: 12px;
   margin-bottom: 12px;
-  background: #2c2c2f;
-  border: 1px solid #1a1a1c;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius:0;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-  color: #d1d1d1;
+  color: var(--text);
 }
 
 /* Ableton style Knobs */
@@ -1276,7 +1194,7 @@ body{
 
 .knob-label {
   font-size:10px;
-  color: #a1a1a5;
+  color: var(--text2);
   font-weight: 600;
   margin-bottom: 4px;
   text-align: center;
@@ -1288,11 +1206,12 @@ body{
   position: relative;
   width: 28px;
   height: 28px;
-  border-radius:0;
-  background: #1c1c1f;
-  border: 2.5px solid #3c3c40;
+  /* Round, like the phone's knobs. A rotary control that reads as a square is
+     the one shape the zero-radius rule does not apply to. */
+  border-radius: 50%;
+  background: var(--ctrl);
+  border: 2.5px solid var(--border);
   cursor: ns-resize;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1300,14 +1219,14 @@ body{
 }
 
 .knob-wheel:hover {
-  border-color: #5a5a60;
+  border-color: var(--accent);
 }
 
 .knob-pointer {
   position: absolute;
   width: 2.5px;
   height: 9px;
-  background: #00ffcc;
+  background: var(--accent);
   top: 2px;
   transform-origin: bottom center;
   transform: rotate(-135deg);
@@ -1322,9 +1241,9 @@ body{
 }
 
 .bound-chip select {
-  background: #1e1e21;
-  color: #fff;
-  border: 1px solid #3e3e42;
+  background: var(--ctrl);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius:0;
   font-size: 10px;
   height: 20px;
@@ -1400,7 +1319,8 @@ body{
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  width: 70px;
+  min-width: 70px;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -1424,44 +1344,7 @@ body{
 
 /* ── Empty & Inactive States (A5) ───────────────────────────────────── */
 
-/* Generic empty-state card used by the sensor grid, mapping list, and
-   anywhere else we want a soft placeholder. The accent-soft border keeps
-   it on-theme without competing with active data displays. */
-.empty-state{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-  padding:20px;
-  color:var(--text3);
-  text-align:center;
-  font-size:11px;
-  border:1px dashed rgba(255,255,255,0.08);
-  border-radius:0;
-  margin:8px;
-}
-.empty-state::before{
-  content:"○";
-  font-size:18px;
-  opacity:0.55;
-}
-.empty-state .empty-title{
-  font-weight:600;
-  color:var(--text2);
-  font-size:11px;
-  letter-spacing:0.4px;
-  text-transform:uppercase;
-}
-.empty-state .empty-sub{
-  font-size:10px;
-  color:var(--text3);
-  line-height:1.4;
-  max-width:240px;
-}
-
-/* Inline banner inside #map-list when no controls are mapped yet.
-   Lighter than .empty-state so the user can still see the group list. */
+/* Inline banner inside #map-list when no controls are mapped yet. */
 .map-list-empty{
   display:flex;
   align-items:center;
@@ -1515,10 +1398,65 @@ body{
   transition:background 0.2s ease, opacity 0.2s ease;
 }
 .ctrl-group[data-active="1"] .ctrl-group-status{
-  color:#34c759;
-  background:rgba(52,199,89,0.10);
+  color:var(--ok);
+  background:var(--ok-bg);
 }
 .ctrl-group[data-active="1"] .ctrl-group-status::before{
-  background:#34c759;
+  background:var(--ok);
   opacity:1;
+}
+
+/* Language selector. Sits in the tab bar because the panel is where the
+   setting lives: the phone follows, and never offers its own. */
+.lang-select { margin-left: auto; display: inline-flex; gap: 2px; align-items: center; }
+.lang-btn {
+  min-width: 30px; padding: 3px 7px; cursor: pointer;
+  border: 1px solid var(--border, #333); background: var(--surface-soft, #1c1c1c);
+  color: var(--text2, #999); font: inherit; font-size: 10px; letter-spacing: .06em;
+}
+.lang-btn.on { background: var(--accent, #ff9f0a); border-color: var(--accent, #ff9f0a); color: #141414; }
+
+/* ---- autostart -----------------------------------------------------------
+   Sits above the footer because it decides the next session, while every
+   button below it acts on this one. */
+.autostart-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border, #2c2c2e);
+}
+.autostart-text {
+  flex: 1;
+  min-width: 0;
+}
+.autostart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #fff);
+}
+.autostart-note {
+  font-size: 11px;
+  color: var(--text-dim, #8e8e93);
+  margin-top: 2px;
+}
+#btn-autostart {
+  flex: 0 0 auto;
+  min-width: 72px;
+}
+#btn-autostart.on {
+  background: var(--accent, #ffa133);
+  border-color: var(--accent, #ffa133);
+  color: #141414;
+}
+
+.migration-notice {
+  background: rgba(255, 159, 10, 0.12);
+  border: 1px solid var(--accent, #ff9f0a);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 16px 0 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text, #e0e0e0);
 }

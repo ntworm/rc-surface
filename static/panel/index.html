@@ -45,7 +45,7 @@
   </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RC Surface — Panel</title>
+<title data-i18n="panel.title">RC Surface — Panel</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -53,12 +53,16 @@
 <!-- ── Tab Bar ──────────────────────────────────────────────── -->
 <nav class="tab-bar">
   <button class="tab-btn active" data-tab="main">
-    <span class="tab-text">Main</span><span class="tab-abbr" title="Main">●</span>
+    <span class="tab-text" data-i18n="panel.tabMain">Main</span><span class="tab-abbr" title="Main" data-i18n-title="panel.tabMain">●</span>
   </button>
   <button class="tab-btn" data-tab="mappings">
-    <span class="tab-text">Mappings</span><span class="tab-abbr" title="Mappings">M</span>
+    <span class="tab-text" data-i18n="panel.tabMappings">Mappings</span><span class="tab-abbr" title="Mappings" data-i18n-title="panel.tabMappings">M</span>
     <span class="badge" id="badge-mappings">0</span>
   </button>
+  <span class="lang-select" role="group" data-i18n-aria-label="lang.aria">
+    <button type="button" class="lang-btn on" data-set-locale="en" data-i18n="lang.en">EN</button>
+    <button type="button" class="lang-btn" data-set-locale="pt-BR" data-i18n="lang.ptBR">PT</button>
+  </span>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -69,31 +73,31 @@
   <!-- QR Cards -->
   <div class="qr-row" id="qr-row">
     <div class="qr-card">
-      <span class="qr-label">Performance</span>
+      <span class="qr-label" data-i18n="panel.performance">Performance</span>
       <div class="qr-frame" id="qr-perf"></div>
       <div class="qr-url" id="url-perf"></div>
       <div class="qr-actions">
-        <a class="btn sm" id="open-perf" href="#" target="_blank" style="text-decoration:none">Open</a>
+        <a class="btn sm" id="open-perf" href="#" target="_blank" style="text-decoration:none" data-i18n="panel.open">Open</a>
         <a class="btn sm" id="link-admin" href="#" target="_blank" style="text-decoration:none;font-size:9px">admin ↗</a>
       </div>
     </div>
     <div class="qr-card" id="perf-status-card" style="display:none; align-items: stretch; justify-content: flex-start; text-align: left; padding: 12px 16px;">
-      <span class="qr-label" style="text-align:center; margin-bottom:4px;">Performance Status</span>
+      <span class="qr-label" style="text-align:center; margin-bottom:4px;" data-i18n="panel.perfStatus">Performance Status</span>
       <div style="display:flex; flex-direction:column; gap:8px; width:100%; font-size:11px;">
         <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:4px;">
-          <span style="color:var(--text2)">Connected Client</span>
+          <span style="color:var(--text2)" data-i18n="panel.connectedClient">Connected Client</span>
           <span id="perf-device" style="font-weight:bold; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
         </div>
         <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:4px;">
-          <span style="color:var(--text2)">Phone Frame Rate</span>
+          <span style="color:var(--text2)" data-i18n="panel.frameRate">Phone Frame Rate</span>
           <span id="perf-fps" style="font-weight:bold; font-family:var(--mono); color:var(--text);">—</span>
         </div>
         <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:4px;">
-          <span style="color:var(--text2)">Command Latency (RTT)</span>
+          <span style="color:var(--text2)" data-i18n="panel.rtt">Command Latency (RTT)</span>
           <span id="perf-rtt" style="font-weight:bold; font-family:var(--mono); color:var(--text);">—</span>
         </div>
         <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
-          <span style="color:var(--text2)">MediaPipe Latency</span>
+          <span style="color:var(--text2)" data-i18n="panel.mediapipe">MediaPipe Latency</span>
           <span id="perf-mediapipe" style="font-weight:bold; font-family:var(--mono); color:var(--text);">—</span>
         </div>
       </div>
@@ -101,7 +105,7 @@
   </div>
 
   <!-- Not-running placeholder -->
-  <div id="qr-placeholder" class="hidden" style="text-align:center;padding:24px;color:var(--text2);font-size:11px">
+  <div id="qr-placeholder" class="hidden" style="text-align:center;padding:24px;color:var(--text2);font-size:11px" data-i18n="panel.startForQr">
     Start the server to get QR codes and LAN URLs.
   </div>
 
@@ -110,9 +114,9 @@
     <div class="pulse-dot" id="conn-pulse"></div>
     <div>
       <div class="conn-count" id="conn-count">0</div>
-      <div class="conn-label" id="conn-label">clients</div>
+      <div class="conn-label" id="conn-label" data-i18n="panel.clients">clients</div>
     </div>
-    <div class="vu-meter" title="Server CPU usage (saturation = latency risk)">
+    <div class="vu-meter" title="Server CPU usage (saturation = latency risk)" data-i18n-title="panel.cpu">
       <div class="vu-fill" id="vu-fill"></div>
     </div>
   </div>
@@ -121,29 +125,29 @@
   <div class="ctrl-groups" id="ctrl-groups"></div>
 
   <!-- Network summary (migrated from former Interfaces tab) -->
-  <div class="section-title" style="margin-top:16px">Network</div>
+  <div class="section-title" style="margin-top:16px" data-i18n="panel.network">Network</div>
   <div class="iface-primary" style="margin-bottom:8px">
     <div class="ip" id="iface-primary-ip">—</div>
-    <div class="url" id="iface-primary-url">Server not running</div>
+    <div class="url" id="iface-primary-url" data-i18n="panel.notRunning">Server not running</div>
     <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn sm" id="copy-primary">Copy URL</button>
+      <button class="btn sm" id="copy-primary" data-i18n="panel.copyUrl">Copy URL</button>
     </div>
   </div>
   <!-- Connection Mode — A1 followup: ids ref'd by updateServerUI()
        were dropped along with the Interfaces tab. Restoring them in a
        compact rows block keeps the JS unchanged and the panel stable. -->
-  <div class="section-title" style="margin-top:10px">Connection Mode</div>
+  <div class="section-title" style="margin-top:10px" data-i18n="panel.connectionMode">Connection Mode</div>
   <div class="conn-mode" id="conn-mode">
     <div class="conn-mode-row">
-      <span class="conn-mode-label">Protocol</span>
+      <span class="conn-mode-label" data-i18n="panel.protocol">Protocol</span>
       <span class="conn-mode-val" id="mode-proto">HTTP</span>
     </div>
     <div class="conn-mode-row">
-      <span class="conn-mode-label">Port</span>
+      <span class="conn-mode-label" data-i18n="panel.port">Port</span>
       <span class="conn-mode-val" id="mode-port">—</span>
     </div>
     <div class="conn-mode-row">
-      <span class="conn-mode-label">Cert</span>
+      <span class="conn-mode-label" data-i18n="panel.cert">Cert</span>
       <span class="conn-mode-val" id="mode-cert">n/a</span>
     </div>
   </div>
@@ -157,18 +161,18 @@
     <!-- Left: control list -->
     <div class="map-left">
       <div class="map-search" style="display:flex;gap:6px;margin-bottom:8px">
-        <input type="text" id="map-search" placeholder="Search controls…" style="flex:1">
-        <button id="btn-project-import" class="btn sm" title="Import .rcsurface">PRJ↑</button>
-        <button id="btn-project-export" class="btn sm" title="Export .rcsurface">PRJ↓</button>
-        <button id="btn-project-rollback" class="btn sm" title="Rollback project profile">↶</button>
-        <select id="map-clear-category" class="btn sm" style="height:26px;flex-shrink:0" aria-label="Mappings to clear"></select>
-        <button class="btn sm danger" id="btn-clear" title="Clear mappings for the selected category (asks for confirmation)" style="height:26px;flex-shrink:0">Clear</button>
+        <input type="text" id="map-search" placeholder="Search controls…" data-i18n-placeholder="panel.searchControls" style="flex:1">
+        <button id="btn-project-import" class="btn sm" title="Import .rcsurface" data-i18n-title="panel.import">PRJ↑</button>
+        <button id="btn-project-export" class="btn sm" title="Export .rcsurface" data-i18n-title="panel.export">PRJ↓</button>
+        <button id="btn-project-rollback" class="btn sm" title="Rollback project profile" data-i18n-title="panel.rollback">↶</button>
+        <select id="map-clear-category" class="btn sm" style="height:26px;flex-shrink:0" aria-label="Mappings to clear" data-i18n-aria-label="panel.mappingsToClear"></select>
+        <button class="btn sm danger" id="btn-clear" title="Clear mappings for the selected category (asks for confirmation)" data-i18n-title="panel.clearCategory" style="height:26px;flex-shrink:0" data-i18n="common.clear">Clear</button>
       </div>
       <div class="map-list" id="map-list"></div>
     </div>
     <!-- Right: detail -->
     <div class="map-right" id="map-right">
-      <div class="map-detail-empty" id="map-empty">Select a control to view details</div>
+      <div class="map-detail-empty" id="map-empty" data-i18n="panel.selectControl">Select a control to view details</div>
       <div class="map-detail hidden" id="map-detail">
         <h3 id="map-detail-name"></h3>
         <div class="map-live-value">
@@ -189,22 +193,22 @@
           <span id="map-conflict-msg"></span>
           <div style="display:flex;gap:6px">
             <button class="btn sm" id="map-conflict-cancel" style="flex:1;height:22px;font-size:10px">Cancel</button>
-            <button class="btn sm primary" id="map-conflict-replace" style="flex:1;height:22px;font-size:10px">Replace existing</button>
+            <button class="btn sm primary" id="map-conflict-replace" style="flex:1;height:22px;font-size:10px" data-i18n="panel.replaceExisting">Replace existing</button>
           </div>
         </div>
         <!-- Inline picker: lives in the detail panel so conflict warnings and
              the picker share the same visible space (no modal in the way). -->
         <div id="map-picker" class="hidden">
           <div id="map-picker-toolbar">
-            <input type="text" id="map-picker-search" placeholder="Search parameters…">
+            <input type="text" id="map-picker-search" placeholder="Search parameters…" data-i18n-placeholder="panel.searchParams">
             <button class="btn sm" id="map-picker-cancel">Cancel</button>
           </div>
           <div id="map-picker-list" class="picker-list"></div>
         </div>
         <div class="bound-targets" id="map-detail-targets"></div>
         <div style="display:flex; gap:8px;">
-          <button class="btn primary" id="btn-bind" style="margin-bottom:8px; flex:1;">Bind to…</button>
-          <button class="btn primary" id="btn-trigger" style="margin-bottom:8px; flex:1; background:var(--flux); border-color:var(--flux); color:var(--flux-ink);">Trigger to…</button>
+          <button class="btn primary" id="btn-bind" style="margin-bottom:8px; flex:1;" data-i18n="panel.bindTo">Bind to…</button>
+          <button class="btn primary" id="btn-trigger" style="margin-bottom:8px; flex:1; background:var(--flux); border-color:var(--flux); color:var(--flux-ink);" data-i18n="panel.triggerTo">Trigger to…</button>
         </div>
       </div>
     </div>
@@ -214,18 +218,30 @@
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!-- Footer                                                     -->
 <!-- ═══════════════════════════════════════════════════════════ -->
+<div class="autostart-row">
+  <div class="autostart-text">
+    <div class="autostart-title" data-i18n="panel.autostart">Start automatically with Live</div>
+    <div class="autostart-note" data-i18n="panel.autostartNote">Turn this off to keep the network free for another RC extension. The panel still starts the bridge by hand, and the setting persists between sessions.</div>
+  </div>
+  <button class="btn" id="btn-autostart" type="button">&mdash;</button>
+</div>
+
 <div class="footer">
   <div class="server-status">
     <span class="server-dot" id="footer-dot"></span>
     <span id="footer-status">—</span>
   </div>
-  <button class="btn primary" data-action="start" id="btn-start">Start</button>
-  <button class="btn" data-action="stop" id="btn-stop">Stop</button>
-  <button class="btn" data-action="restart" id="btn-restart">Restart</button>
+  <button class="btn primary" data-action="start" id="btn-start" data-i18n="common.start">Start</button>
+  <button class="btn" data-action="stop" id="btn-stop" data-i18n="common.stop">Stop</button>
+  <button class="btn" data-action="restart" id="btn-restart" data-i18n="common.restart">Restart</button>
   <button class="btn" data-action="refresh" id="btn-refresh">Refresh</button>
   <button class="btn" data-action="close" id="btn-close">Close</button>
 </div>
 
+<script src="../shared/i18n.js"></script>
+<script src="../shared/i18n-catalog.js"></script>
+<script src="../phone-v3/mapping-input-contract.js"></script>
+<script src="../shared/audio-descriptor-catalog.js"></script>
 <script src="../admin/mappings-core.js"></script>
 <script src="mappings.js"></script>
 <script src="qrcode.js"></script>

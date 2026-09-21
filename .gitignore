@@ -1,6 +1,11 @@
 # dependencies
 node_modules/
 
+# Ableton Extensions SDK/CLI tarballs: licensed material, never tracked.
+# Obtain them from Ableton and verify with `npm run check:vendor` (see vendor/README.md).
+vendor/*.tgz
+/.vendor-private/
+
 # build artifacts
 dist/
 *.tsbuildinfo
@@ -36,12 +41,15 @@ Thumbs.db
 *.bak
 
 # local-only working material
+/.worktrees/
 /archive/
 /prompts/
 docs/research/
 docs/marketing/
 docs/blog/
 PROJECT_RELEASE_REVIEW.md
+# agent handoff notes: shared between agents on this machine, never published
+HANDOFF-*.md
 
 # tester kit output (generated locally by `npm run package:tester`)
 /release-kits/

@@ -18,11 +18,13 @@ test('restored gesture templates are capped to three takes before the UI renders
 });
 
 test('vision detectors are opt-in and persist only explicit choices', () => {
-  const { VisionControlState } = load();
+  const { VisionControlState, VISION_DETECTORS } = load();
   const state = new VisionControlState();
-  for (const detector of ['open', 'fist', 'pinch', 'victory', 'fingers']) {
+  assert.deepEqual(Array.from(VISION_DETECTORS), ['open', 'fist', 'pinch', 'victory']);
+  for (const detector of VISION_DETECTORS) {
     assert.equal(state.detectorEnabled(detector), false);
   }
+  assert.equal(state.setDetector('fingers', true), false);
   state.setDetector('victory', true);
   assert.equal(state.detectorEnabled('victory'), true);
   assert.equal(state.toJSON().detectors.victory, true);
@@ -61,6 +63,6 @@ test('hand label only exposes detectors explicitly enabled by the performer', ()
   state.setDetector('open', true);
   assert.equal(state.describeHand(hand), 'Open hand');
   state.setDetector('open', false);
-  state.setDetector('fingers', true);
-  assert.equal(state.describeHand(hand), '4 fingers');
+  assert.equal(state.setDetector('fingers', true), false);
+  assert.equal(state.describeHand(hand), 'Hand tracked');
 });

@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 
 
 // package-tester-kit.mjs
 //
-// Build a tester-ready .zip of the current Ableton RC Bridge release.
+// Build a tester-ready .zip of the current RC Surface release.
 //
 // Usage:
 //   node scripts/package-tester-kit.mjs
@@ -17,7 +17,8 @@
 //
 // Behavior:
 //   1. run `npm run package` to (re)generate the .ablx
-//   2. stage the .ablx + canonical docs into release-kits/<name>-test/
+//   2. stage the .ablx + companion Max devices + canonical docs into
+//      release-kits/<name>-test/
 //   3. write SHA256SUMS.txt
 //   4. zip the staged folder using a Node-native zip writer (STORE, no deps)
 //
@@ -38,7 +39,7 @@ const repoRoot = resolve(here, "..");
 // resolve name + version from package.json (single source of truth)
 const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8"));
 const version = pkg.version;
-const baseName = `Ableton-RC-Surface-${version}`;
+const baseName = `RC-Surface-${version}`;
 const kitName = `${baseName}-test`;
 const kitsRoot = join(repoRoot, "release-kits");
 const stagedDir = join(kitsRoot, kitName);
@@ -50,19 +51,41 @@ const zipPath = join(kitsRoot, `${kitName}.zip`);
 const stageDocs = [
   "README.md",
   "LICENSE",
+  "NOTICE",
   "CHANGELOG.md",
   "CONTRIBUTING.md",
+  "docs/THIRD-PARTY-NOTICES.md",
   "FUNDING.md",
-  "docs/README.md",
+  "internal/README.md",
   "docs/INSTALL.md",
   "docs/USER-GUIDE.md",
   "docs/FAQ.md",
   "docs/PRIVACY.md",
   "docs/SECURITY.md",
   "docs/CUSTOMIZATION.md",
-  "docs/TESTER-GUIDE.md",
-  "docs/PESQUISA_CELULAR_GESTUAL.md",
+  "docs/INSTALL.pt-BR.md",
+  "docs/USER-GUIDE.pt-BR.md",
+  "docs/FAQ.pt-BR.md",
+  "docs/PRIVACY.pt-BR.md",
+  "docs/SECURITY.pt-BR.md",
+  "docs/CUSTOMIZATION.pt-BR.md",
+  "docs/AUDIO-AUDIT.md",
+  "docs/AUDIO-AUDIT.pt-BR.md",
+  "internal/THEME_CONTRACT.md",
+  "internal/TESTER-GUIDE.md",
+  "internal/PESQUISA_CELULAR_GESTUAL.md",
+  "internal/CONTROL-LATENCY-AUDIT-2026-09-09.md",
+  "scripts/assets/kit/Migrate-RC-Surface-Data.cmd",
+  "scripts/assets/kit/Migrate-RC-Surface-Data.ps1",
+  "scripts/assets/kit/Migrate RC Surface Data.command",
 ];
+
+const companionDevices = [
+  "RC-Midi-Receiver.amxd",
+  "RC-Audio-Sender.amxd",
+];
+
+const packageFiles = [`${baseName}.ablx`, ...companionDevices, ...stageDocs];
 
 function log(msg) {
   process.stdout.write(`[tester-kit] ${msg}\n`);
@@ -85,6 +108,33 @@ async function pathExists(p) {
 async function copyFile(src, dst) {
   await mkdir(resolve(dst, ".."), { recursive: true });
   await writeFile(dst, await readFile(src));
+}
+
+async function stageCompanionDevices(sourceDir, destinationDir) {
+  for (const name of companionDevices) {
+    const source = join(sourceDir, name);
+    if (!(await pathExists(source))) {
+      throw new Error(`missing static/${name}`);
+    }
+    await copyFile(source, join(destinationDir, name));
+  }
+}
+
+async function stageDocumentation(sourceDir, destinationDir) {
+  for (const rel of stageDocs) {
+    const src = join(sourceDir, rel);
+    await copyFile(src, join(destinationDir, rel));
+  }
+}
+
+async function writeChecksums(destinationDir) {
+  const sums = [];
+  for (const rel of packageFiles) {
+    const full = join(destinationDir, rel);
+    sums.push(`${await sha256File(full)}  ${rel.split(sep).join("/")}`);
+  }
+  await writeFile(join(destinationDir, "SHA256SUMS.txt"), sums.join("\n") + "\n");
+  return sums;
 }
 
 // minimal Node-native zip writer (STORE method, no compression, no extra fields)
@@ -194,7 +244,7 @@ async function buildZip(srcDir, outPath) {
   for (const r of centralRecords) {
     const rec = Buffer.alloc(46);
     rec.writeUInt32LE(SIG.centralDirHeader, 0);
-    rec.writeUInt16LE(20, 4);           // version made by
+    rec.writeUInt16LE((3 << 8) | 20, 4); // Unix host, version 2.0
     rec.writeUInt16LE(20, 6);           // version needed
     rec.writeUInt16LE(0x0800, 8);       // flag
     rec.writeUInt16LE(0, 10);           // method
@@ -208,7 +258,8 @@ async function buildZip(srcDir, outPath) {
     rec.writeUInt16LE(0, 32);           // comment
     rec.writeUInt16LE(0, 34);           // disk number
     rec.writeUInt16LE(0, 36);           // internal attrs
-    rec.writeUInt32LE(r.isDir ? 0x10 : 0, 38);  // external attrs
+    const mode = r.isDir ? 0o40755 : (r.nameBuf.toString("utf8").endsWith(".command") ? 0o100755 : 0o100644);
+    rec.writeUInt32LE(((mode << 16) | (r.isDir ? 0x10 : 0)) >>> 0, 38);
     rec.writeUInt32LE(r.localHeaderOffset, 42);
     chunks.push(rec, r.nameBuf);
     centralSize += rec.length + r.nameBuf.length;
@@ -238,7 +289,7 @@ async function buildZip(srcDir, outPath) {
 
 async function checkMarkdownLinks(stagedDir) {
   log("verifying relative markdown links...");
-  const mdFiles = ["README.md", ...stageDocs.filter((d) => d.endsWith(".md"))];
+  const mdFiles = stageDocs.filter((d) => d.endsWith(".md"));
   let warnings = 0;
   for (const rel of mdFiles) {
     const fullPath = join(stagedDir, rel);
@@ -267,6 +318,7 @@ async function checkMarkdownLinks(stagedDir) {
     }
   }
   log(`link check done with ${warnings} warning(s)`);
+  if (warnings > 0) throw new Error(`tester kit contains ${warnings} broken relative link(s)`);
 }
 
 async function main() {
@@ -289,31 +341,14 @@ async function main() {
   }
   await copyFile(ablxSrc, join(stagedDir, `${baseName}.ablx`));
 
-  // 3.5 copy the MIDI receiver device
-  const receiverSrc = join(repoRoot, "static", "RC-Midi-Receiver.amxd");
-  if (!(await pathExists(receiverSrc))) {
-    throw new Error("missing static/RC-Midi-Receiver.amxd");
-  }
-  await copyFile(receiverSrc, join(stagedDir, "RC-Midi-Receiver.amxd"));
+  // 3.5 copy companion Max devices
+  await stageCompanionDevices(join(repoRoot, "static"), stagedDir);
 
   // 4. copy docs
-  for (const rel of stageDocs) {
-    const src = join(repoRoot, rel);
-    if (!(await pathExists(src))) {
-      log(`skip missing doc: ${rel}`);
-      continue;
-    }
-    await copyFile(src, join(stagedDir, rel));
-  }
+  await stageDocumentation(repoRoot, stagedDir);
 
   // 5. write SHA256SUMS.txt
-  const sums = [];
-  for (const rel of [`${baseName}.ablx`, "RC-Midi-Receiver.amxd", ...stageDocs]) {
-    const full = join(stagedDir, rel);
-    if (!(await pathExists(full))) continue;
-    sums.push(`${await sha256File(full)}  ${rel.split(sep).join("/")}`);
-  }
-  await writeFile(join(stagedDir, "SHA256SUMS.txt"), sums.join("\n") + "\n");
+  const sums = await writeChecksums(stagedDir);
 
   // 5.5 Check for broken relative links
   await checkMarkdownLinks(stagedDir);
@@ -330,7 +365,18 @@ async function main() {
   log(`  ${sums.length} entries hashed`);
 }
 
-export { buildZip, crc32, sha256File, stageDocs };
+export {
+  buildZip,
+  checkMarkdownLinks,
+  companionDevices,
+  crc32,
+  packageFiles,
+  sha256File,
+  stageCompanionDevices,
+  stageDocs,
+  stageDocumentation,
+  writeChecksums,
+};
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((err) => {

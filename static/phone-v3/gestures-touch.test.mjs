@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from 'node:assert/strict';
@@ -47,6 +47,7 @@ function loadEngineAndApp() {
         dataset: { padModeSet: 'A' },
         setAttribute: () => {},
         querySelector: (sel) => getMockElement(sel),
+        querySelectorAll: () => [],
         getContext: () => ({
           clearRect: () => {},
           beginPath: () => {},
@@ -121,6 +122,7 @@ function loadEngineAndApp() {
   windowContext.window = windowContext;
 
   vm.runInNewContext(engineSource, windowContext, { filename: engineFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
   vm.runInNewContext(snapshotsSource, windowContext, { filename: snapshotsFile });
   vm.runInNewContext(controlsSource, windowContext, { filename: controlsFile });
@@ -143,18 +145,21 @@ test('Touch pressure: updates state.touches with correct force and pressure valu
   assert.equal(rc.state.touches[0].force, 0.8);
 });
 
-test('PointerEvent pressure: tracks active pointer pressures and translates them to touches', () => {
+test('PointerEvent pressure: associates pressure by position when pointer and touch IDs differ', () => {
   const context = loadEngineAndApp();
   const rc = context.window.__abletonRc;
 
-  // Trigger pointerdown with touch type and pressure
+  // PointerEvent.pointerId and Touch.identifier are independent namespaces in
+  // browsers. A real touch can therefore report different IDs for the same
+  // contact; position is the stable bridge between the two event streams.
   context.__triggerWindowEvent('pointerdown', {
-    pointerId: 2,
+    pointerId: 91,
     pointerType: 'touch',
     pressure: 0.65,
+    clientX: 200,
+    clientY: 300,
   });
 
-  // Trigger window touch start event for touch identifier 2
   context.__triggerDocEvent('touchstart', {
     touches: [
       { identifier: 2, clientX: 200, clientY: 300 }

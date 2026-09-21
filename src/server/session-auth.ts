@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as http from "node:http";
@@ -46,14 +46,17 @@ export function timingSafeCompare(a: string, b: string): boolean {
 }
 
 /**
- * Verifies Same-Origin for browser requests.
- * Returns true if no Origin header is present (non-browser client)
+ * Redacts credential query values, including percent-encoded parameter names.
+ * Does not depend on the URL global, which is absent in the Live host.
  */
 export function sanitizeRequestUrl(urlStr: string | undefined): string {
   if (!urlStr) return "/";
-  return urlStr.replace(/(?:token|secret|password|key|admin_token|controller_token|adminToken|controllerToken)=([^&]+)/gi, (match) => {
-    const eqIdx = match.indexOf("=");
-    return `${match.slice(0, eqIdx + 1)}[REDACTED]`;
+  return urlStr.replace(/([?&#])([^=&#?]+)=([^&#]*)/g, (match, separator, key) => {
+    let decodedKey: string;
+    try { decodedKey = decodeURIComponent(key).toLowerCase(); }
+    catch { return match; }
+    if (!/^(token|secret|password|key|admin_token|controller_token|admintoken|controllertoken)$/.test(decodedKey)) return match;
+    return `${separator}${key}=[REDACTED]`;
   });
 }
 

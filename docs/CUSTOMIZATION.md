@@ -1,12 +1,12 @@
 # Customization Guide
 
-This guide explains where to change Ableton RC Surface without duplicating old code.
+This guide explains where to change RC Surface without duplicating old code.
 It is written for maintainers and contributors.
 
 Read first:
 
 - `CONTRIBUTING.md`
-- `docs/README.md`
+- `internal/README.md`
 
 ## Current Architecture
 
@@ -21,6 +21,7 @@ Backend:
 - `src/live/safe-input.ts` - continuous takeover, loss states, and sensor filtering.
 - `src/live/project-config.ts` - versioned `.rcsurface` profiles, semantic relink, atomic backup, and rollback.
 - `src/live/state.ts` - playhead/live state loop.
+- `src/server/autostart.ts` - whether the bridge takes the network at launch. Only the automatic start is gated; the panel's Start button never consults it.
 - `src/ui/panel.ts` - Ableton panel dialogs.
 - `src/runtime/safety.ts` - process safety handlers.
 
@@ -72,8 +73,8 @@ Control updates use:
 Canonical groups:
 
 - `pad-1` through `pad-12`
-- `knob-1` through `knob-6`
-- `fader-1` through `fader-6`
+- `knob-1` through `knob-8`
+- `fader-1` through `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
 - `toggle-1` through `toggle-4`
 - `button-1` through `button-4`
@@ -152,20 +153,24 @@ Important behavior:
 - Trigger-note targets use `mode: "trigger_note"` with
   `type: "device_param"` for compatibility with the mapping engine.
   Identity is track + MIDI note, not device/parameter slot.
-- Mobile mapping keys can be scoped by phone client ID
-  (`client-id::control`). Always use the local `mappingKey()` helper
-  before reading or writing `state.currentMappings`.
+- Mappings are shared by control name across connected phones. Legacy
+  `client-id::control` keys are migration input only: the mobile mapping layer
+  folds them onto the canonical control and removes the scoped key on write.
+  Always use the local `mappingKey()` helper rather than rebuilding keys.
 
 Editor fields currently exposed on mobile:
 
 - `mode`: `continuous`, `toggle`, `trigger_note`
 - `curve`: `linear`, `exponential`, `logarithmic`, `s-curve`
+- `targetScale`: `auto`, `linear`, `geometric`
 - `inMin`, `inMax`, `outMin`, `outMax`
 - `drive`, `compressor`, `smooth`, `threshold`
 - `midiNote` via Pitch/Octave selectors
 - `midiVelocity`
 - `takeoverMode`: `scale` (default), `pickup`, or advanced `jump`
 - `neutralPolicy` and `neutralValue` for signal-loss behavior
+
+Unsupported/retired mapping modes are discarded on load and rejected on creation.
 
 The curve canvas is a local visual preview of the mapping response. If
 the backend curve implementation changes, update both the backend tests
@@ -187,10 +192,16 @@ value. Never delete a mapping as part of error recovery.
 Phone-side safety primitives live in `static/phone-v3/safe-input-layer.js`:
 
 - audio timeout, outlier rejection, hold/release, and smooth recovery;
-- single-hand spatial calibration and normalization;
-- light, medium, and intense vision smoothing;
-- bounded inertial prediction whose points cannot trigger gestures;
+- a 47-dimension static-pose descriptor combining 42 normalized landmark
+  coordinates with five articulation dimensions for finger spread and thumb
+  opposition;
+- per-gesture tolerance learned from each slot's own takes, with the base
+  threshold as a floor so calibration can only widen acceptance;
 - gesture templates trained only in Learn mode and immutable in performance.
+
+Hand-position smoothing lives in `static/phone-v3/vision-processor.js`, where
+one One Euro filter design steadies X/Y/Z while opening its cutoff for fast
+movement.
 
 MediaPipe Hands and Camera Utilities are npm runtime dependencies copied into
 `dist/static/phone-v3/vendor/mediapipe/` by the build. Vision therefore starts
@@ -221,28 +232,39 @@ Files:
 
 - `static/phone-v3/vision-processor.js`
 - `static/phone-v3/vision-processor.test.mjs`
+- `static/phone-v3/safe-input-layer.js`
 - `static/phone-v3/app.js`
 - `static/panel/app.js`
 
-Canonical controls:
+Runtime vision diagnostics:
 
 - `sensor.vision.active`
 - `sensor.vision.x`
 - `sensor.vision.y`
 - `sensor.vision.z`
+- `sensor.vision.palm`
+- `sensor.vision.face`
 - `sensor.vision.fist`
 - `sensor.vision.pinch`
 - `sensor.vision.victory`
+- `sensor.vision.rotateVal`
 - `sensor.vision.open`
-- `sensor.vision.thumb`
-- `sensor.vision.index`
-- `sensor.vision.middle`
-- `sensor.vision.ring`
-- `sensor.vision.pinky`
 - `sensor.vision.fingers`
+- `sensor.vision.pinch_x`
+- `sensor.vision.pinch_y`
+- `sensor.vision.pinch_z`
 - `sensor.vision.color.r`
 - `sensor.vision.color.g`
 - `sensor.vision.color.b`
+- `sensor.vision.gesture.1`
+- `sensor.vision.gesture.2`
+- `sensor.vision.gesture.3`
+
+Public vision mapping controls are intentionally narrower: direct `x/y/z`,
+the four opt-in detectors, `rotateVal`, Pinch Clutch `pinch_x/y/z`, and the
+three numbered learned-pose slots. `active`, `palm`, `face`, finger counts,
+individual fingers, handedness, and whole-frame RGB stay diagnostic and must
+not be added to a picker merely because telemetry exists.
 
 Do not reintroduce two-hand names from old plans unless the user asks for a new migration.
 
@@ -250,25 +272,82 @@ Do not reintroduce two-hand names from old plans unless the user asks for a new 
 
 Files:
 
-- `static/phone-v3/audio-processor.js`
-- `static/phone-v3/audio-processor.test.mjs`
+- `static/phone-v3/audio-processor.js` — capture, the frame loop, and what is published.
+- `static/phone-v3/audio-analysis-controls.js` — every analysis primitive, each one testable on its own.
+- `static/phone-v3/audio-descriptors.js` — pure transient/kick/snare/brightness DSP: band-local rises against each band's own running energy, a soft knee for sensitivity, an exponential release and a response curve. `normalizeSettings` is the single clamp for every detector setting.
+- `static/phone-v3/audio-spectral-descriptors.js` — eight defined spectral features.
+- `static/shared/audio-descriptor-catalog.js` — shared mapping IDs, groups, three shades per family and Hz readout scales. Preserve catalog order and >=3:1 mark contrast against #0e0e0e. Descriptor curves and swatches are solid; their labelled legend toggles are the non-colour identifier.
+- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — the twelve grouped cards, the single graph-view control and bounded selectable histories. The normalized views scale to the loudest visible curve and publish that ceiling on `#audio-timeline[data-scale]`; amplitude scales from RMS/envelope.
+- `static/phone-v3/audio-descriptor-stream.js` — contiguous sample windows and reusable FFT buffers.
+- `static/phone-v3/audio-descriptor-worklet.js` — continuous capture with one pending, acknowledged descriptor message.
+- `static/phone-v3/style.css` — grouped flat arc dials (horizontal group scroll on short screens), a separate WINDOW toolbar.
+- `static/phone-v3/audio-detector-timing.js` — quarter-note-based subdivisions for RELEASE/SMOOTH: 1/128..1/1, straight/triplet/dotted, sorted by duration. Saved `*Beats` choices and FREE `*Ms` values stay independent; app.js resolves fractional milliseconds when Live tempo/SYNC changes through the existing worklet settings path. DSP RELEASE supports 1.25..360000 ms (1/128 T at 1000 BPM through 1/1 D at 1 BPM); FREE UI stays 10..500 ms and SMOOTH 0..200 ms. Only labels round. Tempo updates preserve active dials. Band outputs remain linear RMS, not loudness-weighted.
+- `static/phone-v3/audio-processor.test.mjs`, `audio-analysis-controls.test.mjs`
 - `static/phone-v3/app.js`
 - `static/panel/app.js`
 
-Canonical controls:
+### Fast descriptors
+
+Transient measures a new attack; Kick and Snare weight it by low-band and
+upper-band spectral energy. They are heuristics, not instrument classification.
+Brightness preserves the logarithmic power centroid (100–12000 Hz); new
+Centroid uses full-range magnitude weights. They are related, not duplicates
+with identical scaling. New spectral definitions/units are in the
+[User Guide](./USER-GUIDE.md#built-in-audio-detectors).
+Timbre uses a 2N Hann window at hop N; attacks retain rectangular N. The
+compatibility AnalyserNode uses Blackman (mean-square .3046), with band energy
+corrected accordingly. No per-descriptor queue, automatic gain or lookahead.
+The legacy `controls` packet accepts complete legacy4/current12 descriptor batches.
+Negotiated `control_frame` shares one bounded clock across controls and audio;
+`app.js` publishes the descriptor set atomically into that stream. New snapshots
+set `controlsRealtime:true` and never actuate Live. Keep the legacy reader for
+mixed versions; negotiate with `hello.controlStreamVersion=1` before switching.
+Extend capture zero/reset, catalog, bounds and mapping dispatch together.
+The fast descriptor path is independent of amplitude analysis and the general
+30 Hz state snapshot. Continuous capture uses a descriptor-only AudioWorklet;
+the labelled compatibility path falls back to animation-frame analysis.
+Parameter writes are single-flight and retain only the newest destination.
+Preserve that separation: added smoothing, UI painting,
+or stale queued frames must not delay control delivery. Validate physical
+microphone-to-Live latency separately; a DSP window is not an end-to-end result.
+
+### Amplitude primitives
+
+`audio-analysis-controls.js` retains only `HystereticGate`, `OnsetGate`
+and `VelocityWindow` for the existing amplitude mapping sources. No tonal
+analysis, note-hold, key estimator or audio BPM estimator remains.
+Amplitude defaults no longer read the retired browser preferences.
+Detector settings and musical timing live in the dedicated descriptor modules.
+
+### Listening to a track
+
+`static/RC-Audio-Sender.amxd`, generated by `scripts/build-audio-sender.js`
+using the container reader in `scripts/amxd.js`. Regenerate rather than editing
+the binary:
+
+```powershell
+node scripts/build-audio-sender.js static/RC-Midi-Receiver.amxd static/RC-Audio-Sender.amxd
+```
+
+It exists because the Extensions SDK exposes no audio: no meter, no buffer, no
+stream, only an offline arrangement render. It sends raw MIDI bytes to UDP
+`9000`, which is where `RC-Midi-Receiver.amxd` already listens, because a Max
+Audio Effect cannot route MIDI to a track other than its own. This is an
+independent pitch-to-MIDI path, not a source of browser audio descriptors.
+
+Public audio mapping controls (all finite normalized `0..1` at the mapping boundary):
 
 - `sensor.audio.rms`
-- `sensor.audio.pitch`
-- `sensor.audio.bpm`
-- `sensor.audio.note`
-- `sensor.audio.clarity`
-- `sensor.audio.whistle.active`
-- `sensor.audio.whistle.bend`
 - `sensor.audio.envelope`
-- `sensor.audio.transient`
 - `sensor.audio.gate`
+- `sensor.audio.attack`
+- `sensor.audio.transient`
+- `sensor.audio.kick`
+- `sensor.audio.snare`
+- `sensor.audio.brightness`
+- `sensor.audio.{centroid,rolloff,flux,flatness,spread,low,mid,high}`
 
-Prefer extending `sensor.audio.*` over creating new audio namespaces.
+Prefer extending `sensor.audio.*` with normalized values rather than new namespaces.
 
 ## Mapping UI
 

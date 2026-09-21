@@ -1,0 +1,63 @@
+﻿# RC Surface — Guia do usuário
+### Controle em tempo real na candidata atual
+## 1. A tela do celular de relance
+## 2. Modos de pad (A / B / C / D)
+### Modo A — Momentâneo (padrão)
+### Modo B — Hold
+### Modo C — Toggle
+### Modo D — Burst
+## 3. LFOs (L1 / L2 / L3 / L4)
+### Controles de cada LFO
+### Uso típico
+## 4. Stutters (S1 / S2 / S3 / S4)
+### Dois eixos, um botão
+### Comportamento do modo B nos stutters
+### Velocidade com visual enxuto
+## 5. Atalhos PERF UTIL
+## 6. XY pads
+### XY 1 — controle direto
+### XY 2 — joystick com física
+## 7. Controles da barra superior
+### SYNC
+### CALIBRAR
+### STAGE
+## 8. Modo MAP — mapeamento pelo celular
+### Escolher um controle
+### Bind num parâmetro
+### Trigger note numa track MIDI
+### Campos do editor de mapeamento
+### Presets, refresh e desfazer bind
+## 9. Aba MIX — knobs e faders
+### Knobs
+### Faders
+## 9.5 Modo Config (CFG)
+### O que dá para mudar por controle
+### Como abrir o CFG
+### Limpando os overrides
+### Onde os dados ficam
+## 10. Aba SNP — snapshots e morph
+### Slots
+### Capturar
+### Limpar
+### Tempo de morph
+### Modos de morph
+## 11. Aba SNS — sensores
+### Estado do sensor
+### MOVIMENTO
+### ORIENTAÇÃO
+### VISÃO LOCAL
+## 12. Abas AUD e VID — áudio e visão
+### Entrada de áudio
+### Escolher a entrada de áudio do navegador
+### Detectores de áudio integrados
+### Os knobs dos detectores
+### Nível de ataque
+### Escutar uma track em vez do microfone
+### Console de performance da VID
+### Poses estáticas aprendidas
+## 13. Referência rápida
+### Faixa vertical por controle
+### Resumo dos modos
+### Nomes de controle (para mapear)
+## 14. Colinha de gestos
+## 15. Diagnóstico

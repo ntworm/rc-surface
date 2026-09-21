@@ -2,41 +2,12 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/ableton-rc-surface
 //
-// This file is part of Ableton RC Surface, distributed under the
+// This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-/* ── Ableton RC Surface — Shared Mappings Core Logic ──────────────── */
+/* ── RC Surface — Shared Mappings Core Logic ──────────────── */
 
-window.phoneControls = [
-  { group: 'Pads', items: Array.from({length:12}, (_,i) => 'pad-' + (i+1)) },
-  { group: 'XY Pads', items: ['xy-1.x','xy-1.y','xy-2.x','xy-2.y'] },
-  { group: 'LFOs (1-4)', items: ['toggle-1','toggle-2','toggle-3','toggle-4'] },
-  { group: 'Stutters (Buttons 1-4)', items: ['button-1','button-2','button-3','button-4'] },
-  { group: 'Mix Knobs (1-6)', items: Array.from({length:6}, (_,i) => 'knob-' + (i+1)) },
-  { group: 'Mix Faders (1-6)', items: Array.from({length:6}, (_,i) => 'fader-' + (i+1)) },
-  { group: 'Sensors: Orientation + Motion', items: [
-      'sensor.orient.alpha', 'sensor.orient.beta', 'sensor.orient.gamma',
-      'sensor.motion.ax', 'sensor.motion.ay', 'sensor.motion.az',
-      'sensor.motion.gx', 'sensor.motion.gy', 'sensor.motion.gz'
-    ]
-  },
-  { group: 'Sensors: Audio', items: [
-      'sensor.audio.rms', 'sensor.audio.pitch', 'sensor.audio.bpm',
-      'sensor.audio.note', 'sensor.audio.clarity',
-      'sensor.audio.whistle.active', 'sensor.audio.whistle.bend',
-      'sensor.audio.envelope', 'sensor.audio.transient', 'sensor.audio.gate'
-    ]
-  },
-  { group: 'Sensors: Vision', items: [
-      'sensor.vision.active', 'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
-      'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
-      'sensor.vision.open', 'sensor.vision.thumb', 'sensor.vision.index',
-      'sensor.vision.middle', 'sensor.vision.ring', 'sensor.vision.pinky',
-      'sensor.vision.fingers', 'sensor.vision.color.r',
-      'sensor.vision.color.g', 'sensor.vision.color.b'
-    ]
-  }
-];
+window.phoneControls = window.MappingInputContract.getControlGroups();
 
 window.currentMappings = {};
 window.mappings = window.currentMappings;
@@ -171,7 +142,7 @@ window.connectCoreWS = function(wsUrl, onOpen, onClose, onClientUpdate, onCustom
       if (onCustomMessage) {
         onCustomMessage(msg);
       }
-    } catch (err) {}
+    } catch {}
   };
 };
 
@@ -249,14 +220,6 @@ window.fetchCoreData = function(onTargets, onMappings, onClients) {
   });
   window.sendWS('getProjectConfigStatus', {}, (res) => {
     if (!res.ok || !res.result) return;
-    const visionGroup = window.phoneControls.find((group) => group.group === 'Sensors: Vision');
-    if (visionGroup) {
-      visionGroup.items = visionGroup.items.filter((name) => !name.startsWith('sensor.vision.gesture.'));
-      for (const template of res.result.clientState?.gestures?.templates || []) {
-        const slug = String(template.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-        if (slug) visionGroup.items.push(`sensor.vision.gesture.${slug}`);
-      }
-    }
     const report = res.result.report;
     const status = document.getElementById('status-info');
     if (status && report) {
