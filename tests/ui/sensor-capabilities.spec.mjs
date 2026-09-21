@@ -120,6 +120,12 @@ test('permission denied on one API stays independent of the other', async ({ pag
 
 test('CALIBRATE without readings shows a neutral reason and audio/camera stay actionable', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 640 });
+  // A runner without a microphone makes getUserMedia reject, and the app then
+  // reverts the checkbox; the assertion below raced that. Feed a silent
+  // stream so "actionable" means what it says on every host.
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async () => new AudioContext().createMediaStreamDestination().stream;
+  });
   await gotoWithClock(page, '/?lang=en');
   await sensorTab(page);
   await page.clock.runFor(2100);
