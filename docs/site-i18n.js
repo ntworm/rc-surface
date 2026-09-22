@@ -224,8 +224,8 @@
       'pt-BR': 'Abra o painel',
     },
     'lp.install.010': {
-      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken.",
-      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada.",
+      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken — the link drawn in <a href=\"#chain\">2.0</a>.",
+      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada — o elo desenhado em <a href=\"#chain\">2.0</a>.",
     },
     'lp.install.011': {
       en: 'Connect the phone',
@@ -380,6 +380,10 @@
       'pt-BR': 'Ler PRIVACY.md',
     },
 
+    'lp.map.165': {
+      en: "Every control on these plans is listed in <a href=\"#controls\">4.0</a>.",
+      'pt-BR': "Todo controle destas plantas está listado em <a href=\"#controls\">4.0</a>.",
+    },
     'lp.map.001': {
       en: 'Surface map <span class="tail">— figs. 1 to 7</span>',
       'pt-BR': 'Mapa da superfície <span class="tail">— figs. 1 a 7</span>',
@@ -514,7 +518,7 @@
     },
     'lp.map.059': {
       en: "<code data-i18n=\"lp.fig.013\">CAPTURE</code>, <code data-i18n=\"lp.fig.014\">CLEAR SLOTS</code>, transition 0.1–5.0 s or synced, and Grid/Vector.",
-      'pt-BR': "<code data-i18n=\"lp.fig.013\">CAPTURE</code>, <code data-i18n=\"lp.fig.014\">CLEAR SLOTS</code>, transição de 0,1 a 5,0 s ou sincronizada, e Grid/Vector.",
+      'pt-BR': "<code data-i18n=\"lp.fig.013\">CAPTURE</code>, <code data-i18n=\"lp.fig.014\">CLEAR SLOTS</code>, transição de 0.1 a 5.0 s ou sincronizada, e Grid/Vector.",
     },
     'lp.map.060': {
       en: 'Vector morph pad',
@@ -594,7 +598,7 @@
     },
     'lp.map.103': {
       en: "Live 2.5-second history: Amplitude, Attacks, Tone, Texture, Bands or All.",
-      'pt-BR': "Histórico ao vivo de 2,5 s: Amplitude, Attacks, Tone, Texture, Bands ou All.",
+      'pt-BR': "Histórico ao vivo de 2.5 s: Amplitude, Attacks, Tone, Texture, Bands ou All.",
     },
     'lp.map.104': {
       en: 'Detector knobs',
@@ -621,8 +625,8 @@
       'pt-BR': "SYNC segue o BPM do Live de 1/128 a 1/1, com quiálteras e pontuadas; FREE guarda os próprios milissegundos. Low, mid e high são loudness K-weighted (ITU-R BS.1770), em LU.",
     },
     'lp.audio.detector-note': {
-      en: "Twelve 0..1 mapping sources: Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%, Low, Mid and High.",
-      'pt-BR': "Doze fontes 0..1 para mapear: Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%, Low, Mid e High.",
+      en: "Twelve 0..1 mapping sources: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.",
+      'pt-BR': "Doze fontes 0..1 para mapear: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.",
     },
     'lp.map.113': {
       en: 'Fig. 6',
@@ -661,8 +665,8 @@
       'pt-BR': 'MAP direto / CLUTCH',
     },
     'lp.map.129': {
-      en: "MAP X/Y/Z follows the hand. CLUTCH is relative and freezes when the pinch opens.",
-      'pt-BR': "MAP X/Y/Z segue a mão. CLUTCH é relativo e congela quando o pinch abre.",
+      en: "MAP X/Y/Z follows the hand; CLUTCH X/Y/Z is relative and freezes when the pinch opens.",
+      'pt-BR': "MAP X/Y/Z segue a mão; CLUTCH X/Y/Z é relativo e congela quando o pinch abre.",
     },
     'lp.map.130': {
       en: 'Camera diagnostics',
@@ -815,7 +819,7 @@
     },
     'lp.controls.032': {
       en: "Free 0.1–5.0 s, or Sync 16 beats to 1/16",
-      'pt-BR': "Free de 0,1 a 5,0 s, ou Sync de 16 beats a 1/16",
+      'pt-BR': "Free de 0.1 a 5.0 s, ou Sync de 16 beats a 1/16",
     },
     'lp.controls.033': {
       en: 'Vector morph pad',
@@ -842,8 +846,8 @@
       'pt-BR': 'Visão de uma mão',
     },
     'lp.controls.042': {
-      en: "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; pinch clutch <code>_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3",
-      'pt-BR': "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; pinch clutch <code>_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; G1–G3 aprendidos",
+      en: "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3",
+      'pt-BR': "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; G1–G3 aprendidos",
     },
     'lp.controls.043': {
       en: 'Map picker',
@@ -883,7 +887,7 @@
     },
     'lp.controls.057': {
       en: "Full-screen transport overlay: locator list, search, and the SYNCED / SDK / FREE readout.",
-      'pt-BR': "Overlay de transporte em tela cheia: lista de locators, busca e a leitura SYNCED / SDK / FREE.",
+      'pt-BR': "Overlay de transporte em tela cheia: lista de locators, busca e a leitura SINCRONIZADO / SDK / FREE.",
     },
     'lp.controls.058': {
       en: "Opens the mapping picker over the current page.",
@@ -1067,7 +1071,7 @@
     },
     'lp.controls.109': {
       en: "CALIBRATE makes the current posture the reference. AUD turns sound into control: level, envelope, gate, attacks and twelve descriptors, graphed over the last 2.5 seconds.",
-      'pt-BR': "CALIBRAR faz da postura atual a referência. AUD transforma som em controle: nível, envelope, gate, attacks e doze descritores, no gráfico dos últimos 2,5 segundos.",
+      'pt-BR': "CALIBRAR faz da postura atual a referência. AUD transforma som em controle: nível, envelope, gate, attacks e doze descritores, no gráfico dos últimos 2.5 segundos.",
     },
     'lp.controls.110': {
       en: "SIGNAL / 2.5s",
@@ -1094,8 +1098,8 @@
       'pt-BR': 'Visão: mão, poses, clutch',
     },
     'lp.controls.117': {
-      en: "Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs.",
-      'pt-BR': "X/Y/Z da mão é contínuo. Um pinch mantido engata o clutch e soltar congela o valor. G1–G3 e os quatro detectores nativos são saídas intencionais.",
+      en: "Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs; PALM and FACE remain local camera diagnostics.",
+      'pt-BR': "X/Y/Z da mão é contínuo. Um pinch mantido engata o clutch e soltar congela o valor. G1–G3 e os quatro detectores nativos são saídas intencionais; PALM e FACE continuam diagnósticos locais da câmera.",
     },
     'lp.controls.118': {
       en: 'the two tips touch',

@@ -207,7 +207,7 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   // inventory while crowding the drawing into four competing rhythms, so they
   // now live only where they are actually consulted. Nothing was dropped —
   // assert both homes so a future edit cannot quietly lose them.
-  assert.match(vision, /G1&#8211;G3 and the four built-in detectors/);
+  assert.match(vision, /G1(?:&#8211;|–)G3 and the four built-in detectors/);
   assert.match(vision, /PALM and FACE remain local camera diagnostics/);
   const inventory = figure('controls', 'scenarios');
   assert.match(inventory, /Open \/ Fist \/ Pinch \/ Victory/);
@@ -293,17 +293,18 @@ test('the sheet is set in one face, embedded, with hierarchy from size', () => {
   );
 });
 
-test('every section states what it is for before showing content', () => {
-  // Five of eight used to open straight into a diagram, a table title or a
-  // symptom, so the reader met the content before learning the section's job.
+test('sections open on their content, not on a line about their content', () => {
+  // These used to open with a `why` paragraph naming the section's job. Read in
+  // sequence they were commentary about the sheet rather than the sheet, so the
+  // owner cut all seven. Assert the decision: a reinstated opener would put the
+  // padding back one section at a time.
   const sections = ['chain', 'map', 'controls', 'scenarios', 'install', 'trouble', 'docs'];
   for (const id of sections) {
     const start = landing.indexOf(`id="${id}"`);
     assert.ok(start > 0, `${id} must exist`);
-    const head = landing.slice(start, start + 1400);
-    assert.match(head, /<p class="why"[ >]/, `${id} needs its why line`);
   }
-  // The hero carries the same job in its lede rather than a duplicate line.
+  assert.doesNotMatch(landing, /<p class="why"[ >]/, 'section openers were cut on purpose');
+  // The hero still states the job once, in its lede.
   const hero = landing.slice(landing.indexOf('id="surface"'), landing.indexOf('id="chain"'));
   assert.match(hero, /class="lede"/);
 });
@@ -610,37 +611,16 @@ test('the chain diagram keeps its column grid in both languages', () => {
   }
 });
 
-test('1.0 highlights section ships in the landing page with EN + pt-BR copy and a matching DOM card', () => {
-  const catalog = loadSiteCatalog();
+test('the four 1.0 features stay documented where the long answers live', () => {
+  // The landing page used to carry a "New in 1.0" card repeating all four.
+  // The owner cut it: a release-notes panel ages into the top of an operator
+  // sheet that is otherwise version-neutral. The features still have to be
+  // documented, so assert the homes that outlive a release.
   const landing = fs.readFileSync(path.join(import.meta.dirname, '..', 'docs', 'index.html'), 'utf8');
-  for (const key of [
-    'lp.highlights.title',
-    'lp.highlights.cfg.title',
-    'lp.highlights.cfg.body',
-    'lp.highlights.lfo.title',
-    'lp.highlights.lfo.body',
-    'lp.highlights.kb.title',
-    'lp.highlights.kb.body',
-    'lp.highlights.lufs.title',
-    'lp.highlights.lufs.body',
-  ]) {
-    assert.ok(catalog[key], `${key} must be present in docs/site-i18n.js`);
-    assert.ok(catalog[key].en, `${key} must have an en value`);
-    assert.ok(catalog[key]['pt-BR'], `${key} must have a pt-BR value`);
-    assert.ok(catalog[key].en.length > 5, `${key}.en must carry real prose`);
-    assert.ok(catalog[key]['pt-BR'].length > 5, `${key}.pt-BR must carry real prose`);
-  }
-  // All four feature cells must be present in the DOM with the matching data-i18n
-  for (const key of [
-    'lp.highlights.cfg.body',
-    'lp.highlights.lfo.body',
-    'lp.highlights.kb.body',
-    'lp.highlights.lufs.body',
-  ]) {
-    assert.match(landing, new RegExp(`data-i18n(-html)?="${key}"`), `${key} must be wired into docs/index.html`);
-  }
-  // The highlights card must exist as a DOM section
-  assert.match(landing, /class="card highlights"/, 'docs/index.html must include the 1.0 highlights card');
+  assert.doesNotMatch(landing, /class="card highlights"/, 'the 1.0 highlights card was cut on purpose');
+  assert.doesNotMatch(landing, /data-i18n(-html)?="lp\.highlights\./, 'no highlights handle may linger');
+  // CFG still has to be reachable from the sheet, as a control rather than as news.
+  assert.match(landing, /data-i18n(-html)?="lp\.controls\.148"/, 'CFG must stay in the header cards');
   // The USER-GUIDE must have a CFG chapter in both languages
   const en = fs.readFileSync(path.join(import.meta.dirname, '..', 'docs', 'USER-GUIDE.md'), 'utf8');
   const pt = fs.readFileSync(path.join(import.meta.dirname, '..', 'docs', 'USER-GUIDE.pt-BR.md'), 'utf8');
