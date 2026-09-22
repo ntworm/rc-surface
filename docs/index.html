@@ -1579,7 +1579,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">4</td><td data-i18n="lp.map.102">Signal history</td><td class="c2">1</td><td data-i18n="lp.map.103">Live 2.5-second history: Amplitude, Attacks, Tone, Texture, Bands or All.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.104">Detector knobs</td><td class="c2">10</td><td data-i18n="lp.map.105">SENS, RELEASE, CURVE, group GAIN and SMOOTH. Note divisions in SYNC, milliseconds in FREE.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.106">Analysis window</td><td class="c2">1</td><td data-i18n-html="lp.map.107">WINDOW x1/x2/x4 trades spectral detail for response time.</td></tr>
-              <tr><td class="c1">7</td><td data-i18n="lp.audio.detectors">Built-in audio detectors</td><td class="c2">12</td><td data-i18n="lp.audio.detector-note">Twelve 0..1 mapping sources: Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%, Low, Mid and High.</td></tr>
+              <tr><td class="c1">7</td><td data-i18n="lp.audio.detectors">Built-in audio detectors</td><td class="c2">12</td><td data-i18n="lp.audio.detector-note">Twelve 0..1 mapping sources: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
@@ -1641,7 +1641,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">2</td><td data-i18n="lp.map.122">Camera</td><td class="c2">1</td><td data-i18n="lp.map.123">On/off, confidence, recognition mode, and the live preview.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.124">Learned poses</td><td class="c2">3</td><td data-i18n-html="lp.map.125">G1, G2 and G3, three examples each: <code>CAP</code>, <code data-i18n="lp.fig.007">TEST</code>, <code data-i18n="lp.fig.008">DEL LAST</code>, <code data-i18n="lp.fig.009">CLR</code>. Recognition emits a momentary 0→1.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.126">Built-in detectors</td><td class="c2">4</td><td data-i18n="lp.map.127">Open, Fist, Pinch and Victory, opt-in and untrained. Rotation belongs to Victory.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.128">Direct MAP / CLUTCH</td><td class="c2">2</td><td data-i18n="lp.map.129">MAP X/Y/Z follows the hand. CLUTCH is relative and freezes when the pinch opens.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.128">Direct MAP / CLUTCH</td><td class="c2">2</td><td data-i18n="lp.map.129">MAP X/Y/Z follows the hand; CLUTCH X/Y/Z is relative and freezes when the pinch opens.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.130">Camera diagnostics</td><td class="c2">2</td><td data-i18n="lp.map.131">PALM size and signed FACE stay local to the preview; they are not mapping controls.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
@@ -1721,6 +1721,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       </figure>
         </div>
       </fieldset>
+      <p class="tnote" data-i18n-html="lp.map.165">Every control on these plans is listed in <a href="#controls">4.0</a>.</p>
       <noscript>
         <style>
           .surface-tabs{display:none}
@@ -1768,7 +1769,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tr><td class="c1">0B</td><td data-i18n="lp.map.076">Motion</td><td class="c2" data-i18n="lp.map.161">6 ax</td><td>SNS</td><td class="c2">SDK</td><td data-i18n="lp.controls.036">GX GY GZ, AX AY AZ</td></tr>
             <tr><td class="c1">0C</td><td data-i18n="lp.map.078">Orientation</td><td class="c2" data-i18n="lp.map.162">3 ax</td><td>SNS</td><td class="c2">SDK</td><td data-i18n="lp.controls.038">Yaw, pitch, roll</td></tr>
             <tr><td class="c1">0D</td><td data-i18n="lp.map.098">Audio input</td><td class="c2">1</td><td>AUD</td><td class="c2">SDK</td><td data-i18n="lp.controls.040">RMS, envelope, gate, attack, plus twelve descriptors</td></tr>
-            <tr><td class="c1">0E</td><td data-i18n="lp.controls.041">Single-hand vision</td><td class="c2">1</td><td>VID</td><td class="c2">SDK</td><td data-i18n-html="lp.controls.042"><code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; pinch clutch <code>_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3</td></tr>
+            <tr><td class="c1">0E</td><td data-i18n="lp.controls.041">Single-hand vision</td><td class="c2">1</td><td>VID</td><td class="c2">SDK</td><td data-i18n-html="lp.controls.042"><code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3</td></tr>
             <tr><td class="c1">0F</td><td data-i18n="lp.controls.043">Map picker</td><td class="c2" data-i18n="lp.controls.146">3 surfaces</td><td>MAP</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.045">Phone overlay, panel Mapping tab and the admin window</td></tr>
             <tr><td class="c1">10</td><td data-i18n="lp.controls.046">Header live panel</td><td class="c2">7</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.048">BPM, transport, TRN, MAP, CFG</td></tr>
             <tr><td class="c1">11</td><td data-i18n="lp.controls.049">Header sync block</td><td class="c2">4</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.051">SYNC, settings, STAGE, CALIBRATE</td></tr>
@@ -2046,7 +2047,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.116">Vision: hand, poses, clutch</h3>
-          <p data-i18n="lp.controls.117">Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs.</p>
+          <p data-i18n="lp.controls.117">Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs; PALM and FACE remain local camera diagnostics.</p>
         </div>
         <div class="feature-figure">
                     <div class="vs-wrap" data-control-illustration="vision">
@@ -2247,7 +2248,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.009">Open the panel</h4>
-            <p data-i18n-html="lp.install.010">In Live, open <span class="path">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken.</p>
+            <p data-i18n-html="lp.install.010">In Live, open <span class="path">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken — the link drawn in <a href="#chain">2.0</a>.</p>
           </div>
         </div>
 
