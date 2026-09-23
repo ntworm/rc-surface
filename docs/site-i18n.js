@@ -894,8 +894,8 @@
       'pt-BR': "Abre o seletor de mapeamento sobre a página atual.",
     },
     'lp.controls.148': {
-      en: "Per-control settings: pad mode, LFO shape, stutter swing, XY 2 physics. PERF and MIX only.",
-      'pt-BR': "Ajustes por controle: modo do pad, forma do LFO, swing do stutter, física do XY 2. Só PERF e MIX.",
+      en: "Per-control settings: pad mode, LFO shape, stutter mode, XY 2 physics. PERF and MIX only.",
+      'pt-BR': "Ajustes por controle: modo do pad, forma do LFO, modo do stutter, física do XY 2. Só PERF e MIX.",
     },
     'lp.controls.059': {
       en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">2.1</a>.",

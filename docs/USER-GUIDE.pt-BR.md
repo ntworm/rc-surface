@@ -509,8 +509,8 @@ pelo celular.
 
 ## 9.5 Modo Config (CFG)
 
-O Modo Config permite que cada pad, knob, fader, toggle, stutter e XY
-pad guarde seu próprio mode, shape, subdivision, swing e physics. O
+O Modo Config permite que controles de performance guardem seus próprios
+overrides individuais (modos, formas, alcances, valores de reset, física). O
 botão **CFG** fica no header do celular, ao lado de **MAP**. Abra-o
 uma vez para mudar o comportamento de um controle; feche-o para voltar
 à execução normal. As configurações persistem por controle no próprio
@@ -531,10 +531,10 @@ navegador do celular, não no Live.
   ramp up, ramp down, square). O modal SYNC continua mostrando o
   preview ao vivo; a forma escolhida aqui sobrescreve a forma global
   só para aquele toggle.
-- **Stutter (button 1 a 4)** — escolha subdivision (1/1 a 1/32), swing
-  (0 a 50 por cento) e phase offset (0 a 360 graus). A taxa real
-  ainda respeita os tetos do LFO (subdivisão de 32 beats, teto por
-  forma).
+- **Stutter (button 1 a 4)** — escolha mode A (momentary), B (hold),
+  C (toggle) ou D (burst). Sobrescreva o modo do botão de stutter sem
+  sair da página. (Subdivisão contínua, swing e deslocamento de fase
+  ficam nas configurações globais do Deep Sync, acessíveis pelo ⚙ ao lado de SYNC).
 - **XY pads** — em `xy-1`, deixe o default. Em `xy-2`, escolha
   friction e bounce; o pad se comporta como um pequeno joystick com
   física que volta ao centro depois do release.
