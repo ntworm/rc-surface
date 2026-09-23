@@ -17,8 +17,8 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.
-- Two physics XY pads.
-- Knobs, faders, toggles, LFO, stutter, and performance utility controls.
+- Two XY pads: one standard/direct (`xy-1`) and one physics joystick (`xy-2`).
+- 4 LFO toggles (`toggle-1`..`toggle-4`), 4 stutter buttons (`button-1`..`button-4`), and performance utility controls (CAP, OFF, 4 snapshot slots).
 - Phone sensors: motion, orientation, audio, and optional camera hand tracking
   via bundled MediaPipe Hands (no CDN).
 - Single-hand vision tracking by design.
@@ -46,7 +46,7 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 ## 1.0 Highlights
 
-- **Config Mode (CFG):** every pad, knob, fader, toggle, stutter and XY pad keeps its own mode, shape, subdivision, swing and physics overrides. Open `CFG` from the phone header (long-press `CFG` to clear all overrides) or right-click a control on the desktop mapping panel to open a per-instance menu. Settings persist per control in `localStorage` under `ableton-rc:control_config`.
+- **Config Mode (CFG):** per-instance overrides for performance controls: pad modes (A/B/C/D), stutter modes (A/B/C/D), LFO waveform shapes, knob drag ranges, fader double-tap reset values, and XY 2 physics (friction, bounce). Open `CFG` from the phone header (long-press `CFG` to clear all overrides) or right-click a control on the desktop mapping panel to open a per-instance menu. Settings persist per control in `localStorage` under `ableton-rc:control_config`.
 - **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 12 Hz).
 - **Desktop keyboard control:** every continuous control (knob, fader, XY pad, toggle, stutter) accepts keyboard nudges while the phone client has focus, so the desktop mapping panel and the phone UI share the same gesture model.
 - **K-weighted loudness:** the AUD tab reports ITU-R BS.1770 K-weighted momentary, short-term and integrated loudness, alongside the existing twelve descriptors.

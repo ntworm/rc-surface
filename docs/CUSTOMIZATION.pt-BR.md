@@ -317,11 +317,10 @@ node scripts/build-audio-sender.js static/RC-Midi-Receiver.amxd static/RC-Audio-
 ```
 
 Ele existe porque o SDK de Extensions não expõe áudio: sem medidor, sem buffer,
-sem stream, apenas uma renderização offline do arrangement. Ele manda bytes MIDI
-crus para a UDP `9000`, que é onde o `RC-Midi-Receiver.amxd` já escuta, porque um
-Max Audio Effect não consegue rotear MIDI para uma track que não seja a dele.
-Esse caminho independente de pitch para MIDI não alimenta os descritores de
-áudio do navegador.
+sem stream, apenas uma renderização offline do arrangement. Ele se comunica com o
+`RC-Midi-Receiver.amxd` pelo barramento interno de send/receive do Max (sem sockets UDP),
+porque um Max Audio Effect não consegue rotear MIDI para uma track que não seja a dele.
+Esse caminho independente de áudio não alimenta os descritores de áudio do navegador.
 
 Controles públicos de áudio (todos finitos e normalizados em `0..1` na fronteira do mapeamento):
 

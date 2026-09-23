@@ -507,8 +507,8 @@ directly from the phone.
 
 ## 9.5 Config Mode (CFG)
 
-Config Mode lets each pad, knob, fader, toggle, stutter and XY pad keep
-its own mode, shape, subdivision, swing and physics overrides. The CFG
+Config Mode lets performance controls keep their own per-instance
+overrides (modes, shapes, ranges, reset values, physics). The CFG
 button lives in the phone header, right next to **MAP**. Open it once
 to change how a single control behaves; close it to go back to normal
 play. Settings persist per control in the phone browser, not in Live.
@@ -528,10 +528,10 @@ play. Settings persist per control in the phone browser, not in Live.
 - **LFO (toggle 1 to 4)** — pick the waveform (sine, triangle, ramp up,
   ramp down, square). The SYNC modal still shows the live preview; the
   shape chosen here overrides the global shape for that toggle.
-- **Stutter (button 1 to 4)** — pick subdivision (1/1 to 1/32), swing
-  (0 to 50 percent) and phase offset (0 to 360 degrees). The actual
-  rate is still capped by the LFO bandwidth rules (32-beat subdivision,
-  per-shape ceiling).
+- **Stutter (button 1 to 4)** — choose mode A (momentary), B (hold),
+  C (toggle) or D (burst). Override the stutter button's mode without
+  leaving the page. (Continuous subdivision, swing, and phase offset
+  live in Deep Sync Settings, accessible from ⚙ next to SYNC).
 - **XY pads** — for `xy-1`, leave the defaults. For `xy-2`, choose
   friction and bounce; the pad behaves like a small physics joystick
   that springs back after release.

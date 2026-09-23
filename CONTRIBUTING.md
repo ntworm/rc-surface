@@ -22,7 +22,7 @@ On macOS/Linux: `export ABLETON_RC_DEV_SYNC=0`.
 
 ```bash
 git clone <this-repo>
-cd ableton-rc-surface
+cd rc-surface
 npm ci
 npm test           # test:static + test:src
 npm run build      # tsc check + esbuild bundle to dist/

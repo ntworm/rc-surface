@@ -7,7 +7,7 @@ your first pad-to-Live mapping working.
 > [!WARNING]
 > **Security Notice**: This extension runs a WebSocket server on your local network. Controller and admin actions require session tokens, but the bridge should still be used only on trusted networks. Do not share QR or admin URLs. See [SECURITY.md](./SECURITY.md) for the threat model.
 
-If you only want the short version: see the [Quick start](../README.md#quick-start)
+If you only want the short version: see the [Quick start](../README.md#quick-start) in the README.
 
 ## Upgrading from Ableton-RC-Surface (1.0.0)
 
@@ -28,7 +28,6 @@ migrator from the tester kit **before** installing the new `.ablx`:
 The script copies every file and skips anything that already exists in the
 destination. It never moves or deletes the source. If the source folder does not
 exist (fresh install), it exits cleanly with a message.
-in the README.
 
 ## 1. Prerequisites
 
