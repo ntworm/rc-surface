@@ -4,6 +4,37 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
+## [Unreleased]
+
+### Added
+
+- The landing page exists in Portuguese as its own URL,
+  https://ntworm.github.io/rc-surface/pt-br.html, generated from the English
+  page and `docs/site-i18n.js` by `npm run build:site` and readable without
+  JavaScript. Both pages carry a searchable title and description, canonical
+  and hreflang links, Open Graph tags and JSON-LD; `docs/sitemap.xml`,
+  `docs/llms.txt` and `docs/llms-full.txt` describe the site to search engines
+  and AI assistants.
+- An IndexNow workflow asks Bing and the other IndexNow engines to recrawl the
+  landing after a Pages build that changes it. The Google Search Console
+  verification file is published in `docs/`.
+- `README.pt-BR.md` (also shipped in the tester kit) and `CITATION.cff`.
+
+### Changed
+
+- The Portuguese text of the docs, the landing page and the phone reads the
+  way Brazilian musicians talk, keeps their English jargon in English, and
+  names the labels the Portuguese interface actually shows.
+- `i18n.js` honours `<html data-default-locale>`, so a page published in one
+  language opens in it; the phone and the panel are unaffected.
+
+### Fixed
+
+- Seven labels on the Portuguese landing page rendered in English.
+- The VID pose status lines, the pose toasts and the MAP In/Out readout stayed
+  in English in a Portuguese session.
+- Two Receiver messages fell back to Portuguese text instead of English.
+
 ## [1.0.0] — 2026-09-21
 
 ### Release preparation — 2026-09-21
