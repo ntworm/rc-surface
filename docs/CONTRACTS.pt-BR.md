@@ -1,9 +1,9 @@
 # Contratos — RC Surface
 
-Este documento registra os contratos entre o host e o telefone que valem nos
-dois lados. Cada seção é exercida por testes que falham quando o contrato
-deriva; a fonte da verdade está na implementação; este documento apenas
-descreve para evitar que quem revisa precise vasculhar as duas árvores.
+Este documento registra os contratos que o host e o celular compartilham. Cada
+seção é coberta por testes que falham quando um lado se afasta do contrato. A
+fonte da verdade é a implementação; este documento só a descreve, para quem
+revisa não precisar vasculhar as duas árvores de código.
 
 ---
 
@@ -14,14 +14,14 @@ byte a byte:
 
 - **Host:** `src/live/transport-clock.ts`
   — `getLfoSubdivision`, `getLfoMaxHz`, `getStutterTiming`
-- **Telefone:** `static/phone-v3/controls.js`
+- **Celular:** `static/phone-v3/controls.js`
   — `LFO_SHAPE_MAX_HZ`, `LFO_SUBDIVISIONS`, `STUTTER_SUBDIVISIONS`,
     `getLfoSubdivision`, `getLfoMaxHz`, `getStutterSubdivisions`,
     `getStutterTiming`, `advanceStutterPhase`
 
 **Teste de paridade:** `tests/modulator-policy-parity.test.mjs` avalia host
-e navegador sobre cada forma, tempo, Auto/free e pino antigo e exige que as
-duas implementações concordem.
+e navegador em todas as combinações de forma, andamento, Auto/free e pin legado,
+e exige que as duas implementações concordem.
 
 ### Tetos por forma (`LFO_SHAPE_MAX_HZ`)
 
@@ -33,29 +33,29 @@ duas implementações concordem.
 | ramp_down | 3      |
 | square    | 12     |
 
-Esses tetos são o contrato; uma mudança só de um lado faria a outra ponta
-aceitar um gesto que a outra recusa, e o usuário veria o controle parar de
-seguir o dedo sem erro visível.
+Esses tetos são o contrato. Uma mudança feita só no navegador ou só no host
+faria um lado aceitar um gesto que o outro recusa, e o usuário veria o controle
+parar de seguir o dedo sem nenhum erro na tela.
 
 Origem: `internal/LIVE-WRITE-CEILING-1.0.md`, regra
 `maxHz(forma) = floor(teto_efetivo / minPontosPorCiclo(forma))`. A tabela
-acima é o **fallback** para `teto_efetivo ≈ 50 escritas/s` (P04 da task
-write-ceiling ainda pendente em 2026-09-17). Quando `teto_efetivo` for
-medido, regenerar a tabela e atualizar este doc, os dois arquivos-fonte
+acima é o **fallback** para `teto_efetivo ≈ 50 escritas/s` (a task P04 de
+write-ceiling ainda estava pendente em 2026-09-17). Quando `teto_efetivo` for
+medido, gere a tabela de novo e atualize este documento, os dois arquivos-fonte
 (`src/live/transport-clock.ts:11`, `static/phone-v3/controls.js:17`) e o
 teste de contrato congelado (`tests/contracts-freeze.test.mjs`).
 
 ### Velocidades de sincronia
 
 `getLfoSubdivision(rate, bpm, pin)` encaixa a posição do dedo nas divisões
-que mantêm o Hz renderizado no máximo do teto por forma acima, em tempos de
-30–300 BPM e pinos legados (3, 2/3, 1/8, 1/32).
+que mantêm o Hz resultante igual ou abaixo do teto de cada forma, em
+andamentos de 30 a 300 BPM e nos pins legados (3, 2/3, 1/8, 1/32).
 
 ### Distribuição do Stutter Auto
 
 Com `syncMode === "sync"`, `getStutterTiming(rate, beat, bpm, auto)` percorre
-o gesto de rate 0 a rate 1 e só emite velocidades atingíveis sob o teto de
-sincronia. Em 120 BPM o conjunto clássico é:
+o gesto de rate 0 a rate 1 e só emite velocidades que cabem no teto do modo
+sync. A 120 BPM, o conjunto clássico é:
 
 | rate | frequência |
 | ---- | ---------- |
@@ -66,15 +66,16 @@ sincronia. Em 120 BPM o conjunto clássico é:
 
 ### Stutter FREE
 
-`auto === false` lê o gesto por toda a barra sem zona morta cortada; o teto
-audível é o teto de reprodução do host, não um corte do telefone.
+`auto === false` lê o gesto em toda a extensão, sem zona morta limitada; o
+limite audível é o teto de reprodução do próprio host, não um corte feito no
+celular.
 
 ### Por que duas implementações
 
-O telefone precisa dos números para renderizar o dial, rótulo e gate dentro
-do orçamento de quadro crítico. O host precisa dos mesmos números para
+O celular precisa dos números para desenhar o dial, o rótulo e o gate dentro
+do tempo de cada frame. O host precisa dos mesmos números para
 agendar a escrita dos parâmetros LFO/Stutter que voltam ao Live. Qualquer
-lado que trate a tabela como sua esconde um bug: o mostrador desenharia uma
+lado que trate a tabela como só sua é um bug: o mostrador desenharia uma
 posição que o host se recusa a honrar, e o usuário acharia o controlador
 quebrado. O teste de paridade é a única coisa que mantém os dois honestos —
 trate qualquer deriva ali como impeditivo de release, não como oportunidade
@@ -82,25 +83,25 @@ de refatorar.
 
 ---
 
-## Limites do protocolo de fio (ADR-004 / congelado)
+## Limites do protocolo de comunicação (ADR-004 / congelado)
 
-O telefone e o servidor compartilham os mesmos limites numéricos para que
-um payload que passa no telefone também passe no servidor.
+O celular e o servidor compartilham os mesmos limites numéricos, para que
+um payload aceito no celular também seja aceito no servidor.
 `src/server/ws-bounds.ts` é a fonte da verdade; `tests/contracts-freeze.test.mjs`
-verifica que cada valor desta tabela confere com o runtime. Mudar aqui é um
-salto de versão de protocolo, não uma refatoração — incremente
-`controlStreamVersion` no payload hello de `src/server/ws.ts` e envie os
+verifica que cada valor desta tabela confere com o runtime. Mudar algo aqui é
+uma nova versão do protocolo, não uma refatoração — incremente
+`controlStreamVersion` no payload hello de `src/server/ws.ts` e publique os
 dois lados juntos.
 
 | Constante                            | Valor            | Propósito                                              |
 | ------------------------------------ | ---------------- | ------------------------------------------------------ |
 | `MAX_PAYLOAD_BYTES`                  | 100 KiB          | Rejeita quadros maiores que isso na camada `ws`        |
-| `MAX_WS_CONNECTIONS`                 | 64               | Sockets abertos no total (telefone + admin)            |
-| `MAX_WS_CONNECTIONS_PER_IP`          | 16               | Limite por IP para NAT não travar um cliente só         |
-| `WS_HEARTBEAT_INTERVAL_MS`           | 15 000           | Cadência do probe de vivência                           |
+| `MAX_WS_CONNECTIONS`                 | 64               | Sockets abertos no total (celular + admin)             |
+| `MAX_WS_CONNECTIONS_PER_IP`          | 16               | Limite por IP, para uma rede atrás de NAT não ficar presa a um cliente só |
+| `WS_HEARTBEAT_INTERVAL_MS`           | 15 000           | Intervalo do heartbeat que confirma a conexão viva      |
 | `MAX_CLIENT_NAME_LENGTH`            | 64 code-points   | Truncar via `Array.from`, não `length`                  |
 | `MAX_CONTROL_NAME_LENGTH`           | 128 chars        | Rejeita nomes longos demais                             |
-| `MAX_CONTROLS_PER_SNAPSHOT`         | 128              | Rejeição dura no gargalo do snapshot                    |
+| `MAX_CONTROLS_PER_SNAPSHOT`         | 128              | Rejeição direta no ponto único de validação do snapshot |
 | `MAX_CONTROLS_PER_IMMEDIATE_BATCH`   | 12               | Caminho de alta taxa só para descritores                |
 | `HISTORY_RING_SIZE`                  | 120              | Ring buffer por controle                                |
 | `RATE_BURST`                         | 600 mensagens    | Tamanho do balde de tokens                              |
@@ -110,13 +111,13 @@ dois lados juntos.
 | `CACHE_MAX_ENTRIES`                  | 2 048            | Limite de cache                                         |
 | `BACKPRESSURE_DROP_THRESHOLD`        | 512 KiB          | Descarta telemetria não crítica acima disso            |
 | `BACKPRESSURE_DISCONNECT_THRESHOLD`   | 2 MiB            | Fecha cliente lento com código 4008                     |
-| `LISTENER_QUIET_MS` (osc-tokens)     | 1 500            | Silêncio do push-stream antes do polling assumir        |
+| `LISTENER_QUIET_MS` (osc-tokens)     | 1 500            | Silêncio no push-stream antes de o polling assumir      |
 
 ---
 
 ## Registro de endereços OSC (congelado)
 
-O servidor é o único lado que fala OSC; o telefone fala WebSocket e o
+O servidor é o único lado que fala OSC; o celular fala WebSocket e o
 servidor traduz. Cada endereço OSC emitido pelo host é, portanto, um
 contrato do host, centralizado em `src/osc-tokens.ts`. `osc-transport.ts`
 importa do registro e nunca escreve um endereço na mão. O teste de freeze
@@ -128,8 +129,8 @@ verifica:
    concatenação inline).
 3. `LISTENER_QUIET_MS` exportado pelo transporte equivale ao do registro.
 
-Deriva entre o registro e o runtime significa que um typo em qualquer um
-dos lados vira silenciosamente um no-op contra o Live; o teste de freeze é
+Se o registro e o runtime divergirem, um erro de digitação em qualquer um dos
+dois vira, em silêncio, um comando que o Live ignora; o teste de freeze é
 o único que pega isso.
 
 ### Registros de listener (push do Live)
@@ -171,18 +172,18 @@ o único que pega isso.
 
 ## Contrato hello (congelado)
 
-`srchello` em `src/server/ws.ts` é o único lugar que monta a mensagem de
+`sendHello` em `src/server/ws.ts` é o único lugar que monta a mensagem de
 boas-vindas. O teste de freeze verifica que cada campo abaixo continua
-presente. Remover um é uma quebra para clientes antigos.
+presente. Remover qualquer um deles quebra clientes antigos.
 
 | Campo                  | Tipo               | Observação                                         |
 | ---------------------- | ------------------ | -------------------------------------------------- |
 | `type`                 | `"hello"`          | Discriminador                                      |
 | `controlStreamVersion` | `1`                | Incrementa a cada mudança de protocolo             |
 | `client_id`            | string             | Identidade atribuída pelo servidor                 |
-| `role`                 | string             | Registro do servidor: admin / telefone             |
+| `role`                 | string             | Registro do servidor: admin / celular              |
 | `tokenStatus`          | string             | Estado do capability token                         |
-| `path`                 | string             | Caminho da URL que o telefone carregou             |
+| `path`                 | string             | Caminho da URL que o celular carregou              |
 | `commands`             | string[]           | Registro de comandos do servidor (panel/help)     |
 | `tempo` / `signature` / `scale` | numbers / string | Snapshot do Live no momento da conexão      |
 | `playheadActive` / `playheadTimeMs` | bool / number | Playhead do Live no momento da conexão      |
@@ -190,26 +191,27 @@ presente. Remover um é uma quebra para clientes antigos.
 | `bipolarControls`      | string[]           | Controles que devem renderizar com ponto central   |
 | `projectConfig`        | object             | Snapshot do painel ProjectConfig                  |
 
-O telefone tolera campos opcionais ausentes (builds antigos não enviavam
-alguns) e ignora campos desconhecidos. Os dois lados da história de upgrade
-estão guardados por `tests/upgrade-regression.test.mjs`.
+O celular tolera campos opcionais ausentes (builds antigos não enviavam
+alguns) e ignora campos desconhecidos. Os dois sentidos da atualização são
+cobertos por `tests/upgrade-regression.test.mjs`.
 
 ---
 
 ## Política de upgrade
 
-O protocolo sustenta por construção uma faixa estreita de forward / backward:
+Por construção, o protocolo tolera uma faixa estreita de compatibilidade, para
+frente e para trás:
 
-- **Novo campo opcional do servidor**: o telefone não pode quebrar quando
+- **Novo campo opcional do servidor**: o celular não pode quebrar quando
   aparece um campo que ele não conhece. O teste de upgrade-regression
-  afirma que o payload hello contém o conjunto conhecido sem exigir que o
-  telefone o consuma.
+  verifica que o payload hello contém o conjunto conhecido de campos, sem
+  exigir que o celular use todos.
 - **Novo campo opcional do cliente**: o servidor deve ignorar chaves
   desconhecidas em snapshot, control e set-display-name; `boundControlFrame`
-  em `ws-bounds.ts` é o gargalo.
-- **Mudança dura de contrato** (limite, endereço, capability): incrementa
-  `controlStreamVersion` em `src/server/ws.ts`, registra o novo valor neste
-  documento e envia os dois lados juntos.
+  em `ws-bounds.ts` é o ponto único de validação.
+- **Mudança que quebra o contrato** (limite, endereço, capability): incremente
+  `controlStreamVersion` em `src/server/ws.ts`, registre o novo valor neste
+  documento e publique os dois lados juntos.
 
 Remover um campo congelado ou alterar um limite sem registrar a mudança
 aqui é exatamente o modo de falha que este documento existe para evitar.

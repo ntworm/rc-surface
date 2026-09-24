@@ -7,7 +7,7 @@ Ele não coleta, transmite nem armazena dados pessoais além da própria máquin
 
 | Dado | Onde | Por quanto tempo |
 |------|------|------------------|
-| Certificado TLS autoassinado + chave privada | `storageDirectory/certs/` do Ableton | Até o usuário apagar o armazenamento ou o certificado expirar/ser regerado |
+| Certificado TLS autoassinado + chave privada | `storageDirectory/certs/` do Ableton | Até o usuário apagar o armazenamento ou o certificado expirar ou ser gerado de novo |
 | Mapeamentos de controle | Armazenamento do Ableton | Persistem entre sessões |
 | Presets de mapeamento | Armazenamento do Ableton | Até serem apagados |
 | Preferências do celular | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |
@@ -15,11 +15,11 @@ Ele não coleta, transmite nem armazena dados pessoais além da própria máquin
 
 ## Dados de rede
 
-- O caminho de bridge suportado não sai da rede local confiável do usuário.
+- Na configuração suportada, a ponte entre o celular e o Live não sai da rede local confiável do usuário.
 - Sem telemetria.
 - Sem analytics.
-- Sem relatório de falhas.
-- Sem caminho de controle pela nuvem.
+- Sem envio de relatórios de erro (crash reports).
+- Nenhum controle passa pela nuvem.
 - Os QR codes são gerados localmente, na interface do painel.
 - Os arquivos de runtime e modelo do MediaPipe Hands são servidos localmente pela extensão.
 
@@ -36,13 +36,14 @@ As permissões são pedidas apenas para as funções em uso:
 Os dados de sensor são processados no navegador do celular e enviados como valores numéricos de controle por WebSocket.
 Áudio bruto e quadros de vídeo brutos não são enviados ao RC Surface.
 
-A captura solicita cancelamento de eco, supressão de ruído e ganho automático
-desligados; o processamento efetivo depende do navegador/driver. O ID da entrada
+A captura pede ao navegador que desligue o cancelamento de eco, a supressão de
+ruído e o controle automático de ganho; o que acontece de fato depende do
+navegador e do driver. O ID da entrada
 selecionada fica no armazenamento local do navegador. Abrir/recarregar AUD
 nunca inicia a captura automaticamente.
 
 Só medições numéricas passam pelo WebSocket: RMS, envelope, gate, ataque,
-transiente, kick, snare, brilho, centroide, rolloff95, fluxo, flatness,
+transiente, kick, snare, brilho, centroide, rolloff 95%, fluxo, flatness,
 dispersão e energia de graves/médios/agudos. Nenhum áudio bruto é transmitido.
 
 ## Runtime de terceiros

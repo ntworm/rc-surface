@@ -1,6 +1,6 @@
 # Compatibility — RC Surface
 
-Build `1.0.0`. Compatibility envelope for the 1.0 candidate. Physical (hardware) compatibility is tracked separately under gate `physical-hardware` (P09) and `internal/TESTER-GUIDE.md`.
+Build `1.0.0`. What the 1.0 release candidate supports. Physical (hardware) compatibility is tracked separately under gate `physical-hardware` (P09) and `internal/TESTER-GUIDE.md`.
 
 ## Live
 
@@ -23,7 +23,7 @@ Build `1.0.0`. Compatibility envelope for the 1.0 candidate. Physical (hardware)
 ## Network + ports
 
 - WebSocket only; no UDP MIDI. The Receiver v2 sends local Max messages inside the device; no UDP broadcast.
-- Default ports are owned by the worktree (see `tests/ui/test-server.ts` and `playwright.config.mjs`).
+- Test ports are set per worktree (see `tests/ui/test-server.mjs` and `playwright.config.mjs`).
 
 ## Third-party packages
 
@@ -37,11 +37,11 @@ Field-tested scenarios (v2 acceptance, recorded in `internal/TESTER-GUIDE.md`):
 - Local-only install via slice A+B (and opt-in R).
 - Two-track routing with the standalone `RC-Audio-Sender` and `RC-Midi-Receiver` pair.
 - WebSocket-only transport inside Live.
-- Synthetic Playwright envelope for the operator console and admin pages.
+- Synthetic Playwright coverage of the operator console and admin pages.
 
 Unmeasured at this delivery (gates remain `pending`/`blocked` by contract):
 
-- Physical hardware round-trip latency on the responsible party's machine (gate `physical-hardware`).
+- Round-trip latency on real hardware, on the maintainer's machine (gate `physical-hardware`).
 - Public distribution via the SDK route (gate `distribution-publication`).
 
 ## See also

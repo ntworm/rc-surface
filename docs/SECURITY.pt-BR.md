@@ -34,7 +34,7 @@ Superfície de ataque:
 O desenho atual pressupõe uma rede local confiável, de estúdio ou de casa. O
 HTTPS protege o transporte do navegador e é o que libera as APIs de câmera e
 microfone. Ações de controlador e de administração também exigem tokens de
-sessão criptograficamente aleatórios, regerados a cada início do servidor,
+sessão criptograficamente aleatórios, gerados de novo a cada início do servidor,
 inclusive Stop/Start no painel sem reiniciar o Live. As
 requisições são classificadas como viewer, controller ou admin, e os comandos
 são autorizados por papel.
@@ -43,7 +43,7 @@ O token de controlador é entregue pela URL do QR gerado e depois passa para um
 cookie de sessão HttpOnly com SameSite. Trate imagens de QR, URLs de
 controlador, URLs de administração e sessões de navegador ativas **como
 credenciais**. Quem obtiver um desses tokens recebe o papel associado a ele até
-o servidor ser reiniciado. Leia o novo QR após reiniciar; páginas antigas
+o servidor ser reiniciado. Escaneie o novo QR depois de reiniciar; páginas antigas
 ficam somente para leitura.
 
 ## HTTPS e certificados
@@ -52,7 +52,7 @@ ficam somente para leitura.
 - Câmera e microfone exigem contexto seguro no celular.
 - As URLs do QR usam um endereço da rede local, para o celular conseguir chegar na máquina.
 - O certificado inclui, na lista SAN, `localhost`, `127.0.0.1` e os IPs atuais da rede local.
-- Se a cobertura de IPs da rede local ficar desatualizada, a extensão consegue regerar o certificado.
+- Se os IPs da rede local mudarem, a extensão consegue gerar o certificado de novo.
 - Os navegadores ainda avisam, porque o certificado é autoassinado. O usuário precisa aceitar o aviso uma vez em cada aparelho e navegador.
 
 Chaves privadas nunca vão dentro dos pacotes `.ablx`.
@@ -87,11 +87,11 @@ bloqueio nasce fechado, então um comando restaurado é descartado; após a
 notificação de pós-inicialização do Live o device arma sozinho, limpando antes o
 valor anterior sem saída. Desativar o device desarma e reativar arma de novo;
 Panic desarma até o clique. Isso não autentica automações/Undo enquanto armado.
-Nunca automatize nem mapeie por MIDI o pacote interno. Desligue antes de carregar
-preset numa instância em execução: a notificação de inicialização chega depois,
+Nunca automatize nem mapeie por MIDI o pacote interno. Desarme o device antes de
+carregar um preset dele numa instância em execução: a notificação de inicialização chega depois,
 não antes da restauração dos valores do preset.
 
-### Proteção obrigatória da UDP no firewall (somente devices antigos)
+### Proteção obrigatória de UDP no firewall (somente devices antigos)
 
 No Windows, abra **PowerShell como Administrador** e execute uma vez:
 
@@ -127,7 +127,7 @@ bloqueie toda a rede do Live: isso também interrompe a conexão do celular.
 Até configurar e verificar a proteção, mantenha o Receiver descarregado em
 máquinas conectadas à rede. A extensão não instala regras silenciosamente
 nem promete isolamento estrito em loopback. Para os devices antigos, essa validação por sistema
-operacional continua necessária; no v2, verificar a migração e ausência de listener.
+operacional continua necessária; o v2, em vez disso, precisa passar na verificação de migração (nenhum listener aberto).
 
 Para desfazer **apenas essa regra**, descarregue o Receiver primeiro e execute
 como administrador:

@@ -217,8 +217,8 @@ outside the v1.0 threat model. The full threat model is in `docs/SECURITY.md`.
 
 No. The project is source-available under the PolyForm Noncommercial 1.0.0
 license, and has no Pro version or
-locked features. The Gumroad page is **pay what you want** (suggested R$25,
-minimum R$0). R$0 is the default so cost is never a barrier. See
+locked features. The Gumroad page is **pay what you want** (suggested R$25 in
+Brazilian reais, minimum R$0). R$0 is the default so cost is never a barrier. See
 [`FUNDING.md`](../FUNDING.md) for details. Only trust links published in
 this repository's README and release notes.
 

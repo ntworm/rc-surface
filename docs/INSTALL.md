@@ -182,7 +182,7 @@ expected. To proceed:
   microphone.
 
 Your browser will remember the decision for the lifetime of the cert
-(about a year, see [Certificate lifecycle](#certificate-lifecycle)
+(about a year, see [Certificate lifecycle](#8-certificate-lifecycle)
 below).
 
 ### What you see
@@ -321,7 +321,7 @@ To force a new cert, stop Live, delete the `certs/` folder under
 
 - Check the Live log: `Help` → *Show Log*.
 - Most common cause: a stale cert in the storage directory with the
-  wrong format. Delete `certs/` and let the extension regenerate.
+  wrong format. Delete `certs/` and let the extension generate a new one.
 
 ## 10. Uninstall
 

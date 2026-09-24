@@ -10,15 +10,15 @@ montagem, passagem de som e apresentação. Leia uma vez antes de tocar um set.
 
 ---
 
-### Controle em tempo real na candidata atual
+### Controle em tempo real na versão candidata atual
 
 O MAP não reduz mais a frequência do controle: XY, MIX e sensores usam um fluxo
 separado, com primeiro envio imediato e tráfego seguinte agrupado com espaçamento
 mínimo de 8 ms. Esse é um limite de despacho, não uma promessa de latência total.
 Posições contínuas novas substituem as ainda não enviadas; pressões e solturas
-dos pads mantêm a ordem. Use **Smooth = 0** para não acrescentar rampa ao mapping.
+dos pads mantêm a ordem. Use **Smooth = 0** para não acrescentar rampa ao mapeamento.
 Smooth explícito, envelopes musicais e perda segura de sinal continuam válidos.
-Main/Master agora abre como **Main → dispositivo → parâmetro**, igual às tracks;
+Main/Master agora abre como **Main → device → parâmetro**, igual às tracks;
 Tempo continua acessível diretamente.
 
 Recarregue a página após atualizar a extensão. Hosts antigos continuam funcionando
@@ -58,8 +58,8 @@ O seletor de modo fica na coluna do meio da aba PERF:
 
 O modo escolhido vale para **os 12 pads** (`pad-1`..`pad-12`), **os 4 LFOs**
 (`toggle-1`..`toggle-4`, rotulados `L1`..`L4`) e **os 4 stutters**
-(`button-1`..`button-4`, rotulados `S1`..`S4`). O modo é compartilhado: escolhe
-uma vez e todo controle joga pela mesma regra.
+(`button-1`..`button-4`, rotulados `S1`..`S4`). O modo é compartilhado: você
+escolhe uma vez e todos os controles seguem a mesma regra.
 
 ### Modo A — Momentâneo (padrão)
 
@@ -67,14 +67,14 @@ uma vez e todo controle joga pela mesma regra.
 - Arraste **na vertical** para escalar o valor de `0` (ponto de soltura) até
   `1` (150 px acima do início do toque). É a mesma faixa que knobs, faders,
   LFOs e stutters usam.
-- Melhor para: batidas de percussão, one-shots, efeitos momentâneos.
+- Melhor para: hits de percussão, one-shots, efeitos momentâneos.
 
 ### Modo B — Hold
 
-- O toque trava o controle **ligado**; soltar sem arrastar devolve ele para
-  desligado. Qualquer movimento, vertical ou horizontal, mantém segurado até
+- O toque trava o controle **ligado**; soltar sem arrastar volta a
+  desligá-lo. Qualquer movimento, vertical ou horizontal, mantém segurado até
   você arrastar o valor de volta a zero de propósito.
-- Para stutters especificamente (veja [§ 4](#4-stutters-s1--s4)): um toque
+- Para stutters especificamente (veja [§ 4](#4-stutters-s1--s2--s3--s4)): um toque
   desliga; soltar com amplitude abaixo de `0.02` também desliga. Arrastar a
   velocidade na horizontal mantém o stutter ligado enquanto há amplitude.
 - Melhor para: LFOs travados que seguem modulando depois de soltar, varreduras
@@ -112,7 +112,7 @@ header para `SYNC` e a duração passa a vir do andamento do Live, escolhida em
 Abaixo do desenho o painel escreve no que o ajuste atual realmente dá — a
 subdivisão, o andamento pelo qual ela é multiplicada, a fonte de clock por trás
 desse andamento, e os milissegundos que saem disso. É essa linha que se lê
-quando uma duração não está se comportando: andamento velho, fonte de clock
+quando uma duração não está se comportando: andamento desatualizado, fonte de clock
 diferente e o `FREE` atropelando a grade parecem a mesma coisa até ela dizer
 qual é. Com o `SYNC` desligado a grade de duração fica apagada, porque nada do
 que ela oferece chega no burst.
@@ -120,8 +120,8 @@ que ela oferece chega no burst.
 Um burst é de uma vez só, então estar fora da grade se ouve na hora — é este o
 ajuste que põe o stab **no** beat, e não perto dele. A seção vale só com o
 `SYNC` ligado; o `FREE` ignora os dois controles e mantém o envelope fixo. Se o
-Live ainda não informou um andamento, a duração cai para 120 BPM em vez de
-emudecer.
+Live ainda não informou um andamento, a duração usa 120 BPM em vez de
+ficar muda.
 
 ---
 
@@ -132,16 +132,16 @@ Cada LFO é um oscilador de baixa frequência contínuo, que emite valores entre
 `0.5 - depth/2` e `0.5 + depth/2`, com centro em `0.5`.
 FREE oferece ajuste contínuo de **0,1 Hz até o teto da forma escolhida**.
 Tetos medidos de fallback: **senoide 4 Hz; triângulo 3 Hz; rampas crescente e
-decrescente 3 Hz; quadrada 12 Hz**. São limites provisórios de fallback baseados
-na regra do teto de escrita (~50 escritas/s); tetos definitivos e fidelidade Live
-permanecem bloqueados pela bancada física (A1 / write-ceiling P04).
+decrescente 3 Hz; quadrada 12 Hz**. São limites provisórios de fallback, baseados
+na regra do teto de escrita (~50 escritas/s); os tetos definitivos e a fidelidade
+no Live ainda dependem do teste na bancada física (A1 / write-ceiling P04).
 Abra **⚙ ao lado de SYNC → Config de LFO → Forma de onda**.
-A forma apenas limita a taxa de transferência, não seleciona taxa automaticamente.
+A forma só define o limite de velocidade; ela não escolhe uma taxa automaticamente.
 A forma global se aplica por padrão a L1–L4, mas **a configuração CFG por controle tem precedência**: abra **CFG** no header e toque no LFO (L1–L4), ou clique com o botão direito no desktop, para definir uma forma que prevalece sobre o LFO CONFIG global daquela instância (ver 9.5). Trocar a forma mantém a fase, mas pode mudar o valor instantâneo.
 
 Mudar a velocidade preserva a fase em FREE e SYNC, inclusive ao trocar subdivisão.
 Morphs de velocidade em FREE integram a aceleração. SYNC Auto usa divisões retas,
-tercinas (T) e pontuadas (D) dentro do teto da forma no BPM atual. A 120 BPM (2 batidas/s):
+tercinas (T) e pontuadas (D) dentro do teto da forma no BPM atual. A 120 BPM (2 beats por segundo):
 - Subdivisão 1/8 solicita 4 Hz. Em senoide (4 Hz) ou quadrada (12 Hz), 1/8 é permitido.
 - Em triângulo ou rampa (teto de 3 Hz), 1/8 ultrapassa 3 Hz; portanto, 1/8 e subdivisões
   mais rápidas (1/16, 1/32, 1/64) ficam desabilitadas na grade e bloqueadas para
@@ -150,8 +150,8 @@ tercinas (T) e pontuadas (D) dentro do teto da forma no BPM atual. A 120 BPM (2 
   exibe explicitamente a taxa solicitada versus efetiva (por ex., 1/8 → 1/4).
   O runtime limita (clamp) a emissão ao teto da forma sem alterar silenciosamente
   a subdivisão salva.
-Deep Sync mostra a divisão pedida/efetiva; Auto libera a divisão anterior. Tudo usa o navegador e a extensão
-existente, **sem dispositivo Max adicional**.
+Deep Sync mostra a divisão pedida/efetiva; Auto libera a divisão fixada anterior. Tudo usa o navegador e a extensão
+existente, **sem nenhum device Max adicional**.
 
 Compatibilidade: rates normalizados salvos não mudam; snapshots FREE antigos
 podem tocar mais rápido e SYNC Auto pode escolher outra divisão após mudar a
@@ -235,9 +235,9 @@ FREE percorre 1–15 Hz continuamente (ratchet antigo eleva o mínimo), sem uma
 faixa final presa no teto. SYNC Auto distribui somente divisões alcançáveis pelo
 gesto. Os ajustes desativam divisões-base que excederiam 15 Hz conforme BPM,
 swing e o maior ratchet salvo entre S1–S4. A 120 BPM, sem swing/ratchet, 1/16
-equivale a 8 Hz; 1/128 exigiria 64 Hz e fica indisponível. Pinos antigos acima do
-teto ainda desaceleram por oitavas, com divisão pedida → efetiva nos ajustes.
-Arrastar na horizontal libera o pino compartilhado e volta ao Auto; arrastar
+equivale a 8 Hz; 1/128 exigiria 64 Hz e fica indisponível. Divisões fixadas antigas
+acima do teto ainda desaceleram por oitavas, com divisão pedida → efetiva nos ajustes.
+Arrastar na horizontal libera a divisão fixada compartilhada e volta ao Auto; arrastar
 só na vertical mantém a divisão escolhida. Velocidades normalizadas salvas podem
 voltar com uma velocidade diferente da r11.
 
@@ -248,8 +248,8 @@ entrega medida no Live. O menor meio-pulso previsto com swing/ratchet continua
 em pelo menos 1/30 s; a frequência média pode ser menor que 15 Hz.
 
 Para alvos contínuos, só o valor não enviado mais recente fica pendente. OFF
-substitui os pulsos pendentes por zero, sem suavização; uma escrita já em voo no
-SDK não pode ser cancelada. Mapeamentos explícitos de toggle e MIDI preservam
+substitui os pulsos pendentes por zero, sem suavização; uma escrita que já saiu
+para o SDK não pode ser cancelada. Mapeamentos explícitos de toggle e MIDI preservam
 a ordem dos eventos.
 
 ---
@@ -325,7 +325,7 @@ calibração já concluída em outra aba. Recarregar a página restaura as três
 - **AUD:** ative a entrada escolhida e mantenha um trecho representativo tocando
   no volume normal por cinco segundos. A calibração ajusta somente a **resposta
   dos controles RMS/envelope**, com ganho limitado (0,25–8x), não o volume no
-  Live, EQ, ganhos dos detectores, limiares, RELEASE ou SMOOTH. Não remove ruído.
+  Live, EQ, ganhos dos detectores, limiares, RELEASE ou SUAVE. Não remove ruído.
   Silêncio não é um trecho válido. Desligar/trocar a entrada restaura o ajuste.
 - **VID:** ative a câmera, fique no enquadramento de uso e levante a mão de
   controle. Durante quatro segundos, a página verifica luminosidade, excesso de
@@ -518,39 +518,39 @@ navegador do celular, não no Live.
 
 ### O que dá para mudar por controle
 
-- **Pads** — escolha mode A (momentary), B (hold), C (toggle) ou D
-  (burst). Substitui o mode global do pad sem precisar trocar de aba.
+- **Pads** — escolha o modo A (momentâneo), B (hold), C (toggle) ou D
+  (burst). Substitui o modo global dos pads sem precisar trocar de aba.
 - **Knobs** — defina a amplitude do gesto (quantos pixels de arrasto
   correspondem a varrer o valor de 0 a 1). Amplitude grande é melhor
   em telas pequenas; amplitude pequena dá controle mais fino no painel
-  de mapping do desktop.
-- **Faders** — escolha um reset value. Quando você toca o fader com um
-  dedo só, o valor salta para o reset value em vez de ir a zero. Útil
+  de mapeamento do desktop.
+- **Faders** — escolha um valor de reset. Quando você dá um toque duplo no
+  fader, o valor salta para esse valor de reset em vez de ir a zero. Útil
   para pan, sends e macros onde existe um ponto de partida conhecido.
-- **LFO (toggle 1 a 4)** — escolha a forma de onda (sine, triangle,
-  ramp up, ramp down, square). O modal SYNC continua mostrando o
-  preview ao vivo; a forma escolhida aqui sobrescreve a forma global
+- **LFO (toggle 1 a 4)** — escolha a forma de onda (senoide, triangular,
+  rampa ↑, rampa ↓, quadrada). O modal SYNC continua mostrando a
+  prévia ao vivo; a forma escolhida aqui sobrescreve a forma global
   só para aquele toggle.
-- **Stutter (button 1 a 4)** — escolha mode A (momentary), B (hold),
-  C (toggle) ou D (burst). Sobrescreva o modo do botão de stutter sem
+- **Stutter (button 1 a 4)** — escolha o modo A (momentâneo), B (hold),
+  C (toggle) ou D (burst). Troque o modo do botão de stutter sem
   sair da página. (Subdivisão contínua, swing e deslocamento de fase
   ficam nas configurações globais do Deep Sync, acessíveis pelo ⚙ ao lado de SYNC).
-- **XY pads** — em `xy-1`, deixe o default. Em `xy-2`, escolha
-  friction e bounce; o pad se comporta como um pequeno joystick com
-  física que volta ao centro depois do release.
+- **XY pads** — em `xy-1`, deixe o padrão. Em `xy-2`, ajuste
+  **Atrito** e **Quique**; o pad se comporta como um pequeno joystick com
+  física que volta ao centro quando você solta.
 
 ### Como abrir o CFG
 
 1. Toque em **CFG** no header do celular. O corpo da página ganha a
-   classe `config-mode`; cada controle mostra uma pequena badge
-   resumindo o override atual (letra do mode, glifo da forma de onda,
+   classe `config-mode`; cada controle mostra uma pequena etiqueta
+   resumindo o override atual (letra do modo, ícone da forma de onda,
    fração da subdivisão).
 2. Toque (ou clique com o botão direito, no desktop) em qualquer
    controle para abrir o menu por instância. O menu lista só as
    chaves que se aplicam àquele controle.
-3. Use a ação **Map to …** para vincular o valor daquele controle a
-   um parâmetro do Live sem sair do celular. Se MAP já estiver aberto,
-   o CFG fecha MAP antes de abrir o menu.
+3. Use a ação **Mapear para…** para vincular o valor daquele controle a
+   um parâmetro do Live sem sair do celular. Se o MAP já estiver aberto,
+   o CFG fecha o MAP antes de abrir o menu.
 4. Toque em **CFG** de novo, pressione **Esc**, ou toque fora de um
    menu aberto para fechar. O modo Stage também fecha o CFG para
    manter o palco limpo.
@@ -558,11 +558,11 @@ navegador do celular, não no Live.
 ### Limpando os overrides
 
 - **Um controle só** — abra o menu por instância e toque em
-  **Reset to default**. O override some; o controle volta ao default
+  **Restaurar padrão**. O override some; o controle volta ao padrão
   global.
 - **Todos os controles** — pressione e segure o botão **CFG** por
   cerca de meio segundo. Aparece um popover listando cada controle
-  com override. Toque em **Clear all control config** para confirmar.
+  com override. Toque em **Limpar toda a config de controles** para confirmar.
   O popover usa o mesmo menu dentro da página, sem alerta do
   navegador.
 
@@ -599,7 +599,8 @@ preenchidos mostram o número do slot.
 
 ### Tempo de morph
 
-O slider à direita dos controles define quanto tempo uma recuperação leva. O
+O slider à direita dos controles define quanto tempo leva a transição até o
+snapshot chamado. O
 par **Free / Sync** acima dele decide o que o slider significa:
 
 - **Free** — o slider é em segundos, de `0.1 s` a `5.0 s`, padrão `1.0 s`. A
@@ -646,7 +647,7 @@ mapear em outro lugar.
 
 ### Estado do sensor
 
-Cada painel mostra o estado atual do sensor, honesto por API:
+Cada painel mostra o estado atual do sensor, informado separadamente por API:
 
 - `ready` — leituras reais e finitas estão chegando e podem ser mapeadas.
 - `waiting` / `no-readings` — a página aguarda a primeira leitura. Um
@@ -714,11 +715,11 @@ Ligue **Entrada de áudio** para liberar o microfone. No computador, o navegador
 também deixa você escolher qual entrada usar, então um loopback ou um canal de
 interface pode alimentar a análise no lugar de um microfone de sala.
 
-A captura solicita cancelamento de eco, supressão de ruído e ganho automático
-desligados, para não remodelar intencionalmente a dinâmica e o espectro.
+A captura pede ao navegador que desligue o cancelamento de eco, a supressão de
+ruído e o controle automático de ganho, para não remodelar a dinâmica e o espectro.
 Navegador, driver e entrada escolhida ainda podem reamostrar ou processar áudio;
 não é garantia de captura bit-perfect. Use os controles agrupados dos
-detectores abaixo, não os controles aposentados de pitch/clareza.
+detectores abaixo; os antigos controles de pitch/clareza foram removidos.
 
 Uma vez ligada:
 
@@ -745,7 +746,7 @@ O cartão ÁUDIO mostra um histórico ao vivo de 2,5 s: ciano é RMS bruto e
 verde é o envelope. A barra mostra o controle RMS suavizado/escalado.
 Os doze descritores abaixo são fontes públicas. Follow Detected Note,
 sua análise tonal, controles antigos e laboratório foram removidos após
-resultados musicais pouco confiáveis. Modos de mapping não suportados são
+resultados musicais pouco confiáveis. Modos de mapeamento não suportados são
 descartados ao carregar; bindings válidos são preservados. BPM/SYNC do Live continua.
 
 ### Detectores de áudio integrados
@@ -762,7 +763,7 @@ Doze cartões expõem fontes normalizadas `0..1` para mapeamento imediato:
 - `sensor.audio.flatness` — média geométrica/aritmética da potência: tonal perto de 0, ruidoso perto de 1.
 - `sensor.audio.spread` — desvio padrão espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 10000.
 - `sensor.audio.rolloff` — frequência que contém 95% da potência espectral; leitura em Hz, mapeamento = Hz / 20000.
-- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high` — loudness ponderado K (ITU-R BS.1770-4) nas bandas 20–250, 250–2000 e 2000–20000 Hz, mapeado para `0..1` de −50 LU a −5 LU em relação ao full-scale digital da entrada. Cada banda aplica a ponderação K por bin (high-shelf + high-pass RLB) e um integrador momentâneo de 400 ms sobre a potência ponderada K. `sensor.audio.flatness` usa entropia de Wiener em dB: tonal → 0 (−60 dB), ruidoso → 1 (0 dB).
+- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high` — loudness ponderado K (ITU-R BS.1770-4) nas bandas 20–250, 250–2000 e 2000–20000 Hz, mapeado para `0..1` de −50 LU a −5 LU em relação ao fundo de escala digital da entrada. Cada banda aplica a ponderação K por bin (high-shelf + high-pass RLB) e um integrador momentâneo de 400 ms sobre a potência ponderada K. `sensor.audio.flatness` usa entropia de Wiener em dB: tonal → 0 (−60 dB), ruidoso → 1 (0 dB).
 
 As oito novas medidas usam centros de bins de 20 Hz até min(20 kHz, Nyquist), sem DC. As bandas não se sobrepõem; bins na fronteira pertencem à banda superior. Silêncio digital zera as oito medidas; reiniciar também zera o histórico do fluxo. Brilho preserva o centroide logarítmico ponderado por potência de 100–12000 Hz: é relacionado ao novo centroide por magnitude, mas não idêntico.
 
@@ -812,7 +813,7 @@ fórmula de compasso. SUAVE também oferece **OFF**, com resposta imediata.
 O valor mostra divisão e milissegundos efetivos; mudanças de BPM atualizam
 processamento e leitura sem interromper o arrasto. RELEASE é uma constante
 de decaimento exponencial, não uma duração rígida de nota; SUAVE é uma
-constante de tempo de um polo, não quantização para a próxima batida.
+constante de tempo de um polo, não quantização para o próximo beat.
 Suavização longa deixa a modulação deliberadamente menos imediata.
 
 **FREE** recupera os valores em milissegundos salvos separadamente, listados
@@ -821,7 +822,7 @@ suavização zero continua OFF. Subdivisões salvas válidas são preservadas;
 RELEASE novo de 45 ms escolhe a subdivisão mais próxima (1/64 D a 120 BPM).
 O áudio não estima BPM; em SYNC, o relógio vem do Live.
 
-Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâneo de 400 ms, mapeado logaritmicamente para `0..1` (0 = −50 LU, 1 = −5 LU, relativos ao full-scale digital da entrada — não SPL). O pré-filtro K e o high-pass RLB são aplicados por bin, então uma banda aguda claramente audível que carrega pouca energia RMS deixa de ficar presa perto de zero. Flatness é mapeada em dB (entropia de Wiener): tonal → 0 (−60 dB), ruidoso → 1 (0 dB). O knob de bandas adiciona um offset de ±dB na mesma escala (ganho `×2` → +6 dB, `×0,5` → −6 dB) antes do clamp; ele não multiplica o valor unitário.
+Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâneo de 400 ms, mapeado logaritmicamente para `0..1` (0 = −50 LU, 1 = −5 LU, relativos ao fundo de escala digital da entrada — não SPL). O pré-filtro K e o high-pass RLB são aplicados por bin, então uma banda aguda claramente audível que carrega pouca energia RMS deixa de ficar presa perto de zero. Flatness é mapeada em dB (entropia de Wiener): tonal → 0 (−60 dB), ruidoso → 1 (0 dB). O knob de bandas adiciona um offset de ±dB na mesma escala (ganho `×2` → +6 dB, `×0,5` → −6 dB) antes do clamp; ele não multiplica o valor unitário.
 
 | Knob | Grupo | O que decide |
 | --- | --- | --- |
@@ -829,7 +830,7 @@ Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâne
 | RELEASE | Ataques | Constante de decaimento do pulso (FREE: `10..500 ms`, padrão `45`). SYNC usa divisões de nota. Curto mantém pancadas rápidas separadas; longo vira envelope de pad. |
 | CURVA | Ataques | O expoente de resposta (`0.3..3`, padrão `1`). Abaixo de 1 levanta as pancadas médias; acima de 1 o pulso fica mais parecido com gate. Nenhuma das pontas se move. |
 | SUAVE | Timbre, Textura, Bandas | Constante de tempo de um polo (FREE: `0..200 ms`, padrão `0`; SYNC: OFF ou divisões de nota). Acalma a curva sem mudar onde ela assenta. |
-| GANHO | todos os grupos | O nível de saída do grupo, `×0,25..×8` em torno de 1. Para Ataques, Timbre e Textura o ganho multiplica o valor unitário. Para Bandas é um offset em dB sobre a escala de loudness ponderado K: `×2` soma +6 dB, `×0,5` subtrai 6 dB, `×1` é unity. Centroide, Rolloff e Dispersão ficam de fora de qualquer ganho: são impressos em Hz, e escalá-los mostraria uma frequência que o sinal não tem. |
+| GANHO | todos os grupos | O nível de saída do grupo, `×0,25..×8` em torno de 1. Para Ataques, Timbre e Textura o ganho multiplica o valor unitário. Para Bandas é um offset em dB sobre a escala de loudness ponderado K: `×2` soma +6 dB, `×0,5` subtrai 6 dB, `×1` é o ganho unitário. Centroide, Rolloff e Dispersão ficam de fora de qualquer ganho: são impressos em Hz, e escalá-los mostraria uma frequência que o sinal não tem. |
 | JANELA | tudo | O tamanho da análise: `x1`, `x2` (padrão) ou `x4`, isto é 512, 1024 ou 2048 amostras a 44,1/48 kHz. Estreita reage antes; larga resolve os graves, que é o que separa um bumbo do corpo de uma caixa. |
 
 Abaixo de 512 amostras não há opção: 256 mandaria mais que as 120 mensagens por
@@ -940,13 +941,13 @@ Cada um dos três slots aprendidos guarda uma forma de mão estática:
    pequeno ângulo de punho. Ele é específico por mão: aprenda a pose com a mão
    que vai usar na performance, porque a outra mão é uma forma espelhada e não
    casa.
-4. Use **APAGAR ÚLT** para trocar só o exemplo mais novo, ou **LIMPAR** para
+4. Use **APAGAR ÚLTIMA** para trocar só o exemplo mais novo, ou **LIMPAR** para
    treinar o slot do zero.
 
 O preset de reconhecimento **Equilibrado** é o ajuste normal de performance.
 **Precisão** rejeita mais variação; **Flexível** aceita mais. Um slot aprendido
 é momentâneo (`0` ou `1`), sobrevive a recarregar a página, e só rearma depois
-que a pose é desfeita. Poses salvas no formato espacial aposentado mostram
+que a pose é desfeita. Poses salvas no antigo formato espacial mostram
 **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---
@@ -956,14 +957,14 @@ que a pose é desfeita. Poses salvas no formato espacial aposentado mostram
 ### Faixa vertical por controle
 
 Todo controle vertical do app usa uma faixa de arrasto de **150 px**, de `0` a
-`1`. Isso é de propósito: manter todos os controles na mesma escala física
-mantém a sua memória muscular honesta pela superfície inteira.
+`1`. Isso é de propósito: com todos os controles na mesma escala física, a
+memória muscular vale para a superfície inteira.
 
 ### Resumo dos modos
 
 | Modo | Ativação | Arrasto vertical | Arrasto horizontal |
 | ---- | -------- | ---------------- | ------------------ |
-| A | enquanto toca | escala o valor 0..1 | sem efeito horizontal |
+| A | enquanto segura | escala o valor 0..1 | sem efeito horizontal |
 | B | o toque trava | escala, zero = desliga | mantém travado |
 | C | o toque alterna | remodula o valor | sem efeito horizontal |
 | D | burst no toque | pico (0.15..1) | sem efeito horizontal |
@@ -1010,14 +1011,14 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 | O celular não conecta | Veja o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) — confira Wi-Fi, IP e o aviso de certificado. |
 | Valores de sensor travados ou errados | Aperte **CALIBRAR** com o aparelho numa superfície estável. |
 | LFOs fora de sincronia com o Live | Aperte **SYNC** para travar de novo no BPM do Live. |
-| A lista de destinos do MAP parece velha | Aperte **Refresh** no modo MAP, depois de adicionar ou remover devices no Live. |
+| A lista de destinos do MAP parece desatualizada | Aperte **Refresh** no modo MAP, depois de adicionar ou remover devices no Live. |
 | O Trigger Note não consegue adicionar o device | Coloque o `RC-Midi-Receiver.amxd` à mão na track MIDI e tente de novo. |
 | Detecções de ataque indesejadas | Reduza **SENS** em Ataques e confira a entrada; Kick/Snare são heurísticas, não separação de bateria. |
 | A resposta do áudio parece lenta | Confira RELEASE/SUAVE, use SUAVE OFF e JANELA menor; meça separadamente a resposta do conjunto. |
 | O toque parece lento | Use rede cabeada, ou fique mais perto do ponto de acesso Wi-Fi. |
 | Os indicadores de estado do celular parecem estranhos | Recarregue o navegador do celular; a sessão reinicia limpa. |
 
-Para problemas mais fundos de instalação (certificados, rede, instalação), veja
+Para problemas mais complexos de instalação (certificados, rede, instalação), veja
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
 

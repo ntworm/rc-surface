@@ -21,7 +21,7 @@ Backend:
 - `src/live/safe-input.ts` — takeover contínuo, estados de perda e filtragem de sensores.
 - `src/live/project-config.ts` — perfis `.rcsurface` versionados, religamento semântico, backup atômico e rollback.
 - `src/live/state.ts` — loop de playhead e estado do Live.
-- `src/server/autostart.ts` — se o bridge toma a rede no carregamento. Só o início automático é gateado; o botão Start do painel nunca consulta isso.
+- `src/server/autostart.ts` — se o bridge toma a rede no carregamento. Só o início automático depende disso; o botão Start do painel nunca consulta essa opção.
 - `src/ui/panel.ts` — diálogos do painel do Ableton.
 - `src/runtime/safety.ts` — handlers de segurança do processo.
 
@@ -60,7 +60,7 @@ npm run package
 Recarga a quente:
 
 - Mudou `static/**`: recarregue o navegador do celular ou do painel.
-- Mudou `src/**`: rebuild, depois desabilite e habilite a extensão no Ableton Live.
+- Mudou `src/**`: faça o build de novo e depois desative e reative a extensão no Ableton Live.
 - `npm run watch` sincroniza os arquivos buildados no AppData do Ableton durante o desenvolvimento.
 
 ## Nomes de controle
@@ -87,7 +87,7 @@ Grupos canônicos:
 Antes de acrescentar um controle:
 
 1. Procure no código atual.
-2. Reaproveite o dono que já existe.
+2. Reaproveite o módulo responsável que já existe.
 3. Emita pelo fluxo de snapshot e controles que já existe.
 4. Acrescente a entrada de alvo no painel e na administração, se o usuário puder mapear.
 5. Escreva testes.
@@ -140,7 +140,7 @@ Comportamentos importantes:
 - O seletor de destino precisa preservar a hierarquia: Song / Main / Master, Tracks, Return Tracks, devices e parâmetros. Evite listas planas na escolha de destino que o usuário vê.
 - Os destinos podem incluir `trackKind: "track" | "return" | "main"`. Preserve esse campo ao acrescentar alvos de mapeamento; o roteamento do backend depende dele.
 - Os destinos de trigger note usam `mode: "trigger_note"` com `type: "device_param"`, por compatibilidade com o motor de mapeamento. A identidade é track + nota MIDI, não o slot de device ou parâmetro.
-- Os mapeamentos são compartilhados por nome de controle entre os celulares conectados. Chaves antigas no formato `client-id::control` servem apenas como entrada de migração: a camada de mapeamento do celular as dobra sobre o controle canônico e remove a chave com escopo na escrita. Use sempre o helper local `mappingKey()`, em vez de remontar chaves.
+- Os mapeamentos são compartilhados por nome de controle entre os celulares conectados. Chaves antigas no formato `client-id::control` servem apenas como entrada de migração: a camada de mapeamento do celular converte essas chaves para o controle canônico e apaga a chave antiga na próxima gravação. Use sempre o helper local `mappingKey()`, em vez de remontar chaves.
 
 Campos do editor hoje expostos no celular:
 
@@ -158,7 +158,7 @@ O canvas de curva é uma prévia visual local da resposta do mapeamento. Se a
 implementação de curva do backend mudar, atualize tanto os testes do backend
 quanto a matemática da prévia no celular.
 
-Modos de mapping aposentados/não suportados são descartados na leitura e rejeitados na criação.
+Modos de mapeamento removidos ou não suportados são descartados na leitura e rejeitados na criação.
 
 ## Camada de entrada segura
 
@@ -260,7 +260,7 @@ usuário peça uma migração nova.
 
 Arquivos:
 
-- `static/phone-v3/audio-processor.js` — captura, o laço de quadro, e o que é publicado.
+- `static/phone-v3/audio-processor.js` — captura, o loop por frame e o que é publicado.
 - `static/phone-v3/audio-analysis-controls.js` — todas as primitivas de análise, cada uma testável sozinha.
 - `static/phone-v3/audio-descriptors.js` — DSP puro de transiente/kick/snare/brilho: subidas por banda comparadas à energia recente da própria banda, joelho suave para sensibilidade, release exponencial e curva de resposta. `normalizeSettings` é o único clamp de todo ajuste de detector.
 - `static/phone-v3/audio-spectral-descriptors.js` — oito medidas espectrais definidas.
@@ -285,13 +285,14 @@ distintas. Fórmulas e unidades estão no
 Timbre usa Hann 2N com hop N; ataques preservam janela retangular N. No
 fallback, AnalyserNode usa Blackman (média quadrática .3046) com correção da
 energia das bandas. Sem fila por descritor, ganho automático ou lookahead.
-O pacote legado `controls` aceita lotes completos legados4/atuais12 de descritores.
+O pacote legado `controls` aceita lotes completos de descritores, tanto no formato
+legado (4) quanto no atual (12).
 O `control_frame` negociado compartilha uma cadência limitada entre controles e
 áudio; `app.js` publica o conjunto de descritores atomicamente nesse fluxo.
 Snapshots novos usam `controlsRealtime:true` e nunca atuam no Live. Preserve o
 leitor legado; negocie `hello.controlStreamVersion=1` antes de trocar o caminho.
 Amplie zero/reset, catálogo, limites e despacho de mapeamento juntos.
-O caminho rápido dos descritores independe das análise de amplitude e do
+O caminho rápido dos descritores independe da análise de amplitude e do
 snapshot geral de 30 Hz. A captura contínua usa um AudioWorklet só de descritores;
 o modo de compatibilidade identificado na tela usa análise por quadro de animação.
 As escritas em parâmetros não se sobrepõem e retêm apenas o destino mais recente.
@@ -310,7 +311,7 @@ Os descritores e seu tempo musical são configurados pelos módulos próprios.
 ### Escutar uma track
 
 `static/RC-Audio-Sender.amxd`, gerado por `scripts/build-audio-sender.js` com o
-leitor de contêiner em `scripts/amxd.js`. Regere em vez de editar o binário:
+leitor de contêiner em `scripts/amxd.js`. Gere o arquivo de novo em vez de editar o binário:
 
 ```powershell
 node scripts/build-audio-sender.js static/RC-Midi-Receiver.amxd static/RC-Audio-Sender.amxd
@@ -405,4 +406,4 @@ Atualize a documentação quando o comportamento público mudar:
 - Novos controles ou sensores: `docs/CUSTOMIZATION.md`, `README.md`.
 
 > Ao mexer nesses arquivos, atualize também a versão em português ao lado
-> (`docs/*.pt-BR.md`). Uma tradução defasada é pior que nenhuma.
+> (`docs/*.pt-BR.md`). Uma tradução desatualizada é pior do que nenhuma.

@@ -37,9 +37,10 @@ one side accept a gesture the other rejects, and the user would see a control
 that stopped following the finger with no error surfaced.
 
 Source: `internal/LIVE-WRITE-CEILING-1.0.md`, rule
-`maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`. The ceiling
-table above is the **fallback** for `teto_efetivo ≈ 50 escritas/s` (live
-write-ceiling task P04 still pending as of 2026-09-17). When `teto_efetivo`
+`maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`, where
+`teto_efetivo` is the effective write ceiling. The table above is the
+**fallback** for an effective ceiling of about 50 writes/s (the live
+write-ceiling task P04 was still pending as of 2026-09-17). When `teto_efetivo`
 is measured, regenerate the table and update this doc, both source files
 (`src/live/transport-clock.ts:11`, `static/phone-v3/controls.js:17`) and the
 frozen contract test (`tests/contracts-freeze.test.mjs`).
@@ -74,7 +75,7 @@ cap.
 The browser needs the numbers to render the dial, label and gate, all on the
 critical frame budget. The host needs the same numbers to compute write
 scheduling for the LFO/stutter parameters that go back to Live. Either side
-treating the table as its own is a bug: a face would draw a position the host
+treating the table as its own is a bug: the dial would draw a position the host
 refuses to honour, and the user would think the controller is broken. The
 parity test is the only thing keeping them honest — treat any drift there as
 a release blocker, not a refactor opportunity.
