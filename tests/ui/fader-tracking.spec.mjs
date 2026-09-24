@@ -23,6 +23,10 @@ async function dragFromThumbToY(page, faderName, targetClientY) {
 
 test('MIX fader thumb tracks the pointer 1:1 across the live track height', async ({ page }) => {
   await page.setViewportSize({ width: 851, height: 393 });
+  // The fader reads a second pointerdown within 300 ms as a double tap and
+  // resets instead of dragging. The page clock lets the spec step past that
+  // window whatever the runner's speed.
+  await page.clock.install();
   await page.goto('/?lang=en');
   await page.locator('.tab[data-page="mixer"]').click();
   await expect(page.locator('.page-mixer .fader')).toHaveCount(8);
@@ -43,18 +47,19 @@ test('MIX fader thumb tracks the pointer 1:1 across the live track height', asyn
   expect(Math.abs(thumbCenterY - (topY + 4))).toBeLessThanOrEqual(6);
 
   // Now drag from the top back down to the middle of the track: value ~ 0.5.
+  // A second drag inside the double-tap window would reset the fader to its
+  // 0.85 default instead, which is how an older `>= 0.7` bound passed on fast
+  // runners and failed on the slow macOS one.
+  await page.clock.runFor(350);
   const midY = trackBox.y + trackBox.height / 2;
   await dragFromThumbToY(page, 'fader-1', midY);
 
   const ariaMid = Number(await page.locator('.page-mixer [data-name="fader-1"]')
     .getAttribute('aria-valuenow'));
-  // P03 preserved the relative drag formula: `value = clamp(startVal + (startY - clientY) / rangePx, 0, 1)`.
-  // After dragging to the top (value=1), the second drag from the top back to midY moves value
-  // DOWN by (startY - midY)/rangePx. The exact delta depends on the live track height and thumb
-  // offset, so we only assert that value actually decreased from the initial 0.85 default plus the
-  // top clamp — confirming the 1:1 contract stays wired.
-  expect(ariaMid).toBeGreaterThanOrEqual(0.7);
-  expect(ariaMid).toBeLessThanOrEqual(1);
+  // P03 relative drag: `value = clamp(startVal + (startY - clientY) / rangePx, 0, 1)` with
+  // rangePx = the live track height, so the drag from the thumb at the top (value 1) down to
+  // the middle of the track lands near 0.5 — well clear of the 0.85 a double-tap reset leaves.
+  expect(ariaMid).toBeCloseTo(0.5, 1);
 });
 
 test('MIX fader rangePx tracks the live track height on mobile landscape', async ({ page }) => {
