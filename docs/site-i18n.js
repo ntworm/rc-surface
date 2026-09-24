@@ -56,11 +56,11 @@
     },
     'lp.surface.002': {
       en: "Any device with a browser becomes a performance controller for Ableton Live. Your machine serves the surface on the local network and the phone just opens a link.",
-      'pt-BR': "Qualquer aparelho com navegador vira um controlador de performance para o Ableton Live. A sua máquina serve a surface na rede local e o celular só abre um link.",
+      'pt-BR': "Qualquer aparelho com navegador vira um controlador de performance para o Ableton Live. O seu computador serve a superfície na rede local e o celular só precisa abrir um link.",
     },
     'lp.surface.003': {
       en: "Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network, nothing installed on the phone.",
-      'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · segurado na <b>horizontal</b> · rede local, nada instalado no celular.",
+      'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.",
     },
     'lp.surface.004': {
       en: "Published releases",
@@ -88,7 +88,7 @@
     },
     'lp.chain.005': {
       en: "       HOP 3  ▼  LIVE OBJECT MODEL · IN PROC",
-      'pt-BR': "     SALTO 3  ▼  LIVE OBJECT MODEL · NO PROC",
+      'pt-BR': "     SALTO 3  ▼  LIVE OBJECT MODEL · INTERNO",
     },
     'lp.chain.006': {
       en: "▼ CONTROL, OUTBOUND      ◀ STATE, INBOUND",
@@ -116,7 +116,7 @@
     },
     'lp.chain.015': {
       en: "BPM simulator off Live's tempo. No beat phase.",
-      'pt-BR': "Simulador de BPM a partir do tempo do Live. Sem fase de beat.",
+      'pt-BR': "Simulador de BPM a partir do andamento do Live. Sem fase de beat.",
     },
     'lp.chain.016': {
       en: 'Free',
@@ -124,11 +124,11 @@
     },
     'lp.chain.018': {
       en: "Internal clock. Not locked to Live's tempo.",
-      'pt-BR': "Clock interno. Não travado no tempo do Live.",
+      'pt-BR': "Clock interno. Não segue o andamento do Live.",
     },
     'lp.chain.019': {
       en: "AbletonOSC is needed <b>only</b> for Deep Sync, and installs separately as a Control Surface with UDP <code>11000</code>/<code>11001</code> free. Without it everything else works. Long-press <code>SYNC</code> for clock source, subdivisions, phase, swing and shapes.",
-      'pt-BR': "AbletonOSC só é necessário para o Deep Sync, e se instala à parte como Control Surface com UDP <code>11000</code>/<code>11001</code> livres. Sem ele o resto funciona igual. Segure <code>SYNC</code> para clock, subdivisões, fase, swing e formas de onda.",
+      'pt-BR': "O AbletonOSC só é necessário para o Deep Sync e é instalado à parte, como Control Surface, com as portas UDP <code>11000</code>/<code>11001</code> livres. Sem ele, todo o resto funciona. Segure <code>SYNC</code> para escolher a fonte de clock, as subdivisões, a fase, o swing e as formas de onda.",
     },
     'lp.scenarios.030': {
       en: "Scenario A · two performers",
@@ -136,7 +136,7 @@
     },
     'lp.scenarios.031': {
       en: "Scenario B · arrangement change",
-      'pt-BR': "Cenário B · virada de arranjo",
+      'pt-BR': "Cenário B · mudança de arranjo",
     },
     'lp.scenarios.032': {
       en: "Scenario C · pinch clutch",
@@ -168,7 +168,7 @@
     },
     'lp.scenarios.013': {
       en: "Intro, verse, chorus and outro in SNP slots 1–4, dragged between corners in Vector XY.",
-      'pt-BR': "Intro, verso, refrão e outro nos slots 1–4 do SNP, arrastados entre os cantos no Vector XY.",
+      'pt-BR': "Intro, verso, refrão e outro nos slots 1–4 do SNP, arrastados entre os cantos no Vetor XY.",
     },
     'lp.scenarios.017': {
       en: 'Push a filter in the air',
@@ -176,7 +176,7 @@
     },
     'lp.scenarios.018': {
       en: "Standing, no table. Pinch with the palm to the camera, move the hand, open the fingers.",
-      'pt-BR': "Em pé, sem mesa. Pinch com a palma para a câmera, move a mão, abre os dedos.",
+      'pt-BR': "Em pé, sem mesa. Faça a pinça com a palma virada para a câmera, mova a mão e abra os dedos.",
     },
     'lp.scenarios.021': {
       en: 'The body supplies the modulation',
@@ -205,11 +205,11 @@
     },
     'lp.install.003': {
       en: 'Clip 1',
-      'pt-BR': 'Clipe 1',
+      'pt-BR': 'Vídeo 1',
     },
     'lp.install.004': {
       en: "Install and first pairing, narrated",
-      'pt-BR': "Instalação e primeiro pareamento, narrado",
+      'pt-BR': "Instalação e primeira conexão, com narração",
     },
     'lp.install.006': {
       en: 'Install the extension',
@@ -217,7 +217,7 @@
     },
     'lp.install.007': {
       en: "Double-click the <code>.ablx</code> from Published releases to request installation in Live.",
-      'pt-BR': "Dê dois cliques no <code>.ablx</code> de Published releases para pedir a instalação no Live.",
+      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado em Versões publicadas para instalar no Live.",
     },
     'lp.install.009': {
       en: 'Open the panel',
@@ -237,11 +237,11 @@
     },
     'lp.install.015': {
       en: 'Arm the sensors',
-      'pt-BR': 'Arme os sensores',
+      'pt-BR': 'Ative os sensores',
     },
     'lp.install.016': {
       en: "Enable <b data-i18n=\"lp.map.076\">Motion</b>, <b>Audio</b> or <b>Vision</b> as needed. Raw camera and microphone never leave the phone — only numeric values do.",
-      'pt-BR': "Habilite <b data-i18n=\"lp.map.076\">Motion</b>, <b>Audio</b> ou <b>Vision</b> conforme precisar. Câmera e microfone crus nunca saem do celular — só valores numéricos saem.",
+      'pt-BR': "Ative <b data-i18n=\"lp.map.076\">Movimento</b>, <b>Áudio</b> ou <b>Visão</b> conforme precisar. A imagem da câmera e o som do microfone nunca saem do celular — só valores numéricos.",
     },
     'lp.install.017': {
       en: 'Map a control to Live',
@@ -249,7 +249,7 @@
     },
     'lp.install.018': {
       en: "Tap <code>MAP</code>, pick a highlighted control, then bind it to a Live parameter or a trigger note. Notes need the bundled <code>RC-Midi-Receiver.amxd</code> on the target MIDI track: Live cannot insert Max for Live devices through the SDK.",
-      'pt-BR': "Toque <code>MAP</code>, escolha um controle destacado e ligue a um parâmetro do Live ou a uma nota de trigger. As notas precisam do <code>RC-Midi-Receiver.amxd</code> que vem junto na MIDI track de destino: o Live não insere devices do Max for Live pelo SDK.",
+      'pt-BR': "Toque em <code>MAP</code>, escolha um controle destacado e ligue-o a um parâmetro do Live ou a uma nota de trigger. As notas precisam do <code>RC-Midi-Receiver.amxd</code>, que vem junto, na track MIDI de destino: o SDK não consegue inserir devices do Max for Live no Live.",
     },
     'lp.install.019': {
       en: 'Optional: Deep Sync',
@@ -265,11 +265,11 @@
     },
     'lp.trouble.003': {
       en: 'Troubleshooting',
-      'pt-BR': 'Diagnóstico',
+      'pt-BR': 'Solução de problemas',
     },
     'lp.trouble.004': {
       en: 'Phone cannot find the host',
-      'pt-BR': 'O celular não acha a máquina',
+      'pt-BR': 'O celular não encontra o computador',
     },
     'lp.trouble.005': {
       en: 'Same Wi-Fi. Live allowed through the firewall. Rescan the current QR.',
@@ -349,7 +349,7 @@
     },
     'lp.trouble.042': {
       en: "v1.0.0, smoke-tested in Live 12.4.5+ Suite (Beta) with a physical phone.",
-      'pt-BR': "v1.0.0, testado em Live 12.4.5+ Suite (Beta) com celular físico.",
+      'pt-BR': "v1.0.0, testado no Live 12.4.5+ Suite (Beta) com um celular de verdade.",
     },
     'lp.docs.001': {
       en: 'Reference documents',
@@ -394,7 +394,7 @@
     },
     'lp.map.005': {
       en: "PERF — the layout as built",
-      'pt-BR': "PERF — o layout como foi construído",
+      'pt-BR': "PERF — o layout real",
     },
     'lp.map.006': {
       en: 'Scale none',
@@ -442,7 +442,7 @@
     },
     'lp.map.018': {
       en: "Captioned <code>XY 1</code> and <code data-i18n=\"lp.fig.016\">XY 2 (Physics)</code>. Each axis maps on its own.",
-      'pt-BR': "Marcados <code>XY 1</code> e <code data-i18n=\"lp.fig.016\">XY 2 (Physics)</code>. Cada eixo mapeia sozinho.",
+      'pt-BR': "Marcados <code>XY 1</code> e <code data-i18n=\"lp.fig.016\">XY 2 (Física)</code>. Cada eixo é mapeado separadamente.",
     },
     'lp.map.019': {
       en: 'LFOs',
@@ -462,7 +462,7 @@
     },
     'lp.map.023': {
       en: "CAP captures, slots 1 to 4 recall, OFF exits.",
-      'pt-BR': "CAP captura, os slots 1 a 4 chamam de volta, OFF sai.",
+      'pt-BR': "CAP captura, os slots 1 a 4 recuperam, OFF sai.",
     },
     'lp.map.024': {
       en: "Live panel",
@@ -490,7 +490,7 @@
     },
     'lp.map.039': {
       en: "<code>knob-1..8</code>, four across by two down. Relative vertical drag.",
-      'pt-BR': "<code>knob-1..8</code>, quatro por duas. Arrasto vertical relativo.",
+      'pt-BR': "<code>knob-1..8</code>, quatro colunas por duas linhas. Arrasto vertical relativo.",
     },
     'lp.map.041': {
       en: "<code>fader-1..8</code>, one row. The thumb moves exactly as far as the finger.",
@@ -518,7 +518,7 @@
     },
     'lp.map.059': {
       en: "<code data-i18n=\"lp.fig.013\">CAPTURE</code>, <code data-i18n=\"lp.fig.014\">CLEAR SLOTS</code>, transition 0.1–5.0 s or synced, and Grid/Vector.",
-      'pt-BR': "<code data-i18n=\"lp.fig.013\">CAPTURE</code>, <code data-i18n=\"lp.fig.014\">CLEAR SLOTS</code>, transição de 0.1 a 5.0 s ou sincronizada, e Grid/Vector.",
+      'pt-BR': "<code data-i18n=\"lp.fig.013\">CAPTURAR</code>, <code data-i18n=\"lp.fig.014\">LIMPAR SLOTS</code>, transição de 0.1 a 5.0 s ou sincronizada, e Grade/Vetor.",
     },
     'lp.map.060': {
       en: 'Vector morph pad',
@@ -526,7 +526,7 @@
     },
     'lp.map.061': {
       en: "Blends slots 1 TL, 2 TR, 3 BL and 4 BR at once, weighted by the point.",
-      'pt-BR': "Mistura os slots 1 TL, 2 TR, 3 BL e 4 BR de uma vez, com peso pela posição do ponto.",
+      'pt-BR': "Mistura os slots 1 SE, 2 SD, 3 IE e 4 ID ao mesmo tempo, com peso pela posição do ponto.",
     },
     'lp.map.067': {
       en: 'Fig. 4',
@@ -534,7 +534,7 @@
     },
     'lp.map.068': {
       en: "SNS — motion and orientation axes",
-      'pt-BR': "SNS — eixos de motion e orientação",
+      'pt-BR': "SNS — eixos de movimento e orientação",
     },
     'lp.map.076': {
       en: 'Motion',
@@ -598,7 +598,7 @@
     },
     'lp.map.103': {
       en: "Live 2.5-second history: Amplitude, Attacks, Tone, Texture, Bands or All.",
-      'pt-BR': "Histórico ao vivo de 2.5 s: Amplitude, Attacks, Tone, Texture, Bands ou All.",
+      'pt-BR': "Histórico ao vivo de 2.5 s: Amplitude, Ataques, Timbre, Textura, Bandas ou Tudo.",
     },
     'lp.map.104': {
       en: 'Detector knobs',
@@ -606,7 +606,7 @@
     },
     'lp.map.105': {
       en: "SENS, RELEASE, CURVE, group GAIN and SMOOTH. Note divisions in SYNC, milliseconds in FREE.",
-      'pt-BR': "SENS, RELEASE, CURVE, GAIN e SMOOTH do grupo. Figuras em SYNC, milissegundos em FREE.",
+      'pt-BR': "SENS, RELEASE, CURVA, GANHO e SUAVE do grupo. Figuras em SYNC, milissegundos em FREE.",
     },
     'lp.map.106': {
       en: "Analysis window",
@@ -614,7 +614,7 @@
     },
     'lp.map.107': {
       en: "WINDOW x1/x2/x4 trades spectral detail for response time.",
-      'pt-BR': "WINDOW x1/x2/x4 troca detalhe espectral por tempo de resposta.",
+      'pt-BR': "JANELA x1/x2/x4 troca detalhe espectral por tempo de resposta.",
     },
     'lp.audio.detectors': {
       en: "Built-in audio detectors",
@@ -622,7 +622,7 @@
     },
     'lp.audio.timing': {
       en: "SYNC follows Live BPM from 1/128 to 1/1, triplets and dotted included; FREE keeps its own milliseconds. Low, mid and high are K-weighted loudness (ITU-R BS.1770), in LU.",
-      'pt-BR': "SYNC segue o BPM do Live de 1/128 a 1/1, com quiálteras e pontuadas; FREE guarda os próprios milissegundos. Low, mid e high são loudness K-weighted (ITU-R BS.1770), em LU.",
+      'pt-BR': "SYNC segue o BPM do Live de 1/128 a 1/1, com tercinas e pontuadas; FREE guarda os próprios milissegundos. Graves, médios e agudos são loudness ponderado K (ITU-R BS.1770), em LU.",
     },
     'lp.audio.detector-note': {
       en: "Twelve 0..1 mapping sources: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.",
@@ -642,7 +642,7 @@
     },
     'lp.map.123': {
       en: "On/off, confidence, recognition mode, and the live preview.",
-      'pt-BR': "Liga/desliga, confiança, modo de reconhecimento e o preview ao vivo.",
+      'pt-BR': "Liga/desliga, confiança, modo de reconhecimento e a prévia ao vivo.",
     },
     'lp.map.124': {
       en: 'Learned poses',
@@ -650,7 +650,7 @@
     },
     'lp.map.125': {
       en: "G1, G2 and G3, three examples each: <code>CAP</code>, <code data-i18n=\"lp.fig.007\">TEST</code>, <code data-i18n=\"lp.fig.008\">DEL LAST</code>, <code data-i18n=\"lp.fig.009\">CLR</code>. Recognition emits a momentary 0→1.",
-      'pt-BR': "G1, G2 e G3, três exemplos cada: <code>CAP</code>, <code data-i18n=\"lp.fig.007\">TEST</code>, <code data-i18n=\"lp.fig.008\">DEL LAST</code>, <code data-i18n=\"lp.fig.009\">CLR</code>. O reconhecimento emite um 0→1 momentâneo.",
+      'pt-BR': "G1, G2 e G3, três exemplos cada: <code>CAP</code>, <code data-i18n=\"lp.fig.007\">TESTE</code>, <code data-i18n=\"lp.fig.008\">APAGAR ÚLT</code>, <code data-i18n=\"lp.fig.009\">LIMPAR</code>. O reconhecimento emite um 0→1 momentâneo.",
     },
     'lp.map.126': {
       en: 'Built-in detectors',
@@ -658,7 +658,7 @@
     },
     'lp.map.127': {
       en: "Open, Fist, Pinch and Victory, opt-in and untrained. Rotation belongs to Victory.",
-      'pt-BR': "Open, Fist, Pinch e Victory, opcionais e sem treino. A rotação pertence ao Victory.",
+      'pt-BR': "Aberta, Punho, Pinça e Victory, opcionais e sem treino. A rotação pertence ao Victory.",
     },
     'lp.map.128': {
       en: 'Direct MAP / CLUTCH',
@@ -666,7 +666,7 @@
     },
     'lp.map.129': {
       en: "MAP X/Y/Z follows the hand; CLUTCH X/Y/Z is relative and freezes when the pinch opens.",
-      'pt-BR': "MAP X/Y/Z segue a mão; CLUTCH X/Y/Z é relativo e congela quando o pinch abre.",
+      'pt-BR': "MAP X/Y/Z segue a mão; CLUTCH X/Y/Z é relativo e congela quando a pinça abre.",
     },
     'lp.map.130': {
       en: 'Camera diagnostics',
@@ -674,7 +674,7 @@
     },
     'lp.map.131': {
       en: "PALM size and signed FACE stay local to the preview; they are not mapping controls.",
-      'pt-BR': "Tamanho de PALM e FACE com sinal ficam locais no preview; não são controles mapeáveis.",
+      'pt-BR': "O tamanho de PALM e o FACE com sinal ficam só na prévia; não são controles mapeáveis.",
     },
     'lp.map.137': {
       en: 'Fig. 7',
@@ -698,7 +698,7 @@
     },
     'lp.map.147': {
       en: "Shows only <code>MAP ARMED / TAP A CONTROL / DONE</code>, and goes once a control is tapped.",
-      'pt-BR': "Mostra só <code>MAP ARMED / TAP A CONTROL / DONE</code>, e some quando um controle é tocado.",
+      'pt-BR': "Mostra só <code>MAP ARMADO / TOQUE UM CONTROLE / PRONTO</code>, e some quando um controle é tocado.",
     },
     'lp.map.148': {
       en: 'Editing overlay',
@@ -714,7 +714,7 @@
     },
     'lp.map.151': {
       en: "Searches target names; <code>Selected in Live</code> narrows to the current track and device.",
-      'pt-BR': "Busca nomes de destino; <code>Selected in Live</code> restringe à track e ao device atuais.",
+      'pt-BR': "Busca nomes de destino; <code>Selecionado no Live</code> restringe à track e ao device atuais.",
     },
     'lp.map.152': {
       en: 'Hierarchy',
@@ -722,7 +722,7 @@
     },
     'lp.map.153': {
       en: "Track → Device → Parameter, plus Song/Main/Master and Return groups.",
-      'pt-BR': "Track → Device → Parameter, mais os grupos Song/Main/Master e Return.",
+      'pt-BR': "Track → Device → Parâmetro, mais os grupos Song/Main/Master e Return.",
     },
     'lp.map.154': {
       en: 'Live selection shortcut',
@@ -855,7 +855,7 @@
     },
     'lp.controls.045': {
       en: "Phone overlay, panel Mapping tab and the admin window",
-      'pt-BR': "Overlay do celular, aba Mapping do painel e a janela administrativa",
+      'pt-BR': "Overlay do celular, aba Mapeamentos do painel e a janela administrativa",
     },
     'lp.controls.046': {
       en: 'Header live panel',
@@ -879,7 +879,7 @@
     },
     'lp.controls.052': {
       en: "<b>SDK</b> rows map numbers to Live parameters. MIDI needs the optional Receiver. Local controls never leave the browser.",
-      'pt-BR': "As linhas <b>SDK</b> mapeiam números para parâmetros do Live. MIDI precisa do Receiver opcional. Controles local nunca saem do navegador.",
+      'pt-BR': "As linhas <b>SDK</b> mapeiam números para parâmetros do Live. MIDI precisa do Receiver opcional. Controles locais nunca saem do navegador.",
     },
     'lp.controls.053': {
       en: "The header <span class=\"tail\">— on every page</span>",
@@ -899,7 +899,7 @@
     },
     'lp.controls.059': {
       en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">2.1</a>.",
-      'pt-BR': "Alterna <b>SYNC</b> / <b>FREE</b>. Segure para Deep Sync Settings, <a href=\"#clock\">2.1</a>.",
+      'pt-BR': "Alterna <b>SYNC</b> / <b>FREE</b>. Segure para abrir os Ajustes de Deep Sync, <a href=\"#clock\">2.1</a>.",
     },
     'lp.controls.062': {
       en: "Sets the neutral reference for the page: posture on SNS, level on AUD, lighting on VID.",
@@ -907,7 +907,7 @@
     },
     'lp.controls.063': {
       en: "Locks the surface to the current page.",
-      'pt-BR': "Trava a surface na página atual.",
+      'pt-BR': "Trava a superfície na página atual.",
     },
     'lp.controls.066': {
       en: "What each one does <span class=\"tail\">— from touch to Live</span>",
@@ -1055,7 +1055,7 @@
     },
     'lp.controls.104': {
       en: "Capture stores every mapped control into one of eight slots. Recall interpolates to it over a set time. Vector XY blends slots 1–4 by finger position.",
-      'pt-BR': "O capture guarda todos os controles mapeados num dos oito slots. O recall interpola até ele no tempo definido. O Vector XY mistura os slots 1–4 pela posição do dedo.",
+      'pt-BR': "CAPTURAR guarda todos os controles mapeados num dos oito slots. Chamar um slot interpola até ele no tempo definido. O Vetor XY mistura os slots 1–4 pela posição do dedo.",
     },
     'lp.controls.105': {
       en: 'RECALL = timed interpolation · Free 0.1–5.0 s or Sync in beats',
@@ -1071,7 +1071,7 @@
     },
     'lp.controls.109': {
       en: "CALIBRATE makes the current posture the reference. AUD turns sound into control: level, envelope, gate, attacks and twelve descriptors, graphed over the last 2.5 seconds.",
-      'pt-BR': "CALIBRAR faz da postura atual a referência. AUD transforma som em controle: nível, envelope, gate, attacks e doze descritores, no gráfico dos últimos 2.5 segundos.",
+      'pt-BR': "CALIBRAR faz da postura atual a referência. AUD transforma som em controle: nível, envelope, gate, ataques e doze descritores, no gráfico dos últimos 2.5 segundos.",
     },
     'lp.controls.110': {
       en: "SIGNAL / 2.5s",
@@ -1163,7 +1163,7 @@
     },
     'lp.controls.133': {
       en: "Phone MAP and panel Mappings bind a control to a Live parameter or a trigger note, with curve, range, takeover and idle settings.",
-      'pt-BR': "O MAP do celular e o Mappings do painel ligam um controle a um parâmetro do Live ou a uma nota de trigger, com curva, faixa, takeover e ajustes de ociosidade.",
+      'pt-BR': "O MAP do celular e a aba Mapeamentos do painel ligam um controle a um parâmetro do Live ou a uma nota de trigger, com curva, faixa, takeover e ajustes de repouso.",
     },
     'lp.controls.134': {
       en: 'INPUT → OUTPUT',
@@ -1459,11 +1459,11 @@
     },
     'lp.fig.124': {
       en: "TAP ON",
-      'pt-BR': "TOCA LIGA",
+      'pt-BR': "TOQUE LIGA",
     },
     'lp.fig.125': {
       en: "TAP OFF",
-      'pt-BR': "TOCA DESLIGA",
+      'pt-BR': "TOQUE DESLIGA",
     },
     'lp.fig.126': {
       en: "70 ms attack",
@@ -1636,7 +1636,7 @@
     },
     'lp.fig.localDisplay': {
       en: 'LOCAL DISPLAY ONLY',
-      'pt-BR': 'EXIBIÇÃO LOCAL',
+      'pt-BR': 'SÓ EXIBIÇÃO LOCAL',
     },
   };
 

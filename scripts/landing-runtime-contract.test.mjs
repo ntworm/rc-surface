@@ -594,6 +594,26 @@ test('the passages that carry inline markup are replaced whole', () => {
     'these carry markup and need data-i18n-html, not data-i18n');
 });
 
+test('a handle nested inside a translated passage already carries its own translation', () => {
+  // i18n.js applies data-i18n before data-i18n-html, so a <code data-i18n> that
+  // sits inside a passage is translated first and then overwritten by the
+  // passage's innerHTML. Whatever the passage's value spells inside that tag is
+  // what the reader sees, so it has to be the nested handle's own string.
+  const catalog = loadSiteCatalog();
+  const drift = [];
+  for (const [key, entry] of Object.entries(catalog)) {
+    for (const locale of ['en', 'pt-BR']) {
+      for (const m of String(entry[locale]).matchAll(/data-i18n="([^"]+)"[^>]*>([^<]*)</g)) {
+        const nested = catalog[m[1]];
+        if (nested && nested[locale] !== m[2]) {
+          drift.push(`${key} [${locale}] shows "${m[2]}" for ${m[1]}, which reads "${nested[locale]}"`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(drift, []);
+});
+
 test('the chain diagram keeps its column grid in both languages', () => {
   // Every annotation line inside the box drawing is padded to a fixed width so
   // the return-path bar that follows lands in one column. Nothing about a
