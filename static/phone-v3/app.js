@@ -11,8 +11,12 @@
 
 (function () {
   'use strict';
-  const T = (k, fallback) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
-    ? window.RcSurfaceI18n.t(k) : (fallback ?? k);
+  // The fallback keeps the English wording readable in the source and serves
+  // when the catalog has not loaded; params fill {name} slots either way.
+  const T = (k, fallback, params) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
+    ? window.RcSurfaceI18n.t(k, params)
+    : String(fallback ?? k).replace(/\{(\w+)\}/g, (whole, key) =>
+      (params && Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : whole));
 
   const TICK_MS = 33;          // ~30 Hz
   const DEBUG_LEN = 240;       // single-line debug; truncate
@@ -1826,12 +1830,12 @@
     // yaw/pitch. Those are the variations a performer will reproduce across
     // rooms and camera angles, so the three takes teach a useful range.
     const POSE_TAKE_GUIDANCE = [
-      'make the gesture naturally',
-      'repeat it with a looser or tighter curl',
-      'turn the palm slightly toward or away from the camera',
+      ['vid.take.natural', 'make the gesture naturally'],
+      ['vid.take.curl', 'repeat it with a looser or tighter curl'],
+      ['vid.take.palm', 'turn the palm slightly toward or away from the camera'],
     ];
-    const poseTakeHint = (taken) => POSE_TAKE_GUIDANCE[
-      Math.min(Math.max(0, taken), POSE_TAKE_GUIDANCE.length - 1)];
+    const poseTakeHint = (taken) => T(...POSE_TAKE_GUIDANCE[
+      Math.min(Math.max(0, taken), POSE_TAKE_GUIDANCE.length - 1)]);
 
     let visionProcessor = null;
     let calibrationFrameContext = null;
@@ -1919,10 +1923,10 @@
         if (deleteButton) deleteButton.disabled = samples === 0;
         if (status && !card.classList.contains('recording') && !card.classList.contains('testing')) {
           status.textContent = samples === 0 && incompatibleGestureNames.has(slot?.name)
-            ? 'RECAPTURE REQUIRED · saved pose used the retired format'
-            : samples === 0 ? 'Empty · capture 3 examples'
-            : samples === 3 ? `${kindPrefix}Ready · press TEST to validate`
-              : `${kindPrefix}${samples}/3 saved · capture ${3 - samples} more`;
+            ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · saved pose used the retired format')
+            : samples === 0 ? T('vid.emptyCapture', 'Empty · capture 3 examples')
+            : samples === 3 ? kindPrefix + T('vid.slotReady', 'Ready · press TEST to validate')
+              : kindPrefix + T('vid.slotPartial', '{n}/3 saved · capture {left} more', { n: samples, left: 3 - samples });
         }
       });
     };
@@ -2085,7 +2089,7 @@
         if (samples > 0) incompatibleGestureNames.delete(slot?.name);
       } catch (error) {
         samples = samplesForGesture(slot?.name);
-        failure = error?.message || 'Hold the pose still and try again';
+        failure = error?.message || T('vid.holdStillRetry', 'Hold the pose still and try again');
       }
 
       visionGestureLearnSlot = null;
@@ -2101,10 +2105,10 @@
       // and stability errors stay visible long enough to guide the performer.
       if (status) {
         if (failure) status.textContent = failure;
-        else if (timedOut) status.textContent = 'NO STABLE POSE FOUND · keep the whole hand visible and try again';
+        else if (timedOut) status.textContent = T('vid.noStablePose', 'NO STABLE POSE FOUND · keep the whole hand visible and try again');
         else if (samples > 0) status.textContent = samples === 3
-          ? 'POSE · 3/3 complete · press TEST'
-          : `POSE · ${samples}/3 saved · next take ${poseTakeHint(samples)}`;
+          ? T('vid.poseComplete', 'POSE · 3/3 complete · press TEST')
+          : T('vid.poseNextTake', 'POSE · {n}/3 saved · next take {hint}', { n: samples, hint: poseTakeHint(samples) });
       }
     };
 
@@ -2118,7 +2122,8 @@
       const learnButton = card?.querySelector('.vision-slot-learn');
       const status = card?.querySelector('.vision-slot-status');
       if (learnButton) learnButton.textContent = T('js.capturing', 'CAPTURING…');
-      if (status) status.textContent = `HOLD POSE · ${poseTakeHint(samplesForGesture(name))} · ${samplesForGesture(name) + 1}/3 · LIVE BLOCKED`;
+      if (status) status.textContent = T('vid.holdPose', 'HOLD POSE · {hint} · {take}/3 · LIVE BLOCKED',
+        { hint: poseTakeHint(samplesForGesture(name)), take: samplesForGesture(name) + 1 });
       poseCaptureTimer = setTimeout(() => finishGestureCapture(false), POSE_CAPTURE_MS);
     };
 
@@ -2131,19 +2136,20 @@
       const status = card.querySelector('.vision-slot-status');
 
       learnButton?.addEventListener('click', () => {
-        if (!visionProcessor) return showToast('Enable camera before gesture Learn', 'warning');
+        if (!visionProcessor) return showToast(T('vid.enableCameraFirst', 'Enable camera before gesture Learn'), 'warning');
         if (visionGestureLearnSlot !== null) {
-          return showToast(`Finish Gesture ${visionGestureLearnSlot} capture first`, 'warning');
+          return showToast(T('vid.finishCaptureFirst', 'Finish Gesture {n} capture first', { n: visionGestureLearnSlot }), 'warning');
         }
         const name = visionControls.slots[slotId - 1]?.name || `Gesture ${slotId}`;
-        if (samplesForGesture(name) >= 3) return showToast('This pose already has 3 examples · use REMOVE LAST first', 'warning');
+        if (samplesForGesture(name) >= 3) return showToast(T('vid.poseFull', 'This pose already has 3 examples · use DELETE LAST first'), 'warning');
         stopGestureTest();
         visionGestureLearnSlot = slotId;
         visionProcessor.beginGestureLearn(name);
         learnButton.textContent = T('js.waiting', 'WAITING…');
         learnButton.disabled = true;
         card.classList.add('recording');
-        if (status) status.textContent = `PREPARE · ${poseTakeHint(samplesForGesture(name))} · WAITING FOR STABLE HAND`;
+        if (status) status.textContent = T('vid.preparePose', 'PREPARE · {hint} · WAITING FOR STABLE HAND',
+          { hint: poseTakeHint(samplesForGesture(name)) });
         poseCaptureTimer = setTimeout(
           () => finishGestureCapture(true),
           POSE_PREPARE_TIMEOUT_MS,
@@ -2152,7 +2158,7 @@
 
       testButton?.addEventListener('click', () => {
         const slot = visionControls.slots[slotId - 1];
-        if (!slot?.name || samplesForGesture(slot.name) !== 3) return showToast('Capture exactly three pose examples before testing', 'warning');
+        if (!slot?.name || samplesForGesture(slot.name) !== 3) return showToast(T('vid.captureThreeFirst', 'Capture exactly three pose examples before testing'), 'warning');
         const shouldStart = visionGestureTestSlot !== slotId;
         stopGestureTest();
         if (!shouldStart) return;
@@ -2174,7 +2180,7 @@
         if (!slot?.name) return;
         stopGestureTest();
         const samples = removeStoredTake(slot.name);
-        if (status) status.textContent = `${samples}/3 saved · record one replacement`;
+        if (status) status.textContent = T('vid.recordReplacement', '{n}/3 saved · record one replacement', { n: samples });
         persistVisionSafety();
         renderVisionControlState();
       });
@@ -2439,8 +2445,8 @@
           const status = card?.querySelector('.vision-slot-status');
           const percent = Math.round((target.confidence || 0) * 100);
           if (status) status.textContent = evaluation.accepted && evaluation.name === slot.name
-            ? `POSE MATCH ${percent}% · hold still to confirm`
-            : `POSE MATCH ${percent}% · adjust your hand`;
+            ? T('vid.poseMatchHold', 'POSE MATCH {percent}% · hold still to confirm', { percent })
+            : T('vid.poseMatchAdjust', 'POSE MATCH {percent}% · adjust your hand', { percent });
         };
         visionProcessor.onGesture = (match) => {
           const slot = visionControls.slotForGesture(match.name);
@@ -2459,11 +2465,12 @@
             const testButton = card?.querySelector('.vision-slot-test');
             testButton?.setAttribute('aria-pressed', 'false');
             testButton?.classList.remove('active');
-            if (status) status.textContent = `✓ TEST PASSED · ${percent}% confidence · release and show the pose again to retrigger`;
+            if (status) status.textContent = T('vid.testPassed',
+              '✓ TEST PASSED · {percent}% confidence · release and show the pose again to retrigger', { percent });
             setTimeout(() => card?.classList.remove('recognized'), 1600);
             return;
           }
-          if (status) status.textContent = `✓ ${match.name} recognized · ${percent}%`;
+          if (status) status.textContent = T('vid.poseRecognized', '✓ {name} recognized · {percent}%', { name: match.name, percent });
           setTimeout(() => card?.classList.remove('recognized'), 420);
           if (!window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);

@@ -7,8 +7,10 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 (function () {
   'use strict';
-  const T = (k, fallback) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
-    ? window.RcSurfaceI18n.t(k) : (fallback ?? k);
+  const T = (k, fallback, params) => (typeof window !== 'undefined' && window.RcSurfaceI18n)
+    ? window.RcSurfaceI18n.t(k, params)
+    : String(fallback ?? k).replace(/\{(\w+)\}/g, (whole, key) =>
+      (params && Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : whole));
 
   const state = {
     open: false,
@@ -364,9 +366,9 @@
     if (!install.ok || !install.result || !install.result.success) {
       const reason = install.result?.reason;
       setStatus(reason === 'receiver_upgrade_required'
-        ? T('map.receiverUpgrade', 'Substitua o Receiver antigo dessa track pelo RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP) e tente novamente.')
+        ? T('map.receiverUpgrade', 'Replace the old Receiver on this track with RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP), then retry.')
         : reason === 'receiver_ambiguous'
-          ? T('map.receiverAmbiguous', 'Há mais de um Receiver nessa track. Deixe apenas um Receiver v2 e tente novamente.')
+          ? T('map.receiverAmbiguous', 'More than one Receiver was found on this track. Keep only one Receiver v2 and retry.')
         : reason === 'receiver_missing'
         ? 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.'
         : (install.error || 'Não foi possível verificar RC-Midi-Receiver.amxd nessa track.'), 'error');
@@ -1235,9 +1237,10 @@
       const lost = window.currentControlLost && state.selectedControl
         ? window.currentControlLost[state.selectedControl] === true
         : false;
+      const values = { in: currentInput.toFixed(2), out: scaledOutput.toFixed(2) };
       readoutEl.textContent = lost
-        ? `NO SIGNAL — last In: ${currentInput.toFixed(2)} | Out: ${scaledOutput.toFixed(2)}`
-        : `In: ${currentInput.toFixed(2)} | Out: ${scaledOutput.toFixed(2)}`;
+        ? T('mm.inOutLost', 'NO SIGNAL — last In: {in} | Out: {out}', values)
+        : T('mm.inOutLive', 'In: {in} | Out: {out}', values);
     }
   }
 

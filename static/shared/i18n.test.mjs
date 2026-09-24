@@ -203,11 +203,57 @@ test('the scripts route their strings through the catalog', () => {
       .map((m) => m[1])
       .filter((v) => /[A-Za-z]{2}/.test(v));
     assert.deepEqual(literals, [], `${rel} still writes untranslated text`);
-    assert.ok(src.includes('const T = (k, fallback)'), `${rel} needs the catalog helper`);
+    assert.match(src, /const T = \(k, fallback(?:, params)?\)/, `${rel} needs the catalog helper`);
     // Every lookup carries its English text, so a catalog that fails to load
     // shows English rather than raw keys like mm.clearAll.
     for (const m of src.matchAll(/T\('([\w.]+)'([^)]*)\)/g)) {
       assert.match(m[2], /^,\s*'/, `${rel}: T('${m[1]}') has no English fallback`);
     }
   }
+});
+
+test('every catalog lookup in the phone scripts exists in both languages with the same placeholders', () => {
+  // A status line built from a template literal cannot be translated, and a
+  // key whose Portuguese drops a {placeholder} shows the raw brace on stage.
+  const catalogSrc = fs.readFileSync(path.join(import.meta.dirname, 'i18n-catalog.js'), 'utf8');
+  const scope = {};
+  vm.runInNewContext(catalogSrc, { globalThis: scope });
+  const catalog = scope.RcSurfaceI18nCatalog;
+  const slots = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+  const problems = [];
+  for (const rel of ['../phone-v3/app.js', '../phone-v3/mapping-mode.js']) {
+    const src = fs.readFileSync(path.join(import.meta.dirname, rel), 'utf8');
+    for (const m of src.matchAll(/T\('([\w.]+)',\s*'([^']*)'/g)) {
+      const [, key, fallback] = m;
+      const entry = catalog[key];
+      if (!entry) { problems.push(`${rel}: ${key} is not in the catalog`); continue; }
+      if (!entry['pt-BR']) problems.push(`${key} has no pt-BR`);
+      if (entry.en.replace(/\s+/g, ' ') !== fallback) problems.push(`${key}: fallback "${fallback}" differs from catalog "${entry.en}"`);
+      for (const locale of ['en', 'pt-BR']) {
+        if (slots(entry[locale]).join() !== slots(fallback).join()) {
+          problems.push(`${key} [${locale}] placeholders ${slots(entry[locale])} vs ${slots(fallback)}`);
+        }
+      }
+    }
+    for (const m of src.matchAll(/(?:status|readoutEl)\.textContent\s*=[^;]*`[^`]*[A-Za-z]{3}[^`]*`/g)) {
+      problems.push(`${rel}: template literal written straight to the screen: ${m[0].slice(0, 80)}`);
+    }
+  }
+  assert.deepEqual(problems, []);
+});
+
+test('the pose-slot status lines read in Portuguese', () => {
+  const catalogSrc = fs.readFileSync(path.join(import.meta.dirname, 'i18n-catalog.js'), 'utf8');
+  const { api } = load({ search: '?lang=pt-BR' });
+  const scope = {};
+  vm.runInNewContext(catalogSrc, { globalThis: scope });
+  api.registerCatalog(scope.RcSurfaceI18nCatalog);
+  // USER-GUIDE.pt-BR.md tells the reader to look for this exact wording.
+  assert.match(api.t('vid.recaptureRequired'), /^RECAPTURA NECESSÁRIA/);
+  assert.equal(api.t('vid.slotPartial', { n: 2, left: 1 }), '2/3 salvos · capture mais 1');
+  assert.equal(api.t('vid.poseRecognized', { name: 'G1', percent: 77 }), '✓ G1 reconhecido · 77%');
+  // The buttons read TESTE and APAGAR ÚLTIMA, so the prose names them that way.
+  assert.match(api.t('vid.slotReady'), /TESTE/);
+  assert.match(api.t('vid.poseFull'), /APAGAR ÚLTIMA/);
+  assert.equal(api.t('mm.inOutLost', { in: '0.50', out: '0.25' }), 'SEM SINAL — último In: 0.50 | Out: 0.25');
 });

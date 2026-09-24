@@ -41,7 +41,7 @@ test('the capture flow asks for meaningful curl and palm-angle variation on each
     'uniform scale is normalized and should not be the main capture instruction');
   assert.match(app, /poseTakeHint\(samplesForGesture\(name\)\)/,
     'the hint shown while capturing must depend on which take this is');
-  assert.match(app, /next take \$\{poseTakeHint\(samples\)\}/,
+  assert.match(app, /next take \{hint\}', \{ n: samples, hint: poseTakeHint\(samples\) \}/,
     'the message between takes must say what to vary next');
 });
 
@@ -50,12 +50,13 @@ test('F-010: recognition label renders match.name literally and distinguishes sa
   const css = fs.readFileSync(path.join(import.meta.dirname, 'style.css'), 'utf8');
   const i18n = fs.readFileSync(path.join(import.meta.dirname, '../shared/i18n-catalog.js'), 'utf8');
 
-  // Verify the exact string template in app.js
+  // Verify the exact lookup in app.js: the saved name goes in as {name}
   assert.match(
     app,
-    /status\.textContent\s*=\s*`✓\s*\$\{match\.name\}\s*recognized\s*·\s*\$\{percent\}%`/,
+    /status\.textContent\s*=\s*T\('vid\.poseRecognized',\s*'✓ \{name\} recognized · \{percent\}%',\s*\{ name: match\.name, percent \}\)/,
     'app.js must interpolate match.name directly, not a missing placeholder like {n}s',
   );
+  assert.match(i18n, /'vid\.poseRecognized': \{ en: '✓ \{name\} recognized · \{percent\}%'/);
 
   // Exercise formatting helper mimicking app.js line 2466
   function formatRecognition(matchName, confidence) {
