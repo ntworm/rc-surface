@@ -50,6 +50,7 @@ const zipPath = join(kitsRoot, `${kitName}.zip`);
 // inside the test zip kit to ensure that the kit remains self-contained and free of broken links.
 const stageDocs = [
   "README.md",
+  "README.pt-BR.md",
   "LICENSE",
   "NOTICE",
   "CHANGELOG.md",

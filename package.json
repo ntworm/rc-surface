@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc --noEmit && tsx build.ts",
     "build:prod": "tsc --noEmit && tsx build.ts --production",
+    "build:site": "node scripts/build-site.mjs",
     "build:prod-ablx": "npm run build:prod && node -e \"const fs=require('fs');const v=JSON.parse(fs.readFileSync('package.json')).version;require('child_process').execSync('npx extensions-cli package -i dist/static -o RC-Surface-'+v+'.ablx',{stdio:'inherit'})\"",
     "lint": "npx eslint src static tests docs scripts build.ts && tsc --noEmit",
     "check:vendor": "node scripts/check-vendor-sdk.mjs",

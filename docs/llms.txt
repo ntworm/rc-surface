@@ -1,0 +1,42 @@
+# RC Surface
+
+> RC Surface is a free, source-available extension for Ableton Live 12.4.5+ Suite that turns a phone's web browser into a wireless controller for Live. The computer serves the controller over the local network; the phone scans a QR code and opens it in Safari (iOS 15.4+) or a Chromium browser (Android). Nothing is installed on the phone and nothing goes through the cloud.
+
+What it controls and how:
+
+- Controls: 12 performance pads with modes A/B/C/D (momentary, hold, toggle, burst), two XY pads (one with physics), 8 knobs, 8 faders, 4 LFOs, 4 stutters, 8 snapshots with timed and vector (XY) morph.
+- Sensors as mapping sources: motion and orientation, the phone microphone or a selected audio input (RMS, envelope, gate, attack and twelve audio descriptors such as transient, kick, snare, brightness and K-weighted low/mid/high loudness), and single-hand camera tracking with MediaPipe Hands (bundled, works offline).
+- Mapping: from the phone (MAP) or the panel inside Live, any control can be bound to a Live parameter (tracks, returns, main, devices) or to a fixed MIDI trigger note through the bundled Max for Live receiver `RC-Midi-Receiver.amxd`. Curves, ranges, soft takeover and signal-loss behaviour are per mapping.
+- Optional AbletonOSC integration adds beat-accurate sync for LFOs and stutters, a visual metronome and locator transport.
+- Built on the Ableton Extensions SDK (host side, TypeScript) and plain browser JavaScript (phone side). HTTPS/WSS with a per-install self-signed certificate and rotating session tokens; meant for a trusted studio or home network.
+- Licence: PolyForm Noncommercial 1.0.0 (free for noncommercial use; not open source in the OSI sense). Independent project by Gabriel Worm, not affiliated with Ableton AG.
+- Not supported: Ableton Live 11 or earlier, other DAWs, more than one controlling phone at a time, Linux hosts.
+
+Interface and documentation exist in English and Brazilian Portuguese.
+
+## Docs
+
+- [Landing page](https://ntworm.github.io/rc-surface/): overview, surface map, control inventory, install steps and troubleshooting
+- [README](https://raw.githubusercontent.com/ntworm/rc-surface/main/README.md): feature summary, quick start, architecture and development commands
+- [Install guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/INSTALL.md): installing the .ablx, connecting the phone, certificates, AbletonOSC, the Max devices and troubleshooting
+- [User guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/USER-GUIDE.md): every page of the phone controller, pad modes, LFOs, stutters, MAP, CFG, snapshots, sensors, audio descriptors and vision
+- [FAQ](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/FAQ.md): compatibility, latency, privacy, pricing and common questions
+- [Security](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/SECURITY.md): threat model, tokens, certificates and network exposure
+- [Privacy](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/PRIVACY.md): what data exists and where it stays
+
+## Português (Brasil)
+
+- [Página em português](https://ntworm.github.io/rc-surface/pt-br.html): visão geral, mapa da superfície, controles, instalação e solução de problemas
+- [README em português](https://raw.githubusercontent.com/ntworm/rc-surface/main/README.pt-BR.md)
+- [Guia de instalação](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/INSTALL.pt-BR.md)
+- [Guia do usuário](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/USER-GUIDE.pt-BR.md)
+- [Perguntas frequentes](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/FAQ.pt-BR.md)
+
+## Optional
+
+- [All English docs in one file](https://ntworm.github.io/rc-surface/llms-full.txt)
+- [Customization and development](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CUSTOMIZATION.md): source map, control names and extension points
+- [Contracts](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CONTRACTS.md): protocol limits and host/phone parity rules
+- [Compatibility](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/COMPATIBILITY.md): tested Live, browser and Node versions
+- [Changelog](https://raw.githubusercontent.com/ntworm/rc-surface/main/CHANGELOG.md)
+- [Releases](https://github.com/ntworm/rc-surface/releases): the installable .ablx packages

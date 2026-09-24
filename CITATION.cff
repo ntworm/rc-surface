@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you refer to RC Surface in your work, please cite it as below."
+type: software
+title: "RC Surface"
+abstract: >-
+  Source-available Ableton Live 12 extension that turns a phone's web browser
+  into a wireless controller: performance pads, XY pads, knobs, faders, LFOs,
+  stutters, snapshots with vector morph, motion sensors, audio descriptors and
+  single-hand camera tracking, mapped to Live parameters or MIDI notes over the
+  local network.
+authors:
+  - given-names: Gabriel
+    family-names: Worm
+    alias: ntworm
+version: 1.0.0
+date-released: 2026-09-21
+license: PolyForm-Noncommercial-1.0.0
+repository-code: "https://github.com/ntworm/rc-surface"
+url: "https://ntworm.github.io/rc-surface/"
+keywords:
+  - Ableton Live
+  - Ableton Live 12
+  - Ableton Extensions SDK
+  - Max for Live
+  - MIDI controller
+  - phone controller
+  - control surface
+  - live performance
+  - motion sensors
+  - audio descriptors
+  - hand tracking
+  - MediaPipe

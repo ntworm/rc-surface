@@ -42,11 +42,14 @@ function el(attrs = {}) {
   };
 }
 
-function load({ search = '', stored = null, nodes = [] } = {}) {
+function load({ search = '', stored = null, nodes = [], pageLocale = null } = {}) {
   const store = new Map();
   if (stored) store.set('ableton-rc:locale', stored);
   const doc = {
-    documentElement: { lang: '' },
+    documentElement: {
+      lang: '',
+      getAttribute: (name) => (name === 'data-default-locale' ? pageLocale : null),
+    },
     querySelectorAll: (sel) =>
       nodes.filter((n) => n.matchSelector === sel),
     querySelector: () => null,
@@ -88,6 +91,15 @@ test('storage carries a reopened page that has no parameter', () => {
   assert.equal(load({ stored: 'pt-BR' }).api.getLocale(), 'pt-BR');
   assert.equal(load({ search: '?lang=fr', stored: 'pt-BR' }).api.getLocale(), 'pt-BR');
   assert.equal(load().api.getLocale(), 'en', 'and the default when there is nothing');
+});
+
+test('a page published in one language opens in it, unless the URL asks otherwise', () => {
+  // docs/pt-br.html is the Portuguese landing page: a visitor who last chose
+  // English on the English page still has to read the page they opened.
+  assert.equal(load({ pageLocale: 'pt-BR', stored: 'en' }).api.getLocale(), 'pt-BR');
+  assert.equal(load({ pageLocale: 'pt-BR', search: '?lang=en' }).api.getLocale(), 'en');
+  // Pages without the attribute — the phone, the panel — are unchanged.
+  assert.equal(load({ stored: 'pt-BR' }).api.getLocale(), 'pt-BR');
 });
 
 test('a missing key shows the key, a missing translation shows English', () => {

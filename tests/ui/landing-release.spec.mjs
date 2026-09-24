@@ -45,6 +45,21 @@ test('operator landing fits mobile widths in both languages with local scrollabl
   }
 });
 
+test('the Portuguese landing URL opens in Portuguese for a browser that last chose English', async ({ page }) => {
+  // pt-br.html is what a Portuguese search result links to; storage from an
+  // earlier English visit must not turn it back into the English page.
+  await page.addInitScript(() => localStorage.setItem('ableton-rc:locale', 'en'));
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/landing/pt-br.html');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
+  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Versões publicadas');
+  await expect(page.locator('[data-i18n-html="lp.map.018"] code').nth(1)).toHaveText('XY 2 (Física)');
+  await page.locator('[data-set-locale="en"]').click();
+  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Published releases');
+  expect(errors).toEqual([]);
+});
+
 test('all seven refreshed tab diagrams and six family cards remain reachable in EN/PT', async ({ page }, testInfo) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));

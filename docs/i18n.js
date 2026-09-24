@@ -12,9 +12,13 @@
  *
  *   1. `?lang=` on the URL — the QR carries it, so the phone paints in the
  *      right language on the first frame instead of flashing English.
- *   2. localStorage — a surface reopened without the parameter keeps what it
+ *   2. `<html data-default-locale>` — a page that exists as its own
+ *      translated URL (the landing page's pt-br.html) is in that language
+ *      whatever this browser chose elsewhere, or search engines and shared
+ *      links would land on text that does not match the page they indexed.
+ *   3. localStorage — a surface reopened without the parameter keeps what it
  *      last saw, so a bookmarked page is not stuck in the wrong language.
- *   3. the shipped default.
+ *   4. the shipped default.
  *
  * The server can override at any time through `adoptFromServer`, which is how
  * a phone that is already open follows a change made in the panel.
@@ -48,6 +52,14 @@
     try {
       const params = new globalScope.URLSearchParams(globalScope.location?.search || '');
       return normalizeLocale(params.get('lang'));
+    } catch {
+      return null;
+    }
+  }
+
+  function fromDocument() {
+    try {
+      return normalizeLocale(documentRef?.documentElement?.getAttribute?.('data-default-locale'));
     } catch {
       return null;
     }
@@ -216,7 +228,7 @@
     apply();
   }
 
-  locale = fromUrl() || fromStorage() || DEFAULT;
+  locale = fromUrl() || fromDocument() || fromStorage() || DEFAULT;
 
   globalScope.RcSurfaceI18n = Object.freeze({
     STORAGE_KEY,

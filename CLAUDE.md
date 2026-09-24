@@ -21,6 +21,7 @@ npm run build          # tsc --noEmit + esbuild -> dist/
 npm run test:ui        # Playwright, tests/ui/*.spec.mjs against tests/ui/test-server.mjs on :9880
 npm run ci             # the full local gate
 npm run build:prod-ablx
+npm run build:site     # regenerate docs/pt-br.html, the landing <head> SEO block, sitemap.xml, llms-full.txt
 ```
 
 Single test:
@@ -46,7 +47,9 @@ Node is pinned to 24.x (`engines`, `.nvmrc`). The static and `scripts/` tests ru
 - `static/panel/` — the panel shown inside Live (QR, mapping editor). `static/admin/` — admin dashboard.
 - `static/shared/` — `i18n.js` (runtime) + `i18n-catalog.js` (strings), audio descriptor catalog (IDs and scales of the twelve public descriptors).
 
-**Landing page (`docs/`, served by GitHub Pages at https://ntworm.github.io/rc-surface/, `.nojekyll`).** A single hand-written `docs/index.html` ("operator sheet") with the font embedded as base64. Every translatable element carries `data-i18n` / `data-i18n-html` / `data-i18n-href` handles resolved from `docs/site-i18n.js`. `docs/i18n.js` must be a byte-identical copy of `static/shared/i18n.js`.
+**Landing page (`docs/`, served by GitHub Pages at https://ntworm.github.io/rc-surface/, `.nojekyll`).** A single hand-written `docs/index.html` ("operator sheet") with the font embedded as base64. Every translatable element carries `data-i18n` / `data-i18n-html` / `data-i18n-href` handles resolved from `docs/site-i18n.js`. `docs/i18n.js` must be a byte-identical copy of `static/shared/i18n.js`. `scripts/build-site.mjs` generates, and `scripts/build-site.test.mjs` fails when stale: the `seo:begin`/`seo:end` block of `docs/index.html`, `docs/pt-br.html` (the Portuguese page as its own URL, catalog applied ahead of time, `<html data-default-locale="pt-BR">`), `docs/sitemap.xml` and `docs/llms-full.txt`. Edit the landing, the catalog or the English docs, then run `npm run build:site`. `docs/llms.txt` is hand-written; `.github/workflows/indexnow.yml` pings IndexNow after Pages builds. The account-side SEO steps live in `internal/SEO-E-DESCOBERTA.pt-BR.md`.
+
+`i18n.js` applies `data-i18n` before `data-i18n-html`, so a handle nested inside a translated passage is overwritten by the passage's value: the passage must already spell the nested label in each language (asserted in `scripts/landing-runtime-contract.test.mjs`).
 
 ## Invariants enforced by tests
 
