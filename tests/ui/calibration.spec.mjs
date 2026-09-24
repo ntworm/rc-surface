@@ -45,6 +45,10 @@ test('audio calibration uses live raw samples and resets on input stop without c
   await page.locator('.tab[data-page="audio"]').click();
   await page.locator('#chk-audio-enable').check({ force: true });
   await page.clock.install();
+  // Only runFor may move time: the audio watchdog marks the envelope lost 180 ms
+  // after the last frame, and the resize and screenshot steps below take longer
+  // than that on a slow runner, which turned the final reading into a recovery.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   const button = page.locator('#btn-calibrate-sensors-header');
   const detectors = await page.evaluate(() => localStorage.getItem('ableton-rc:audio_detectors'));
   await button.click();
