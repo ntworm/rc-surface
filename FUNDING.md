@@ -3,8 +3,8 @@
 If this project saved you time on stage, in the studio, or while prototyping, consider supporting development.
 
 RC Surface is **licensed under the PolyForm Noncommercial 1.0.0**
-and free to install for noncommercial use. The code is open source, the
-`.ablx` is free to install, and there is no Pro tier. Donations fund the next
+and free to install for noncommercial use. The source is public
+(source-available), the `.ablx` is free to install, and there is no Pro tier. Donations fund the next
 round of work, not gate existing features.
 
 ## Where donations go

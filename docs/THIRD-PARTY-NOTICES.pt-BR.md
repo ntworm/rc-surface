@@ -59,7 +59,7 @@ Copyright (c) Russell McClellan <russell.mcclellan@gmail.com>
 
 Copyright 2019 The MediaPipe Authors.
 Copiados para o payload em `static/phone-v3/vendor/mediapipe/`; o texto da
-Apache License 2.0 é vendado em `static/phone-v3/vendor/mediapipe/LICENSE`.
+Apache License 2.0 fica copiado em `static/phone-v3/vendor/mediapipe/LICENSE`.
 <https://developers.google.com/mediapipe>
 
 ### Departure Mono — MIT

@@ -200,8 +200,7 @@ Phone-side safety primitives live in `static/phone-v3/safe-input-layer.js`:
 - gesture templates trained only in Learn mode and immutable in performance.
 
 Hand-position smoothing lives in `static/phone-v3/vision-processor.js`, where
-one One Euro filter design steadies X/Y/Z while opening its cutoff for fast
-movement.
+a One Euro filter steadies X/Y/Z and opens its cutoff for fast movement.
 
 MediaPipe Hands and Camera Utilities are npm runtime dependencies copied into
 `dist/static/phone-v3/vendor/mediapipe/` by the build. Vision therefore starts
@@ -366,7 +365,7 @@ Mapping UI must support:
 - inline curve/range editing per target;
 - conflict warnings without blocking `alert()`;
 - replace flow that removes old mapping before setting new one;
-- live graph update while dragging sliders.
+- live graph update while dragging sliders;
 - mobile-first binding through the phone MAP mode;
 - trigger-note mappings with `RC-Midi-Receiver.amxd` reuse/manual fallback;
 - normal tracks, return tracks, and main/master targets.

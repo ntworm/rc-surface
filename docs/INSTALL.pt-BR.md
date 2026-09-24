@@ -21,14 +21,14 @@ Seus mapeamentos, presets, certificados, locale, autostart e projetos continuam
 em `worm.ableton-rc-surface`.
 
 Para mover esses dados para a pasta nova sem sobrescrever nada, rode o migrador
-do kit do tester **antes** de instalar o novo `.ablx`:
+do kit de teste **antes** de instalar o novo `.ablx`:
 
 - Windows: clique duas vezes em `Migrate-RC-Surface-Data.cmd` (ou rode `Migrate-RC-Surface-Data.ps1`)
 - macOS: clique duas vezes em `Migrate RC Surface Data.command`
 
 O script copia cada arquivo e pula o que já existe no destino. Nunca move nem
-apaga a origem. Se a pasta de origem não existir (instalação nova), sai com
-uma mensagem e exit 0.
+apaga a origem. Se a pasta de origem não existir (instalação nova), ele só
+mostra uma mensagem e termina sem erro.
 
 ## 1. Pré-requisitos
 
@@ -48,12 +48,12 @@ A extensão em si é construída sobre o
 
 ## 2. Baixar e instalar
 
-### A partir de uma candidata de teste ou release publicada
+### A partir de uma versão candidata de teste ou de uma release publicada
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
    do projeto, ou use o pacote de teste enviado pelo mantenedor. A versão do
-   código é **1.0.0**; a candidata local não significa que já existe uma release
-   pública. Siga a versão e as instruções de verificação do pacote recebido.
+   código é **1.0.0**; ter uma versão candidata local não significa que já existe
+   uma release pública. Siga a versão e as instruções de verificação do pacote recebido.
 2. Dê dois cliques no arquivo. O instalador de extensões do Live abre.
 3. Clique em *Install*. O Live coloca o arquivo em
    `User Library / Extensions`.
@@ -74,10 +74,10 @@ precisa instalar e configurar o **AbletonOSC**:
 1. Baixe o **AbletonOSC** no repositório: [AbletonOSC no GitHub](https://github.com/ideoforms/AbletonOSC). Clique em **Code** → **Download ZIP**.
 2. Extraia o ZIP e coloque a pasta `AbletonOSC` no diretório **MIDI Remote Scripts** do seu Ableton Live:
    - **Windows**: `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\`
-   - **macOS**: clique com o botão direito no aplicativo Ableton Live em Aplicativos, escolha **Show Package Contents**, e vá até `Contents/App-Resources/MIDI Remote Scripts/`.
+   - **macOS**: clique com o botão direito no Ableton Live, na pasta Aplicativos, escolha **Mostrar Conteúdo do Pacote** (*Show Package Contents*) e vá até `Contents/App-Resources/MIDI Remote Scripts/`.
 3. Abra as preferências **Link/Tempo/MIDI** do Ableton Live.
 4. Adicione o **AbletonOSC** como Control Surface na lista. Em **Input** e **Output**, deixe **None**.
-5. Configurado isso, a extensão detecta sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada).
+5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada).
 
 ### Opcional: instalar o RC-Midi-Receiver.amxd (para trigger notes MIDI)
 
@@ -104,21 +104,21 @@ A extensão não consegue ouvir uma track do Live — o SDK de Extensions não e
 de áudio do Live.
 
 1. Ache o `RC-Audio-Sender.amxd` no kit da release, ou em `static/` no código.
-2. Solte ele na **track de áudio que você quer escutar**.
-3. Ponha o `RC-Midi-Receiver.amxd` na **track MIDI que deve tocar**.
+2. Arraste-o para a **track de áudio que você quer escutar**.
+3. Coloque o `RC-Midi-Receiver.amxd` na **track MIDI que vai tocar**.
 
-4. Habilite **Audio Sender input** no Receiver v2 de destino. Ele começa OFF.
-Ambos precisam ser v2: usam barramento interno do Max, sem UDP. Todos os
+4. Ative **Audio Sender input** no Receiver v2 de destino. Ele começa em OFF.
+Os dois devices precisam ser v2: eles usam um barramento interno do Max, sem UDP. Todos os
 Receivers com essa entrada habilitada recebem o Sender; deixe os demais OFF.
 Trigger Note do celular usa o SDK e não exige habilitar essa entrada.
 
 Exige Max for Live, que vem com o Live Suite.
 
 > **O transporte v2 aguarda novo teste no Live.** Os resultados anteriores
-> eram da versão UDP, não desta troca. Verifique carregamento, estéreo,
-> notas/OFF e latência medida antes de usar em performance.
+> eram da versão UDP, não desta substituta. Confira o carregamento, a
+> passagem do estéreo, as notas/OFF e a latência medida antes de usar ao vivo.
 
-## 3. Subir o bridge
+## 3. Iniciar o bridge
 
 1. No Live, abra o menu **Extensions** (ou `Cmd-Shift-A` / `Ctrl-Shift-A`).
 2. Procure **RC Surface** e clique em *Show panel* (ou *Open*,
@@ -134,7 +134,7 @@ Exige Max for Live, que vem com o Live Suite.
 O servidor mantém HTTP simples em loopback na **8730** e expõe o celular por
 HTTPS/WSS na rede local, normalmente na **8731**. Portas estáveis permitem
 reencontrar o servidor após reiniciar, mas a sessão antiga fica somente para
-leitura até você ler o novo QR. Isso também vale para Stop/Start no painel.
+leitura até você escanear o novo QR. Isso também vale para Stop/Start no painel.
 Se uma porta já estiver ocupada, o Surface cai para uma porta
 atribuída pelo sistema, e o painel mostra a que está realmente em uso. Defina
 `RC_SURFACE_PORT` para trocar a porta HTTP preferida. O acesso pela rede local
@@ -152,9 +152,9 @@ vem ligada, que é como toda instalação se comportava antes de ela existir.
 Desligue quando outra extensão RC dividir a máquina e você quiser escolher qual
 delas fica com as portas na sessão, em vez de deixar as duas disputarem no
 carregamento. Só o início automático é afetado: o botão **Start** do painel
-continua funcionando, e o painel é renderizado do disco quando não há nada
-escutando — então a chave é sempre alcançável, inclusive no estado que ela
-mesma cria. A escolha persiste entre sessões.
+continua funcionando, e o painel abre direto do disco mesmo com o servidor
+parado — então a chave fica sempre acessível, inclusive quando foi ela que
+deixou o servidor desligado. A escolha persiste entre sessões.
 
 ## 4. Conectar o celular
 
@@ -187,15 +187,15 @@ abaixo).
 
 ### O que você vê
 
-Um controlador que só funciona na horizontal. O celular é melhor segurado com
-os dois polegares na tela, na horizontal; na vertical aparece um aviso de
-orientação.
+Um controlador feito só para a horizontal. O ideal é segurar o celular deitado,
+com os dois polegares na tela; na vertical aparece um aviso pedindo para girar
+o aparelho.
 
 Na primeira vez que você abre o app, o navegador pede permissão para acessar os
 sensores de movimento e orientação. Toque em *Permitir* — eles são necessários
 para o painel de sensores e para a bolha de nível.
 
-## 5. Conferida: seu primeiro mapeamento pelo celular
+## 5. Teste rápido: seu primeiro mapeamento pelo celular
 
 Com o celular conectado:
 
@@ -226,15 +226,15 @@ continua útil para inspeção e diagnóstico, mas os mapeamentos do dia a dia
 podem ser criados pelo celular.
 
 Para testar modulação por áudio, ligue **Audio input** na **AUD**. Entre em
-**MAP**, escolha o card do detector **Kick** e use Bind num parâmetro de synth,
+**MAP**, escolha o cartão do detector **Kick** e use Bind num parâmetro de synth,
 com uma faixa pequena de saída e **Smooth = 0**. Saia do MAP e toque kicks
 isolados, depois snares e silêncio. Compare o som com o parâmetro real do Live,
 não só com o medidor. Repita com Transient, Snare e Brightness. Kick/snare são
 heurísticas espectrais; a latência do microfone, da rede e do Live ainda exige
 teste físico.
 
-Follow Detected Note e sua análise tonal foram removidos. Modos de mapping não
-suportados são descartados ao carregar; vínculos válidos permanecem. Os doze
+O Follow Detected Note e a análise tonal dele foram removidos. Modos de
+mapeamento não suportados são descartados ao carregar; vínculos válidos permanecem. Os doze
 descritores analisam a entrada selecionada no navegador (microfone, interface
 ou loopback quando disponível). O Max Audio Sender não alimenta esses controles.
 
@@ -277,7 +277,7 @@ pacote npm `selfsigned`. O certificado:
 - Vale um ano (`notAfterDate` assume, por padrão, um ano a partir da geração).
 - Inclui entradas `subjectAltName` para `localhost`, `127.0.0.1` e os IPs
   atuais da rede local. Se o IP da rede local mudar e o certificado guardado
-  não cobrir mais a URL do celular, a extensão regera o certificado.
+  não cobrir mais a URL do celular, a extensão gera um certificado novo.
 - É guardado com permissão `0600` no diretório de armazenamento do Live.
 
 Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
@@ -310,7 +310,7 @@ Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
 
 ### A latência está ruim
 
-- Os dois aparelhos devem estar em Wi-Fi de 5 GHz, não de 2.4 GHz.
+- Os dois aparelhos devem estar em Wi-Fi de 5 GHz, não de 2,4 GHz.
 - O bridge manda os eventos de controle e sensor do celular na cadência do
   `requestAnimationFrame` do navegador, mais atualizações de estado do Live em
   taxa baixa. Numa rede local lenta isso pode cair bastante. O painel
@@ -321,8 +321,8 @@ Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
 ### O Live trava quando a extensão carrega
 
 - Confira o log do Live: `Help` → *Show Log*.
-- Causa mais comum: um certificado velho no diretório de armazenamento, em
-  formato errado. Apague `certs/` e deixe a extensão regerar.
+- Causa mais comum: um certificado antigo, em formato errado, no diretório de
+  armazenamento. Apague `certs/` e deixe a extensão gerar um novo.
 
 ## 10. Desinstalar
 

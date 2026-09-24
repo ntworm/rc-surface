@@ -36,9 +36,9 @@ Permissions are requested only for active features:
 Sensor data is processed in the phone browser and sent as numeric control values over WebSocket.
 Raw audio and raw video frames are not sent to RC Surface.
 
-Capture requests echo cancellation, noise suppression and automatic gain control
-off; actual processing depends on the browser/driver. The selected device ID
-is remembered in local browser storage. Opening/reloading AUD never starts capture.
+Capture asks the browser to turn off echo cancellation, noise suppression and
+automatic gain control; what actually happens depends on the browser and driver. The selected device ID
+is remembered in local browser storage. Opening or reloading AUD never starts capture on its own.
 
 Only numeric measurements cross WebSocket: RMS, envelope, gate, attack,
 transient, kick, snare, brightness, centroid, rolloff95, flux, flatness,

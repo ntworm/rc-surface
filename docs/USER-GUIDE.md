@@ -74,7 +74,7 @@ The mode is shared: pick once, every control plays by the same rule.
 - Touch latches the control **on**; release without any drag sends it
   back off. Any movement (vertical or horizontal) keeps it held until
   you deliberately drag the value back to zero.
-- For Stutters specifically (see [§ 4](#4-stutters-s1-s4)): a tap
+- For Stutters specifically (see [§ 4](#4-stutters-s1--s2--s3--s4)): a tap
   turns the stutter off; release with amplitude below `0.02` also turns
   it off. Horizontal speed changes keep it running while amplitude is nonzero.
 - Best for: latched LFOs that keep modulating after release, sustained
@@ -521,9 +521,9 @@ play. Settings persist per control in the phone browser, not in Live.
   pixels before the value sweeps from 0 to 1). Wide range is better
   for small phone screens; narrow range gives finer control on the
   desktop mapping panel.
-- **Faders** — choose a reset value. When you tap the fader with a
-  single finger the value jumps back to the reset value instead of
-  zero. Useful for pans, sends and macro controls where you want a
+- **Faders** — choose a reset value. When you double-tap the fader,
+  the value jumps back to the reset value instead of the default
+  position. Useful for pans, sends and macro controls where you want a
   known starting point.
 - **LFO (toggle 1 to 4)** — pick the waveform (sine, triangle, ramp up,
   ramp down, square). The SYNC modal still shows the live preview; the
@@ -811,7 +811,7 @@ nonzero timings acquire the nearest offered note on migration; zero smoothing
 stays OFF. Existing valid saved subdivisions are preserved; a fresh 45 ms
 RELEASE chooses its nearest subdivision (1/64 D at 120 BPM). Audio does not estimate BPM; the clock comes from Live in SYNC.
 
-Bands are **K-weighted loudness (ITU-R BS.1770-4)** with a 400 ms momentaneous integrator, mapped logarithmically to `0..1` (0 = −50 LU, 1 = −5 LU, relative to the digital full scale of the input — not SPL). The K-weighting pre-filter and RLB high-pass are applied per bin, so a clearly audible high band that carries little RMS energy is no longer pinned near zero. Flatness is mapped in dB (Wiener entropy): tonal → 0 (−60 dB), noise-like → 1 (0 dB). The bands knob adds a ±dB offset on the same scale (gain `×2` → +6 dB, gain `×0.5` → −6 dB) before clamping; it does not multiply the unit value.
+Bands are **K-weighted loudness (ITU-R BS.1770-4)** with a 400 ms momentary integrator, mapped logarithmically to `0..1` (0 = −50 LU, 1 = −5 LU, relative to the digital full scale of the input — not SPL). The K-weighting pre-filter and RLB high-pass are applied per bin, so a clearly audible high band that carries little RMS energy is no longer pinned near zero. Flatness is mapped in dB (Wiener entropy): tonal → 0 (−60 dB), noise-like → 1 (0 dB). The bands knob adds a ±dB offset on the same scale (gain `×2` → +6 dB, gain `×0.5` → −6 dB) before clamping; it does not multiply the unit value.
 
 | Knob | Group | What it decides |
 | --- | --- | --- |
@@ -926,7 +926,7 @@ Each of the three learned slots stores one static hand shape:
    wrist angle. It is hand-specific: learn the pose with the hand you will
    perform it with, because the other hand is a mirrored shape and does not
    match.
-4. Use **REMOVE LAST** to replace only the newest example, or **CLEAR ALL**
+4. Use **DELETE LAST** to replace only the newest example, or **CLR**
    to retrain the slot from scratch.
 
 The **Balanced** recognition preset is the normal performance setting.

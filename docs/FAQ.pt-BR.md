@@ -48,9 +48,10 @@ um build validado para publicação.
 
 ### Qual é a latência? Dá para usar ao vivo?
 
-Na candidata atual, gestos e áudio compartilham um caminho rápido: primeiro envio
-imediato, lotes seguintes espaçados por pelo menos 8 ms. Os snapshots visuais do MAP
-não seguram esses comandos. Smooth 0 não acrescenta rampa ao mapping. Isso não é
+Na versão candidata atual, gestos e áudio dividem um caminho em tempo real: o
+primeiro envio é imediato e os lotes seguintes saem com pelo menos 8 ms de
+intervalo. Os snapshots visuais do MAP não atrasam esses comandos. Smooth 0 não
+acrescenta rampa nenhuma ao mapeamento. Isso não é
 latência total medida; hosts antigos usam o caminho legado. O cliente foi feito
 para Wi-Fi local de baixa latência. A latência real depende da máquina, do
 celular, do navegador, do roteador e do congestionamento da rede. Use Wi-Fi de
@@ -88,15 +89,15 @@ customizar a interface do celular ou contribuir com código.
 ### Meu antivírus está acusando o `.ablx`. É malware?
 
 Não. WebSocket local, HTTPS e certificados gerados na hora podem parecer
-estranhos para software de segurança. O projeto tem código aberto para consulta,
-e o `.ablx` contém o código da extensão mais os arquivos estáticos do
-navegador — não chaves privadas nem certificados embutidos.
+estranhos para software de segurança. O código-fonte do projeto é público
+(source-available), e o `.ablx` contém o código da extensão mais os arquivos estáticos do
+navegador — nada de chaves privadas ou certificados embutidos.
 
 ---
 
 ## Recursos e funcionamento
 
-### Os pads e knobs funcionam com qualquer dispositivo MIDI no Live?
+### Os pads e knobs funcionam com qualquer device MIDI no Live?
 
 Funcionam com os alvos do Live expostos à extensão: valores de mixer, estado de
 track, parâmetros de device e as ações suportadas de nota e clip. Para
@@ -114,8 +115,8 @@ selecione a ação correspondente à fonte:
 - **Trigger Note** mapeia o controle escolhido para uma nota MIDI numa track
   MIDI escolhida, através do `RC-Midi-Receiver.amxd`.
 
-Seguir a Nota Detectada foi removido. Modos de mapping não suportados são
-descartados ao carregar; os vínculos válidos, incluindo Trigger Note fixo, ficam.
+O Follow Detected Note (seguir a nota detectada) foi removido. Modos de
+mapeamento não suportados são descartados ao carregar; os vínculos válidos, incluindo Trigger Note fixo, ficam.
 
 Use o Receiver v2 (**SDK / LOCAL MAX — NO UDP**) e troque instâncias antigas
 nos Sets; só um Receiver compatível é aceito por track de destino.
@@ -133,13 +134,13 @@ de estado.
 
 ### O celular vibra quando eu bato num pad?
 
-Não. Vibração e resposta tátil foram aposentadas na v1.0.0, para manter a
-interface previsível entre iOS e Android.
+Não. Vibração e resposta tátil foram removidas na v1.0.0, para a interface se
+comportar do mesmo jeito no iOS e no Android.
 
 ### Dá para transformar o que eu toco em notas MIDI?
 
-Não. **Seguir a Nota Detectada** e sua análise tonal foram removidos porque os
-testes musicais repetidos não deram resultados confiáveis. **Trigger Note** fixo
+Não. O **Follow Detected Note** (seguir a nota detectada) e a análise tonal dele
+foram removidos porque testes musicais repetidos não deram resultados confiáveis. **Trigger Note** fixo
 continua; ele não estima a nota que você está tocando.
 
 ### O que posso mapear a partir do áudio?
@@ -152,24 +153,26 @@ Para modular um synth pelo kick, comece com uma faixa pequena e Smooth em zero.
 
 Transiente mede ataques; Kick e Snare ponderam esses ataques pela energia
 espectral grave e média/aguda. Brilho descreve o espectro do escuro ao brilhante.
-Os doze valores de mapeamento são normalizados de 0 a 1. Kick/Snare são heurísticas: uma
-mix completa, ruído ou outro instrumento podem ativá-los. Não separam bateria.
+Os doze valores de mapeamento são normalizados de 0 a 1. Kick/Snare são heurísticas: a
+mix inteira, o ruído da sala ou outro instrumento podem disparar os dois. Eles não
+isolam a bateria.
 
 Os descritores usam a entrada de áudio do navegador. O `RC-Audio-Sender.amxd`
 mantém sua análise da track; ele não fornece estes descritores do navegador.
 
 ### O navegador processa o áudio antes de eu receber?
 
-A aplicação solicita cancelamento de eco, supressão de ruído e ganho automático
-desligados, para preservar amplitude e descritores espectrais. Isso não garante
+O app pede ao navegador que desligue o cancelamento de eco, a supressão de ruído
+e o controle automático de ganho, para preservar a amplitude e os descritores
+espectrais. Isso não garante
 captura bit-perfect: navegador, sistema ou driver ainda podem reamostrar/processar
 áudio. Selecione o loopback/interface desejado na AUD.
 
-### Dá para ele não iniciar junto com o Live?
+### Dá para impedir que ele inicie junto com o Live?
 
 Dá, na chave **Iniciar automaticamente com o Live**, no rodapé do painel. Útil
-quando outra extensão RC divide a máquina. O botão Start do painel não é
-afetado, e o painel abre mesmo sem nada escutando.
+quando outra extensão RC divide a máquina. O botão Start do painel continua
+funcionando, e o painel abre mesmo com o servidor desligado.
 
 ### Dá para customizar a interface do controlador no celular?
 
@@ -217,8 +220,8 @@ está no [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md).
 
 ### Preciso pagar? Existe versão Pro?
 
-Não. O projeto tem código aberto para consulta sob a licença PolyForm
-Noncommercial 1.0.0, e não tem versão Pro nem recursos trancados. A página do
+Não. O código-fonte é público (source-available) sob a licença PolyForm
+Noncommercial 1.0.0, e não existe versão Pro nem recurso bloqueado. A página do
 Gumroad é **pague quanto quiser** (sugestão R$25, mínimo R$0). R$0 é o padrão,
 para o custo nunca ser barreira. Veja o [`FUNDING.md`](../FUNDING.md) para os
 detalhes. Confie apenas nos links publicados no README deste repositório e nas
