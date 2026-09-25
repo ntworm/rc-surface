@@ -154,6 +154,30 @@ test('requires a stable pose, fires once, and rearms only after release', () => 
   assert.equal(lib.recognize(gun, 1010)?.name, 'Gesture 1');
 });
 
+test('switches directly between learned poses after each new pose is held', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const gun = normalizeHandPose(handPose({ thumb: 1, index: 1, middle: 0.2, ring: 0.2, pinky: 0.2 }));
+  const open = normalizeHandPose(handPose());
+  const lib = new GestureLibrary({ threshold: 0.16, minimumConfidence: 0.52, holdMs: 160, releaseMs: 220 });
+  for (let take = 0; take < 3; take += 1) {
+    lib.learn('Gesture 1', frames(gun));
+    lib.learn('Gesture 2', frames(open));
+  }
+
+  assert.equal(lib.evaluate(gun)?.accepted, true);
+  assert.equal(lib.evaluate(open)?.accepted, true);
+  assert.equal(lib.recognize(gun, 0), null);
+  assert.equal(lib.recognize(gun, 170)?.name, 'Gesture 1');
+  assert.equal(lib.recognize(open, 200), null, 'the new pose must complete its own hold');
+  assert.equal(lib.recognize(gun, 300), null, 'returning to the active pose cancels the switch');
+  assert.equal(lib.recognize(open, 330), null);
+  assert.equal(lib.recognize(open, 480), null, 'an interrupted switch must start a fresh hold');
+  assert.equal(lib.recognize(open, 500)?.name, 'Gesture 2', 'switching must not require an empty camera frame');
+  assert.equal(lib.recognize(open, 600), null, 'holding the second pose must not repeat');
+  assert.equal(lib.recognize(gun, 630), null);
+  assert.equal(lib.recognize(gun, 800)?.name, 'Gesture 1', 'switching back must also work');
+});
+
 test('a held pose does not rearm while its score drifts across the acquisition cutoff', () => {
   const { GestureLibrary, normalizeHandPose } = load();
   const gun = normalizeHandPose(handPose({ thumb: 1, index: 1, middle: 0.2, ring: 0.2, pinky: 0.2 }));

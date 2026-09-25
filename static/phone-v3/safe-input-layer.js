@@ -598,7 +598,11 @@
       }
 
       this.releaseSince = null;
-      if (this.activeName) return null;
+      if (this.activeName === evaluation.name) {
+        this.candidateName = null;
+        this.candidateSince = null;
+        return null;
+      }
       if (this.candidateName !== evaluation.name) {
         this.candidateName = evaluation.name;
         this.candidateSince = timestamp;
