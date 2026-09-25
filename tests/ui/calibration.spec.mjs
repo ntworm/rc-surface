@@ -8,6 +8,11 @@ test('contextual calibration collects actual sensor events, cancels, and isolate
   await page.locator('.tab[data-page="sensors"]').click();
   await expect(button).toHaveText('CALIBRATE');
   await page.clock.install();
+  // Only runFor may move time: the sensor collector restarts its 1 s window when
+  // two samples arrive more than 250 ms apart. With the clock running, a stall of
+  // about 200 ms between loop steps on a slow runner opens that gap, the job never
+  // finishes and the 1.2 s watchdog cancels it back to idle for lack of readings.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await button.click();
   await page.clock.runFor(1500);
   await expect(button).not.toHaveText('CALIBRATED');
@@ -93,12 +98,19 @@ test('camera calibration restores canceled adjustments, rejects missing hands an
       apply() {}, reset() {},
     });
   });
+  await page.clock.install();
+  // Only runFor may move time: the camera collector restarts its 4 s window when
+  // two samples arrive more than 500 ms apart. With the clock running, a stall of
+  // about 400 ms between loop steps on a slow runner opens that gap, the job never
+  // finishes and the 1.2 s watchdog cancels it back to idle for lack of readings.
+  // A 1.2 s stall right after the first click would likewise let the watchdog
+  // undo the camera change before the spec reads it.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   const button = page.locator('#btn-calibrate-sensors-header');
   await button.click();
   await expect.poll(() => page.evaluate(() => window.cameraSettings.exposureMode)).toBe('continuous');
   await button.click();
   await expect.poll(() => page.evaluate(() => window.cameraSettings.exposureMode)).toBe('manual');
-  await page.clock.install();
   await button.click();
   await page.evaluate(async () => { await Promise.resolve(); });
   for (let i = 0; i <= 42; i++) {
