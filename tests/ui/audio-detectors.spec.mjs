@@ -61,6 +61,13 @@ test('MAP selects the actual Kick control from its detector card', async ({ page
 for (const liveStream of ['descriptor', 'analysis']) {
   test('audio watchdog isolates the stalled stream while ' + liveStream + ' stays live', async ({ page }) => {
     await page.clock.install();
+    // The audio watchdog is a 50 ms setInterval created during app.js load.
+    // Installing the clock before reloading turns that watchdog into a fake timer,
+    // and pausing it ensures only the spec's runFor steps move time. Real-time runner
+    // stalls between steps no longer cause the live stream to exceed AUDIO_SIGNAL_TIMEOUT_MS (180 ms).
+    await page.reload();
+    await page.locator('.tab[data-page="audio"]').click();
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     await page.evaluate(() => {
       window.AudioProcessor = class {
         constructor() { window.testAudioProcessor = this; }

@@ -66,6 +66,10 @@ test('MIX fader rangePx tracks the live track height on mobile landscape', async
   // Phone UI v3 is landscape-only by design (static/phone-v3/style.css: LANDSCAPE-ONLY).
   // Portrait viewports trigger the orientation-warning overlay and skip the MIX page render.
   await page.setViewportSize({ width: 844, height: 390 });
+  // The fader reads a second pointerdown within 300 ms as a double tap and
+  // resets instead of dragging. The page clock lets the spec step past that
+  // window whatever the runner's speed.
+  await page.clock.install();
   await page.goto('/?lang=en');
   await page.locator('.tab[data-page="mixer"]').click({ force: true });
   await expect(page.locator('.page-mixer .fader')).toHaveCount(8);
@@ -80,10 +84,15 @@ test('MIX fader rangePx tracks the live track height on mobile landscape', async
     .getAttribute('aria-valuenow'));
   expect(ariaTop).toBeCloseTo(1, 1);
 
+  // A second drag inside the double-tap window would reset the fader to its
+  // 0.85 default instead, which is how an older `>= 0.7` bound passed on fast
+  // runners and failed on the slow macOS one.
+  await page.clock.runFor(350);
   await dragFromThumbToY(page, 'fader-1', midY);
   const ariaMid = Number(await page.locator('.page-mixer [data-name="fader-1"]')
     .getAttribute('aria-valuenow'));
-  // P03 preserved the relative drag formula (see the desktop test above for the rationale).
-  expect(ariaMid).toBeGreaterThanOrEqual(0.7);
-  expect(ariaMid).toBeLessThanOrEqual(1);
+  // P03 relative drag: `value = clamp(startVal + (startY - clientY) / rangePx, 0, 1)` with
+  // rangePx = the live track height, so the drag from the thumb at the top (value 1) down to
+  // the middle of the track lands near 0.5 — well clear of the 0.85 a double-tap reset leaves.
+  expect(ariaMid).toBeCloseTo(0.5, 1);
 });

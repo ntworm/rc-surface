@@ -208,19 +208,28 @@ test.describe('RC Surface UI & E2E Suite', () => {
 
   // ── SCENARIO 5: WS close triggers disconnected status ───────────────────────
   test('status reflects disconnected state after WebSocket close', async ({ page }) => {
-    // Allow time for the initial connection attempt to start
-    await page.waitForTimeout(1200);
+    const statusEl = page.locator('#status');
+    await expect(statusEl).toBeAttached();
+
+    // Ensure the socket is genuinely OPEN and the status is not already disconnected
+    // before closing, verifying that onclose actively triggers the state transition.
+    await expect.poll(() => page.evaluate(() => window.phoneWs?.readyState === (window.WebSocket ? window.WebSocket.OPEN : 1)))
+      .toBe(true);
+    await expect(statusEl).not.toHaveClass(/disconnected/);
+
+    // Only runFor may move time: onclose schedules a reconnect setTimeout(connect, 1000).
+    // Pausing the clock prevents the reconnect timer from firing and clearing the status
+    // on slow runners before the assertion reads it.
+    await page.clock.install();
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
 
     // Programmatically close the WS from inside the page
     await page.evaluate(() => {
-      const ws = window.phoneWs;
-      if (ws && ws.readyState < 2) ws.close();
+      window.phoneWs.close();
     });
 
-    await page.waitForTimeout(600);
-
-    const statusEl = page.locator('#status');
-    await expect(statusEl).toBeAttached();
+    // Confirm transition to disconnected
+    await expect(statusEl).toHaveClass(/disconnected/);
 
     // After close the status class must indicate disconnected state
     const cls = await statusEl.getAttribute('class') ?? '';
