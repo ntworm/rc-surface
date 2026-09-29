@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import { existsSync as fsExistsSync } from "node:fs";
 import * as path from "node:path";
 import { getExtensionContext, requireCtx, requireTrack } from "../context.js";
-import { trackedClients } from "../server/ws.js";
+import { trackedClients, broadcastTriggerNoteState } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
 import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
 import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
@@ -21,6 +21,9 @@ import { scaleTargetValue, unscaleTargetValue, type TargetScale } from "./target
 import { continuousTargetActuator, defaultNow as nowMs } from "./continuous-target-actuator.js";
 import { stopAllHostModulators } from "./host-modulators.js";
 import { SafeInputRegistry, SafeSignalFilter, type SafeInputResult, type TakeoverMode } from "./safe-input.js";
+import { TriggerNoteClock, resolveTriggerNoteOptions, resolveGridDurationMs, type NoteTiming, type NoteGate } from "./trigger-note-clock.js";
+import { TriggerNoteScheduler } from "./trigger-note-scheduler.js";
+import type { CommandExecutionContext } from "./catalog/types.js";
 import { buildServerAccessUrls } from "../server/access-urls.js";
 import {
   buildProjectConfig,
@@ -61,6 +64,11 @@ export interface MappingTarget {
   threshold?: number;
   midiNote?: string;
   midiVelocity?: number;
+  noteTiming?: NoteTiming;
+  noteGate?: NoteGate;
+  noteDurationMs?: number;
+  noteDurationMode?: 'ms' | 'grid';
+  noteDurationBars?: number;
   idleValue?: number;
   takeoverMode?: TakeoverMode;
   /**
@@ -78,6 +86,7 @@ export interface MappingTarget {
    */
   neutralPolicy?: 'hold' | 'zero' | 'center' | 'custom' | 'release' | 'initial' | 'reconcile';
   neutralValue?: number;
+  visionSafeLossVersion?: number;
   signature?: SemanticTargetSignature;
   relinkStatus?: 'loaded' | 'relinked' | 'review' | 'ambiguous' | 'missing';
   relinkConfidence?: number;
@@ -88,6 +97,20 @@ export const controlMappings = new Map<string, MappingTarget[]>();
 export const lastMappedValues = new Map<string, number>();
 export const eventModesState = new Map<string, { lastInput: number; active: boolean }>();
 export const safeInputRegistry = new SafeInputRegistry();
+export function migrateVisionSafeLossTarget<T extends Pick<MappingTarget, 'neutralPolicy' | 'visionSafeLossVersion'>>(
+  control: string, target: T,
+): T {
+  if (!control.startsWith('sensor.vision.') || target.visionSafeLossVersion === 2) return target;
+  return {
+    ...target,
+    neutralPolicy: !target.neutralPolicy || target.neutralPolicy === 'release' ? 'hold' : target.neutralPolicy,
+    visionSafeLossVersion: 2,
+  };
+}
+
+function migrateVisionTargets(control: string, targets: MappingTarget[]): MappingTarget[] {
+  return targets.map((target) => migrateVisionSafeLossTarget(control, target));
+}
 const sensorSignalFilters = new Map<string, SafeSignalFilter>();
 const lastClientControlValues = new Map<string, number>();
 export const lastMappedInputAt = new Map<string, number>();
@@ -361,7 +384,7 @@ async function loadBestProjectProfile(song: any, isCurrent: () => boolean): Prom
   controlMappings.clear();
   safeInputRegistry.clear();
   for (const [control, targets] of best.relink.mappings) {
-    controlMappings.set(control, targets as MappingTarget[]);
+    controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
   }
   currentProjectFilePath = best.file;
   currentProjectPreferences = { ...best.config.preferences };
@@ -431,7 +454,7 @@ export async function loadMappings(isCurrent: () => boolean = () => true): Promi
     controlMappings.clear();
     safeInputRegistry.clear();
     for (const [k, v] of Object.entries(migration.mappings)) {
-      controlMappings.set(k, Array.isArray(v) ? v : [v]);
+      controlMappings.set(k, migrateVisionTargets(k, Array.isArray(v) ? v : [v]));
     }
     if (migration.conflicts.length) {
       currentProjectReport.compatibility.push(...migration.conflicts);
@@ -587,6 +610,34 @@ let mappingDispatchGeneration = 0;
 const mappingClientSessions = new Map<string, object>();
 const heldTriggerNotes = new Map<string, { voice: HeldMidiNote; isCurrent: () => boolean }>();
 
+export const triggerNoteClock = new TriggerNoteClock();
+export const triggerNoteScheduler = new TriggerNoteScheduler(triggerNoteClock);
+
+// Duration is independent of onset quantization. A stopped but freshly
+// observed OSC clock still supplies real BPM/meter; it never permits Beat/Bar.
+function immediatePulseDuration(durationMs: number, durationBars?: number): number | null {
+  return durationBars === undefined ? durationMs
+    : resolveGridDurationMs(durationBars, triggerNoteClock.snapshot({ allowStopped: true }));
+}
+
+oscTransport.on("position", ({ beat, tempo, signatureNumerator, signatureDenominator }: any) => {
+  const num = Number.isFinite(signatureNumerator) && signatureNumerator > 0 ? signatureNumerator : 4;
+  const den = Number.isFinite(signatureDenominator) && signatureDenominator > 0 ? signatureDenominator : 4;
+  triggerNoteClock.observePosition(beat, tempo, num, den);
+  triggerNoteScheduler.refresh();
+});
+
+oscTransport.on("update", (state: any) => {
+  triggerNoteClock.updateTransport(
+    Boolean(state.isPlaying ?? state.playing),
+    Boolean(state.connected),
+    Number(state.tempo) || 120,
+    Number(state.signatureNumerator) || 4,
+    Number(state.signatureDenominator) || 4,
+  );
+  triggerNoteScheduler.refresh();
+});
+
 async function releaseRetiredTriggerNotes(): Promise<void> {
   const releases: Promise<void>[] = [];
   for (const [key, held] of heldTriggerNotes) {
@@ -598,6 +649,21 @@ async function releaseRetiredTriggerNotes(): Promise<void> {
   await Promise.all(releases.map(release => release.catch(error => {
     console.error("[ableton-rc-surface] MIDI release failed:", error);
   })));
+}
+
+async function releaseVisionPerformance(clientId: string): Promise<void> {
+  const prefix = `${clientId}::sensor.vision.`;
+  await triggerNoteScheduler.cancelWhere((request) => request.key.startsWith(prefix), 'camera_stopped');
+  const releases: Promise<void>[] = [];
+  for (const [key, held] of heldTriggerNotes) {
+    if (!key.startsWith(prefix)) continue;
+    heldTriggerNotes.delete(key);
+    releases.push(held.voice.release());
+  }
+  for (const [key, mode] of eventModesState) {
+    if (key.startsWith(prefix)) mode.lastInput = 0;
+  }
+  await Promise.all(releases);
 }
 
 async function releaseRetiredMappingWork(): Promise<void> {
@@ -612,7 +678,7 @@ async function releaseRetiredMappingWork(): Promise<void> {
 }
 
 /** Invalidate unsent work; SDK calls already in flight cannot be recalled. */
-export function cancelPendingMappingWrites(): Promise<void> {
+export async function cancelPendingMappingWrites(): Promise<void> {
   mappingDispatchGeneration++;
   mappingClientSessions.clear();
   globalWriteScheduler.clear();
@@ -621,6 +687,7 @@ export function cancelPendingMappingWrites(): Promise<void> {
     for (const timer of timers) clearTimeout(timer);
   }
   clientReleaseTimers.clear();
+  await triggerNoteScheduler.cancelWhere(() => true, "cancelled");
   return releaseRetiredMappingWork();
 }
 
@@ -837,6 +904,11 @@ export function stopHostReconcileTimer(): void {
 }
 
 export async function applyMapping(clientId: string, controlName: string, value: number, isDeactivated?: boolean): Promise<void> {
+  // The camera's deliberate OFF edge is distinct from temporary hand loss.
+  // It must retire held and queued vision notes even when active has no mapping.
+  if (controlName === 'sensor.vision.active' && value === 0 && !isDeactivated) {
+    await releaseVisionPerformance(clientId);
+  }
   // Mappings are addressed by control name alone. A phone-scoped lookup used
   // to come first, which is what let the same control mean different things
   // depending on who touched it — the ambiguity the shared surface removes.
@@ -885,6 +957,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
       // immediate. Set below so the smoothing stage picks it up.
       let releaseGlide = false;
       if (isDeactivated) {
+        if (controlName.startsWith('sensor.vision.') && target.neutralPolicy === 'hold') return;
         // Momentary controls (pads, buttons, gesture pulses, trigger notes)
         // always release straight to their off state — a pad that lingers or
         // eases out is a stuck note, not a safe loss.
@@ -990,22 +1063,79 @@ export async function applyMapping(clientId: string, controlName: string, value:
 
         const midiNum = noteNameToMidiNumber(target.midiNote ?? "C3");
         const velocity = target.midiVelocity ?? 100;
+        const { timing, gate, durationMs, durationBars, valid } = resolveTriggerNoteOptions(target);
+        if (!valid) return;
+        const targetIdx = targets.indexOf(target);
 
-        if (isPressed && !wasPressed) {
-          const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
-          const held = { voice, isCurrent };
-          heldTriggerNotes.set(key, held);
-          try {
-            if (!await voice.started && heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
-          } catch (error) {
-            if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
-            modeState.lastInput = 0;
-            throw error;
+        if (timing === 'immediate') {
+          if (gate === 'hold') {
+            if (isPressed && !wasPressed) {
+              const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
+              const held = { voice, isCurrent };
+              heldTriggerNotes.set(key, held);
+              try {
+                const didSend = await voice.started;
+                if (!didSend && heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+                if (didSend) broadcastTriggerNoteState(clientId, controlName, targetIdx, 'held');
+              } catch (error) {
+                if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+                modeState.lastInput = 0;
+                throw error;
+              }
+            } else if (!isPressed && wasPressed) {
+              const held = heldTriggerNotes.get(key);
+              heldTriggerNotes.delete(key);
+              await held?.voice.release();
+              if (held) broadcastTriggerNoteState(clientId, controlName, targetIdx, 'released');
+            }
+          } else {
+            // immediate + pulse
+            if (isPressed && !wasPressed) {
+              const effectiveDuration = immediatePulseDuration(durationMs, durationBars);
+              if (effectiveDuration === null) {
+                broadcastTriggerNoteState(clientId, controlName, targetIdx, 'unavailable', undefined, 'duration_clock');
+                return;
+              }
+              const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
+              const held = { voice, isCurrent };
+              heldTriggerNotes.set(key, held);
+              voice.started.then((didSend) => {
+                if (!didSend) {
+                  if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+                  return;
+                }
+                broadcastTriggerNoteState(clientId, controlName, targetIdx, 'sent');
+                setTimeout(async () => {
+                  if (heldTriggerNotes.get(key) === held) {
+                    heldTriggerNotes.delete(key);
+                    await voice.release();
+                    broadcastTriggerNoteState(clientId, controlName, targetIdx, 'released');
+                  }
+                }, effectiveDuration);
+              }).catch(() => {
+                if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
+              });
+            }
           }
-        } else if (!isPressed && wasPressed) {
-          const held = heldTriggerNotes.get(key);
-          heldTriggerNotes.delete(key);
-          await held?.voice.release();
+        } else {
+          // synchronized: 'beat' or 'bar'
+          if (isPressed && !wasPressed) {
+            const track = song.tracks[target.trackIndex ?? 0];
+            if (track) {
+              triggerNoteScheduler.enqueue({
+                lane: track,
+                key,
+                timing,
+                durationMs,
+                ...(durationBars !== undefined ? { durationBars } : {}),
+                send: () => pressReceiverNote(track, midiNum, velocity, isCurrent),
+                isCurrent,
+                feedback: (state, targetBeat, reason) => {
+                  broadcastTriggerNoteState(clientId, controlName, targetIdx, state, targetBeat, reason);
+                },
+              });
+            }
+          }
         }
         skipApply = true;
       } else if (target.mode === 'toggle') {
@@ -1226,13 +1356,17 @@ function defaultNeutralForControl(controlName: string): number {
 export async function handleClientDisconnect(clientId: string): Promise<void> {
   // Retire queued gestures before creating deliberate loss/OFF commands.
   mappingClientSessions.delete(clientId);
-  const midiReleases = releaseRetiredTriggerNotes();
   const prefix = `${clientId}::`;
+  const schedulerCancel = triggerNoteScheduler.cancelWhere(
+    (req) => req.key.startsWith(prefix) || !req.isCurrent(),
+    "client_disconnected",
+  );
+  const midiReleases = releaseRetiredTriggerNotes();
   for (const timer of clientReleaseTimers.get(clientId) ?? []) clearTimeout(timer);
   clientReleaseTimers.delete(clientId);
   safeInputRegistry.markLost(prefix, Date.now());
 
-  const momentary: Promise<void>[] = [midiReleases];
+  const momentary: Promise<void>[] = [midiReleases, schedulerCancel];
   const timers: NodeJS.Timeout[] = [];
   for (const [key, lastValue] of [...lastClientControlValues.entries()]) {
     if (!key.startsWith(prefix)) continue;
@@ -1447,7 +1581,7 @@ export async function getControlValues(_clientId: string): Promise<Record<string
 
 export type CommandSpec = {
   description: string;
-  handler: (args: Record<string, any>) => Promise<any>;
+  handler: (args: Record<string, any>, context?: CommandExecutionContext) => Promise<any>;
 };
 
 // Module-level flag guarding the live-write bench so two concurrent calls
@@ -2130,13 +2264,32 @@ export const commands: Record<string, CommandSpec> = {
       } else {
         throw new Error("either target or targets must be specified");
       }
-      if (finalTargets.some((candidate) => !isSupportedMappingMode(candidate))) {
-        throw new Error('Unsupported or retired mapping mode');
+      for (const candidate of finalTargets) {
+        if (!isSupportedMappingMode(candidate)) {
+          throw new Error('Unsupported or retired mapping mode');
+        }
+        if (
+          candidate.mode === 'trigger_note'
+          || candidate.noteTiming !== undefined
+          || candidate.noteGate !== undefined
+          || candidate.noteDurationMs !== undefined
+          || candidate.noteDurationMode !== undefined
+          || candidate.noteDurationBars !== undefined
+        ) {
+          const validated = resolveTriggerNoteOptions(candidate);
+          if (!validated.valid) {
+            throw new Error(validated.error || 'Invalid trigger note options');
+          }
+        }
       }
 
       const nextMappings = new Map(controlMappings);
       nextMappings.set(control, finalTargets);
       await saveMappings(nextMappings);
+      await triggerNoteScheduler.cancelWhere(
+        (req) => req.key.includes(`::${control}::`),
+        "mapping_replaced",
+      );
       controlMappings.set(control, finalTargets);
       safeInputRegistry.deleteControl(control);
       return { control, targets: finalTargets, total: controlMappings.size };
@@ -2152,6 +2305,10 @@ export const commands: Record<string, CommandSpec> = {
       const nextMappings = new Map(controlMappings);
       const had = nextMappings.delete(controlKey);
       await saveMappings(nextMappings);
+      await triggerNoteScheduler.cancelWhere(
+        (req) => req.key.includes(`::${controlKey}::`),
+        "mapping_removed",
+      );
       controlMappings.delete(controlKey);
       safeInputRegistry.deleteControl(controlKey);
       return { control, removed: had, total: controlMappings.size };
@@ -2175,6 +2332,95 @@ export const commands: Record<string, CommandSpec> = {
       }
       return { ok: true, control, durationMs };
     }
+  },
+
+  testTriggerNote: {
+    description: "Preview a saved trigger note mapping using its configured timing and gate. Args: {control: string, targetIndex?: number}",
+    handler: async (args, context) => {
+      const control = args["control"];
+      if (typeof control !== "string" || !control) {
+        throw new Error("control must be a non-empty string");
+      }
+      const targetIndex = Number(args["targetIndex"] ?? 0);
+      if (!Number.isInteger(targetIndex) || targetIndex < 0) {
+        throw new Error("targetIndex must be a non-negative integer");
+      }
+
+      if (!context || typeof context.isCurrent !== "function" || !context.isCurrent()) {
+        throw new Error("Invalid or stale command execution context");
+      }
+
+      const targets = controlMappings.get(control);
+      if (!targets || !targets[targetIndex]) {
+        throw new Error(`Target at index ${targetIndex} not found for control "${control}"`);
+      }
+
+      const target = targets[targetIndex];
+      if (target.mode !== "trigger_note") {
+        throw new Error(`Target at index ${targetIndex} is not a trigger_note mapping`);
+      }
+      if (target.relinkStatus === "review" || target.relinkStatus === "missing" || target.relinkStatus === "ambiguous") {
+        throw new Error(`Target at index ${targetIndex} requires review before dispatch`);
+      }
+
+      const { song } = requireCtx();
+      const trackIndex = target.trackIndex ?? 0;
+      const track = song.tracks[trackIndex];
+      if (!track) {
+        throw new Error(`Track at index ${trackIndex} not found`);
+      }
+      const receiver = findMidiReceiver(track);
+      if (receiver.reason) {
+        throw new Error(receiver.reason);
+      }
+
+      const midiNum = noteNameToMidiNumber(target.midiNote ?? "C3");
+      const velocity = target.midiVelocity ?? 100;
+      const { timing, gate, durationMs, durationBars, valid, error } = resolveTriggerNoteOptions(target);
+      if (!valid) throw new Error(error ?? 'Invalid trigger note options');
+      const effectiveDuration = timing === "immediate"
+        ? gate === "hold" ? 500 : immediatePulseDuration(durationMs, durationBars)
+        : durationMs;
+      if (effectiveDuration === null) throw new Error('Musical duration requires fresh Live BPM and meter (OSC)');
+
+      const clientId = context.clientId;
+      const key = `${clientId}::${control}::test::${targetIndex}`;
+
+      if (timing === "immediate") {
+        const voice = pressReceiverNote(track, midiNum, velocity, context.isCurrent);
+        broadcastTriggerNoteState(clientId, control, targetIndex, "sent");
+        voice.started.then((didSend) => {
+          if (!didSend) return;
+          setTimeout(async () => {
+            await voice.release();
+          }, effectiveDuration);
+        }).catch(() => {});
+      } else {
+        triggerNoteScheduler.enqueue({
+          lane: track,
+          key,
+          timing,
+          durationMs,
+          ...(durationBars !== undefined ? { durationBars } : {}),
+          send: () => pressReceiverNote(track, midiNum, velocity, context.isCurrent),
+          isCurrent: context.isCurrent,
+          feedback: (state, targetBeat, reason) => {
+            broadcastTriggerNoteState(clientId, control, targetIndex, state, targetBeat, reason);
+          },
+        });
+      }
+
+      return {
+        ok: true,
+        control,
+        targetIndex,
+        timing,
+        gate,
+        durationMs: effectiveDuration,
+        effectiveDuration,
+        velocity,
+      };
+    },
   },
 
   getProjectConfigStatus: {
@@ -2236,7 +2482,8 @@ export const commands: Record<string, CommandSpec> = {
       const previousReport = currentProjectReport;
       const previousLoaded = projectConfigLoaded;
       controlMappings.clear();
-      for (const [control, targets] of relink.mappings) controlMappings.set(control, targets as MappingTarget[]);
+      await triggerNoteScheduler.cancelWhere(() => true, "project_relinked");
+      for (const [control, targets] of relink.mappings) controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
       currentProjectPreferences = { ...config.preferences };
       currentProjectExtras = { camera: config.camera, gestures: config.gestures, pages: config.pages };
       currentProjectReport = relink.report;
@@ -2298,8 +2545,9 @@ export const commands: Record<string, CommandSpec> = {
       const config = await loadProjectConfigFile(currentProjectFilePath);
       const relink = relinkProjectConfig(config, song);
       controlMappings.clear();
+      await triggerNoteScheduler.cancelWhere(() => true, "project_relinked");
       safeInputRegistry.clear();
-      for (const [control, targets] of relink.mappings) controlMappings.set(control, targets as MappingTarget[]);
+      for (const [control, targets] of relink.mappings) controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
       currentProjectReport = relink.report;
       currentProjectPreferences = { ...config.preferences };
       currentProjectExtras = { camera: config.camera, gestures: config.gestures, pages: config.pages };

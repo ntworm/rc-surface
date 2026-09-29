@@ -402,7 +402,11 @@ function connectWS() {
       processClientSensors(msg);
     },
     // onCustomMessage
-    () => {}
+    (msg) => {
+      if (msg && msg.type === "trigger_note_state" && typeof window.handleTriggerNoteState === "function") {
+        window.handleTriggerNoteState(msg);
+      }
+    }
   );
 }
 

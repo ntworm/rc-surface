@@ -434,6 +434,14 @@
       this.unknownSince = null;
     }
 
+    getRecognitionState() {
+      if (this.candidateName !== null) return 'candidate';
+      if (this.releaseSince !== null) return 'releasing';
+      if (this.activeName !== null) return 'held';
+      if (this.unknownSince !== null) return 'unknown';
+      return 'ready';
+    }
+
     isStableCapture(frames) {
       if (!Array.isArray(frames) || frames.length < 5 || !frames.every(validDescriptor)) return false;
       const descriptor = medianDescriptor(frames);

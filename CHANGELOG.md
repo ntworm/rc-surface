@@ -8,6 +8,18 @@ intermediate release records are intentionally not published.
 
 ### Added
 
+- Curve handles follow the shaped response under Drive and Compression, with aligned hit testing and drag math. Preview compression uses the same safe bounds as Live, and saturated/flat drags preserve finite values.
+
+- Compact Bind editor with direct Continuous/Toggle and curve buttons, full-width graph with unclipped handles at its extremes, smaller fader thumbs, and uncommon settings under Advanced. Unmapped controls explain Bind versus Trigger Note at entry; existing mappings form a labelled group with mapping type and destination. Five maintenance actions sit directly below the control title and remain accessible while scrolling. Musical duration fractions are direct buttons with no estimated-ms readout; empty note feedback is hidden.
+
+- Vision performance refinements: temporary hand loss holds the last pose and mapped values, malformed MediaPipe landmarks recover safely, and the camera badge marks held/last-known poses and note status. Camera OFF still releases vision notes.
+- Short Trigger Note durations with immediate or synchronized onset can follow 1/16 through 4 bars (new default 1/4 bar) while saved millisecond durations remain compatible. Same-track retrigger retires the previous OFF timer before starting the replacement voice.
+- Vision Safe loss defaults to hold, with one-time migration of the former release default; the mapping curve has larger touch handles and a distinct Drive handle.
+- Performance opt-in preset for learned static poses with dedicated FSM recognition states (`ready`, `candidate`, `held`, `releasing`, `unknown`), enabling natural Rock gesture variance and fast physical rearm without false triggers.
+- Contextual Trigger Note editor with Destination, Note and Trigger groups, one destination label, fixed velocity, visible timing/duration state, Musical/ms controls, and discreet collapsed Advanced and presets, with five always-visible maintenance actions. Entering sync from Now defaults to 1/4 bar; redundant chord shortcuts and the mapping Test Note button are removed. Gesture-training TEST remains MIDI-silent.
+- OSC-synchronized trigger note scheduling (`TriggerNoteClock` and `TriggerNoteScheduler`) with next-beat/next-bar quantization based on fresh host OSC position (<=1000ms), latest-wins per track object lane, 64-lane cap, and automatic Note-Off release timer.
+- Safe lifecycle cancellation: pending notes are cancelled and active voices released upon transport stop, seek, loop jump, stale clock (>1000ms), track deletion, unbinding, or disconnection. Triggers arriving >20ms late are dropped as missed.
+- Live-write command `testTriggerNote` with trusted session authorization (`CommandExecutionContext`).
 - The landing page exists in Portuguese as its own URL,
   https://ntworm.github.io/rc-surface/pt-br.html, generated from the English
   page and `docs/site-i18n.js` by `npm run build:site` and readable without
@@ -22,6 +34,8 @@ intermediate release records are intentionally not published.
 
 ### Changed
 
+- MAP sliders and trigger note controls now share the amber CFG theme (`morph-slider` and `--range-progress`), removing the default blue slider accent.
+- Continuous mapping controls (curve canvas, min/max sliders, takeover, drive, comp, smooth) are hidden when `trigger_note` mode is active, while preserving their values across mode switches.
 - The Portuguese text of the docs, the landing page and the phone reads the
   way Brazilian musicians talk, keeps their English jargon in English, and
   names the labels the Portuguese interface actually shows.

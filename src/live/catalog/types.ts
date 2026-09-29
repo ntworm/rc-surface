@@ -4,7 +4,12 @@
 //
 // Types for modular command catalog (Task 3.4 / ADR-004)
 
+export interface CommandExecutionContext {
+  clientId: string;
+  isCurrent: () => boolean;
+}
+
 export type CommandSpec = {
   description: string;
-  handler: (args: Record<string, any>) => Promise<any>;
+  handler: (args: Record<string, any>, context?: CommandExecutionContext) => Promise<any>;
 };

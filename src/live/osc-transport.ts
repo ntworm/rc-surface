@@ -344,9 +344,15 @@ export class OSCTransport extends EventEmitter {
       }
     } else if (address === RESPONSE.currentSongTime) {
       const time = args[0]?.value;
-      if (typeof time === 'number') {
+      if (typeof time === 'number' && Number.isFinite(time)) {
         this.state.currentSongTimeBeats = time;
         this.lastSongTimeUpdateAt = Date.now();
+        this.emit('position', {
+          beat: time,
+          tempo: this.state.tempo,
+          signatureNumerator: this.state.signatureNumerator,
+          signatureDenominator: this.state.signatureDenominator,
+        });
         updated = true;
       }
     } else if (address === RESPONSE.metronome) {

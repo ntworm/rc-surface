@@ -474,6 +474,7 @@
               <select id="vision-recognition-preset">
                 <option value="precision" data-i18n="vid.precision">Precision</option>
                 <option value="balanced" selected data-i18n="vid.balanced">Balanced</option>
+                <option value="performance" data-i18n="vid.performance">Performance</option>
                 <option value="flexible" data-i18n="vid.flexible">Flexible</option>
               </select>
             </label>
@@ -590,6 +591,7 @@
   <video id="vision-video" style="display:none;" autoplay playsinline muted></video>
   <div id="vision-hud" class="vision-hud-container hidden">
     <canvas id="vision-canvas" width="320" height="240"></canvas>
+    <div id="vision-performance-badge" class="vision-performance-badge hidden" role="status" aria-live="polite"></div>
     <div class="hud-stats">
       <div><span data-i18n="vid.gesture">Gesture:</span> <span id="lbl-vision-gesture">--</span></div>
     </div>

@@ -29,7 +29,111 @@
     midiTargetMode: 'trigger_note',
     pickerFilter: '',
     pendingConflict: null,
+    changeTargetIndex: null,
   };
+
+  let triggerFeedbackState = {
+    control: null,
+    targetIndex: null,
+    state: 'ready',
+    targetBeat: null,
+    reason: null,
+  };
+
+  window.handleTriggerNoteState = function (msg) {
+    if (!msg || msg.type !== 'trigger_note_state') return;
+    const currentKey = mappingKey(state.selectedControl);
+    const msgControl = msg.control;
+    const msgTarget = Number(msg.target);
+    if (msgControl === currentKey && (Number.isNaN(msgTarget) || msgTarget === state.selectedTargetIndex)) {
+      triggerFeedbackState = {
+        control: msgControl,
+        targetIndex: state.selectedTargetIndex,
+        state: msg.state || 'ready',
+        targetBeat: msg.targetBeat,
+        reason: msg.reason,
+      };
+      updateTriggerFeedbackUI();
+    }
+  };
+
+  function updateLiveLine(liveLine, syncWarning) {
+    if (!liveLine) return;
+    const bpm = typeof window.lastSessionBpm === 'number' ? window.lastSessionBpm : (window.currentBpm || 120);
+    const num = (window.currentNumerator && window.currentNumerator > 0) ? window.currentNumerator : 4;
+    const den = (window.currentDenominator && window.currentDenominator > 0) ? window.currentDenominator : 4;
+    const wsConnected = window.phoneWs?.readyState === 1;
+    const clockSnap = window.triggerNoteClockSnapshot;
+    const clockValid = clockSnap?.valid === true;
+    const clockReason = clockSnap?.reason;
+
+    let syncText = '';
+    if (clockValid) {
+      syncText = T('mm.clockOscOk', 'CLOCK OSC OK');
+      liveLine.dataset.syncState = 'ok';
+    } else if (clockReason) {
+      syncText = T('mm.clockOscInvalid', 'NO OSC CLOCK ({reason})', { reason: clockReason });
+      liveLine.dataset.syncState = 'invalid';
+    } else if (!window.oscConnected) {
+      syncText = T('mm.clockOscDisconnected', 'OSC DISCONNECTED');
+      liveLine.dataset.syncState = 'disconnected';
+    } else {
+      syncText = T('mm.clockOscWaiting', 'WAITING OSC');
+      liveLine.dataset.syncState = 'waiting';
+    }
+
+    liveLine.textContent = `LIVE ${bpm.toFixed(1)}BPM · ${num}/${den} · WS ${wsConnected ? 'OK' : 'OFFLINE'} · ${syncText}`;
+
+    if (syncWarning) {
+      if (clockValid) {
+        syncWarning.style.display = 'none';
+      } else {
+        syncWarning.style.display = '';
+        syncWarning.textContent = clockReason === 'stopped'
+          ? T('mm.syncStartPlayback', 'Start Live playback to use Beat or Bar.')
+          : T('mm.syncConnectClock', 'Beat and Bar need a connected OSC clock and Live playback.');
+      }
+    }
+  }
+
+  window.updateTriggerNoteClockUI = function updateTriggerNoteClockUI(snapshot) {
+    if (snapshot) window.triggerNoteClockSnapshot = snapshot;
+    const liveLine = document.querySelector('.map-timing-live-status');
+    const syncWarning = document.querySelector('.map-timing-sync-warning');
+    updateLiveLine(liveLine, syncWarning);
+  };
+
+  function updateTriggerFeedbackUI(el = document.getElementById('map-trigger-feedback')) {
+    if (!el) return;
+    const sameTarget = triggerFeedbackState.control === mappingKey(state.selectedControl)
+      && triggerFeedbackState.targetIndex === state.selectedTargetIndex;
+    const { state: fbState, targetBeat, reason } = sameTarget ? triggerFeedbackState : { state: 'ready' };
+    el.hidden = ['ready', 'released'].includes(fbState);
+    el.dataset.state = fbState;
+    if (fbState === 'pending') {
+      const beatStr = typeof targetBeat === 'number' ? ` ${targetBeat.toFixed(1)}` : '';
+      el.textContent = `${T('mm.statePending', 'SCHEDULED {beat}', { beat: beatStr })}`.trim();
+    } else if (fbState === 'held') {
+      el.textContent = T('mm.stateHeld', 'HELD');
+    } else if (fbState === 'sent') {
+      el.textContent = T('mm.stateSent', 'SENT');
+    } else if (fbState === 'unavailable') {
+      const reasonStr = reason ? ` (${reason})` : '';
+      el.textContent = reason === 'duration_clock'
+        ? T('mm.durationNoClock', 'Musical duration needs Live BPM and meter.')
+        : `${T('mm.stateUnavailable', 'NO SYNC')}${reasonStr}`;
+    } else if (fbState === 'missed') {
+      el.textContent = T('mm.stateMissed', 'MISSED (>20ms)');
+    } else if (fbState === 'cancelled') {
+      const reasonStr = reason ? ` (${reason})` : '';
+      el.textContent = `${T('mm.stateCancelled', 'CANCELLED')}${reasonStr}`;
+    } else if (fbState === 'error') {
+      const reasonStr = reason ? ` (${reason})` : '';
+      el.textContent = `${T('mm.stateError', 'ERROR')}${reasonStr}`;
+    } else {
+      el.textContent = T('mm.stateReady', 'READY');
+    }
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -88,13 +192,13 @@
     return [];
   }
 
-  function targetLabel(target) {
+  function targetLabel(target, includeMode = true) {
     if (!target) return '';
     if (target.type === 'tempo') return 'Song Tempo';
     const targetKind = target.trackKind || 'track';
     const track = state.allTargets.find((item) => item.trackIndex === target.trackIndex && (item.trackKind || 'track') === targetKind);
     const trackName = track ? track.name : `Track ${(target.trackIndex ?? 0) + 1}`;
-    if (target.mode === 'trigger_note') return `${trackName} -> Trigger ${target.midiNote || 'C3'}`;
+    if (target.mode === 'trigger_note') return includeMode ? `${trackName} · ${T('mm.triggerNote', 'Trigger Note')}` : trackName;
     if (target.type === 'mixer_volume') return `${trackName} -> Volume`;
     if (target.type === 'mixer_pan') return `${trackName} -> Pan`;
     if (target.type === 'mixer_send') return `${trackName} -> Send ${(target.sendIndex ?? 0) + 1}`;
@@ -248,14 +352,45 @@
     return saveTargetsForSelected(current, false);
   }
 
-  function normalizeMidiNote(value) {
+  const PITCHES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+  function parseMidiNoteToNumber(value) {
     const text = String(value || '').trim().toUpperCase();
-    if (/^[A-G]#?-?\d+$/.test(text) || /^\d+$/.test(text)) return text;
+    if (!text) return null;
+    const match = text.match(/^([A-G]#?)(-?\d+)$/);
+    if (match) {
+      const pitch = match[1];
+      const oct = parseInt(match[2], 10);
+      const pIdx = PITCHES.indexOf(pitch);
+      if (pIdx === -1 || oct < -2 || oct > 8) return null;
+      const num = (oct + 2) * 12 + pIdx;
+      if (num < 0 || num > 127) return null; // Reject G#8+ and < C-2
+      return num;
+    }
+    const rawNum = parseInt(text, 10);
+    if (Number.isFinite(rawNum) && rawNum >= 0 && rawNum <= 127) {
+      return rawNum;
+    }
     return null;
   }
 
+  function midiNumberToNoteName(num) {
+    if (!Number.isFinite(num) || num < 0 || num > 127) return 'C3';
+    const oct = Math.floor(num / 12) - 2;
+    const pitch = PITCHES[num % 12];
+    return `${pitch}${oct}`;
+  }
+
+  function normalizeMidiNote(value) {
+    const num = parseMidiNoteToNumber(value);
+    if (num === null) return null;
+    const text = String(value || '').trim().toUpperCase();
+    if (/^[A-G]#?-?\d+$/.test(text)) return text;
+    return midiNumberToNoteName(num);
+  }
+
   const NUMERIC_TARGET_FIELDS = ['inMin', 'inMax', 'outMin', 'outMax', 'threshold',
-    'drive', 'compressor', 'smooth', 'idleValue', 'neutralValue'];
+    'drive', 'compressor', 'smooth', 'idleValue', 'neutralValue', 'noteDurationMs'];
 
   async function updateMobileTargetField(field, value, opts = {}) {
     if (!state.selectedControl) return;
@@ -267,6 +402,34 @@
       target[field] = note;
     } else if (field === 'midiVelocity') {
       target[field] = Math.max(1, Math.min(127, Math.round(Number(value) || 1)));
+    } else if (field === 'noteTiming') {
+      if (!['immediate', 'beat', 'bar'].includes(value)) return;
+      if (value !== 'immediate' && !['beat', 'bar'].includes(target.noteTiming)) {
+        target.noteDurationMode = 'grid';
+        target.noteDurationBars = 0.25;
+      }
+      target[field] = value;
+      if (['beat', 'bar'].includes(value) && target.noteGate === 'hold') {
+        target.noteGate = 'pulse';
+      }
+    } else if (field === 'noteGate') {
+      if (!['pulse', 'hold'].includes(value)) return;
+      if (value === 'hold') {
+        target.noteTiming = 'immediate';
+        target.noteDurationMode = 'ms';
+      }
+      target[field] = value;
+    } else if (field === 'noteDurationMs') {
+      const ms = Math.max(20, Math.min(2000, Math.round(Number(value) || 80)));
+      target[field] = ms;
+    } else if (field === 'noteDurationMode') {
+      if (!['ms', 'grid'].includes(value) || (value === 'grid' && target.noteGate !== 'pulse')) return;
+      target[field] = value;
+      if (value === 'grid' && !target.noteDurationBars) target.noteDurationBars = 0.25;
+    } else if (field === 'noteDurationBars') {
+      const bars = Number(value);
+      if (![1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4].includes(bars)) return;
+      target[field] = bars;
     } else if (NUMERIC_TARGET_FIELDS.includes(field)) {
       // Editor sliders hand over input.value, which is a string. A target that
       // keeps the string reaches Live as "0.35": the mapping is rejected and
@@ -282,6 +445,9 @@
       }
     } else {
       target[field] = value;
+    }
+    if (field === 'neutralPolicy' && state.selectedControl.startsWith('sensor.vision.')) {
+      target.visionSafeLossVersion = 2;
     }
     targets[state.selectedTargetIndex] = target;
     if (window.currentControlMappings && state.selectedControl) {
@@ -299,6 +465,8 @@
     state.pickerMode = null;
     state.midiTargetMode = 'trigger_note';
     state.pendingConflict = null;
+    state.changeTargetIndex = null;
+    state.pickerFilter = '';
     renderDetail();
   }
 
@@ -318,7 +486,9 @@
       setStatus('Este parâmetro já está mapeado para este controle.', 'error');
       return false;
     }
-    targets.push({ curve: 'linear', inMin: 0, inMax: 1, outMin: 0, outMax: 1, neutralPolicy: 'release', ...normalized });
+    const vision = state.selectedControl.startsWith('sensor.vision.');
+    targets.push({ curve: 'linear', inMin: 0, inMax: 1, outMin: 0, outMax: 1,
+      neutralPolicy: vision ? 'hold' : 'release', ...(vision ? { visionSafeLossVersion: 2 } : {}), ...normalized });
     const response = await saveTargetsForSelected(targets);
     if (response && response.ok !== false) {
       return true;
@@ -375,16 +545,23 @@
       renderDetail();
       return false;
     }
-    const targets = targetsForControl(state.selectedControl)
-      .filter((target) => !(target.mode === targetMode && target.trackIndex === track.trackIndex));
+    const targets = targetsForControl(state.selectedControl).slice();
+    const existingIndex = targets.findIndex((t) => t.mode === targetMode && t.trackIndex === track.trackIndex && (t.midiNote ?? 'C3') === 'C3');
     const target = {
       type: 'device_param',
       trackIndex: track.trackIndex,
       mode: targetMode,
       midiVelocity: 100,
+      noteTiming: 'immediate',
+      noteGate: 'hold',
+      noteDurationMs: 80,
     };
     if (targetMode === 'trigger_note') target.midiNote = 'C3';
-    targets.push(target);
+    if (existingIndex >= 0) {
+      targets[existingIndex] = target;
+    } else {
+      targets.push(target);
+    }
     return saveTargetsForSelected(targets);
   }
 
@@ -694,15 +871,7 @@
     });
     container.appendChild(del);
 
-    // This is the presets row the user actually sees in the detail pane, so
-    // the global clear has to live here too — not only in the standalone
-    // presets strip, where it was unreachable.
-    const clearAll = document.createElement('button');
-    clearAll.type = 'button';
-    clearAll.className = 'map-mini-btn map-action-danger';
-    clearAll.textContent = T('mm.clearAllMappings', 'Clear All Mappings');
-    clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
-    container.appendChild(clearAll);
+
   }
 
   function renderDetail() {
@@ -733,6 +902,15 @@
       return;
     }
 
+    const targets = targetsForControl(state.selectedControl);
+    const isNoteEditor = targets[state.selectedTargetIndex]?.mode === 'trigger_note';
+    if (pane) pane.classList.add('map-note-pane');
+    const management = document.createElement('details');
+    management.className = 'map-note-management';
+    const summary = document.createElement('summary');
+    summary.textContent = T('mm.presets', 'Presets');
+    management.appendChild(summary);
+
     // Status and refresh row
     const statusRow = document.createElement('div');
     statusRow.className = 'map-detail-header-row';
@@ -749,13 +927,13 @@
     refreshBtn.textContent = T('mm.refresh', 'Refresh');
     refreshBtn.addEventListener('click', loadMobileMappingData);
     statusRow.appendChild(refreshBtn);
-    el.appendChild(statusRow);
+    management.appendChild(statusRow);
 
     // Presets inline
     const presetsRow = document.createElement('div');
     presetsRow.className = 'map-detail-presets-row';
     renderPresetsInline(presetsRow);
-    el.appendChild(presetsRow);
+    management.appendChild(presetsRow);
 
     const title = document.createElement('h2');
     title.className = 'map-detail-title';
@@ -772,6 +950,9 @@
     });
     title.appendChild(deselectBtn);
     el.appendChild(title);
+    const actions = document.createElement('div');
+    actions.className = 'map-detail-actions';
+    el.appendChild(actions);
 
     if (state.selectedControl && (state.selectedControl.startsWith('xy-1.') || state.selectedControl.startsWith('xy-2.'))) {
       const base = state.selectedControl.split('.')[0];
@@ -912,7 +1093,6 @@
       el.appendChild(banner);
     }
 
-    const targets = targetsForControl(state.selectedControl);
     const list = document.createElement('div');
     list.className = 'map-bound-list';
     for (let i = 0; i < targets.length; i += 1) {
@@ -921,21 +1101,41 @@
       row.className = 'map-bound-target';
       row.dataset.targetIndex = String(i);
       row.classList.toggle('selected', i === state.selectedTargetIndex);
-      row.textContent = targetLabel(targets[i]);
+      row.setAttribute('aria-pressed', String(i === state.selectedTargetIndex));
+      const type = document.createElement('span');
+      type.className = 'map-bound-type';
+      type.textContent = targets[i].mode === 'trigger_note' ? T('mm.triggerNote', 'Trigger Note') : T('mm.bind', 'Bind');
+      const destination = document.createElement('span');
+      destination.className = 'map-bound-destination';
+      destination.textContent = targetLabel(targets[i], false);
+      row.appendChild(type);
+      row.appendChild(destination);
       row.addEventListener('click', () => {
         state.selectedTargetIndex = i;
         renderDetail();
       });
       list.appendChild(row);
     }
-    el.appendChild(list);
+    if (targets.length && (!isNoteEditor || targets.length > 1)) {
+      const group = document.createElement('section');
+      group.className = 'map-control-mappings';
+      group.setAttribute('aria-label', `${controlLabel(state.selectedControl)} · ${T('mm.controlMappings', 'Mappings')}`);
+      const heading = document.createElement('h3');
+      heading.className = 'map-control-mappings-title';
+      heading.textContent = T('mm.controlMappings', 'Mappings');
+      const count = document.createElement('span');
+      count.className = 'map-control-mappings-count';
+      count.textContent = String(targets.length);
+      heading.appendChild(count);
+      group.appendChild(heading);
+      group.appendChild(list);
+      el.appendChild(group);
+    }
 
     if (targets[state.selectedTargetIndex]) {
       renderTargetEditor(el, targets[state.selectedTargetIndex]);
     }
 
-    const actions = document.createElement('div');
-    actions.className = 'map-detail-actions';
     const bind = document.createElement('button');
     bind.type = 'button';
     bind.textContent = T('mm.bind', 'Bind');
@@ -948,36 +1148,73 @@
     trigger.addEventListener('click', () => openMidiTrackPicker('trigger_note'));
     actions.appendChild(trigger);
 
-    // If there are mapped targets, show the Delete and Clear All options!
-    if (targets.length > 0) {
-      const unbind = document.createElement('button');
-      unbind.type = 'button';
-      unbind.className = 'map-action-danger';
-      unbind.textContent = T('mm.unbindTarget', 'Unbind Target');
-      unbind.addEventListener('click', async () => {
-        if (window.confirm && !window.confirm('Remove this mapping?')) return;
-        await removeMobileMappingTarget(state.selectedTargetIndex);
-        state.selectedTargetIndex = 0;
-        renderDetail();
-      });
-      actions.appendChild(unbind);
+    const unbind = document.createElement('button');
+    unbind.type = 'button';
+    unbind.className = 'map-action-danger';
+    unbind.disabled = !targets.length;
+    unbind.textContent = T('mm.unbindTarget', 'Unbind Target');
+    unbind.addEventListener('click', async () => {
+      if (window.confirm && !window.confirm('Remove this mapping?')) return;
+      await removeMobileMappingTarget(state.selectedTargetIndex);
+      state.selectedTargetIndex = 0;
+      renderDetail();
+    });
+    actions.appendChild(unbind);
 
-      // Named for what it does: this clears only the selected control. The
-      // old "Clear All" label made it indistinguishable from a global wipe.
-      const clearControl = document.createElement('button');
-      clearControl.type = 'button';
-      clearControl.className = 'map-action-danger';
-      clearControl.textContent = T('mm.clearControl', 'Clear Control');
-      clearControl.addEventListener('click', async () => {
-        if (window.confirm && !window.confirm('Clear all mappings for this control?')) return;
-        await clearSelectedMobileControl();
-        state.selectedTargetIndex = 0;
-        renderDetail();
-      });
-      actions.appendChild(clearControl);
+    const clearControl = document.createElement('button');
+    clearControl.type = 'button';
+    clearControl.className = 'map-action-danger';
+    clearControl.disabled = !targets.length;
+    clearControl.textContent = T('mm.clearControl', 'Clear Control');
+    clearControl.addEventListener('click', async () => {
+      if (window.confirm && !window.confirm('Clear all mappings for this control?')) return;
+      await clearSelectedMobileControl();
+      state.selectedTargetIndex = 0;
+      renderDetail();
+    });
+    actions.appendChild(clearControl);
+
+    const clearAll = document.createElement('button');
+    clearAll.type = 'button';
+    clearAll.className = 'map-action-danger map-action-clear-all';
+    clearAll.textContent = T('mm.clearAllMappings', 'Clear All Mappings');
+    clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
+    actions.appendChild(clearAll);
+    bind.classList.toggle('active', targets.length > 0 && !isNoteEditor);
+    trigger.classList.toggle('active', isNoteEditor);
+
+    if (!targets.length) {
+      const entry = document.createElement('div');
+      entry.className = 'map-entry';
+      const heading = document.createElement('h3');
+      heading.textContent = T('mm.chooseMapping', 'What should this control do?');
+      entry.appendChild(heading);
+      for (const [kind, label, description, action] of [
+        ['bind', T('mm.bind', 'Bind'), T('mm.bindDescription', 'Control a Live parameter, continuously or as a toggle.'), openTargetPicker],
+        ['note', T('mm.triggerNote', 'Trigger Note'), T('mm.noteDescription', 'Play a MIDI note when this control activates.'), () => openMidiTrackPicker('trigger_note')],
+      ]) {
+        const choice = document.createElement('button');
+        choice.type = 'button';
+        choice.className = 'map-entry-choice';
+        choice.dataset.kind = kind;
+        const icon = document.createElement('span');
+        icon.className = `map-choice-icon map-icon-${kind}`;
+        icon.setAttribute('aria-hidden', 'true');
+        const name = document.createElement('strong');
+        name.textContent = label;
+        const explanation = document.createElement('span');
+        explanation.className = 'map-entry-description';
+        explanation.textContent = description;
+        choice.appendChild(icon);
+        choice.appendChild(name);
+        choice.appendChild(explanation);
+        choice.addEventListener('click', action);
+        entry.appendChild(choice);
+      }
+      el.appendChild(entry);
     }
+    el.appendChild(management);
 
-    el.appendChild(actions);
   }
 
   function renderMidiPicker(container) {
@@ -994,6 +1231,17 @@
     head.appendChild(title);
     container.appendChild(head);
 
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'map-picker-search';
+    search.placeholder = 'Search MIDI tracks…';
+    search.value = state.pickerFilter || '';
+    search.addEventListener('input', () => {
+      state.pickerFilter = search.value;
+      populateMidiList();
+    });
+    container.appendChild(search);
+
     const statusRow = document.createElement('div');
     statusRow.className = 'map-detail-header-row';
     const statusEl = document.createElement('div');
@@ -1006,21 +1254,62 @@
 
     const list = document.createElement('div');
     list.className = 'map-picker-list';
-    for (const track of state.allTargets.filter((item) => item.isMidi)) {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'map-picker-row';
-      row.disabled = state.busy;
-      row.textContent = state.busy ? 'Installing...' : (track.name || `Track ${track.trackIndex + 1}`);
-      row.addEventListener('click', async () => {
-        const result = await createMobileMidiTarget(track, state.midiTargetMode);
-        // Only close the picker on success; on failure the error is shown inside the detail pane.
-        if (result === false || result?.ok === false) return;
-        closePicker();
-      });
-      list.appendChild(row);
-    }
     container.appendChild(list);
+
+    function populateMidiList() {
+      list.innerHTML = '';
+      const filter = (state.pickerFilter || '').toLowerCase().trim();
+      const tracks = state.allTargets.filter((item) => {
+        if (!item.isMidi) return false;
+        if (item.trackKind && item.trackKind !== 'track') return false;
+        if (!filter) return true;
+        const name = (item.name || `Track ${item.trackIndex + 1}`).toLowerCase();
+        return name.includes(filter);
+      });
+      for (const track of tracks) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'map-picker-row';
+        row.disabled = state.busy;
+        row.textContent = state.busy ? 'Installing...' : (track.name || `Track ${track.trackIndex + 1}`);
+        row.addEventListener('click', async () => {
+          if (state.changeTargetIndex !== null && state.changeTargetIndex !== undefined) {
+            const targets = targetsForControl(state.selectedControl).slice();
+            const target = targets[state.changeTargetIndex];
+            if (target) {
+              state.busy = true;
+              renderDetail();
+              const install = await command('addUdpReceiverToTrack', { trackIndex: track.trackIndex });
+              state.busy = false;
+              if (!install.ok || !install.result || !install.result.success) {
+                const reason = install.result?.reason;
+                setStatus(reason === 'receiver_upgrade_required'
+                  ? T('map.receiverUpgrade', 'Replace the old Receiver on this track with RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP), then retry.')
+                  : reason === 'receiver_ambiguous'
+                    ? T('map.receiverAmbiguous', 'More than one Receiver was found on this track. Keep only one Receiver v2 and retry.')
+                  : reason === 'receiver_missing'
+                  ? 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.'
+                  : (install.error || 'Não foi possível verificar RC-Midi-Receiver.amxd nessa track.'), 'error');
+                renderDetail();
+                return;
+              }
+              target.trackIndex = track.trackIndex;
+              target.trackKind = 'track';
+              await saveTargetsForSelected(targets);
+              state.changeTargetIndex = null;
+              closePicker();
+              return;
+            }
+          }
+          const result = await createMobileMidiTarget(track, state.midiTargetMode);
+          if (result === false || result?.ok === false) return;
+          closePicker();
+        });
+        list.appendChild(row);
+      }
+    }
+
+    populateMidiList();
   }
 
   function addEditorSelect(container, label, field, value, options) {
@@ -1103,6 +1392,9 @@
         }
       }
       
+      // Keep the drawing and pointer geometry in CSS pixels at every drawer size.
+      const width = Math.round(canvas.clientWidth || canvas.width);
+      if (canvas.width !== width) canvas.width = width;
       drawCurve(canvas, ctx, activeTarget, rawVal, readoutEl, hostVal);
       activeAnimationId = requestAnimationFrame(run);
     };
@@ -1110,97 +1402,123 @@
     activeAnimationId = requestAnimationFrame(run);
   }
 
+  function curvePlotGeometry(canvas) {
+    // Reserve room for the complete handles, strokes and live marker at 0/1.
+    // Rendering and pointer interaction must use the same inset transform.
+    const padding = 14;
+    const width = Math.max(1, canvas.width - padding * 2);
+    const height = Math.max(1, canvas.height - padding * 2);
+    const clamp = (value) => Math.max(0, Math.min(1, value));
+    return {
+      x: (value) => padding + clamp(value) * width,
+      y: (value) => padding + (1 - clamp(value)) * height,
+      valueAtY: (pixel) => clamp(1 - (pixel - padding) / height),
+    };
+  }
+
+  function curveBaseValue(value, curve) {
+    if (curve === 'exponential') return value * value;
+    if (curve === 'logarithmic') return Math.sqrt(Math.max(0, value));
+    if (curve === 's-curve') return 0.5 * (1 - Math.cos(value * Math.PI));
+    return value;
+  }
+
+  function curvePreviewInput(input, target) {
+    const inMin = target.inMin ?? 0;
+    const inMax = target.inMax ?? 1;
+    return inMax > inMin
+      ? Math.max(0, Math.min(1, (input - inMin) / (inMax - inMin)))
+      : input >= inMin ? 1 : 0;
+  }
+
+  function curvePreviewShape(value, target) {
+    if (!Number.isFinite(value)) return 0;
+    let result = curveBaseValue(value, target.curve);
+    const drive = target.drive ?? 0;
+    if (drive !== 0) result = Math.max(0, Math.min(1, result + drive));
+    // Match src/live/curves.ts, including the safe compander bounds.
+    const compressor = Math.max(-0.99, Math.min(0.99, target.compressor ?? 0));
+    if (compressor < 0) return result * (1 + compressor) - 0.5 * compressor;
+    if (compressor > 0) {
+      const diff = result - 0.5;
+      return 0.5 + Math.sign(diff) * 0.5 * Math.pow(Math.abs(diff) * 2, 1 - compressor * 0.8);
+    }
+    return result;
+  }
+
+  function curvePreviewOutput(input, target) {
+    const outMin = target.outMin ?? 0;
+    const outMax = target.outMax ?? 1;
+    return outMin + curvePreviewShape(curvePreviewInput(input, target), target) * (outMax - outMin);
+  }
+
+  function inverseCurveCompression(value, target) {
+    const compressor = Math.max(-0.99, Math.min(0.99, target.compressor ?? 0));
+    let result = value;
+    if (compressor < 0) result = (value + 0.5 * compressor) / (1 + compressor);
+    else if (compressor > 0) {
+      const diff = Math.max(0, Math.min(1, value)) - 0.5;
+      result = 0.5 + Math.sign(diff) * 0.5 * Math.pow(Math.abs(diff) * 2, 1 / (1 - compressor * 0.8));
+    }
+    return Math.max(0, Math.min(1, result));
+  }
+
+  function curveHandlePositions(canvas, target, plot = curvePlotGeometry(canvas)) {
+    const inMin = target.inMin ?? 0;
+    const inMax = target.inMax ?? 1;
+    return [['outMin', inMin], ['outMax', inMax], ['drive', (inMin + inMax) / 2]].map(([name, input]) => ({
+      name,
+      x: plot.x(input),
+      y: plot.y(curvePreviewOutput(input, target)),
+    }));
+  }
+
   function drawCurve(canvas, ctx, target, currentInput, readoutEl, hostVal) {
     const w = canvas.width;
     const h = canvas.height;
+    const plot = curvePlotGeometry(canvas);
 
-    ctx.fillStyle = '#0d0d0f';
+    ctx.fillStyle = '#141414';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = '#1a1a1c';
+    ctx.strokeStyle = '#222222';
     ctx.lineWidth = 1;
     for (let i = 0.25; i < 1; i += 0.25) {
       ctx.beginPath();
-      ctx.moveTo(i * w, 0);
-      ctx.lineTo(i * w, h);
+      ctx.moveTo(plot.x(i), plot.y(0));
+      ctx.lineTo(plot.x(i), plot.y(1));
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(0, i * h);
-      ctx.lineTo(w, i * h);
+      ctx.moveTo(plot.x(0), plot.y(i));
+      ctx.lineTo(plot.x(1), plot.y(i));
       ctx.stroke();
     }
 
-    const curve = target.curve || 'linear';
-    const drive = target.drive ?? 0;
-    const compressor = target.compressor ?? 0;
     const inMin = target.inMin ?? 0;
     const inMax = target.inMax ?? 1;
-    const outMin = target.outMin ?? 0;
-    const outMax = target.outMax ?? 1;
 
-    const applyCurveLocal = (val) => {
-      let v = val;
-      if (curve === 'exponential') {
-        v = val * val;
-      } else if (curve === 'logarithmic') {
-        v = Math.sqrt(val);
-      } else if (curve === 's-curve') {
-        v = 0.5 * (1 - Math.cos(val * Math.PI));
-      }
-
-      if (drive !== 0) {
-        v = Math.max(0, Math.min(1, v + drive));
-      }
-
-      if (compressor !== 0) {
-        if (compressor < 0) {
-          v = v * (1 + compressor) + 0.5 * (-compressor);
-        } else {
-          const diff = v - 0.5;
-          const sign = diff >= 0 ? 1 : -1;
-          const normDiff = Math.abs(diff) * 2;
-          const exponent = 1 - compressor * 0.8;
-          const expanded = Math.pow(normDiff, exponent);
-          v = 0.5 + sign * 0.5 * expanded;
-        }
-      }
-      return v;
-    };
-
-    ctx.strokeStyle = '#007aff';
+    ctx.strokeStyle = '#ffa133';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
 
-    const steps = 60;
-    for (let i = 0; i <= steps; i++) {
-      const pct = i / steps;
-      let norm = 0;
-      if (inMax > inMin) {
-        norm = Math.max(0, Math.min(1, (pct - inMin) / (inMax - inMin)));
-      } else {
-        norm = pct >= inMin ? 1 : 0;
-      }
-      const curved = applyCurveLocal(norm);
-      const yVal = outMin + curved * (outMax - outMin);
-      const cx = pct * w;
-      const cy = (1 - yVal) * h;
+    // Sample the handle inputs explicitly so the polyline passes through them.
+    const samples = Array.from({ length: 61 }, (_, i) => i / 60);
+    samples.push(inMin, inMax, (inMin + inMax) / 2);
+    samples.sort((a, b) => a - b);
+    for (const [i, pct] of samples.entries()) {
+      const yVal = curvePreviewOutput(pct, target);
+      const cx = plot.x(pct);
+      const cy = plot.y(yVal);
       if (i === 0) ctx.moveTo(cx, cy);
       else ctx.lineTo(cx, cy);
     }
     ctx.stroke();
 
-    let normalizedInput = 0;
-    if (inMax > inMin) {
-      normalizedInput = Math.max(0, Math.min(1, (currentInput - inMin) / (inMax - inMin)));
-    } else {
-      normalizedInput = currentInput >= inMin ? 1 : 0;
-    }
-    const curvedInput = applyCurveLocal(normalizedInput);
-    const scaledOutput = outMin + curvedInput * (outMax - outMin);
+    const scaledOutput = curvePreviewOutput(currentInput, target);
 
-    const dotX = currentInput * w;
-    const dotY = (1 - scaledOutput) * h;
+    const dotX = plot.x(currentInput);
+    const dotY = plot.y(scaledOutput);
 
     ctx.fillStyle = 'rgba(255, 149, 0, 0.35)';
     ctx.beginPath();
@@ -1213,14 +1531,14 @@
     ctx.fill();
 
     if (hostVal !== null && hostVal !== undefined) {
-      const hostY = (1 - hostVal) * h;
+      const hostY = plot.y(hostVal);
       // Draw horizontal dashed line
       ctx.strokeStyle = 'rgba(255, 100, 100, 0.4)';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.moveTo(0, hostY);
-      ctx.lineTo(w, hostY);
+      ctx.moveTo(plot.x(0), hostY);
+      ctx.lineTo(plot.x(1), hostY);
       ctx.stroke();
       ctx.setLineDash([]);
       
@@ -1230,6 +1548,37 @@
       ctx.arc(dotX, hostY, 5, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Draw 3 curve editing handles: left (outMin), right (outMax), middle (drive / transition)
+    const handleRadius = 8;
+    const [leftHandle, rightHandle, midHandle] = curveHandlePositions(canvas, target, plot);
+
+    // Draw left handle (outMin)
+    ctx.fillStyle = '#ffa133';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(leftHandle.x, leftHandle.y, handleRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw right handle (outMax)
+    ctx.fillStyle = '#ffa133';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(rightHandle.x, rightHandle.y, handleRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw middle handle (shape / transition drive)
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffa133';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(midHandle.x, midHandle.y, handleRadius + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
     if (readoutEl) {
       // Say when the number is the last known reading rather than a live one,
@@ -1244,9 +1593,56 @@
     }
   }
 
-  function addEditorSlider(container, labelText, field, value, min, max, step) {
+  function formatSliderValue(val, step, unit) {
+    const num = Number(val) || 0;
+    const isInt = step >= 1 && Number.isInteger(step);
+    const formatted = isInt ? Math.round(num).toString() : num.toFixed(2);
+    return unit ? `${formatted}${unit}` : formatted;
+  }
+
+  function paintProgress(el) {
+    const mn = Number(el.min) || 0;
+    const mx = Number(el.max) || 1;
+    const vl = Number(el.value) || 0;
+    const pct = (mx - mn) === 0 ? 0 : ((vl - mn) / (mx - mn)) * 100;
+    if (typeof el.style?.setProperty === 'function') {
+      el.style.setProperty('--range-progress', `${Number.isFinite(pct) ? pct : 0}%`);
+    }
+  }
+
+  const EDITOR_SLIDER_DEFAULTS = Object.freeze({
+    inMin: 0,
+    inMax: 1,
+    outMin: 0,
+    outMax: 1,
+    idleValue: 0,
+    neutralValue: 0,
+    drive: 0,
+    compressor: 0,
+    smooth: 0,
+    threshold: 0.5,
+    midiVelocity: 100,
+    noteDurationMs: 80,
+  });
+
+  function syncSliderDOM(field, value) {
+    const input = document.querySelector(`.map-editor-slider-input[data-field="${field}"]`);
+    if (!input) return;
+    input.value = String(value);
+    paintProgress(input);
+    const wrap = input.closest?.('.map-editor-slider-wrap');
+    const valEl = wrap?.querySelector?.('.map-editor-slider-value');
+    if (valEl) {
+      const step = Number(input.step) || 0.01;
+      const unit = field === 'noteDurationMs' ? 'ms' : '';
+      valEl.textContent = formatSliderValue(value, step, unit);
+    }
+  }
+
+  function addEditorSlider(container, labelText, field, value, min, max, step, unit = '') {
     const wrap = document.createElement('div');
     wrap.className = 'map-editor-slider-wrap';
+    wrap.dataset.field = field;
 
     const labelRow = document.createElement('div');
     labelRow.className = 'map-editor-slider-label-row';
@@ -1257,7 +1653,7 @@
 
     const valEl = document.createElement('span');
     valEl.className = 'map-editor-slider-value';
-    valEl.textContent = value.toFixed(2);
+    valEl.textContent = formatSliderValue(value, step, unit);
 
     labelRow.appendChild(label);
     labelRow.appendChild(valEl);
@@ -1269,17 +1665,410 @@
     input.max = String(max);
     input.step = String(step);
     input.value = String(value);
-    input.className = 'map-editor-slider-input';
+    input.className = 'morph-slider map-editor-slider-input';
+    input.dataset.field = field;
+    input.setAttribute('aria-label', labelText);
+
+    paintProgress(input);
 
     input.addEventListener('input', () => {
-      valEl.textContent = Number(input.value).toFixed(2);
+      paintProgress(input);
+      valEl.textContent = formatSliderValue(input.value, step, unit);
       updateMobileTargetField(field, input.value, { refresh: false });
     });
     input.addEventListener('change', () => {
+      paintProgress(input);
       updateMobileTargetField(field, input.value);
     });
 
+    const resetToDefault = () => {
+      const defaultVal = EDITOR_SLIDER_DEFAULTS[field];
+      if (defaultVal === undefined) return;
+      input.value = String(defaultVal);
+      paintProgress(input);
+      valEl.textContent = formatSliderValue(defaultVal, step, unit);
+      updateMobileTargetField(field, defaultVal);
+      setStatus(`${labelText} resetado para default (${formatSliderValue(defaultVal, step, unit)})`, 'ok');
+    };
+
+    // Double-click reset (mouse / pointer)
+    input.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      resetToDefault();
+    });
+    wrap.addEventListener('dblclick', (e) => {
+      if (e.target === input) return;
+      e.preventDefault();
+      resetToDefault();
+    });
+
+    // Touch: track taps with strict timing (60-320ms) and distance (<12px) to prevent accidental double-tap resets
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+    wrap.addEventListener('touchend', (e) => {
+      if (!e.changedTouches || e.changedTouches.length !== 1) return;
+      const touch = e.changedTouches[0];
+      const now = Date.now();
+      const dt = now - lastTapTime;
+      const dx = Math.abs(touch.clientX - lastTapX);
+      const dy = Math.abs(touch.clientY - lastTapY);
+      if (dt > 60 && dt < 320 && dx < 12 && dy < 12) {
+        lastTapTime = 0;
+        resetToDefault();
+      } else {
+        lastTapTime = now;
+        lastTapX = touch.clientX;
+        lastTapY = touch.clientY;
+      }
+    }, { passive: true });
+
     wrap.appendChild(input);
+    container.appendChild(wrap);
+  }
+
+  function renderTriggerNoteEditor(container, target) {
+    const wrap = document.createElement('div');
+    wrap.className = 'map-trigger-editor';
+    const section = (key, title) => {
+      const block = document.createElement('section');
+      block.className = 'map-note-section';
+      block.dataset.section = key;
+      const heading = document.createElement('h3');
+      heading.className = 'map-note-section-title';
+      heading.textContent = title;
+      block.appendChild(heading);
+      wrap.appendChild(block);
+      return block;
+    };
+    const destinationSection = section('destination', T('mm.destination', 'Destination'));
+    const noteSection = section('note', T('mm.noteLabel', 'Note'));
+    const triggerSection = section('trigger', T('mm.triggerSection', 'Trigger'));
+
+    // 1. Header with Destination Track and [TROCAR] button
+    const header = document.createElement('div');
+    header.className = 'map-trigger-header';
+    const targetKind = target.trackKind || 'track';
+    const track = state.allTargets.find((item) => item.trackIndex === target.trackIndex && (item.trackKind || 'track') === targetKind);
+    const trackName = track ? (track.name || `Track ${(target.trackIndex ?? 0) + 1}`) : `Track ${(target.trackIndex ?? 0) + 1}`;
+
+    const trackLabel = document.createElement('div');
+    trackLabel.className = 'map-trigger-track-label';
+    trackLabel.textContent = trackName;
+    header.appendChild(trackLabel);
+
+    const changeBtn = document.createElement('button');
+    changeBtn.type = 'button';
+    changeBtn.className = 'map-btn-change-target';
+    changeBtn.textContent = T('mm.changeTarget', 'Change');
+    changeBtn.addEventListener('click', () => {
+      state.changeTargetIndex = state.selectedTargetIndex;
+      openMidiTrackPicker();
+    });
+    header.appendChild(changeBtn);
+    destinationSection.appendChild(header);
+
+    // 2. Receiver v2 Status Badge
+    const receiverBadge = document.createElement('div');
+    receiverBadge.className = 'map-receiver-badge';
+    receiverBadge.textContent = T('mm.receiverReady', 'RECEIVER v2: READY');
+    destinationSection.appendChild(receiverBadge);
+
+    command('addUdpReceiverToTrack', { trackIndex: target.trackIndex ?? 0 }).then((res) => {
+      if (res && res.ok && res.result && res.result.success) {
+        receiverBadge.className = 'map-receiver-badge ready';
+        receiverBadge.textContent = T('mm.receiverReady', 'RECEIVER v2: READY');
+      } else {
+        const reason = res?.result?.reason;
+        if (reason === 'receiver_upgrade_required') {
+          receiverBadge.className = 'map-receiver-badge upgrade';
+          receiverBadge.textContent = T('mm.receiverUpgrade', 'RECEIVER v2: UPGRADE REQUIRED');
+        } else if (reason === 'receiver_ambiguous') {
+          receiverBadge.className = 'map-receiver-badge ambiguous';
+          receiverBadge.textContent = T('mm.receiverAmbiguous', 'RECEIVER v2: AMBIGUOUS');
+        } else {
+          receiverBadge.className = 'map-receiver-badge missing';
+          receiverBadge.textContent = T('mm.receiverMissing', 'RECEIVER v2: MISSING');
+        }
+      }
+    }).catch(() => {
+      receiverBadge.className = 'map-receiver-badge missing';
+      receiverBadge.textContent = T('mm.receiverMissing', 'RECEIVER v2: MISSING');
+    });
+
+    // 3. Note & Octave & MIDI number row
+    const noteRow = document.createElement('div');
+    noteRow.className = 'map-trigger-note-row';
+
+    const currentNote = target.midiNote || 'C2';
+    const match = currentNote.trim().toUpperCase().match(/^([A-G]#?)(-?\d+)$/);
+    const currentPitch = match ? match[1] : 'C';
+    const currentOctave = match ? match[2] : '2';
+
+    // Pitch Select
+    const pitchWrap = document.createElement('div');
+    pitchWrap.className = 'map-trigger-note-field';
+    const pitchTitle = document.createElement('span');
+    pitchTitle.className = 'map-trigger-field-title';
+    pitchTitle.textContent = T('mm.noteLabel', 'Note');
+    pitchWrap.appendChild(pitchTitle);
+
+    const pitchSelect = document.createElement('select');
+    pitchSelect.className = 'map-midi-pitch-select';
+
+    // Octave Select
+    const octWrap = document.createElement('div');
+    octWrap.className = 'map-trigger-note-field';
+    const octTitle = document.createElement('span');
+    octTitle.className = 'map-trigger-field-title';
+    octTitle.textContent = T('mm.octaveLabel', 'Octave');
+    octWrap.appendChild(octTitle);
+
+    const octaveSelect = document.createElement('select');
+    octaveSelect.className = 'map-midi-octave-select';
+
+    // MIDI badge
+    const midiBadge = document.createElement('div');
+    midiBadge.className = 'map-midi-number-badge';
+
+    const refreshPitchOptions = () => {
+      const selectedOct = parseInt(octaveSelect.value || currentOctave, 10);
+      const prevPitch = pitchSelect.value || currentPitch;
+      pitchSelect.innerHTML = '';
+      for (const p of PITCHES) {
+        // If octave is 8, only C through G are valid (<= 127). Reject G#8+!
+        const midi = (selectedOct + 2) * 12 + PITCHES.indexOf(p);
+        if (midi > 127) continue;
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        if (p === prevPitch) opt.selected = true;
+        pitchSelect.appendChild(opt);
+      }
+      pitchSelect.value = prevPitch;
+    };
+
+    const octaves = ['-2', '-1', '0', '1', '2', '3', '4', '5', '6', '7', '8'];
+    octaveSelect.value = currentOctave;
+    for (const o of octaves) {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = o;
+      opt.selected = o === currentOctave;
+      octaveSelect.appendChild(opt);
+    }
+
+    refreshPitchOptions();
+
+    const updateNoteFromSelects = () => {
+      const newPitch = pitchSelect.value;
+      const newOct = octaveSelect.value;
+      const noteStr = `${newPitch}${newOct}`;
+      const midiNum = parseMidiNoteToNumber(noteStr);
+      if (midiNum === null) {
+        setStatus('Invalid MIDI note range (C-2 to G8 allowed)', 'error');
+        return;
+      }
+      midiBadge.textContent = `MIDI ${midiNum}`;
+      updateMobileTargetField('midiNote', noteStr);
+    };
+
+    const initialMidiNum = parseMidiNoteToNumber(currentNote) ?? 48;
+    midiBadge.textContent = `MIDI ${initialMidiNum}`;
+
+    pitchSelect.addEventListener('change', () => {
+      updateNoteFromSelects();
+    });
+    octaveSelect.addEventListener('change', () => {
+      refreshPitchOptions();
+      updateNoteFromSelects();
+    });
+
+    pitchWrap.appendChild(pitchSelect);
+    octWrap.appendChild(octaveSelect);
+    noteRow.appendChild(pitchWrap);
+    noteRow.appendChild(octWrap);
+    noteRow.appendChild(midiBadge);
+    noteSection.appendChild(noteRow);
+
+    // 4. Velocity Slider (1..127)
+    addEditorSlider(noteSection, T('mm.velocityLabel', 'Velocity'), 'midiVelocity', target.midiVelocity ?? 100, 1, 127, 1);
+
+    // 5. Timing Segmented Control (AGORA, PRÓX. TEMPO, COMPASSO)
+    const timingWrap = document.createElement('div');
+    timingWrap.className = 'map-trigger-note-field';
+    const timingTitle = document.createElement('span');
+    timingTitle.className = 'map-trigger-field-title';
+    timingTitle.textContent = T('mm.whenLabel', 'When');
+    timingWrap.appendChild(timingTitle);
+
+    const currentTiming = target.noteTiming || 'immediate';
+    const timingGroup = document.createElement('div');
+    timingGroup.className = 'map-segmented-control';
+
+    const timingOptions = [
+      { id: 'immediate', label: T('mm.timingImmediate', 'Now') },
+      { id: 'beat', label: T('mm.timingBeat', 'Next Beat') },
+      { id: 'bar', label: T('mm.timingBar', 'Bar') },
+    ];
+
+    for (const opt of timingOptions) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `map-segmented-btn${currentTiming === opt.id ? ' active' : ''}`;
+      btn.textContent = opt.label;
+      btn.dataset.value = opt.id;
+      btn.addEventListener('click', async () => {
+        for (const b of timingGroup.children) b.classList.toggle('active', b === btn);
+        await updateMobileTargetField('noteTiming', opt.id);
+        renderDetail();
+      });
+      timingGroup.appendChild(btn);
+    }
+    timingWrap.appendChild(timingGroup);
+
+    // Live transport line under timing
+    const liveLine = document.createElement('div');
+    liveLine.className = 'map-timing-live-status';
+    liveLine.hidden = !['beat', 'bar'].includes(target.noteTiming);
+    timingWrap.appendChild(liveLine);
+
+    let syncWarning = null;
+    if (['beat', 'bar'].includes(target.noteTiming)) {
+      syncWarning = document.createElement('div');
+      syncWarning.className = 'map-timing-sync-warning';
+      timingWrap.appendChild(syncWarning);
+    }
+    triggerSection.appendChild(timingWrap);
+
+    updateLiveLine(liveLine, syncWarning);
+
+    // 6. Gate Segmented Control (CURTA, ENQUANTO PRESSIONADO)
+    const gateWrap = document.createElement('div');
+    gateWrap.className = 'map-trigger-note-field';
+    const gateTitle = document.createElement('span');
+    gateTitle.className = 'map-trigger-field-title';
+    gateTitle.textContent = T('mm.durationLabel', 'Duration');
+    gateWrap.appendChild(gateTitle);
+
+    const isSync = ['beat', 'bar'].includes(target.noteTiming);
+    const currentGate = isSync ? 'pulse' : (target.noteGate || 'hold');
+    const gateGroup = document.createElement('div');
+    gateGroup.className = 'map-segmented-control';
+
+    const gateOptions = [
+      { id: 'pulse', label: T('mm.gatePulse', 'Short') },
+      { id: 'hold', label: T('mm.gateHold', 'While Held') },
+    ];
+
+    for (const opt of gateOptions) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `map-segmented-btn${currentGate === opt.id ? ' active' : ''}`;
+      btn.textContent = opt.label;
+      btn.dataset.value = opt.id;
+      if (opt.id === 'hold' && isSync) {
+        btn.disabled = true;
+        btn.title = T('mm.syncRequiresPulse', 'Quantized trigger requires short pulse gate');
+      }
+      btn.addEventListener('click', async () => {
+        if (opt.id === 'hold' && ['beat', 'bar'].includes(target.noteTiming)) {
+          setStatus(T('mm.syncRequiresPulse', 'Quantized trigger requires short pulse gate'), 'error');
+          return;
+        }
+        for (const b of gateGroup.children) b.classList.toggle('active', b === btn);
+        target.noteGate = opt.id;
+        await updateMobileTargetField('noteGate', opt.id);
+        renderDetail();
+      });
+      gateGroup.appendChild(btn);
+    }
+    gateWrap.appendChild(gateGroup);
+    triggerSection.appendChild(gateWrap);
+
+    // 7. Duration: musical bar fraction or legacy free milliseconds.
+    if (currentGate === 'pulse') {
+      const durationWrap = document.createElement('div');
+      durationWrap.className = 'map-trigger-duration';
+      const mode = document.createElement('div');
+      mode.className = 'map-duration-mode map-segmented-control';
+      mode.setAttribute('aria-label', T('mm.durationLabel', 'Duration'));
+      for (const [value, label] of [['grid', T('mm.durationMusical', 'Musical')], ['ms', 'ms']]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        const selected = (target.noteDurationMode || 'ms') === value;
+        button.className = `map-segmented-btn map-duration-mode-btn${selected ? ' active' : ''}`;
+        button.dataset.durationMode = value;
+        button.setAttribute('aria-pressed', String(selected));
+        button.textContent = label;
+        button.addEventListener('click', async () => {
+          await updateMobileTargetField('noteDurationMode', value);
+          renderDetail();
+        });
+        mode.appendChild(button);
+      }
+      durationWrap.appendChild(mode);
+      if (target.noteDurationMode === 'grid') {
+        const unit = document.createElement('span');
+        unit.className = 'map-trigger-field-title';
+        unit.textContent = T('mm.durationGrid', 'Bars');
+        durationWrap.appendChild(unit);
+        const bars = document.createElement('div');
+        bars.className = 'map-duration-bars';
+        bars.setAttribute('aria-label', T('mm.durationGrid', 'Bars'));
+        for (const value of [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          const selected = (target.noteDurationBars ?? 0.25) === value;
+          button.className = `map-segmented-btn${selected ? ' active' : ''}`;
+          button.dataset.durationBars = String(value);
+          button.setAttribute('aria-pressed', String(selected));
+          button.textContent = value < 1 ? `1/${Math.round(1 / value)}` : String(value);
+          button.addEventListener('click', async () => {
+            await updateMobileTargetField('noteDurationBars', value);
+            renderDetail();
+          });
+          bars.appendChild(button);
+        }
+        durationWrap.appendChild(bars);
+      } else {
+        addEditorSlider(durationWrap, T('mm.durationLabel', 'Duration'), 'noteDurationMs', target.noteDurationMs ?? 80, 20, 2000, 10, 'ms');
+      }
+      triggerSection.appendChild(durationWrap);
+    }
+
+    // 9. Feedback Status readout
+    const feedbackBox = document.createElement('div');
+    feedbackBox.id = 'map-trigger-feedback';
+    feedbackBox.className = 'map-trigger-feedback';
+    feedbackBox.dataset.state = triggerFeedbackState.state || 'ready';
+    triggerSection.appendChild(feedbackBox);
+    updateTriggerFeedbackUI(feedbackBox);
+
+    // 10. Collapsible Advanced section
+    const advanced = document.createElement('details');
+    advanced.className = 'map-editor-advanced';
+    const summary = document.createElement('summary');
+    summary.textContent = T('mm.advanced', 'Advanced');
+    advanced.appendChild(summary);
+
+    const advBody = document.createElement('div');
+    advBody.className = 'map-advanced-body';
+
+    // Threshold slider
+    addEditorSlider(advBody, T('mm.triggerThreshold', 'Trigger threshold'), 'threshold', target.threshold ?? 0.5, 0, 1, 0.01);
+
+    // Safe loss notice
+    const safeLossNotice = document.createElement('div');
+    safeLossNotice.className = 'map-safe-loss-note';
+    safeLossNotice.textContent = state.selectedControl?.startsWith('sensor.vision.') && (target.neutralPolicy || 'hold') === 'hold'
+      ? T('mm.safeLossVisionHold', 'Hand lost: keep the last state. Camera OFF and Panic stop the note.')
+      : T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
+    advBody.appendChild(safeLossNotice);
+
+    advanced.appendChild(advBody);
+    wrap.appendChild(advanced);
+
     container.appendChild(wrap);
   }
 
@@ -1313,24 +2102,58 @@
       }
     }
 
-    const selectRow = document.createElement('div');
-    selectRow.className = 'map-editor-row-selects';
-    const modeOptions = ['continuous', 'toggle', 'trigger_note'];
-    addEditorSelect(selectRow, 'Mode', 'mode', target.mode || 'continuous', modeOptions);
-    addEditorSelect(selectRow, 'Curve', 'curve', target.curve || 'linear', ['linear', 'exponential', 'logarithmic', 's-curve']);
-    addEditorSelect(selectRow, 'Target scale', 'targetScale', target.targetScale || 'auto', ['auto', 'linear', 'geometric']);
-    addEditorSelect(selectRow, 'Takeover', 'takeoverMode', target.takeoverMode || 'scale', ['scale', 'pickup', 'jump']);
-    // Five modes, each distinct: hold freezes, zero/center/custom park, and
-    // release glides back to the control's rest position. 'initial' and
-    // 'reconcile' were retired — both meant "adopt Live's current value",
-    // which was indistinguishable from hold.
-    addEditorSelect(selectRow, 'Safe loss', 'neutralPolicy', target.neutralPolicy || 'release', ['release', 'hold', 'zero', 'center', 'custom']);
-    editor.appendChild(selectRow);
+    const mode = target.mode || 'continuous';
 
+    if (mode === 'trigger_note') {
+      renderTriggerNoteEditor(editor, target);
+      container.appendChild(editor);
+      return;
+    }
+
+    editor.classList.add('map-bind-editor');
+    function choices(label, field, items, selected, dataKey) {
+      const row = document.createElement('div');
+      row.className = 'map-bind-choice-row';
+      const title = document.createElement('span');
+      title.className = 'map-trigger-field-title';
+      title.textContent = label;
+      row.appendChild(title);
+      const group = document.createElement('div');
+      group.className = `map-segmented-control map-bind-${field}`;
+      group.setAttribute('aria-label', label);
+      for (const [value, text] of items) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `map-segmented-btn${selected === value ? ' active' : ''}`;
+        button.dataset[dataKey] = value;
+        button.setAttribute('aria-pressed', String(selected === value));
+        const icon = document.createElement('span');
+        icon.className = `map-choice-icon map-icon-${value}`;
+        icon.setAttribute('aria-hidden', 'true');
+        const name = document.createElement('span');
+        name.textContent = text;
+        button.appendChild(icon);
+        button.appendChild(name);
+        button.addEventListener('click', async () => {
+          await updateMobileTargetField(field, value);
+          renderDetail();
+        });
+        group.appendChild(button);
+      }
+      row.appendChild(group);
+      editor.appendChild(row);
+    }
+    choices(T('mm.bindMode', 'Mode'), 'mode', [
+      ['continuous', T('mm.modeContinuous', 'Continuous')], ['toggle', T('mm.modeToggle', 'Toggle')],
+    ], mode, 'bindMode');
+    choices(T('mm.curve', 'Curve'), 'curve', [
+      ['linear', T('mm.curveLinear', 'Linear')], ['exponential', T('mm.curveExp', 'Exp')],
+      ['logarithmic', T('mm.curveLog', 'Log')], ['s-curve', T('mm.curveS', 'S')],
+    ], target.curve || 'linear', 'bindCurve');
     const canvasWrap = document.createElement('div');
     canvasWrap.className = 'map-curve-canvas-wrap';
     const canvas = document.createElement('canvas');
-    canvas.width = 180;
+    canvas.width = 360;
     canvas.height = 180;
     canvas.className = 'map-curve-canvas';
     canvasWrap.appendChild(canvas);
@@ -1341,90 +2164,180 @@
     canvasWrap.appendChild(readout);
     editor.appendChild(canvasWrap);
 
+    // 3 draggable handles on the curve graph:
+    // Left handle: outMin (0..1)
+    // Right handle: outMax (0..1)
+    // Middle handle: transition form / drive (-1..1)
+    let activeDragHandle = null;
+
+    function getCanvasCoords(e) {
+      if (typeof canvas.getBoundingClientRect !== 'function') {
+        return { x: e.offsetX ?? 0, y: e.offsetY ?? 0 };
+      }
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+      const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+      const clientX = e.clientX ?? (rect.left + (e.offsetX ?? 0));
+      const clientY = e.clientY ?? (rect.top + (e.offsetY ?? 0));
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
+      };
+    }
+
+    function findHandleAt(pos) {
+      const target = getActiveTarget();
+      if (!target) return null;
+      const handles = curveHandlePositions(canvas, target);
+      const nearest = handles.map((handle) => ({
+        name: handle.name,
+        distance: Math.hypot(pos.x - handle.x, pos.y - handle.y),
+      })).sort((a, b) => a.distance - b.distance || (a.name === 'drive' ? -1 : b.name === 'drive' ? 1 : 0))[0];
+      return nearest && nearest.distance <= 24 ? nearest.name : null;
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const pos = getCanvasCoords(e);
+      const handle = findHandleAt(pos);
+      if (handle) {
+        activeDragHandle = handle;
+        try { canvas.setPointerCapture?.(e.pointerId); } catch {}
+        e.preventDefault?.();
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activeDragHandle) {
+        const pos = getCanvasCoords(e);
+        const handle = findHandleAt(pos);
+        canvas.style.cursor = handle ? 'pointer' : 'default';
+        return;
+      }
+      const target = getActiveTarget();
+      if (!target) return;
+      const pos = getCanvasCoords(e);
+      const normY = curvePlotGeometry(canvas).valueAtY(pos.y);
+
+      if (activeDragHandle === 'outMin') {
+        const shaped = curvePreviewShape(curvePreviewInput(target.inMin ?? 0, target), target);
+        const influence = 1 - shaped;
+        if (Math.abs(influence) < 1e-8) return;
+        const value = (normY - shaped * (target.outMax ?? 1)) / influence;
+        const rounded = Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+        target.outMin = rounded;
+        updateMobileTargetField('outMin', rounded, { refresh: false });
+        syncSliderDOM('outMin', rounded);
+      } else if (activeDragHandle === 'outMax') {
+        const shaped = curvePreviewShape(curvePreviewInput(target.inMax ?? 1, target), target);
+        if (Math.abs(shaped) < 1e-8) return;
+        const value = (normY - (1 - shaped) * (target.outMin ?? 0)) / shaped;
+        const rounded = Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+        target.outMax = rounded;
+        updateMobileTargetField('outMax', rounded, { refresh: false });
+        syncSliderDOM('outMax', rounded);
+      } else if (activeDragHandle === 'drive') {
+        const outMin = target.outMin ?? 0;
+        const outMax = target.outMax ?? 1;
+        const range = outMax - outMin;
+        if (Math.abs(range) < 1e-8) return;
+        const desiredNorm = inverseCurveCompression((normY - outMin) / range, target);
+        const midInput = ((target.inMin ?? 0) + (target.inMax ?? 1)) / 2;
+        const baseMid = curveBaseValue(curvePreviewInput(midInput, target), target.curve);
+        const desiredDrive = Math.max(-1, Math.min(1, desiredNorm - baseMid));
+        const rounded = Math.round(desiredDrive * 100) / 100;
+        target.drive = rounded;
+        updateMobileTargetField('drive', rounded, { refresh: false });
+        syncSliderDOM('drive', rounded);
+      }
+    });
+
+    const finishDrag = () => {
+      if (!activeDragHandle) return;
+      const target = getActiveTarget();
+      if (target) {
+        if (activeDragHandle === 'outMin') updateMobileTargetField('outMin', target.outMin);
+        else if (activeDragHandle === 'outMax') updateMobileTargetField('outMax', target.outMax);
+        else if (activeDragHandle === 'drive') updateMobileTargetField('drive', target.drive);
+      }
+      activeDragHandle = null;
+    };
+    canvas.addEventListener('pointerup', finishDrag);
+    canvas.addEventListener('pointercancel', finishDrag);
+
+    canvas.addEventListener('dblclick', (e) => {
+      e.preventDefault?.();
+      const target = getActiveTarget();
+      if (!target) return;
+      const pos = getCanvasCoords(e);
+      const handle = findHandleAt(pos);
+      if (handle === 'outMin') {
+        target.outMin = 0;
+        updateMobileTargetField('outMin', 0);
+        syncSliderDOM('outMin', 0);
+        setStatus(T('mm.handleResetOutMin', 'Out Min restored to default (0.00)'), 'ok');
+      } else if (handle === 'outMax') {
+        target.outMax = 1;
+        updateMobileTargetField('outMax', 1);
+        syncSliderDOM('outMax', 1);
+        setStatus(T('mm.handleResetOutMax', 'Out Max restored to default (1.00)'), 'ok');
+      } else if (handle === 'drive') {
+        target.drive = 0;
+        updateMobileTargetField('drive', 0);
+        syncSliderDOM('drive', 0);
+        setStatus(T('mm.handleResetDrive', 'Drive restored to default (0.00)'), 'ok');
+      } else {
+        target.outMin = 0;
+        target.outMax = 1;
+        target.drive = 0;
+        updateMobileTargetField('outMin', 0, { refresh: false });
+        updateMobileTargetField('outMax', 1, { refresh: false });
+        updateMobileTargetField('drive', 0);
+        syncSliderDOM('outMin', 0);
+        syncSliderDOM('outMax', 1);
+        syncSliderDOM('drive', 0);
+        setStatus(T('mm.handleResetAll', 'Curve restored to defaults (Out Min: 0.00, Out Max: 1.00, Drive: 0.00)'), 'ok');
+      }
+    });
+
     const slidersGrid = document.createElement('div');
     slidersGrid.className = 'map-editor-sliders-grid';
 
-    addEditorSlider(slidersGrid, 'In Min', 'inMin', target.inMin ?? 0, 0, 1, 0.01);
-    addEditorSlider(slidersGrid, 'In Max', 'inMax', target.inMax ?? 1, 0, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Out Min', 'outMin', target.outMin ?? 0, 0, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Out Max', 'outMax', target.outMax ?? 1, 0, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Idle Val', 'idleValue', target.idleValue ?? 0, 0, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Neutral', 'neutralValue', target.neutralValue ?? 0, 0, 1, 0.01);
+    addEditorSlider(slidersGrid, T('mm.outMin', 'Output min'), 'outMin', target.outMin ?? 0, 0, 1, 0.01);
+    addEditorSlider(slidersGrid, T('mm.outMax', 'Output max'), 'outMax', target.outMax ?? 1, 0, 1, 0.01);
     addEditorSlider(slidersGrid, 'Drive', 'drive', target.drive ?? 0, -1, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Comp', 'compressor', target.compressor ?? 0, -1, 1, 0.01);
-    addEditorSlider(slidersGrid, 'Smooth', 'smooth', target.smooth ?? 0, 0, 1, 0.01);
+    addEditorSlider(slidersGrid, T('mm.compression', 'Compression'), 'compressor', target.compressor ?? 0, -1, 1, 0.01);
+    addEditorSlider(slidersGrid, T('mm.smoothing', 'Smoothing'), 'smooth', target.smooth ?? 0, 0, 1, 0.01);
 
-    if ((target.mode || 'continuous') !== 'continuous') {
+    if (mode !== 'continuous') {
       addEditorSlider(slidersGrid, 'Threshold', 'threshold', target.threshold ?? 0.5, 0, 1, 0.01);
     }
 
-
     editor.appendChild(slidersGrid);
-
-    if ((target.mode || 'continuous') === 'trigger_note') {
-      const midiWrap = document.createElement('div');
-      midiWrap.className = 'map-editor-midi-wrap';
-      addMidiNoteEditor(midiWrap, target);
-      editor.appendChild(midiWrap);
-    }
-
+    const advanced = document.createElement('details');
+    advanced.className = 'map-editor-advanced';
+    const summary = document.createElement('summary');
+    summary.textContent = T('mm.advanced', 'Advanced');
+    advanced.appendChild(summary);
+    const advancedBody = document.createElement('div');
+    advancedBody.className = 'map-advanced-body';
+    const selects = document.createElement('div');
+    selects.className = 'map-editor-row-selects';
+    addEditorSelect(selects, T('mm.targetScale', 'Target scale'), 'targetScale', target.targetScale || 'auto', ['auto', 'linear', 'geometric']);
+    addEditorSelect(selects, T('mm.takeover', 'Takeover'), 'takeoverMode', target.takeoverMode || 'scale', ['scale', 'pickup', 'jump']);
+    addEditorSelect(selects, T('mm.safeLoss', 'Safe loss'), 'neutralPolicy', target.neutralPolicy ||
+      (state.selectedControl?.startsWith('sensor.vision.') ? 'hold' : 'release'), ['release', 'hold', 'zero', 'center', 'custom']);
+    advancedBody.appendChild(selects);
+    const extra = document.createElement('div');
+    extra.className = 'map-editor-sliders-grid';
+    addEditorSlider(extra, T('mm.inMin', 'Input min'), 'inMin', target.inMin ?? 0, 0, 1, 0.01);
+    addEditorSlider(extra, T('mm.inMax', 'Input max'), 'inMax', target.inMax ?? 1, 0, 1, 0.01);
+    addEditorSlider(extra, T('mm.idleValue', 'Idle value'), 'idleValue', target.idleValue ?? 0, 0, 1, 0.01);
+    addEditorSlider(extra, T('mm.neutralValue', 'Neutral'), 'neutralValue', target.neutralValue ?? 0, 0, 1, 0.01);
+    advancedBody.appendChild(extra);
+    advanced.appendChild(advancedBody);
+    editor.appendChild(advanced);
     container.appendChild(editor);
     startCanvasAnimation(canvas, readout);
-  }
-
-  function addMidiNoteEditor(container, target) {
-    const noteWrap = document.createElement('div');
-    noteWrap.className = 'map-editor-field-midi-note';
-    
-    const label = document.createElement('span');
-    label.className = 'map-editor-field-label';
-    label.textContent = T('mm.midiNote', 'MIDI Note');
-    noteWrap.appendChild(label);
-
-    const selectRow = document.createElement('div');
-    selectRow.className = 'map-midi-note-select-row';
-
-    const currentNote = target.midiNote || 'C3';
-    const match = currentNote.trim().toUpperCase().match(/^([A-G]#?)(-?\d+)$/);
-    const currentPitch = match ? match[1] : 'C';
-    const currentOctave = match ? match[2] : '3';
-
-    const pitchSelect = document.createElement('select');
-    pitchSelect.className = 'map-midi-pitch-select';
-    const pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    for (const p of pitches) {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      opt.selected = p === currentPitch;
-      pitchSelect.appendChild(opt);
-    }
-    selectRow.appendChild(pitchSelect);
-
-    const octaveSelect = document.createElement('select');
-    octaveSelect.className = 'map-midi-octave-select';
-    const octaves = ['-2', '-1', '0', '1', '2', '3', '4', '5', '6', '7', '8'];
-    for (const o of octaves) {
-      const opt = document.createElement('option');
-      opt.value = o;
-      opt.textContent = o;
-      opt.selected = o === currentOctave;
-      octaveSelect.appendChild(opt);
-    }
-    selectRow.appendChild(octaveSelect);
-
-    const updateNote = () => {
-      const newNote = pitchSelect.value + octaveSelect.value;
-      updateMobileTargetField('midiNote', newNote);
-    };
-
-    pitchSelect.addEventListener('change', updateNote);
-    octaveSelect.addEventListener('change', updateNote);
-
-    noteWrap.appendChild(selectRow);
-    container.appendChild(noteWrap);
-
-    addEditorNumber(container, 'Velocity', 'midiVelocity', target.midiVelocity ?? 100, 1, 127, 1);
   }
 
   function renderTargetPicker(container) {
@@ -1718,6 +2631,8 @@
   window.openMobileMappingMode = openMappingMode;
   window.closeMobileMappingMode = closeMappingMode;
   window.loadMobileMappingData = loadMobileMappingData;
+  window.renderDetail = renderDetail;
+  window.renderMobileDetail = renderDetail;
 
   function init() {
     const btn = $('btn-map-mode');

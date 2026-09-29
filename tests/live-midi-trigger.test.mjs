@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
-import { commands, applyMapping, controlMappings, eventModesState, lastMappedValues, getTargetKey, cancelPendingMappingWrites } from "../src/live/mappings.ts";
+import { commands, applyMapping, controlMappings, eventModesState, lastMappedValues, getTargetKey, cancelPendingMappingWrites, setMappingsFilePath } from "../src/live/mappings.ts";
 import { noteNameToMidiNumber } from "../src/live/midi-receiver.ts";
 
 const receiver = () => ({ name: 'RC-Midi-Receiver', parameters: [{
@@ -18,6 +18,7 @@ const receiver = () => ({ name: 'RC-Midi-Receiver', parameters: [{
 
 test.afterEach(async () => {
   await cancelPendingMappingWrites();
+  setMappingsFilePath(null);
   clearExtensionContext();
   controlMappings.clear();
   eventModesState.clear();
@@ -174,4 +175,99 @@ test("backend does not suppress note-on for second control when first control is
   const pad2State = eventModesState.get("client-1::pad-2::trigger_note::0::D3");
   assert.ok(pad2State, "pad-2 modeState should exist");
   assert.ok(pad2State.lastInput >= 0.5, "pad-2 should record its own pressed state independently");
+});
+
+test("setMapping rejects invalid trigger note options atomically", async () => {
+  setMappingsFilePath(null);
+  const baseTarget = {
+    type: "device_param",
+    mode: "trigger_note",
+    trackIndex: 0,
+    midiNote: "C3",
+  };
+
+  // Invalid timing
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteTiming: "sync" },
+    }),
+    /Invalid noteTiming/,
+  );
+
+  // Invalid gate
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteGate: "toggle" },
+    }),
+    /Invalid noteGate/,
+  );
+
+  // Duration out of bounds < 20
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteDurationMs: 19 },
+    }),
+    /Invalid noteDurationMs/,
+  );
+
+  // Duration out of bounds > 2000
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteDurationMs: 2001 },
+    }),
+    /Invalid noteDurationMs/,
+  );
+
+  // Fractional duration
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteDurationMs: 80.5 },
+    }),
+    /Invalid noteDurationMs/,
+  );
+
+  // Synchronized timing combined with hold gate
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteTiming: "beat", noteGate: "hold" },
+    }),
+    /Synchronized timing .* cannot be combined with hold gate/,
+  );
+
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      target: { ...baseTarget, noteTiming: "bar", noteGate: "hold" },
+    }),
+    /Synchronized timing .* cannot be combined with hold gate/,
+  );
+
+  // Multi-target atomic rejection: valid target + invalid target must not save
+  await assert.rejects(
+    async () => commands.setMapping.handler({
+      control: "pad-1",
+      targets: [
+        { ...baseTarget, noteTiming: "immediate", noteGate: "hold" },
+        { ...baseTarget, noteTiming: "beat", noteGate: "hold" },
+      ],
+    }),
+    /Synchronized timing .* cannot be combined with hold gate/,
+  );
+  assert.equal(controlMappings.has("pad-1"), false);
+
+  // Valid combinations are accepted
+  const result = await commands.setMapping.handler({
+    control: "pad-1",
+    target: { ...baseTarget, noteTiming: "beat", noteGate: "pulse", noteDurationMs: 100 },
+  });
+  assert.equal(result.control, "pad-1");
+  assert.equal(controlMappings.get("pad-1")[0].noteTiming, "beat");
+  assert.equal(controlMappings.get("pad-1")[0].noteGate, "pulse");
+  assert.equal(controlMappings.get("pad-1")[0].noteDurationMs, 100);
 });

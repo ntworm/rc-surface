@@ -1078,6 +1078,44 @@ test('desktop non-audio targets do not offer Follow Detected Note', () => {
   assert.deepEqual(Array.from(mode.children, (option) => option.value), ['continuous', 'toggle', 'trigger_note']);
 });
 
+test('C14: desktop sync defaults to musical after ms/hold and omits audition shortcuts', () => {
+  const { context, document } = loadMappingsModule();
+  context.window.selectedControl = 'pad-1';
+  const target = { type: 'device_param', trackIndex: 0, mode: 'trigger_note', midiNote: 'E4', midiVelocity: 64, noteTiming: 'immediate', noteGate: 'hold', noteDurationMode: 'ms', noteDurationMs: 600 };
+  context.window.currentMappings = { 'pad-1': [target] };
+  context.window.saveMappingTargets = () => {};
+  context.window.renderMappingDetail();
+  const targets = document.getElementById('map-detail-targets');
+  assert.equal(queryByClass(targets, 'btn-for-chords').length, 0);
+  assert.equal(queryByClass(targets, 'btn-test-note').length, 0);
+  const timing = queryByClass(targets, 'target-note-timing')[0];
+  for (const option of timing.children) option.selected = option.value === 'beat';
+  timing.listeners.get('change')();
+  assert.equal(target.noteDurationMode, 'grid');
+  assert.equal(target.noteDurationBars, 0.25);
+  assert.equal(target.midiNote, 'E4');
+  assert.equal(target.midiVelocity, 64);
+  assert.equal(queryByClass(targets, 'target-note-duration-mode-btn').length, 2);
+});
+
+test('C16: desktop Now pulse saves musical duration through direct fraction buttons', () => {
+  const { context, document } = loadMappingsModule();
+  context.window.selectedControl = 'pad-1';
+  const target = { type: 'device_param', trackIndex: 0, mode: 'trigger_note', midiNote: 'C2', noteTiming: 'immediate', noteGate: 'pulse', noteDurationMode: 'grid', noteDurationBars: 0.25 };
+  context.window.currentMappings = { 'pad-1': [target] };
+  context.window.saveMappingTargets = () => {};
+  context.window.renderMappingDetail();
+  const detail = document.getElementById('map-detail-targets');
+  const bars = queryByClass(detail, 'target-note-duration-bars')[0];
+  assert.ok(bars, 'Now pulse must show musical fractions');
+  const halfBar = bars.children.find((button) => button.dataset.durationBars === '0.5');
+  assert.ok(halfBar);
+  halfBar.listeners.get('click')();
+  assert.equal(target.noteDurationBars, 0.5);
+  assert.equal(target.noteTiming, 'immediate');
+  assert.equal(queryByClass(detail, 'target-note-duration-preview').length, 0);
+});
+
 test('typing a Trigger Note value persists the MIDI note without waiting for blur', () => {
   const { context, document } = loadMappingsModule();
   context.window.selectedControl = 'pad-1';
@@ -1558,10 +1596,11 @@ test('A5: renderPickerList shows a .picker-empty notice when nothing matches', (
   assert.equal(empties[0].textContent, 'No parameters found');
 });
 
-test('new desktop bindings default to release on signal loss', () => {
+test('new desktop vision bindings default to hold while other controls keep release', () => {
   const source = fs.readFileSync(path.join(import.meta.dirname, 'mappings.js'), 'utf8');
   const bind = source.slice(source.indexOf('function doApplyBind'), source.indexOf('targets.push(newTarget)'));
-  assert.match(bind, /neutralPolicy:\s*['"]release['"]/);
+  assert.match(bind, /neutralPolicy:.*sensor\.vision\..*\? 'hold' : 'release'/);
+  assert.match(bind, /visionSafeLossVersion: 2/);
   assert.match(bind, /takeoverMode:\s*['"]scale['"]/);
-  assert.match(source, /\(t\.neutralPolicy \|\| ["']release["']\)/);
+  assert.match(source, /t\.neutralPolicy \|\| .*sensor\.vision\./);
 });

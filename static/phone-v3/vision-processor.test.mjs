@@ -772,18 +772,18 @@ test('VisionProcessor integration: hand active status and mappable X/Y/Z follow 
   windowContext.currentTime = startTime + 150;
   windowContext.lastIntervalCallback();
 
-  assert.equal(windowContext.currentControlStates['sensor.vision.active'], 0);
+  assert.equal(windowContext.currentControlStates['sensor.vision.active'], 1);
+  assert.equal(windowContext.currentControlLost['sensor.vision.active'], true);
   // Built-in gesture detectors are opt-in; a disabled detector must stay
   // completely off the output stream instead of producing noisy zeroes.
   assert.equal(windowContext.currentControlStates['sensor.vision.fist'], undefined);
 
-  // Tick 2: 300ms after loss (fully decayed). With spatial tracking
-  // retired there is nothing to decay toward a neutral; the only
-  // state change is that `sensor.vision.active` is now 0.
+  // Later missing frames still preserve the last real reading.
   windowContext.currentTime = startTime + 300;
   windowContext.lastIntervalCallback();
 
-  assert.equal(windowContext.currentControlStates['sensor.vision.active'], 0);
+  assert.equal(windowContext.currentControlStates['sensor.vision.active'], 1);
+  assert.equal(windowContext.currentControlLost['sensor.vision.active'], true);
 });
 
 // Build a synthetic 21-landmark "open hand" in the same coordinates used
@@ -2023,7 +2023,7 @@ test('VisionProcessor integration: hand loss emits the complete pre-armed loss c
   HandsMock.instance.resultsCallback({ image: {}, multiHandLandmarks: [], multiHandedness: [] });
 
   const lostNames = seen
-    .filter((ctrl) => ctrl.name?.startsWith('sensor.vision.') && ctrl.lost === true)
+    .filter((ctrl) => ctrl.name?.startsWith('sensor.vision.') && ctrl.name !== 'sensor.vision.active' && ctrl.lost === true)
     .map((ctrl) => ctrl.name)
     .sort();
   assert.deepEqual(
@@ -2031,6 +2031,7 @@ test('VisionProcessor integration: hand loss emits the complete pre-armed loss c
     prearmedLossNames,
     'hand loss, camera stop, and pre-arm must consume one shared loss catalog',
   );
+  assert.ok(seen.some((ctrl) => ctrl.name === 'sensor.vision.active' && ctrl.lost === true));
 });
 
 test('VisionProcessor integration: absent-hand cadence keeps enabled detector outputs marked lost', async () => {
@@ -2220,4 +2221,79 @@ test('VisionProcessor: ausencia longa limpa o sinal guardado da tolerancia de po
   for (let index = 0; index < 4; index += 1) estado = frame(0);
   assert.equal(estado.pinch_engaged, false,
     'uma mao que volta em pose invalida nao pode reutilizar contato anterior a perda');
+});
+
+test('VisionProcessor: onGestureProgress includes recognitionState and safetyConfig roundtrips Performance preset', () => {
+  const { VisionProcessor, windowContext } = loadVisionProcessor();
+  const vp = new VisionProcessor();
+  const { normalizeHandPose, GestureLibrary } = windowContext.SafeInputLayer;
+
+  function handPose({ thumb = 0.5, index = 1, middle = 1, ring = 1, pinky = 1 } = {}) {
+    const L = new Array(21);
+    const P = (i, x, y) => { L[i] = { x, y, z: 0 }; };
+    P(0, 0.50, 0.90);
+    const a0 = thumb * (-2.30) + (1 - thumb) * 0.35;
+    const a1 = a0 + (1 - thumb) * (Math.PI * 0.92);
+    P(1, 0.445, 0.825);
+    P(2, 0.405, 0.762);
+    P(3, 0.405 + Math.cos(a0) * 0.100, 0.762 + Math.sin(a0) * 0.100);
+    P(4, L[3].x + Math.cos(a1) * 0.092, L[3].y + Math.sin(a1) * 0.092);
+    const columns = [[5, 0.42], [9, 0.48], [13, 0.54], [17, 0.60]];
+    const extension = [index, middle, ring, pinky];
+    const segments = [
+      [0.105, 0.090, 0.070], [0.110, 0.095, 0.072],
+      [0.100, 0.088, 0.068], [0.085, 0.072, 0.058],
+    ];
+    columns.forEach(([base, x], column) => {
+      const e = extension[column];
+      const seg = segments[column];
+      P(base, x, 0.62);
+      let px = x;
+      let py = 0.62;
+      let angle = -Math.PI / 2;
+      const bend = (1 - e) * (Math.PI * 1.72);
+      const share = [0.42, 0.34, 0.24];
+      for (let joint = 0; joint < 3; joint += 1) {
+        angle += bend * share[joint];
+        px += Math.cos(angle) * seg[joint];
+        py += Math.sin(angle) * seg[joint];
+        P(base + 1 + joint, px, py);
+      }
+    });
+    return L;
+  }
+  function frames(descriptor, count = 8) {
+    return Array.from({ length: count }, () => descriptor);
+  }
+
+  const rock = normalizeHandPose(handPose({ thumb: 1, index: 1, middle: 0.2, ring: 0.2, pinky: 1 }));
+  const perfOpts = { threshold: 0.176, ambiguityRatio: 1.25, minimumConfidence: 0.52, holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
+
+  vp.setGestureOptions(perfOpts);
+  for (let take = 0; take < 3; take += 1) {
+    vp.gestures.learn('Rock', frames(rock));
+  }
+
+  let lastProgress = null;
+  vp.onGestureProgress = (ev) => {
+    lastProgress = ev;
+  };
+
+  const landmarks = handPose({ thumb: 1, index: 1, middle: 0.2, ring: 0.2, pinky: 1 });
+  vp.processHandData({ x: 0.5, y: 0.5, z: 0.5, active: true }, 0, landmarks);
+  assert.equal(lastProgress?.recognitionState, 'candidate', 'Progress receives candidate state');
+
+  vp.processHandData({ x: 0.5, y: 0.5, z: 0.5, active: true }, 130, landmarks);
+  assert.equal(lastProgress?.recognitionState, 'held', 'Progress receives held state after hold duration');
+
+  // Export safety config with performance preset
+  const exported = { ...vp.exportSafetyConfig(), gesturePreset: 'performance' };
+  assert.equal(exported.gesturePreset, 'performance');
+  assert.equal(exported.gestureOptions.threshold, 0.176);
+
+  // Restore into a fresh processor without recapturing
+  const restoredVp = new VisionProcessor();
+  restoredVp.importSafetyConfig(exported);
+  assert.equal(restoredVp.gestureSampleCount('Rock'), 3, 'Templates survive reload intact');
+  assert.equal(restoredVp.gestures.getRecognitionState(), 'ready', 'Initial state of restored library is ready');
 });

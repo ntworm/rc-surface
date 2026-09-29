@@ -213,3 +213,52 @@ The protocol supports a narrow forward / backward range by construction:
 
 Removing a frozen field or bumping a limit without recording the change
 here is the failure mode this document exists to prevent.
+
+---
+
+## Trigger note scheduling and schema (`trigger_note`)
+
+Trigger note targets allow controls and learned gestures to trigger MIDI notes with transport-synchronized quantization and safe Note-Off guarantees.
+
+### Target Schema
+
+Targets with `mode: 'trigger_note'` adhere to the following schema constraints:
+
+| Field | Type | Validation rules |
+| ----- | ---- | ---------------- |
+| `mode` | `'trigger_note'` | Required discriminator. Continuous mapping controls are hidden in UI. |
+| `midiNote` | string | Standard note name (e.g. `'C2'`). Range: `C-2` (MIDI 0) to `G8` (MIDI 127). Pitches above G8 (MIDI 128+) are rejected. Default `'C2'`. |
+| `midiVelocity` | number | Integer in range `1..127`. Default `100`. |
+| `noteTiming` | string | `'immediate'`, `'beat'`, or `'bar'`. Default `'immediate'`. |
+| `noteGate` | string | `'pulse'` or `'hold'`. Default `'hold'`. |
+| `noteDurationMs`| number | Integer in range `20..2000` ms. Default `80`. |
+| `noteDurationMode` | string | `'ms'` (legacy/default when absent) or `'grid'` (pulse with immediate, beat or bar onset). |
+| `noteDurationBars` | number | For grid mode: exactly `1/16`, `1/8`, `1/4`, `1/2`, `1`, `2`, or `4`. New UI sync selections use `1/4`. |
+
+**Timing & Gate Invariant (D04):** `hold + sync` is rejected. If `noteTiming` is `'beat'` or `'bar'`, `noteGate` must be `'pulse'`. If `noteGate` is `'hold'`, `noteTiming` must be `'immediate'`.
+
+### OSC Clock Contract
+
+- Quantization calculates the next quarter-note beat (`beat`) or next bar boundary (`bar`) strictly from the fresh host OSC position (`/live/song/get/current_song_time`) observed within `<=1000 ms`.
+- If the transport is stopped (`!isPlaying`), the song position is stale (`>1000 ms`), or tempo is non-positive, scheduling reports `unavailable` / `NO SYNC` and drops the trigger safely.
+- Quantized trigger beats are strictly future (`nextTriggerBeat > currentBeat`).
+- Grid duration is resolved from the fresh OSC snapshot at actual Note-On: `bars × beatsPerBar × 60000 / BPM`, frozen for that voice. Invalid or unbounded durations do not dispatch. Legacy `noteDurationMs` profiles keep their saved duration.
+- Immediate pulse may use the same grid duration without quantizing onset. A stopped, connected, previously observed clock retains BPM/meter metadata; a stationary position does not expire it. Playing clocks still require a position within 1000 ms, and disconnected/unknown/invalid metadata does not dispatch. Grid with hold is invalid; legacy ms behavior is unchanged.
+
+### Scheduler Contract
+
+- **Lanes & Concurrency:** The queue is keyed by destination track object lane, capped at `MAX_TRACK_LANES = 64`.
+- **Latest-Wins Policy:** When multiple triggers arrive for the same track lane, the latest scheduled trigger supersedes any pending trigger on that lane.
+- **Timing & Lateness Window:** Timers sleep until the computed trigger beat. If execution delay exceeds `20 ms` past scheduled time, the trigger is dropped as `missed` with no catch-up note.
+- **Guaranteed Note-Off:** Every started Note-On registers an active held voice with a release timer. On same-lane retrigger, the old timer is cancelled and its OFF completes before the replacement ON. The replacement gets its own full duration.
+- **Safe Cancellation:** Transport stop, seek, loop jump, stale transport clock, track deletion, device change, client disconnection, or mapping unbind immediately cancels all pending triggers and releases active voices on the affected tracks.
+
+### Vision Safe Loss
+
+Temporary missing-hand or malformed-landmark frames hold the last real vision output and learned pose, including immediate/hold notes. A real pose change or release reconciles the edge once. Camera OFF, pagehide, Panic, unbind and socket disconnect retire vision notes and pending triggers. New vision mappings default to `neutralPolicy: 'hold'`; legacy vision `release` defaults migrate once to hold with `visionSafeLossVersion: 2`, while explicit `zero`/`center`/`custom`, newer deliberate `release`, and non-vision settings remain intact.
+
+### Command Authorization (`testTriggerNote`)
+
+- `testTriggerNote({ control, targetIndex })`: Live-write command executed only on saved mapping bindings.
+- Evaluates within a trusted `CommandExecutionContext` (`clientId`, `isCurrent()`) created by the server from socket connection context (never from client request parameters).
+- Authorized only for `controller` or `admin` roles; unauthorized or stale sessions are rejected.

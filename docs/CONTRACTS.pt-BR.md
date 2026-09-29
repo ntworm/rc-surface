@@ -215,3 +215,52 @@ frente e para trás:
 
 Remover um campo congelado ou alterar um limite sem registrar a mudança
 aqui é exatamente o modo de falha que este documento existe para evitar.
+
+---
+
+## Agendamento e esquema de trigger note (`trigger_note`)
+
+Destinos de trigger note permitem que controles e gestos aprendidos disparem notas MIDI com quantização sincronizada ao transporte e garantia de Note-Off seguro.
+
+### Esquema do destino
+
+Destinos com `mode: 'trigger_note'` obedecem às seguintes restrições de esquema:
+
+| Campo | Tipo | Regras de validação |
+| ----- | ---- | ------------------- |
+| `mode` | `'trigger_note'` | Discriminador obrigatório. Controles de mapeamento contínuo ficam ocultos na interface. |
+| `midiNote` | string | Nome de nota padrão (ex.: `'C2'`). Faixa: `C-2` (MIDI 0) a `G8` (MIDI 127). Notas acima de G8 (MIDI 128+) são rejeitadas. Padrão `'C2'`. |
+| `midiVelocity` | number | Inteiro na faixa `1..127`. Padrão `100`. |
+| `noteTiming` | string | `'immediate'`, `'beat'` ou `'bar'`. Padrão `'immediate'`. |
+| `noteGate` | string | `'pulse'` ou `'hold'`. Padrão `'hold'`. |
+| `noteDurationMs`| number | Inteiro na faixa `20..2000` ms. Padrão `80`. |
+| `noteDurationMode` | string | `'ms'` (legado/padrão quando ausente) ou `'grid'` (pulso com disparo imediato, no tempo ou no compasso). |
+| `noteDurationBars` | number | Em modo grid: exatamente `1/16`, `1/8`, `1/4`, `1/2`, `1`, `2` ou `4`. Novas seleções de sync usam `1/4`. |
+
+**Invariante de tempo e gate (D04):** `hold + sync` é rejeitado. Se `noteTiming` for `'beat'` ou `'bar'`, `noteGate` deve ser `'pulse'`. Se `noteGate` for `'hold'`, `noteTiming` deve ser `'immediate'`.
+
+### Contrato de relógio OSC
+
+- A quantização calcula o próximo tempo (`beat`) ou início de compasso (`bar`) estritamente a partir da posição OSC fresca do host (`/live/song/get/current_song_time`) observada em `<=1000 ms`.
+- Se o transporte estiver parado (`!isPlaying`), a posição estiver desatualizada (`>1000 ms`) ou o andamento for não-positivo, o agendamento reporta `unavailable` / `SEM SYNC` e descarta o trigger com segurança.
+- Tempos de disparo quantizados são estritamente futuros (`nextTriggerBeat > currentBeat`).
+- A duração grid usa o snapshot OSC fresco no Note-On real: `compassos × temposPorCompasso × 60000 / BPM`, congelado para a voz. Duração inválida ou excessiva não dispara. Perfis antigos em `noteDurationMs` conservam seu valor.
+- Pulso imediato pode usar duração grid sem quantizar o ataque. Clock parado, conectado e observado conserva os metadados de BPM/compasso; posição estacionária não os expira. Clock tocando continua exigindo posição de até 1000 ms; metadados desconectados, desconhecidos ou inválidos não disparam. Grid com hold é inválido; ms legado permanece igual.
+
+### Contrato do agendador
+
+- **Faixas e concorrência:** A fila é indexada por objeto de track de destino, limitada a `MAX_TRACK_LANES = 64`.
+- **Política de última intenção:** Quando chegam múltiplos disparos para a mesma faixa de track, o mais recente substitui qualquer disparo pendente não enviado naquela faixa.
+- **Janela de atraso:** Temporizadores aguardam até o tempo calculado. Se o atraso real de execução exceder `20 ms`, o disparo é descartado como `missed` sem disparos atrasados de compensação.
+- **Note-Off garantido:** Cada Note-On iniciado registra voz e timer de liberação. Ao repetir na mesma track, o timer antigo é cancelado e o OFF antigo conclui antes do ON novo; a nota nova recebe a duração inteira.
+- **Cancelamento seguro:** Parada de transporte, seek, loop, relógio OSC desatualizado, exclusão de track, troca de dispositivo, desconexão ou remoção de bind cancelam imediatamente todos os disparos pendentes e desligam vozes ativas nas tracks afetadas.
+
+### Safe loss de visão
+
+Quadros sem mão ou com landmarks incompletos seguram a última saída real e a pose aprendida, inclusive notas immediate/hold. Uma mudança ou soltura real reconcilia a borda uma vez. Camera OFF, pagehide, Panic, remoção de bind e desconexão encerram notas e agendamentos. Novos mapeamentos de visão usam `neutralPolicy: 'hold'`; o antigo padrão `release` migra uma vez para hold com `visionSafeLossVersion: 2`, preservando `zero`/`center`/`custom`, um `release` escolhido depois e controles sem visão.
+
+### Autorização de comandos (`testTriggerNote`)
+
+- `testTriggerNote({ control, targetIndex })`: Comando de escrita ao vivo executado exclusivamente em mapeamentos já salvos.
+- Avaliado dentro de um `CommandExecutionContext` confiável (`clientId`, `isCurrent()`) montado pelo servidor a partir do socket da conexão (nunca de argumentos enviados pelo cliente).
+- Autorizado apenas para papéis `controller` ou `admin`; sessões não autorizadas ou desatualizadas são rejeitadas.

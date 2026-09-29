@@ -394,6 +394,12 @@
     }
   }
 
+  function hasUsableHandLandmarks(landmarks) {
+    return Array.isArray(landmarks) && landmarks.length >= 21
+      && Array.from({ length: 21 }, (_, index) => landmarks[index]).every((point) =>
+        point && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z));
+  }
+
   function computeHandData(landmarks, handedness = null) {
     const palmSize = dist3D(landmarks[0], landmarks[9]) || 0.1;
     const palmSize2D = Math.hypot(
@@ -608,6 +614,7 @@
       this.onHandUpdate = null; // Callback: (data) => {}
       this.onColorUpdate = null; // Callback: (data) => {}
       this.onGesture = null; // Callback: ({name, confidence}) => {}
+      this.onGestureRelease = null; // Callback: (name: string) => {} — fired on release edge
       this.onGestureProgress = null; // Callback: ({name, confidence, accepted}) => {}
       this.onVisionStatus = null; // Callback: (visionStatus) => {}
       this.active = false;
@@ -862,28 +869,31 @@
         }
       } else if (descriptor.length) {
         const evaluation = this.gestures?.evaluate(descriptor, this.gestureTestName);
+        const prevActiveName = this.gestures?.activeName ?? null;
+        const match = this.recognizeGesture(descriptor, timestamp, this.gestureTestName);
+        const recognitionState = this.gestures?.getRecognitionState?.() || 'unknown';
         if (evaluation && this.onGestureProgress
           && (evaluation.accepted || timestamp - this.lastGestureProgressAt >= 100)) {
           this.lastGestureProgressAt = timestamp;
-          this.onGestureProgress(evaluation);
+          this.onGestureProgress({ ...evaluation, recognitionState });
         }
-        const match = this.recognizeGesture(descriptor, timestamp, this.gestureTestName);
+        // Emit release edge when the active gesture transitions away from a name.
+        // This fires when: (a) pose dropped to null, (b) pose switched to a different name.
+        const nextActiveName = this.gestures?.activeName ?? null;
+        if (prevActiveName !== null && prevActiveName !== nextActiveName) {
+          try { this.onGestureRelease?.(prevActiveName); } catch { /* UI must not break pipeline */ }
+        }
         if (match && this.onGesture) this.onGesture(match);
       }
       return output;
     }
 
-    processMissing(timestamp = Date.now()) {
-      // Spatial tracking was retired, so the inertial predictor is gone.
-      // Mark the gesture library as UNKNOWN. Its short grace window absorbs
-      // detector dropouts, then the normal hold/release state can reset if the
-      // hand does not return. Nothing synthetic is emitted on the wire.
-      this.gestures?.recognize(null, timestamp, this.gestureTestName);
+    processMissing(_timestamp = Date.now()) {
+      // A missing camera frame is not a release. Preserve the last pose until
+      // a valid hand reading replaces it or the performer stops the camera.
       if (this.gestureLearnName && !this.gestureLearnReady) {
         this.gestureLearnPreparationFrames = [];
       }
-      // Pose patience only bridges a noisy gate while the same contact stays
-      // visible. Once the hand is gone there is no contact to carry forward.
       this.poseDropFrames = 0;
       this.lastPinchSignal = 0;
       this.pinchClutch.missing();
@@ -1108,7 +1118,8 @@
         }
       }
 
-      const sawHand = Boolean(results.multiHandLandmarks && results.multiHandLandmarks.length > 0);
+      const landmarks = results.multiHandLandmarks?.[0];
+      const sawHand = hasUsableHandLandmarks(landmarks);
       // Results arriving at all proves the pipeline is alive; whether a hand is
       // present is a separate fact. Keeping them distinct is what lets the UI
       // say "waiting for hand" instead of leaving the user guessing.
@@ -1132,7 +1143,6 @@
           }
         }
         this.wasHandPresent = true;
-        const landmarks = results.multiHandLandmarks[0];
         if (canRender) this.drawLandmarks(landmarks);
         // Filter the position before anything downstream reads it, so the
         // gesture layer, the HUD and the wire all see the same steady value.

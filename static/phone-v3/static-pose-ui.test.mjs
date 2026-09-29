@@ -96,3 +96,30 @@ test('F-010: recognition label renders match.name literally and distinguishes sa
   // Conclusion: '✓ s recognized · 77%' occurs because the saved gesture name is 's',
   // not due to a missing duration '{n}s' or CSS clipping of 'Gesture 1'.
 });
+
+test('Performance opt-in preset exists in index.html, app.js, and i18n-catalog without modifying other presets', () => {
+  const html = fs.readFileSync(path.join(import.meta.dirname, 'index.html'), 'utf8');
+  const app = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
+  const i18n = fs.readFileSync(path.join(import.meta.dirname, '../shared/i18n-catalog.js'), 'utf8');
+
+  // Option in select
+  assert.match(html, /<option value="performance" data-i18n="vid\.performance">Performance<\/option>/);
+
+  // i18n entries
+  assert.match(i18n, /'vid\.performance':\s*\{\s*en:\s*'Performance',\s*'pt-BR':\s*'Performance'\s*\}/);
+
+  // GESTURE_PRESETS in app.js contains performance with exact parameters
+  assert.match(app, /performance:\s*\{\s*threshold:\s*0\.176,\s*ambiguityRatio:\s*1\.25,\s*minimumConfidence:\s*0\.52,\s*captureStabilityThreshold:\s*0\.10,\s*holdMs:\s*120,\s*releaseMs:\s*140,\s*releaseRatio:\s*1\.10,\s*unknownGraceMs:\s*140\s*\}/);
+
+  // Existing presets preserved intact
+  assert.match(app, /precision:\s*\{\s*threshold:\s*0\.11/);
+  assert.match(app, /balanced:\s*\{\s*threshold:\s*0\.16/);
+  assert.match(app, /flexible:\s*\{\s*threshold:\s*0\.20/);
+});
+
+test('UI displays held, releasing and ready states in onGestureProgress', () => {
+  const app = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
+  assert.match(app, /vid\.poseStateHeld/);
+  assert.match(app, /vid\.poseStateReleasing/);
+  assert.match(app, /vid\.poseStateReady/);
+});

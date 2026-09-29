@@ -27,11 +27,13 @@ import {
   getProjectConfigStatus,
   handleClientDisconnect,
   updateHostModulator,
+  triggerNoteClock,
 } from "../live/mappings.js";
 import { createClientId } from "./client-id.js";
 import { oscTransport } from "../live/osc-transport.js";
 import { authenticateRequest, checkSameOrigin, classifyRequestToken, validateSameOrigin, type SessionRole } from "./session-auth.js";
 import { dispatchCommand, isRoleAuthorized, type CommandEnvelope } from "./command-dispatch.js";
+import type { CommandExecutionContext } from "../live/catalog/types.js";
 import {
   PER_MESSAGE_DEFLATE,
   MAX_PAYLOAD_BYTES,
@@ -450,6 +452,30 @@ export function broadcastToAdmins(payload: object): void {
   }
 }
 
+export function broadcastTriggerNoteState(
+  clientId: string,
+  control: string,
+  targetIndex: number,
+  state: string,
+  targetBeat?: number,
+  reason?: string,
+): void {
+  const payload = JSON.stringify({
+    type: "trigger_note_state",
+    clientId,
+    control,
+    targetIndex,
+    state,
+    ...(targetBeat !== undefined ? { targetBeat } : {}),
+    ...(reason !== undefined ? { reason } : {}),
+  });
+  for (const c of trackedClients.values()) {
+    if (c.ws.readyState === WebSocket.OPEN) {
+      sendWithBackpressure(c.ws, payload, "critical");
+    }
+  }
+}
+
 /**
  * Minimum spacing between client_update broadcasts for the same client.
  * The admin dashboard is a monitor, not an audio path: 20 Hz is past what it
@@ -779,7 +805,21 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
       initScale = getScaleLabel(song.rootNote, song.scaleName);
       if (song.scenes && song.scenes.length > 0 && song.scenes[0]) {
         const scene = song.scenes[0];
-        initSig = `${scene.signatureNumerator}/${scene.signatureDenominator}`;
+        if (
+          typeof scene.signatureNumerator === "number" &&
+          scene.signatureNumerator > 0 &&
+          typeof scene.signatureDenominator === "number" &&
+          scene.signatureDenominator > 0
+        ) {
+          initSig = `${scene.signatureNumerator}/${scene.signatureDenominator}`;
+        } else if (
+          typeof oscTransport.state.signatureNumerator === "number" &&
+          oscTransport.state.signatureNumerator > 0 &&
+          typeof oscTransport.state.signatureDenominator === "number" &&
+          oscTransport.state.signatureDenominator > 0
+        ) {
+          initSig = `${oscTransport.state.signatureNumerator}/${oscTransport.state.signatureDenominator}`;
+        }
       }
     }
     if (!isAdmin) {
@@ -801,6 +841,12 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
   if (ws.readyState === WebSocket.OPEN) {
     const now = Date.now();
     const currentPos = playheadActive ? playheadBaseTimeMs + (now - playheadStartTime) : playheadBaseTimeMs;
+    let clockSnapshot = null;
+    try {
+      clockSnapshot = triggerNoteClock.snapshot();
+    } catch (err) {
+      console.warn("[ableton-rc-surface] failed to capture clock snapshot for hello:", err);
+    }
     sendWithBackpressure(
       ws,
       JSON.stringify({
@@ -819,6 +865,7 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
         values: initValues,
         bipolarControls: getBipolarControls(),
         projectConfig: getProjectConfigStatus(),
+        clock: clockSnapshot,
       }),
       "critical",
     );
@@ -828,6 +875,7 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
         JSON.stringify({
           type: "transport_state",
           state: oscTransport.state,
+          clock: clockSnapshot,
         }),
         "critical",
       );
@@ -1080,7 +1128,12 @@ function dispatch(ws: WebSocket, info: TrackedClient, msg: Record<string, unknow
     args: (msg["args"] ?? {}) as Record<string, unknown>,
   };
 
-  dispatchCommand(info.role, envelope)
+  const context: CommandExecutionContext = {
+    clientId: info.id,
+    isCurrent: () => trackedClients.get(info.id)?.ws === ws && ws.readyState === WebSocket.OPEN,
+  };
+
+  dispatchCommand(info.role, envelope, context)
     .then((result) => {
       sendWithBackpressure(ws, JSON.stringify(result), "critical");
     })
@@ -1110,9 +1163,16 @@ oscTransport.on("update", (state) => {
   const performBroadcast = () => {
     lastBroadcastTime = Date.now();
     pendingBroadcastTimeout = null;
+    let clockSnapshot = null;
+    try {
+      clockSnapshot = triggerNoteClock.snapshot();
+    } catch {
+      // ignore
+    }
     const payload = JSON.stringify({
       type: "transport_state",
-      state
+      state,
+      clock: clockSnapshot,
     });
     for (const c of trackedClients.values()) {
       if (!c.isAdmin && c.ws.readyState === WebSocket.OPEN) {

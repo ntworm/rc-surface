@@ -266,3 +266,82 @@ test("atomic project save creates backup and rollback restores it", async () => 
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test("trigger_note roundtrip preserves noteTiming, noteGate, and noteDurationMs", () => {
+  const currentSong = {
+    tempo: 120,
+    tracks: [
+      { name: "Lead Synth", isMidi: true, handle: { id: 10n }, devices: [] },
+    ],
+    returnTracks: [],
+    mainTrack: { name: "Main", handle: { id: 7n }, devices: [] },
+  };
+  const target = {
+    type: "device_param",
+    mode: "trigger_note",
+    trackIndex: 0,
+    midiNote: "C2",
+    noteTiming: "beat",
+    noteGate: "pulse",
+    noteDurationMs: 140,
+  };
+  const config = buildProjectConfig(currentSong, { "pad-1": [target] });
+  assert.equal(config.mappings["pad-1"][0].noteTiming, "beat");
+  assert.equal(config.mappings["pad-1"][0].noteGate, "pulse");
+  assert.equal(config.mappings["pad-1"][0].noteDurationMs, 140);
+
+  const restored = relinkProjectConfig(JSON.parse(JSON.stringify(config)), currentSong);
+  assert.equal(restored.report.loaded, 1);
+  assert.equal(restored.report.review, 0);
+  const relinkedTarget = restored.mappings.get("pad-1")[0];
+  assert.equal(relinkedTarget.relinkStatus, "loaded");
+  assert.equal(relinkedTarget.noteTiming, "beat");
+  assert.equal(relinkedTarget.noteGate, "pulse");
+  assert.equal(relinkedTarget.noteDurationMs, 140);
+});
+
+for (const noteTiming of ['immediate', 'bar']) test(`grid duration (${noteTiming}) roundtrips through profile relink and rejects an invalid fraction`, () => {
+  const currentSong = {
+    tempo: 120,
+    tracks: [{ name: 'Lead Synth', isMidi: true, handle: { id: 10n }, devices: [] }],
+    returnTracks: [], mainTrack: { name: 'Main', handle: { id: 7n }, devices: [] },
+  };
+  const target = { type: 'device_param', mode: 'trigger_note', trackIndex: 0,
+    midiNote: 'C2', noteTiming, noteGate: 'pulse', noteDurationMs: 80,
+    noteDurationMode: 'grid', noteDurationBars: 0.25 };
+  const config = buildProjectConfig(currentSong, { 'sensor.vision.gesture.1': [target] });
+  const roundtrip = validateProjectConfig(JSON.parse(JSON.stringify(config)));
+  const restored = relinkProjectConfig(roundtrip, currentSong).mappings.get('sensor.vision.gesture.1')[0];
+  assert.equal(restored.noteDurationMode, 'grid');
+  assert.equal(restored.noteDurationBars, 0.25);
+  assert.equal(restored.noteTiming, noteTiming);
+  roundtrip.mappings['sensor.vision.gesture.1'][0].noteDurationBars = 0.3;
+  assert.throws(() => validateProjectConfig(roundtrip), /note duration grid/);
+});
+
+test("trigger_note with invalid options is marked as review upon relink", () => {
+  const currentSong = {
+    tempo: 120,
+    tracks: [
+      { name: "Lead Synth", isMidi: true, handle: { id: 10n }, devices: [] },
+    ],
+    returnTracks: [],
+    mainTrack: { name: "Main", handle: { id: 7n }, devices: [] },
+  };
+  const target = {
+    type: "device_param",
+    mode: "trigger_note",
+    trackIndex: 0,
+    midiNote: "C2",
+    noteTiming: "bar",
+    noteGate: "hold", // Invalid: synchronized timing with hold gate
+    noteDurationMs: 100,
+  };
+  const config = buildProjectConfig(currentSong, { "pad-1": [target] });
+  const restored = relinkProjectConfig(JSON.parse(JSON.stringify(config)), currentSong);
+  assert.equal(restored.report.loaded, 0);
+  assert.equal(restored.report.review, 1);
+  const relinkedTarget = restored.mappings.get("pad-1")[0];
+  assert.equal(relinkedTarget.relinkStatus, "review");
+  assert.ok(Array.isArray(relinkedTarget.relinkCandidates));
+});

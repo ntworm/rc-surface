@@ -1693,7 +1693,6 @@
 
     const gesture = getVisionGestureLabel(h);
     const lblGesture = document.getElementById('lbl-vision-gesture');
-
     if (lblGesture) lblGesture.textContent = gesture;
     for (const channel of ['x', 'y', 'z']) {
       const value = document.getElementById(`vision-value-${channel}`);
@@ -1733,6 +1732,28 @@
     const video = document.getElementById('vision-video');
     const canvas = document.getElementById('vision-canvas');
     const lblGesture = document.getElementById('lbl-vision-gesture');
+    const performanceBadge = document.getElementById('vision-performance-badge');
+    let badgePose = null;
+    let badgeTrackingLost = false;
+    let badgeNoteState = null;
+    const renderPerformanceBadge = () => {
+      if (!performanceBadge) return;
+      const parts = [];
+      if (badgePose) parts.push(`${badgePose} · ${badgeTrackingLost
+        ? T('vid.poseLastKnown', 'LAST KNOWN') : T('vid.poseHeld', 'HELD')}`);
+      if (badgeNoteState) parts.push(`${T('vid.noteBadge', 'NOTE')}: ${badgeNoteState}`);
+      performanceBadge.textContent = parts.join(' · ');
+      if (performanceBadge.dataset) performanceBadge.dataset.tracking = badgeTrackingLost ? 'lost' : 'live';
+      if (parts.length) performanceBadge.classList.remove('hidden');
+      else performanceBadge.classList.add('hidden');
+    };
+    window.onVisionTriggerNoteState = (message) => {
+      if (!String(message?.control || '').startsWith('sensor.vision.')) return;
+      const next = String(message.state || '');
+      badgeNoteState = ['pending', 'held', 'sent', 'cancelled', 'unavailable'].includes(next)
+        ? next.toUpperCase() : null;
+      renderPerformanceBadge();
+    };
     const confidenceSelect = document.getElementById('vision-confidence');
     const gesturePresetSelect = document.getElementById('vision-recognition-preset');
     const cameraStage = document.querySelector('.vision-camera-stage');
@@ -1819,6 +1840,7 @@
     const GESTURE_PRESETS = {
       precision: { threshold: 0.11, ambiguityRatio: 1.4, minimumConfidence: 0.66, captureStabilityThreshold: 0.075, holdMs: 260, releaseMs: 240, releaseRatio: 1.25, unknownGraceMs: 80 },
       balanced: { threshold: 0.16, ambiguityRatio: 1.25, minimumConfidence: 0.52, captureStabilityThreshold: 0.10, holdMs: 160, releaseMs: 220, releaseRatio: 1.4, unknownGraceMs: 140 },
+      performance: { threshold: 0.176, ambiguityRatio: 1.25, minimumConfidence: 0.52, captureStabilityThreshold: 0.10, holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 },
       flexible: { threshold: 0.20, ambiguityRatio: 1.15, minimumConfidence: 0.44, captureStabilityThreshold: 0.125, holdMs: 120, releaseMs: 200, releaseRatio: 1.6, unknownGraceMs: 200 },
     };
     const POSE_CAPTURE_MS = 900;
@@ -2296,6 +2318,8 @@
           // at the 0.5 neutral.
           if (visionControls.detectorEnabled('victory')) visibleReading.rotateVal = data.rotateVal;
           state.sensors.vision_reading = visibleReading;
+          badgeTrackingLost = false;
+          renderPerformanceBadge();
           renderVisionReadouts();
 
           if (window.onControl) {
@@ -2352,48 +2376,20 @@
           return !wasActive;
         }
 
-        // Mark a hand as lost: snapshot its current x/y/z as the decay
-        // origin so the values drift back to neutral smoothly. Reset the
-        // previous-frame gesture flags so the next time this hand appears
-        // the very first frame counts as a fresh rising edge for mode-C
-        // toggle channels (otherwise an already-latched toggle would never
-        // fire again until the gesture dropped and rose).
+        // Missing hand is temporary: retain the last measured positions,
+        // detector edges and pose until a real frame or explicit camera OFF.
         function markHandLost() {
           const h = state.vision.hand;
           if (!h.active) return;
           h.active = false;
-          h.x = 0.5;
-          h.y = 0.5;
-          h.z = 0;
-          // The readout is repainted from these below, and no further frame
-          // arrives while the hand is gone, so anything left set here stays on
-          // screen: the clutch chip frozen at HELD, PALM showing a hand size
-          // with no hand. PinchClutch has already released internally.
-          // pinch_x/y/z keep their held values — that is the freeze-on-release
-          // semantic, and the next pinch is meant to carry on from them.
-          h.pinch_engaged = false;
-          h.palmSize = 0;
-          h.facing = 0;
-          h.handedness = null;
-          h.handReal = null;
-          h.palmPoseOk = null;
-          h.indexCurved = null;
-          h.otherFingersExtended = null;
+          badgeTrackingLost = true;
+          renderPerformanceBadge();
+          // Keep the entire last hand reading on screen as last-known state.
+          // The processor may safely unlatch its internal clutch gate for
+          // reacquisition; no mapped output changes until a real frame.
           h.handLostTime = Date.now();
-          if (state.visionPrev) {
-            state.visionPrev.fist = 0;
-            state.visionPrev.pinch = 0;
-            state.visionPrev.victory = 0;
-            state.visionPrev.open = 0;
-          }
           if (state.sensors.vision_reading) {
             state.sensors.vision_reading.active = false;
-            state.sensors.vision_reading.x = 0.5;
-            state.sensors.vision_reading.y = 0.5;
-            state.sensors.vision_reading.z = 0;
-            state.sensors.vision_reading.palm = 0;
-            state.sensors.vision_reading.face = 0.5;
-            state.sensors.vision_reading.fingers = 0;
           }
           renderVisionReadouts();
           if (window.onControl) {
@@ -2401,7 +2397,7 @@
             // placeholder for the HUD; `lost: true` tells the server to apply
             // each target's Safe loss policy (hold / zero / center / initial /
             // custom / release / reconcile) instead of taking it literally.
-            window.onControl({ name: 'sensor.vision.active', value: 0 });
+            window.onControl({ name: 'sensor.vision.active', value: 0, lost: true });
             emitVisionSignalLoss();
             emitEnabledVisionDetectorLoss();
           }
@@ -2444,9 +2440,20 @@
           const card = document.querySelector(`[data-gesture-slot="${slot.id}"]`);
           const status = card?.querySelector('.vision-slot-status');
           const percent = Math.round((target.confidence || 0) * 100);
-          if (status) status.textContent = evaluation.accepted && evaluation.name === slot.name
-            ? T('vid.poseMatchHold', 'POSE MATCH {percent}% · hold still to confirm', { percent })
-            : T('vid.poseMatchAdjust', 'POSE MATCH {percent}% · adjust your hand', { percent });
+          if (status) {
+            const state = evaluation?.recognitionState;
+            if (state === 'held') {
+              status.textContent = T('vid.poseStateHeld', 'HELD · release slightly to retrigger', { percent });
+            } else if (state === 'releasing') {
+              status.textContent = T('vid.poseStateReleasing', 'RELEASING · almost ready to retrigger');
+            } else if (state === 'ready') {
+              status.textContent = T('vid.poseStateReady', 'READY · ready to trigger');
+            } else if (evaluation.accepted && evaluation.name === slot.name) {
+              status.textContent = T('vid.poseMatchHold', 'POSE MATCH {percent}% · hold still to confirm', { percent });
+            } else {
+              status.textContent = T('vid.poseMatchAdjust', 'POSE MATCH {percent}% · adjust your hand', { percent });
+            }
+          }
         };
         visionProcessor.onGesture = (match) => {
           const slot = visionControls.slotForGesture(match.name);
@@ -2471,11 +2478,27 @@
             return;
           }
           if (status) status.textContent = T('vid.poseRecognized', '✓ {name} recognized · {percent}%', { name: match.name, percent });
-          setTimeout(() => card?.classList.remove('recognized'), 420);
+          badgePose = `G${slot.id}`;
+          badgeTrackingLost = false;
+          renderPerformanceBadge();
           if (!window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);
+          // Emit ON edge. OFF is emitted by onGestureRelease (FSM transition)
+          // and by an explicit camera stop. Missing frames retain the pose.
           window.onControl({ name: control, value: 1 });
-          setTimeout(() => window.onControl && window.onControl({ name: control, value: 0 }), 80);
+        };
+        visionProcessor.onGestureRelease = (name) => {
+          // This callback fires on a real pose drop or switch. TEST mode is never
+          // active here because onGesture already cleared it before returning.
+          if (visionGestureTestSlot !== null) return;
+          const slot = visionControls.slotForGesture(name);
+          if (!slot) return;
+          document.querySelector(`[data-gesture-slot="${slot.id}"]`)?.classList.remove('recognized');
+          if (badgePose === `G${slot.id}`) badgePose = null;
+          renderPerformanceBadge();
+          if (!window.onControl) return;
+          const control = visionControls.controlForSlot(slot.id);
+          window.onControl({ name: control, value: 0 });
         };
       }
       const processor = visionProcessor;
@@ -2547,6 +2570,10 @@
     };
 
     const stopVision = () => {
+      badgePose = null;
+      badgeNoteState = null;
+      badgeTrackingLost = false;
+      renderPerformanceBadge();
       window.PageCalibration?.invalidate('video');
       visionStartGeneration += 1;
       stopGestureTest();
@@ -2554,7 +2581,7 @@
       poseCaptureTimer = null;
       visionGestureLearnSlot = null;
       gestureSlotCards.forEach((card) => {
-        card.classList.remove('recording');
+        card.classList.remove('recording', 'recognized');
         const button = card.querySelector('.vision-slot-learn');
         if (button) {
           button.textContent = T('js.capturePose', 'CAPTURE POSE');
@@ -2690,13 +2717,21 @@
           }
         }
         if (msg.signature) {
-          const sigEl = document.getElementById('live-sig');
-          if (sigEl) sigEl.textContent = msg.signature;
           const sigParts = msg.signature.split('/');
           if (sigParts.length === 2) {
-            window.currentNumerator = parseInt(sigParts[0]) || 4;
-            window.currentDenominator = parseInt(sigParts[1]) || 4;
+            const num = parseInt(sigParts[0], 10);
+            const den = parseInt(sigParts[1], 10);
+            if (Number.isFinite(num) && num > 0) window.currentNumerator = num;
+            if (Number.isFinite(den) && den > 0) window.currentDenominator = den;
           }
+          const sigEl = document.getElementById('live-sig');
+          if (sigEl) sigEl.textContent = `${window.currentNumerator || 4}/${window.currentDenominator || 4}`;
+        }
+        if (msg.clock) {
+          window.triggerNoteClockSnapshot = msg.clock;
+        }
+        if (typeof window.updateTriggerNoteClockUI === 'function') {
+          window.updateTriggerNoteClockUI();
         }
         applyIncomingPlayheadState(msg);
         if (msg.values && typeof msg.values === 'object') {
@@ -2729,6 +2764,11 @@
         if (typeof window.updateSafeInputFeedback === 'function') {
           window.updateSafeInputFeedback(msg.control, msg);
         }
+      } else if (msg.type === 'trigger_note_state') {
+        window.onVisionTriggerNoteState?.(msg);
+        if (typeof window.handleTriggerNoteState === 'function') {
+          window.handleTriggerNoteState(msg);
+        }
       } else if (msg.type === 'tempo') {
         if (typeof msg.tempo === 'number') {
           window.lastSessionBpm = msg.tempo;
@@ -2737,6 +2777,9 @@
             const bpmEl = document.getElementById('live-bpm');
             if (bpmEl) bpmEl.textContent = `${msg.tempo.toFixed(1)} BPM`;
             window.refreshAudioDetectorTiming?.();
+          }
+          if (typeof window.updateTriggerNoteClockUI === 'function') {
+            window.updateTriggerNoteClockUI();
           }
         }
       } else if (msg.type === 'live_state') {
@@ -2750,20 +2793,40 @@
           }
         }
         if (msg.signature) {
-          const sigEl = document.getElementById('live-sig');
-          if (sigEl) sigEl.textContent = msg.signature;
           const sigParts = msg.signature.split('/');
           if (sigParts.length === 2) {
-            window.currentNumerator = parseInt(sigParts[0]) || 4;
-            window.currentDenominator = parseInt(sigParts[1]) || 4;
+            const num = parseInt(sigParts[0], 10);
+            const den = parseInt(sigParts[1], 10);
+            if (Number.isFinite(num) && num > 0) window.currentNumerator = num;
+            if (Number.isFinite(den) && den > 0) window.currentDenominator = den;
           }
+          const sigEl = document.getElementById('live-sig');
+          if (sigEl) sigEl.textContent = `${window.currentNumerator || 4}/${window.currentDenominator || 4}`;
         }
         applyIncomingPlayheadState(msg);
+        if (typeof window.updateTriggerNoteClockUI === 'function') {
+          window.updateTriggerNoteClockUI();
+        }
       } else if (msg.type === 'playhead_state') {
         applyIncomingPlayheadState(msg);
       } else if (msg.type === 'transport_state') {
         const state = msg.state;
+        if (msg.clock) {
+          window.triggerNoteClockSnapshot = msg.clock;
+          if (typeof window.updateTriggerNoteClockUI === 'function') {
+            window.updateTriggerNoteClockUI(msg.clock);
+          }
+        }
         if (state) {
+          window.oscConnected = Boolean(state.connected);
+          if (typeof state.signatureNumerator === 'number' && state.signatureNumerator > 0) {
+            window.currentNumerator = state.signatureNumerator;
+          }
+          if (typeof state.signatureDenominator === 'number' && state.signatureDenominator > 0) {
+            window.currentDenominator = state.signatureDenominator;
+          }
+          const sigEl = document.getElementById('live-sig');
+          if (sigEl) sigEl.textContent = `${window.currentNumerator || 4}/${window.currentDenominator || 4}`;
           if (state.locators && typeof window.updateTransportLocators === 'function') {
             window.updateTransportLocators(state.locators);
           }
@@ -2793,6 +2856,9 @@
               window.refreshAudioDetectorTiming?.();
             }
           }
+        }
+        if (typeof window.updateTriggerNoteClockUI === 'function') {
+          window.updateTriggerNoteClockUI();
         }
       } else if (msg.type === 'beat') {
         if (typeof window.triggerMetronomePulse === 'function') {

@@ -4,6 +4,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { resolveTriggerNoteOptions } from "./trigger-note-clock.js";
 
 export const PROJECT_CONFIG_FORMAT = "ableton-rc-surface-project";
 export const PROJECT_CONFIG_VERSION = 1;
@@ -39,6 +40,11 @@ export interface ProjectMappingTarget extends Record<string, any> {
   relinkStatus?: "loaded" | "relinked" | "review" | "ambiguous" | "missing";
   relinkConfidence?: number;
   relinkCandidates?: Array<{ target: ProjectMappingTarget; confidence: number }> | undefined;
+  noteTiming?: unknown;
+  noteGate?: unknown;
+  noteDurationMs?: unknown;
+  noteDurationMode?: unknown;
+  noteDurationBars?: unknown;
 }
 
 export interface ProjectConfig {
@@ -319,6 +325,10 @@ export function validateProjectConfig(value: unknown): ProjectConfig {
     if (!Array.isArray(targets) || targets.some((target) => !target || typeof target.type !== "string")) {
       throw new Error("Invalid .rcsurface mappings payload");
     }
+    if (targets.some((target) => (target.noteDurationMode !== undefined || target.noteDurationBars !== undefined)
+        && !resolveTriggerNoteOptions(target).valid)) {
+      throw new Error('Invalid .rcsurface note duration grid');
+    }
   }
   return config as ProjectConfig;
 }
@@ -433,13 +443,14 @@ export function relinkProjectConfig(configValue: ProjectConfig, song: any): {
         .sort((a, b) => b.confidence - a.confidence);
       const best = ranked[0];
       const second = ranked[1];
+      const triggerOptionsValid = !isMidiNoteTarget(original) || resolveTriggerNoteOptions(original).valid;
       if (!best || best.confidence < 0.58) {
         resolved.push({ ...originalWithoutCandidates, relinkStatus: "missing", relinkConfidence: best?.confidence ?? 0 });
         report.missing++;
       } else if (second && best.confidence - second.confidence < 0.05) {
         resolved.push({ ...original, relinkStatus: "ambiguous", relinkConfidence: best.confidence, relinkCandidates: ranked.slice(0, 5) });
         report.ambiguous++;
-      } else if (best.confidence < 0.82) {
+      } else if (best.confidence < 0.82 || !triggerOptionsValid) {
         resolved.push({ ...original, relinkStatus: "review", relinkConfidence: best.confidence, relinkCandidates: ranked.slice(0, 5) });
         report.review++;
       } else {

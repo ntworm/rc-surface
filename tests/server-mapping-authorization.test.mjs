@@ -128,3 +128,42 @@ test("R7: dispatching removeMapping as viewer is still refused", async () => {
   assert.equal(result.ok, false);
   assert.match(String(result.error), /Unauthorized/);
 });
+
+test("testTriggerNote is classified as live-write and authorized for controller but refused for viewer", async () => {
+  assert.equal(COMMAND_SIDE_EFFECTS.testTriggerNote, "live-write");
+  assert.equal(isRoleAuthorized("controller", "live-write"), true);
+  assert.equal(isRoleAuthorized("admin", "live-write"), true);
+  assert.equal(isRoleAuthorized("viewer", "live-write"), false);
+
+  const viewerResult = await dispatchCommand("viewer", {
+    id: "test-viewer",
+    cmd: "testTriggerNote",
+    args: { control: "pad-1", targetIndex: 0 },
+  });
+  assert.equal(viewerResult.ok, false);
+  assert.match(String(viewerResult.error), /Unauthorized/);
+});
+
+test("testTriggerNote rejects missing, spoofed, or stale execution context", async () => {
+  // Context missing
+  const noCtxResult = await dispatchCommand("controller", {
+    id: "test-no-ctx",
+    cmd: "testTriggerNote",
+    args: { control: "pad-1", targetIndex: 0 },
+  });
+  assert.equal(noCtxResult.ok, false);
+  assert.match(String(noCtxResult.error), /Invalid or stale command execution context/);
+
+  // Context stale (isCurrent() returns false)
+  const staleCtxResult = await dispatchCommand(
+    "controller",
+    {
+      id: "test-stale-ctx",
+      cmd: "testTriggerNote",
+      args: { control: "pad-1", targetIndex: 0 },
+    },
+    { clientId: "spoofed-id", isCurrent: () => false },
+  );
+  assert.equal(staleCtxResult.ok, false);
+  assert.match(String(staleCtxResult.error), /Invalid or stale command execution context/);
+});

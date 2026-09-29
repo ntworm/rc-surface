@@ -7,6 +7,7 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import { SessionRole, Session } from "./session-auth.js";
 import { commands } from "../live/mappings.js";
+import type { CommandExecutionContext } from "../live/catalog/types.js";
 
 /**
  * "mapping-write" exists because the MAP panel lives in the PHONE UI, and the
@@ -54,6 +55,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   transportJumpToLocator: "live-write",
   addUdpReceiverToTrack: "live-write",
   highlightControl: "live-write",
+  testTriggerNote: "live-write",
 
   // Mapping-write side effects (controller, admin) — everything the phone's
   // own MAP panel needs to bind a control and manage its presets.
@@ -123,6 +125,7 @@ export interface DispatchResult {
 export async function dispatchCommand(
   roleOrSession: SessionRole | Session,
   envelope: CommandEnvelope,
+  context?: CommandExecutionContext,
 ): Promise<DispatchResult> {
   const role: SessionRole =
     typeof roleOrSession === "object" && roleOrSession !== null
@@ -146,7 +149,7 @@ export async function dispatchCommand(
   }
 
   try {
-    const result = await spec.handler(args);
+    const result = await spec.handler(args, context);
     return { id, ok: true, result };
   } catch (err) {
     const detail =

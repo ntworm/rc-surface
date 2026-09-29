@@ -425,6 +425,27 @@ Notes is ON such automation can play notes.
 Multiple controls can trigger notes on the same MIDI track. Different
 notes are treated as different trigger targets.
 
+### Trigger Note mode (`trigger_note`)
+
+When mapping a control to play notes on a MIDI track equipped with an `RcReceiver v2` device, set the target mode to `trigger_note`. The editor displays a dedicated contextual interface tailored for musical chord and note triggering:
+
+- **Destination Track & Switch:** Displays the target MIDI track name and an indicator badge for the `RcReceiver v2` device. Tap **[TROCAR]** to reassign the target track while preserving your existing note, velocity, and timing configurations.
+- **Pitch and Octave:** Pick the note pitch (C through B) and octave (-2 through 8). The editor calculates the standard MIDI note number (C-2 = 0, C2 = 48, G8 = 127). Pitches above G8 (MIDI 128+) are rejected.
+- **Velocity:** Adjust the outgoing MIDI velocity (1 to 127, default 100).
+- **Timing:**
+  - `immediate`: Fires the note immediately upon gesture recognition.
+  - `beat` (Próx. Tempo): Quantizes Note-On to the next quarter-note beat based on fresh OSC transport position.
+  - `bar` (Compasso): Quantizes Note-On to the next bar boundary.
+- **Gate:**
+  - `pulse` (Short): Plays for a chosen duration. New synchronized notes default to **1/4 bar**; choose 1/16, 1/8, 1/4, 1/2, 1, 2, or 4 bars, or switch to free milliseconds (20–2000 ms). Existing millisecond mappings retain their saved duration.
+  - `hold` (While Held): Sustains the note until the triggering control or gesture is released.
+  - *Constraint:* `hold` is incompatible with quantized timing (`beat` or `bar`). Selecting quantized timing automatically switches the gate to `pulse`.
+- **Editor layout:** Destination appears once, followed by Note (pitch, octave, MIDI number and fixed velocity) and Trigger (when to fire and how long to play). Selecting Next Beat or Bar from Now opens Musical, 1/4 bar automatically, including after While Held. Choose ms explicitly for free duration; old millisecond presets are unchanged when opened.
+- **Musical duration:** Available with Short in Now, Next Beat and Bar. Tap a fraction directly; there is no duration dropdown or estimated-ms readout. Now starts immediately and uses the connected Live BPM/meter for its release timer, even while playback is stopped. Unknown or disconnected musical metadata blocks the note with feedback; ms remains available. While Held uses real gesture release instead of a fixed duration.
+- **Advanced:** Collapsed by default; contains trigger threshold and the actual signal-loss behavior. Bind and Trigger Note are selected at entry, without a second mapping-mode selector here. Presets stay collapsed; Bind, Trigger Note, Unbind Target, Clear Control and Clear All Mappings sit directly below the control title and stay accessible while scrolling. Multiple mappings form one labelled block, with Bind/Trigger Note type and destination on each selectable row. Only meaningful note feedback is displayed.
+- **Bind:** Direct Continuous/Toggle and Linear/Exp/Log/S buttons precede a full-width interactive graph. Output min/max, Drive, Compression and Smoothing are the primary faders. The three graph points follow the effective output after Drive and Compression; output min/max remain the limits used to scale that response. Dragging a point accounts for these settings, and a saturated or flat response keeps values bounded. Input range, target scale, takeover, safe loss, idle and neutral values are under Advanced. Small fader thumbs retain a larger interaction area and double-click reset.
+- **Safe Lifecycle & Cancellation:** Unsent scheduled notes are cancelled and held notes released on transport stop, meter change, seek, loop jump, stale transport clock (>1000 ms), track deletion, unbinding, or disconnection. Triggers executing >20 ms late are discarded as missed. Scheduling operates per track lane with latest-wins policy (capped at 64 active lanes).
+  A retrigger on the same track retires the previous voice and OFF timer before the replacement ON, so the new note receives its full duration.
 
 ### Mapping editor fields
 
@@ -432,7 +453,7 @@ Each mapped target can be adjusted from the phone:
 
 | Field | Meaning |
 | ----- | ------- |
-| Mode | `continuous`, `toggle`, or `trigger_note`. |
+| Mode | `continuous`, `toggle`, or `trigger_note`. In `trigger_note` mode, continuous sliders (curve, in/out ranges, drive, comp, smooth) are hidden, but their values are preserved if you switch back. |
 | Curve | `linear`, `exponential`, `logarithmic`, or `s-curve`. |
 | Target scale | `Auto` keeps mixer/tempo linear and uses geometric travel for recognized wide positive frequency ranges; explicit `Linear` or `Geometric` overrides Auto when the target supports it. |
 | In Min / In Max | The input range read from the phone control. |
@@ -441,12 +462,13 @@ Each mapped target can be adjusted from the phone:
 | Comp | Compresses or expands the middle of the response curve. |
 | Smooth | Adds smoothing to reduce abrupt value jumps. |
 | Threshold | Threshold for non-continuous modes. |
-| MIDI Note | Pitch and octave for fixed trigger-note mappings. |
-| Velocity | MIDI velocity for fixed trigger-note mappings. |
+| MIDI Note | Pitch and octave for fixed trigger-note mappings (C-2 to G8). |
+| Velocity | MIDI velocity for fixed trigger-note mappings (1 to 127). |
+| Timing | Note scheduling quantization (`immediate`, `beat`, `bar`). |
+| Gate | Note duration behavior (`pulse` with configurable duration, or `hold`). |
 
 The curve canvas shows the current response shape and a moving dot for
-the selected control's live input/output. Use it to verify that the
-range, curve, drive, and compression settings match what you expect.
+the selected control's live input/output in continuous mode.
 Phone inputs enter the mapping engine in one normalized `0..1` domain.
 Centroid, Spread and Rolloff show Hz on AUD but map in that same `0..1`
 domain. Detected pitch, note and audio BPM are not provided.
@@ -910,9 +932,16 @@ Pinch Clutch **X/Y/Z**, the four opt-in detectors, Victory rotation, and the
 three learned pose slots. **PALM** and **FACE** remain local camera
 diagnostics in the preview. Finger-count, individual-landmark, and whole-frame
 colour readings are internal diagnostics and are not mapping channels.
-When the hand or camera disappears, every exposed vision channel reports
-signal loss through the same catalog; each mapping's Safe loss policy then
-decides whether the Live target holds, centres, parks, or releases.
+When the hand temporarily leaves the frame, vision mappings **hold the last
+real value and pose**, including a sustained note. The camera badge marks this
+as **LAST KNOWN**. A real pose release sends Note-Off; turning the camera off,
+Panic, unbinding, or disconnecting also retires held and scheduled notes.
+New vision mappings default to Safe loss **hold**. On first load, older vision
+mappings with the former `release` default migrate to `hold`; explicit `zero`,
+`center`, and `custom` settings, plus non-vision mappings, remain unchanged.
+You can choose `release` again in the mapping editor. Incomplete MediaPipe
+frames are treated as temporary missing-hand frames and recover on the next
+valid frame.
 
 ### Learned static poses
 
@@ -930,10 +959,15 @@ Each of the three learned slots stores one static hand shape:
    to retrain the slot from scratch.
 
 The **Balanced** recognition preset is the normal performance setting.
-**Precision** rejects more variation; **Flexible** accepts more. A learned
-slot is momentary (`0` or `1`), persists across page reloads, and rearms only
-after the pose is released. Poses saved by the retired spatial format show
-**RECAPTURE REQUIRED** instead of being treated as usable.
+**Precision** rejects more variation; **Flexible** accepts more. The **Performance**
+preset is specifically tuned for live gesture-chord performance, permitting the
+natural variation of expressive poses (such as the Rock sign) while enabling fast
+physical rearming without false triggering on open hand or fist. A learned slot
+is momentary (`0` or `1`), persists across page reloads, and rearms only after
+the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
+Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
+To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
+Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 
 ---
 

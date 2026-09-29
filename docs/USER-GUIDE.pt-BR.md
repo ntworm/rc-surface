@@ -425,13 +425,34 @@ tocar notas.
 Vários controles podem disparar notas na mesma track MIDI. Notas diferentes são
 tratadas como destinos de trigger diferentes.
 
+### Modo Trigger Note (`trigger_note`)
+
+Ao mapear um controle para disparar notas em uma track MIDI com o dispositivo `RcReceiver v2`, defina o modo do destino como `trigger_note`. O editor exibe uma interface contextual dedicada para acordes e notas musicais:
+
+- **Destino e Troca de Track:** Exibe o nome da track MIDI de destino e o selo de status do dispositivo `RcReceiver v2`. Toque em **[TROCAR]** para mudar a track de destino preservando as configurações de nota, velocity e tempo já feitas.
+- **Nota e Oitava:** Escolha a nota (C a B) e a oitava (-2 a 8). O editor calcula o número MIDI padrão (C-2 = 0, C2 = 48, G8 = 127). Notas acima de G8 (MIDI 128+) são rejeitadas.
+- **Velocity:** Ajuste a intensidade da nota MIDI (1 a 127, padrão 100).
+- **Tempo:**
+  - `immediate` (Agora): Dispara a nota imediatamente ao reconhecer o gesto.
+  - `beat` (Próx. Tempo): Quantiza o Note-On para o próximo tempo musical (semínima) com base na posição OSC fresca do transporte.
+  - `bar` (Compasso): Quantiza o Note-On para o próximo início de compasso.
+- **Gate:**
+  - `pulse` (Curta): Dura pela fração musical escolhida. Notas sincronizadas novas usam **1/4 de compasso** por padrão; opções: 1/16, 1/8, 1/4, 1/2, 1, 2 ou 4 compassos. Também é possível escolher milissegundos livres (20–2000 ms). Mapeamentos antigos preservam seus milissegundos.
+  - `hold` (While Held): Sustenta a nota enquanto o gesto ou controle estiver sendo segurado.
+  - *Restrição:* `hold` é incompatível com tempo sincronizado (`beat` ou `bar`). Ao escolher tempo sincronizado, o gate é automaticamente forçado para `pulse`.
+- **Organização do editor:** Destino aparece uma vez, seguido de Nota (nota, oitava, número MIDI e velocity fixo) e Disparo (quando tocar e por quanto tempo). Sair de Agora para Próx. Tempo ou Compasso abre Musical, 1/4 de compasso automaticamente, inclusive após While Held. Escolha ms explicitamente para duração livre; presets antigos em milissegundos permanecem intactos ao abrir.
+- **Duração musical:** Disponível com Curta em Agora, Próx. Tempo e Compasso. Clique diretamente na fração, sem lista ou estimativa em ms. Agora começa imediatamente e usa o BPM/compasso conectado do Live para desligar a nota, inclusive com o transporte parado. Metadados musicais desconhecidos ou desconectados bloqueiam a nota com feedback; ms continua disponível. While Held segue a soltura real do gesto, sem duração fixa.
+- **Avançado:** Recolhido por padrão; contém limiar de disparo e comportamento real de perda de sinal. Bind e Trigger Note são escolhidos na entrada, sem repetir o seletor de modo aqui. Presets ficam recolhidos; Bind, Trigger Note, Desfazer o bind, Limpar o controle e Limpar todos os mapeamentos ficam logo abaixo do título do controle e acessíveis durante a rolagem. Vários mapeamentos formam um bloco identificado, com tipo Bind/Trigger Note e destino em cada linha selecionável. Só feedback de nota com conteúdo aparece.
+- **Bind:** Botões diretos de Contínuo/Alternar e Linear/Exp/Log/S precedem o gráfico interativo ocupando a largura disponível. Saída mínima/máxima, Drive, Compressão e Suavização são os faders principais. Os três pontos do gráfico seguem a saída efetiva após Drive e Compressão; saída mínima/máxima continuam sendo os limites usados para escalar essa resposta. Arrastar um ponto considera essas configurações, e uma resposta saturada ou plana mantém os valores limitados. Entrada mínima/máxima, escala do alvo, retomada, perda de sinal, valor inativo e neutro ficam em Avançado. Alças menores conservam área de interação maior e reset por duplo clique.
+- **Ciclo Seguro e Cancelamento:** Notas agendadas não enviadas são canceladas e notas sustentadas são desligadas ao parar o transporte, mudar fórmula, saltar em seek/loop, detectar OSC desatualizado (>1000 ms), deletar track, remover bind ou perder conexão. Eventos mais de 20 ms atrasados são descartados. Na mesma track, uma nota nova aposenta o timer e envia o OFF anterior antes de seu ON, recebendo a duração integral. O limite é 64 tracks ativas.
+
 ### Campos do editor de mapeamento
 
 Cada destino mapeado pode ser ajustado pelo celular:
 
 | Campo | Significado |
 | ----- | ----------- |
-| Mode | `continuous`, `toggle` ou `trigger_note`. |
+| Mode | `continuous`, `toggle` ou `trigger_note`. No modo `trigger_note`, os sliders contínuos (curva, faixas in/out, drive, comp, smooth) ficam ocultos, mas seus valores são preservados se você alternar de volta. |
 | Curve | `linear`, `exponential`, `logarithmic`, ou `s-curve`. |
 | Target scale | `Auto` mantém mixer e andamento lineares e usa percurso geométrico para faixas de frequência largas e positivas que ele reconhece; `Linear` ou `Geometric` explícitos passam por cima do Auto, quando o destino permite. |
 | In Min / In Max | A faixa de entrada lida do controle do celular. |
@@ -440,13 +461,13 @@ Cada destino mapeado pode ser ajustado pelo celular:
 | Comp | Comprime ou expande o meio da curva de resposta. |
 | Smooth | Acrescenta suavização, para reduzir saltos bruscos de valor. |
 | Threshold | Limiar, para os modos não contínuos. |
-| MIDI Note | Pitch e oitava, para mapeamentos de trigger note fixa. |
-| Velocity | Velocity MIDI para trigger note fixa. |
+| MIDI Note | Pitch e oitava, para mapeamentos de trigger note fixa (C-2 a G8). |
+| Velocity | Velocity MIDI para trigger note fixa (1 a 127). |
+| Timing | Quantização do agendamento da nota (`immediate`, `beat`, `bar`). |
+| Gate | Duração da nota (`pulse` com duração configurável, ou `hold`). |
 
 O canvas de curva mostra a forma de resposta atual e um ponto em movimento com
-a entrada e a saída ao vivo do controle escolhido. Use para conferir se faixa,
-curva, drive e compressão batem com o que você espera.
-
+a entrada e a saída ao vivo do controle escolhido no modo contínuo.
 As entradas do celular chegam no motor de mapeamento num único domínio
 normalizado `0..1`. Centroide, Dispersão e Rolloff mostram Hz na AUD, mas
 mapeiam nesse mesmo domínio `0..1`. Pitch, nota detectada e BPM do áudio
@@ -925,9 +946,15 @@ três slots de pose aprendida. **PALM** e **FACE** seguem como diagnóstico loca
 da câmera, na prévia. Contagem de dedos, landmarks individuais e leituras de
 cor do quadro inteiro são diagnóstico interno e não são canais de mapeamento.
 
-Quando a mão ou a câmera some, todo canal de visão exposto reporta perda de
-sinal pelo mesmo catálogo; a política de perda segura de cada mapeamento decide
-então se o destino no Live segura, centraliza, estaciona ou solta.
+Quando a mão sai temporariamente do vídeo, os mapeamentos de visão **seguram o
+último valor e a última pose reais**, inclusive uma nota sustentada. O badge
+da câmera indica **ÚLTIMO ESTADO**. Soltar realmente a pose manda Note-Off;
+desligar a câmera, Panic, remover bind ou desconectar também encerra notas e
+agendamentos. Novos mapeamentos de visão usam Safe loss **hold**. Na primeira
+carga, os mapeamentos antigos de visão com padrão `release` migram para `hold`;
+`zero`, `center`, `custom` e controles que não são de visão não mudam. É possível
+selecionar `release` novamente no editor. Quadros MediaPipe incompletos seguem
+o caminho de perda temporária e o próximo quadro válido recupera a leitura.
 
 ### Poses estáticas aprendidas
 
@@ -945,10 +972,15 @@ Cada um dos três slots aprendidos guarda uma forma de mão estática:
    treinar o slot do zero.
 
 O preset de reconhecimento **Equilibrado** é o ajuste normal de performance.
-**Precisão** rejeita mais variação; **Flexível** aceita mais. Um slot aprendido
-é momentâneo (`0` ou `1`), sobrevive a recarregar a página, e só rearma depois
-que a pose é desfeita. Poses salvas no antigo formato espacial mostram
-**RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
+**Precisão** rejeita mais variação; **Flexível** aceita mais. O preset **Performance**
+é especificamente calibrado para a execução de acordes por gestos ao vivo, tolerando
+a variação natural de poses expressivas (como o gesto Rock) e agilizando o rearme físico
+sem falsos disparos com mão aberta ou punho fechado. Um slot aprendido é momentâneo
+(`0` ou `1`), sobrevive a recarregar a página, e só rearma depois que a pose é desfeita
+(com estados de FSM `ready` → `candidate` → `held` → `releasing`).
+Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
+Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
+Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---
 
@@ -1021,6 +1053,3 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 Para problemas mais complexos de instalação (certificados, rede, instalação), veja
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
-
-
-

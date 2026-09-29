@@ -529,3 +529,142 @@ test('a save written before the articulation block still loads and still matches
   // comparison uses only the dimensions both sides have.
   assert.equal(restored.evaluate(rock(0.20, 0.18)).accepted, true);
 });
+
+test('Performance preset accepts natural Rock curl rejected by Balanced while rejecting invalid poses', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const rock = (middle, ring) => normalizeHandPose(
+    handPose({ thumb: 1, index: 1, middle, ring, pinky: 1 }));
+
+  const balancedOpts = { threshold: 0.16, ambiguityRatio: 1.25, minimumConfidence: 0.52, holdMs: 160, releaseMs: 220, releaseRatio: 1.4, unknownGraceMs: 140 };
+  const performanceOpts = { threshold: 0.176, ambiguityRatio: 1.25, minimumConfidence: 0.52, holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
+
+  const balanced = new GestureLibrary(balancedOpts);
+  const performance = new GestureLibrary(performanceOpts);
+
+  const takes = [rock(0.16, 0.18), rock(0.20, 0.20), rock(0.26, 0.24)];
+  for (const take of takes) {
+    balanced.learn('Rock', frames(take));
+    performance.learn('Rock', frames(take));
+  }
+
+  // Measured natural curl that Balanced marginally rejects but Performance accepts
+  const naturalLoose = rock(0.50, 0.50);
+  assert.equal(balanced.evaluate(naturalLoose).accepted, false, 'Balanced marginally rejects looser natural curl');
+  assert.equal(performance.evaluate(naturalLoose).accepted, true, 'Performance accepts looser natural curl');
+
+  // Translation, scale, and moderate wrist rotation invariance preserved
+  const transformed = normalizeHandPose(transform2D(handPose({ thumb: 1, index: 1, middle: 0.50, ring: 0.50, pinky: 1 }), {
+    scale: 1.4,
+    x: 0.25,
+    y: -0.15,
+    radians: Math.PI / 16,
+  }));
+  assert.equal(performance.evaluate(transformed).accepted, true, 'Performance preserves 2D translation, scale and rotation invariance');
+
+  // Open, fist, near neighbour missing thumb and ambiguous poses must be rejected
+  const open = normalizeHandPose(handPose());
+  const fist = normalizeHandPose(handPose({ thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15 }));
+  const withoutThumb = normalizeHandPose(handPose({ thumb: 0.15, index: 1, middle: 0.20, ring: 0.20, pinky: 1 }));
+  assert.equal(performance.evaluate(open).accepted, false, 'Open hand is rejected');
+  assert.equal(performance.evaluate(fist).accepted, false, 'Fist is rejected');
+  assert.equal(performance.evaluate(withoutThumb).accepted, false, 'Rock without thumb is rejected');
+
+  // Ambiguity rejected
+  for (const take of takes) performance.learn('RockTwin', frames(take));
+  const ambig = performance.evaluate(takes[0]);
+  assert.equal(ambig.ambiguous, true, 'Twin pose causes ambiguity');
+  assert.equal(ambig.accepted, false, 'Ambiguous pose cannot be accepted');
+});
+
+test('GestureLibrary FSM exposes getRecognitionState without reset and follows Performance timing', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const rock = normalizeHandPose(handPose({ thumb: 1, index: 1, middle: 0.2, ring: 0.2, pinky: 1 }));
+  const peace = normalizeHandPose(handPose({ thumb: 0.2, index: 1, middle: 1, ring: 0.2, pinky: 0.2 }));
+
+  const perfOpts = { threshold: 0.176, ambiguityRatio: 1.25, minimumConfidence: 0.52, holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
+  const lib = new GestureLibrary(perfOpts);
+
+  assert.equal(typeof lib.getRecognitionState, 'function', 'getRecognitionState interface exists');
+  assert.equal(lib.getRecognitionState(), 'ready', 'Initial state is ready');
+
+  for (let take = 0; take < 3; take += 1) {
+    lib.learn('Rock', frames(rock));
+    lib.learn('Peace', frames(peace));
+  }
+
+  // candidate at t=0
+  assert.equal(lib.recognize(rock, 0), null);
+  assert.equal(lib.getRecognitionState(), 'candidate', 'State is candidate during hold');
+
+  // event at t=120
+  const ev1 = lib.recognize(rock, 120);
+  assert.equal(ev1?.name, 'Rock', 'Fires at 120ms');
+  assert.equal(lib.getRecognitionState(), 'held', 'State is held after recognition');
+
+  // drift inside retention does not repeat
+  assert.equal(lib.recognize(rock, 150), null, 'Drift within retention does not repeat');
+  assert.equal(lib.getRecognitionState(), 'held', 'State remains held during drift');
+
+  // 90ms dropout does not rearm
+  assert.equal(lib.recognize(null, 160), null);
+  assert.equal(lib.recognize(rock, 250), null, '90ms dropout retains held state');
+  assert.equal(lib.getRecognitionState(), 'held', 'State remains held across 90ms dropout');
+
+  // score above release Performance (releaseRatio=1.10, 0.176*1.10=0.1936) but below hold Balanced (0.16*1.4=0.224)
+  // We can pass a descriptor that evaluates to score ~0.205 (e.g. by intercepting evaluate or mocking evaluate)
+  const realEvaluate = lib.evaluate.bind(lib);
+  let mockScore = null;
+  lib.evaluate = (descriptor, targetName) => {
+    if (mockScore !== null) {
+      return {
+        name: 'Rock',
+        score: mockScore,
+        confidence: 0.60,
+        accepted: false,
+        ambiguous: false,
+        candidates: [{ name: 'Rock', score: mockScore, confidence: 0.60 }],
+        target: null,
+      };
+    }
+    return realEvaluate(descriptor, targetName);
+  };
+
+  // At t=200: score 0.205 is above Performance release (0.1936)
+  mockScore = 0.205;
+  assert.equal(lib.recognize(rock, 200), null);
+  assert.equal(lib.getRecognitionState(), 'releasing', 'Score above release puts state into releasing');
+
+  // Before 140ms release expires (e.g. t=300), still releasing
+  assert.equal(lib.recognize(rock, 300), null);
+  assert.equal(lib.getRecognitionState(), 'releasing', 'Still releasing at 300ms');
+
+  // At t=341 (> 340ms, releaseMs=140 passed): rearmed!
+  assert.equal(lib.recognize(rock, 341), null);
+  assert.equal(lib.getRecognitionState(), 'ready', 'Rearmed at 341ms (state is ready)');
+
+  // Return at t=350 gives candidate, event at t=470 (350+120)
+  mockScore = null;
+  assert.equal(lib.recognize(rock, 350), null);
+  assert.equal(lib.getRecognitionState(), 'candidate', 'Candidate at 350ms');
+  const ev2 = lib.recognize(rock, 470);
+  assert.equal(ev2?.name, 'Rock', 'Second event fired at 470ms');
+  assert.equal(lib.getRecognitionState(), 'held', 'State is held after second event');
+
+  // hold 10s does not repeat
+  assert.equal(lib.recognize(rock, 10470), null, 'Holding for 10s does not repeat');
+  assert.equal(lib.getRecognitionState(), 'held', 'State remains held after 10s');
+
+  // switch direto exige hold próprio e contradição reinicia candidato
+  assert.equal(lib.recognize(peace, 10500), null, 'Switch to Peace requires hold');
+  assert.equal(lib.getRecognitionState(), 'candidate', 'State is candidate for Peace');
+  // Contradiction at 10550 (e.g. unknown or unmatched pose)
+  const open = normalizeHandPose(handPose());
+  assert.equal(lib.recognize(open, 10550), null, 'Contradiction cancels candidate');
+  assert.notEqual(lib.getRecognitionState(), 'held', 'Contradiction interrupted previous hold');
+
+  // Peace presented again must start a fresh hold of 120ms
+  assert.equal(lib.recognize(peace, 10600), null);
+  assert.equal(lib.recognize(peace, 10700), null, '100ms is not enough for fresh hold');
+  const evPeace = lib.recognize(peace, 10720);
+  assert.equal(evPeace?.name, 'Peace', 'Peace fires after completing its own fresh 120ms hold');
+});

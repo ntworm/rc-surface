@@ -13,6 +13,29 @@ import vm from 'node:vm';
 
 const root = import.meta.dirname;
 
+test('new sync selection defaults to 1/4 bar while legacy milliseconds and hold transition persist', async () => {
+  const { context, calls } = loadMappingMode();
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl = 'sensor.vision.gesture.1';
+  context.window.mobileMappingState.currentMappings = {
+    'sensor.vision.gesture.1': [{ type: 'device_param', mode: 'trigger_note', noteTiming: 'immediate', noteGate: 'hold', noteDurationMs: 90 }],
+  };
+  await context.window.updateMobileTargetField('noteTiming', 'beat');
+  const first = calls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets[0];
+  assert.equal(first.noteGate, 'pulse');
+  assert.equal(first.noteDurationMode, 'grid');
+  assert.equal(first.noteDurationBars, 0.25);
+  assert.equal(first.noteDurationMs, 90);
+  await context.window.updateMobileTargetField('noteDurationMode', 'ms');
+  const second = calls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets[0];
+  assert.equal(second.noteDurationMode, 'ms');
+  assert.equal(second.noteDurationMs, 90);
+  await context.window.updateMobileTargetField('noteGate', 'hold');
+  const third = calls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets[0];
+  assert.equal(third.noteTiming, 'immediate');
+  assert.equal(third.noteDurationMode, 'ms');
+});
+
 class FakeElement {
   constructor(id = '') {
     this.id = id;
@@ -255,9 +278,9 @@ test('mobile audio note target does not offer withheld Follow Detected Note mode
 
   const label = findByText(elements.get('map-mobile-detail'), 'Mode');
   assert.ok(label, 'mode label should render');
-  const select = label.parentNode?.children?.[1];
-  assert.deepEqual(Array.from(select.children, (option) => option.value), [
-    'continuous', 'toggle', 'trigger_note',
+  const choices = label.parentNode?.children?.[1];
+  assert.deepEqual(Array.from(choices.children, (button) => button.dataset.bindMode), [
+    'continuous', 'toggle',
   ]);
 });
 
@@ -298,8 +321,8 @@ test('mobile non-audio target does not expose Follow Detected Note mode', async 
   padRow.listeners.get('click')();
 
   const label = findByText(elements.get('map-mobile-detail'), 'Mode');
-  const select = label.parentNode?.children?.[1];
-  assert.deepEqual(Array.from(select.children, (option) => option.value), ['continuous', 'toggle', 'trigger_note']);
+  const choices = label.parentNode?.children?.[1];
+  assert.deepEqual(Array.from(choices.children, (button) => button.dataset.bindMode), ['continuous', 'toggle']);
 });
 
 test('removing the final target sends removeMapping', async () => {

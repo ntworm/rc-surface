@@ -473,11 +473,12 @@ function renderTargetChip(targetContainer, t, idx) {
     const option = document.createElement("option");
     option.value = opt;
     option.textContent = `Loss: ${opt}`;
-    option.selected = (t.neutralPolicy || "release") === opt;
+    option.selected = (t.neutralPolicy || (String(window.selectedControl || '').startsWith('sensor.vision.') ? 'hold' : 'release')) === opt;
     neutralSelect.appendChild(option);
   }
   neutralSelect.addEventListener("change", () => {
     t.neutralPolicy = neutralSelect.value;
+    if (String(window.selectedControl || '').startsWith('sensor.vision.')) t.visionSafeLossVersion = 2;
     if (t.neutralPolicy === "center") t.neutralValue = 0.5;
     if (t.neutralPolicy === "zero" || t.neutralPolicy === "release") t.neutralValue = 0;
     window.saveMappingTargets();
@@ -552,7 +553,7 @@ function renderTargetChip(targetContainer, t, idx) {
   });
   col2.appendChild(col2Toggle);
 
-  // Sub-container C: Trigger Note controls (MidiNote & Velocity)
+  // Sub-container C: Trigger Note controls (MidiNote, Velocity, Timing, Gate, Duration, Actions)
   const col2TriggerNote = document.createElement("div");
   col2TriggerNote.style.cssText = "display:flex; flex-direction:column; gap:4px; align-items:center; width:100%;";
 
@@ -564,28 +565,65 @@ function renderTargetChip(targetContainer, t, idx) {
   const noteInput = document.createElement("input");
   noteInput.type = "text";
   noteInput.className = "target-midi-note";
-  noteInput.style.cssText = "background:#1a1a1a; color:#fff; border:1px solid #333333; border-radius:0; font-size:10px; height:20px; width:45px; text-align:center; outline:none; font-family:var(--mono); margin-bottom:4px;";
+  noteInput.style.cssText = "background:#1a1a1a; color:#fff; border:1px solid #333333; border-radius:0; font-size:10px; height:20px; width:45px; text-align:center; outline:none; font-family:var(--mono); margin-bottom:2px;";
   noteInput.value = t.midiNote ?? "C3";
+
+  const midiPitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   function parseMidiNoteInput() {
     const val = noteInput.value.trim().toUpperCase();
-    if (/^[A-G]#?-?\d+$/.test(val) || /^\d+$/.test(val)) {
+    const match = val.match(/^([A-G]#?)(-?\d+)$/);
+    if (match) {
+      const pitch = match[1];
+      const oct = parseInt(match[2], 10);
+      const pIdx = midiPitches.indexOf(pitch);
+      if (pIdx === -1 || oct < -2 || oct > 8) return null;
+      const num = (oct + 2) * 12 + pIdx;
+      if (num < 0 || num > 127) return null;
       return val;
+    }
+    const num = parseInt(val, 10);
+    if (Number.isFinite(num) && num >= 0 && num <= 127) {
+      const oct = Math.floor(num / 12) - 2;
+      const pitch = midiPitches[num % 12];
+      return `${pitch}${oct}`;
     }
     return null;
   }
+
+  function getMidiNumber(name) {
+    const val = String(name || '').trim().toUpperCase();
+    const match = val.match(/^([A-G]#?)(-?\d+)$/);
+    if (!match) return 48;
+    const pIdx = midiPitches.indexOf(match[1]);
+    const oct = parseInt(match[2], 10);
+    return (oct + 2) * 12 + pIdx;
+  }
+
+  const midiBadge = document.createElement("span");
+  midiBadge.className = "target-midi-badge";
+  midiBadge.style.cssText = "font-size:9px; color:var(--accent); font-family:var(--mono); margin-bottom:4px;";
+  midiBadge.textContent = `MIDI ${getMidiNumber(t.midiNote ?? "C3")}`;
+
   noteInput.addEventListener("input", () => {
     const val = parseMidiNoteInput();
     if (!val) return;
     t.midiNote = val;
+    midiBadge.textContent = `MIDI ${getMidiNumber(val)}`;
     window.saveMappingTargets(undefined, { refresh: false });
   });
   noteInput.addEventListener("change", () => {
     const val = parseMidiNoteInput();
-    if (val) t.midiNote = val;
-    noteInput.value = t.midiNote ?? "C3";
+    if (val) {
+      t.midiNote = val;
+      noteInput.value = val;
+      midiBadge.textContent = `MIDI ${getMidiNumber(val)}`;
+    } else {
+      noteInput.value = t.midiNote ?? "C3";
+    }
     window.saveMappingTargets();
   });
   col2TriggerNote.appendChild(noteInput);
+  col2TriggerNote.appendChild(midiBadge);
 
   makeKnob(col2TriggerNote, "Veloc", t.midiVelocity ?? 100, 1, 127, false, false, 1, "target-midi-velocity", t, "midiVelocity", (val) => {
     t.midiVelocity = Math.round(val);
@@ -593,6 +631,160 @@ function renderTargetChip(targetContainer, t, idx) {
   }, () => {
     window.saveMappingTargets();
   });
+
+  // Timing Select (immediate, beat, bar)
+  const timingSelect = document.createElement("select");
+  timingSelect.className = "target-note-timing";
+  timingSelect.style.cssText = "background:#1a1a1a; color:#fff; border:1px solid #333333; font-size:9px; height:18px; outline:none; font-family:var(--mono); margin-top:2px; width:70px; text-align:center;";
+  const timingOpts = [
+    { value: "immediate", label: "Agora" },
+    { value: "beat", label: "Próx. Tempo" },
+    { value: "bar", label: "Compasso" }
+  ];
+  for (const opt of timingOpts) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    o.selected = (t.noteTiming || "immediate") === opt.value;
+    timingSelect.appendChild(o);
+  }
+  col2TriggerNote.appendChild(timingSelect);
+
+  // Gate Select (pulse, hold)
+  const gateSelect = document.createElement("select");
+  gateSelect.className = "target-note-gate";
+  gateSelect.style.cssText = "background:#1a1a1a; color:#fff; border:1px solid #333333; font-size:9px; height:18px; outline:none; font-family:var(--mono); margin-top:2px; width:70px; text-align:center;";
+  const gateOpts = [
+    { value: "pulse", label: "Curta" },
+    { value: "hold", label: "Hold" }
+  ];
+  for (const opt of gateOpts) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    o.selected = (t.noteGate || "hold") === opt.value;
+    gateSelect.appendChild(o);
+  }
+  col2TriggerNote.appendChild(gateSelect);
+
+  const updateGateDisabledState = () => {
+    const isSync = ["beat", "bar"].includes(t.noteTiming);
+    if (isSync) {
+      gateSelect.value = "pulse";
+      t.noteGate = "pulse";
+      const holdOpt = gateSelect.querySelector('option[value="hold"]');
+      if (holdOpt) holdOpt.disabled = true;
+    } else {
+      const holdOpt = gateSelect.querySelector('option[value="hold"]');
+      if (holdOpt) holdOpt.disabled = false;
+    }
+  };
+  updateGateDisabledState();
+
+  timingSelect.addEventListener("change", () => {
+    if (["beat", "bar"].includes(timingSelect.value) && !["beat", "bar"].includes(t.noteTiming)) {
+      t.noteDurationMode = 'grid';
+      t.noteDurationBars = 0.25;
+    }
+    t.noteTiming = timingSelect.value;
+    if (["beat", "bar"].includes(t.noteTiming) && t.noteGate === "hold") {
+      t.noteGate = "pulse";
+      gateSelect.value = "pulse";
+    }
+    updateGateDisabledState();
+    window.saveMappingTargets();
+    window.renderMappingDetail();
+  });
+
+  gateSelect.addEventListener("change", () => {
+    if (gateSelect.value === "hold") {
+      t.noteTiming = "immediate";
+      if (t.noteDurationMode === 'grid') t.noteDurationMode = 'ms';
+      timingSelect.value = "immediate";
+    }
+    t.noteGate = gateSelect.value;
+    updateGateDisabledState();
+    window.saveMappingTargets();
+    window.renderMappingDetail();
+  });
+
+  if (t.noteGate === 'pulse') {
+    const durationMode = document.createElement('div');
+    durationMode.className = 'target-note-duration-mode';
+    for (const [value, label] of [['grid', 'Musical'], ['ms', 'ms']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      const selected = (t.noteDurationMode || 'ms') === value;
+      button.className = `target-note-duration-mode-btn${selected ? ' active' : ''}`;
+      button.setAttribute('aria-pressed', String(selected));
+      button.textContent = label;
+      button.addEventListener('click', () => {
+        t.noteDurationMode = value;
+        if (value === 'grid' && !t.noteDurationBars) t.noteDurationBars = 0.25;
+        window.saveMappingTargets(); window.renderMappingDetail();
+      });
+      durationMode.appendChild(button);
+    }
+    col2TriggerNote.appendChild(durationMode);
+  }
+  if (t.noteGate === 'pulse' && t.noteDurationMode === 'grid') {
+    const bars = document.createElement('div');
+    bars.className = 'target-note-duration-bars';
+    bars.setAttribute('aria-label', 'Bars');
+    for (const value of [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      const selected = (t.noteDurationBars ?? 0.25) === value;
+      button.className = `target-note-duration-bar-btn${selected ? ' active' : ''}`;
+      button.dataset.durationBars = String(value);
+      button.setAttribute('aria-pressed', String(selected));
+      button.textContent = value < 1 ? `1/${Math.round(1 / value)}` : String(value);
+      button.addEventListener('click', () => {
+        t.noteDurationBars = value;
+        window.saveMappingTargets(); window.renderMappingDetail();
+      });
+      bars.appendChild(button);
+    }
+    col2TriggerNote.appendChild(bars);
+  } else if (t.noteGate === 'pulse') {
+    makeKnob(col2TriggerNote, "Dur", t.noteDurationMs ?? 80, 20, 2000, false, true, 10, "target-note-duration", t, "noteDurationMs", (val) => {
+      t.noteDurationMs = Math.round(val);
+      window.saveMappingTargets(undefined, { refresh: false });
+    }, () => { window.saveMappingTargets(); });
+  }
+
+  const feedbackBox = document.createElement("div");
+  feedbackBox.className = "target-trigger-feedback";
+  feedbackBox.style.cssText = "font-family:var(--mono); font-size:9px; color:#a0a0a0; margin-top:2px; text-align:center;";
+  feedbackBox.textContent = "PRONTO";
+
+  col2TriggerNote.appendChild(feedbackBox);
+
+  // Register global feedback receiver for panel
+  window.handleTriggerNoteState = function(msg) {
+    if (!msg || msg.type !== "trigger_note_state") return;
+    if (msg.control === window.selectedControl) {
+      if (msg.state === "pending") {
+        feedbackBox.textContent = `AGENDADO ${msg.targetBeat?.toFixed(1) ?? ''}`.trim();
+        feedbackBox.style.color = "var(--accent)";
+      } else if (msg.state === "sent") {
+        feedbackBox.textContent = "ENVIADO";
+        feedbackBox.style.color = "#4caf50";
+      } else if (msg.state === "unavailable") {
+        feedbackBox.textContent = `SEM SYNC (${msg.reason || ''})`.trim();
+        feedbackBox.style.color = "#f44336";
+      } else if (msg.state === "missed") {
+        feedbackBox.textContent = "PERDIDO (>20ms)";
+        feedbackBox.style.color = "#f44336";
+      } else if (msg.state === "cancelled") {
+        feedbackBox.textContent = `CANCELADO (${msg.reason || ''})`.trim();
+        feedbackBox.style.color = "#9e9e9e";
+      } else if (msg.state === "error") {
+        feedbackBox.textContent = `ERRO (${msg.reason || ''})`.trim();
+        feedbackBox.style.color = "#f44336";
+      }
+    }
+  };
 
   col2.appendChild(col2TriggerNote);
 
@@ -1505,7 +1697,8 @@ function doApplyBind(t, { replaceOtherControl = null } = {}) {
     outMax: 1,
     smooth: 0,
     takeoverMode: 'scale',
-    neutralPolicy: 'release',
+    neutralPolicy: String(window.selectedControl || '').startsWith('sensor.vision.') ? 'hold' : 'release',
+    ...(String(window.selectedControl || '').startsWith('sensor.vision.') ? { visionSafeLossVersion: 2 } : {}),
     neutralValue: 0,
   };
 

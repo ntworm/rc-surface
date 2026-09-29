@@ -63,3 +63,16 @@ test("computeLiveStatePayload: handles missing scenes gracefully (defaults to 4/
   });
   assert.equal(payload.signature, "4/4");
 });
+
+test("computeLiveStatePayload: handles scene with negative or invalid signature by falling back to 4/4", () => {
+  const { computeLiveStatePayload } = mod;
+  const payload = computeLiveStatePayload({
+    tempo: 120,
+    scenes: [{ signatureNumerator: -1, signatureDenominator: -1 }],
+    scaleMode: false,
+    scaleName: "Major",
+    rootNote: 0,
+    scaleIntervals: [0, 2, 4, 5, 7, 9, 11],
+  });
+  assert.equal(payload.signature, "4/4");
+});

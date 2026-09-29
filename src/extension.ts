@@ -59,6 +59,7 @@ import {
   loadMappings,
   configureMappingStorage,
   cancelPendingMappingWrites,
+  triggerNoteScheduler,
 } from "./live/mappings.js";
 import { continuousTargetActuator } from "./live/continuous-target-actuator.js";
 import { startServer, stopServer, getServerGeneration } from "./server/state.js";
@@ -184,6 +185,7 @@ function deactivate(): void {
   clearExtensionContext();
 
   try { oscTransport.dispose(); } catch (err) { console.error(`[ableton-rc-surface] oscTransport.dispose failed: ${err instanceof Error ? err.message : String(err)}`); }
+  try { void triggerNoteScheduler.dispose(); } catch (err) { console.error(`[ableton-rc-surface] triggerNoteScheduler.dispose failed: ${err instanceof Error ? err.message : String(err)}`); }
 
   // Drop the process-level safety listeners so a subsequent activate()
   // can re-install them cleanly. A no-op if installRuntimeSafety was

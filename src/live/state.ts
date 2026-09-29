@@ -69,10 +69,18 @@ export function computeLiveStatePayload(song: {
   rootNote: number;
   scaleIntervals: number[];
 } {
-  const signature =
-    song.scenes && song.scenes.length > 0 && song.scenes[0]
-      ? `${song.scenes[0].signatureNumerator}/${song.scenes[0].signatureDenominator}`
-      : "4/4";
+  const scene = song.scenes && song.scenes.length > 0 ? song.scenes[0] : null;
+  const hasValidSceneSig = Boolean(
+    scene &&
+    typeof scene.signatureNumerator === "number" &&
+    scene.signatureNumerator > 0 &&
+    typeof scene.signatureDenominator === "number" &&
+    scene.signatureDenominator > 0
+  );
+  const signature = hasValidSceneSig
+    ? `${scene!.signatureNumerator}/${scene!.signatureDenominator}`
+    : "4/4";
+
 
   return {
     type: "live_state",
