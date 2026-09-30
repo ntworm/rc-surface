@@ -1799,6 +1799,16 @@
           await root.requestFullscreen();
         } catch {}
       }
+      // EXIT tapped while the request was still pending already left stage
+      // mode; a fullscreen granted after that must not outlive it.
+      if (!document.body.classList.contains('stage-mode')) {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          try {
+            await document.exitFullscreen();
+          } catch {}
+        }
+        return;
+      }
       heldFullscreen = Boolean(document.fullscreenElement);
     }
 

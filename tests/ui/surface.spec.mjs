@@ -331,7 +331,27 @@ test.describe('RC Surface UI & E2E Suite', () => {
     await expect(page.locator('body')).toHaveClass(/stage-mode/);
     await stage.click();
     await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
+    await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+  });
+
+  test('STAGE tapped off before fullscreen is granted does not leave the page fullscreen', async ({ page }) => {
+    // A slow fullscreen grant (as on Windows runners and some phones) must
+    // not outlive a quick STAGE then EXIT.
+    await page.addInitScript(() => {
+      const request = Element.prototype.requestFullscreen;
+      Element.prototype.requestFullscreen = function slowRequest(...args) {
+        return new Promise((resolve) => setTimeout(resolve, 150)).then(() => request.apply(this, args));
+      };
+    });
+    await page.reload();
+    await page.setViewportSize({ width: 851, height: 393 });
+    const stage = page.locator('#btn-stage-mode');
+    await stage.click();
+    await stage.click();
+    await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
+    await page.waitForTimeout(400);
     expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+    await expect(stage).toHaveText('STAGE');
   });
 
   test('STAGE labels its exit in the interface language', async ({ page }) => {

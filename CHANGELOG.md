@@ -54,7 +54,9 @@ intermediate release records are intentionally not published.
   the back button or a camera/microphone permission prompt left the page in
   stage mode with an EXIT button and no fullscreen. Losing fullscreen now
   leaves stage mode, as the user guide describes. The exit label is
-  translated (EXIT/SAIR) and survives a language change while on stage.
+  translated (EXIT/SAIR) and survives a language change while on stage. A
+  quick STAGE then EXIT before the browser grants fullscreen no longer
+  leaves the page fullscreen outside stage mode.
 
 ## [1.0.1] — 2026-09-29
 
