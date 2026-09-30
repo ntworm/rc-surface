@@ -19,10 +19,14 @@ intermediate release records are intentionally not published.
   Note-Off; a retrigger on the same track retires the previous voice and its
   Note-Off timer before the new note starts (`TriggerNoteClock`,
   `TriggerNoteScheduler`).
-- Safe note lifecycle: pending notes are cancelled and sounding ones released
-  on transport stop, meter change, seek, loop jump, stale clock (over
-  1000 ms), track deletion, unbinding or disconnection. A trigger that would
-  fire more than 20 ms late is dropped as missed.
+- Safe note lifecycle: pending Beat/Bar notes are cancelled on transport
+  stop, meter change, seek, loop jump, stale clock (over 1000 ms), unbinding
+  or disconnection. A sounding Beat/Bar note is released on stop, clock loss,
+  unbinding or disconnection; after a seek, loop jump or meter change it ends
+  on its own Note-Off. Now notes are not tied to the transport: Short ends on
+  its own Note-Off and While Held when the control releases, and unbinding or
+  disconnection releases them early. A trigger that would fire more than
+  20 ms late is dropped as missed.
 - Contextual Trigger Note editor on the phone and in the Live panel, grouped
   as Destination (track and Receiver v2 status; Change keeps the note and
   timing), Note (pitch C-2 to G8, octave, MIDI number, fixed velocity) and

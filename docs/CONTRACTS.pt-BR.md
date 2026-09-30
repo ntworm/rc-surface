@@ -253,7 +253,8 @@ Destinos com `mode: 'trigger_note'` obedecem às seguintes restrições de esque
 - **Política de última intenção:** Quando chegam múltiplos disparos para a mesma faixa de track, o mais recente substitui qualquer disparo pendente não enviado naquela faixa.
 - **Janela de atraso:** Temporizadores aguardam até o tempo calculado. Se o atraso real de execução exceder `20 ms`, o disparo é descartado como `missed` sem disparos atrasados de compensação.
 - **Note-Off garantido:** Cada Note-On iniciado registra voz e timer de liberação. Ao repetir na mesma track, o timer antigo é cancelado e o OFF antigo conclui antes do ON novo; a nota nova recebe a duração inteira.
-- **Cancelamento seguro:** Parada de transporte, seek, loop, relógio OSC desatualizado, exclusão de track, troca de dispositivo, desconexão ou remoção de bind cancelam imediatamente todos os disparos pendentes e desligam vozes ativas nas tracks afetadas.
+- **Cancelamento seguro:** Parada de transporte, seek, loop, mudança de fórmula, relógio OSC desatualizado ou desconectado, desconexão do cliente, remoção ou troca de bind cancelam os disparos pendentes afetados. Parada, relógio desatualizado ou desconectado (aplicado na próxima atualização OSC), desconexão do cliente e remoção ou troca de bind também desligam as vozes agendadas ativas. Seek, loop e mudança de fórmula só avançam o epoch do relógio; a voz que já está soando termina no próprio Note-Off.
+- **Notas imediatas:** Notas `immediate` (Agora) não passam pelo agendador e não seguem o transporte. Um `pulse` termina no próprio Note-Off e um `hold` na soltura do controle; remoção ou troca de bind e desconexão do cliente as desligam antes.
 
 ### Safe loss de visão
 

@@ -251,7 +251,8 @@ Targets with `mode: 'trigger_note'` adhere to the following schema constraints:
 - **Latest-Wins Policy:** When multiple triggers arrive for the same track lane, the latest scheduled trigger supersedes any pending trigger on that lane.
 - **Timing & Lateness Window:** Timers sleep until the computed trigger beat. If execution delay exceeds `20 ms` past scheduled time, the trigger is dropped as `missed` with no catch-up note.
 - **Guaranteed Note-Off:** Every started Note-On registers an active held voice with a release timer. On same-lane retrigger, the old timer is cancelled and its OFF completes before the replacement ON. The replacement gets its own full duration.
-- **Safe Cancellation:** Transport stop, seek, loop jump, stale transport clock, track deletion, device change, client disconnection, or mapping unbind immediately cancels all pending triggers and releases active voices on the affected tracks.
+- **Safe Cancellation:** Transport stop, seek, loop jump, meter change, a stale or disconnected OSC clock, client disconnection, or mapping unbind/replacement cancels the affected pending triggers. Transport stop, a stale or disconnected clock (applied on the next OSC update), client disconnection, and unbind/replacement also release active scheduled voices. Seek, loop jump, and meter change only advance the clock epoch, so a voice already sounding ends at its own Note-Off.
+- **Immediate notes:** `immediate` (Now) notes are not scheduled and do not follow the transport. A `pulse` ends at its own Note-Off and a `hold` at control release; unbind/replacement and client disconnection release them early.
 
 ### Vision Safe Loss
 
