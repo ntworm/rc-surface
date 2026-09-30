@@ -181,7 +181,7 @@ Veja o [`CUSTOMIZATION.pt-BR.md`](./CUSTOMIZATION.pt-BR.md).
 
 ### Dá para salvar e compartilhar mapeamentos?
 
-Salvar e carregar presets locais de mapeamento, sim. A v1.0.0 não inclui
+Salvar e carregar presets locais de mapeamento, sim. O RC Surface 1.0.x não inclui
 exportação e importação de pacotes de mapeamento compartilháveis; os presets
 ficam locais ao armazenamento da extensão.
 

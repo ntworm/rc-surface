@@ -4,22 +4,36 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
-## [Unreleased]
+## [1.0.1] — 2026-09-29
 
 ### Added
 
-- Curve handles follow the shaped response under Drive and Compression, with aligned hit testing and drag math. Preview compression uses the same safe bounds as Live, and saturated/flat drags preserve finite values.
-
-- Compact Bind editor with direct Continuous/Toggle and curve buttons, full-width graph with unclipped handles at its extremes, smaller fader thumbs, and uncommon settings under Advanced. Unmapped controls explain Bind versus Trigger Note at entry; existing mappings form a labelled group with mapping type and destination. Five maintenance actions sit directly below the control title and remain accessible while scrolling. Musical duration fractions are direct buttons with no estimated-ms readout; empty note feedback is hidden.
-
-- Vision performance refinements: temporary hand loss holds the last pose and mapped values, malformed MediaPipe landmarks recover safely, and the camera badge marks held/last-known poses and note status. Camera OFF still releases vision notes.
-- Short Trigger Note durations with immediate or synchronized onset can follow 1/16 through 4 bars (new default 1/4 bar) while saved millisecond durations remain compatible. Same-track retrigger retires the previous OFF timer before starting the replacement voice.
-- Vision Safe loss defaults to hold, with one-time migration of the former release default; the mapping curve has larger touch handles and a distinct Drive handle.
-- Performance opt-in preset for learned static poses with dedicated FSM recognition states (`ready`, `candidate`, `held`, `releasing`, `unknown`), enabling natural Rock gesture variance and fast physical rearm without false triggers.
-- Contextual Trigger Note editor with Destination, Note and Trigger groups, one destination label, fixed velocity, visible timing/duration state, Musical/ms controls, and discreet collapsed Advanced and presets, with five always-visible maintenance actions. Entering sync from Now defaults to 1/4 bar; redundant chord shortcuts and the mapping Test Note button are removed. Gesture-training TEST remains MIDI-silent.
-- OSC-synchronized trigger note scheduling (`TriggerNoteClock` and `TriggerNoteScheduler`) with next-beat/next-bar quantization based on fresh host OSC position (<=1000ms), latest-wins per track object lane, 64-lane cap, and automatic Note-Off release timer.
-- Safe lifecycle cancellation: pending notes are cancelled and active voices released upon transport stop, seek, loop jump, stale clock (>1000ms), track deletion, unbinding, or disconnection. Triggers arriving >20ms late are dropped as missed.
-- Live-write command `testTriggerNote` with trusted session authorization (`CommandExecutionContext`).
+- Synchronized Trigger Note: a note fires Now, on the Next Beat or on the next
+  Bar, quantized to a fresh AbletonOSC transport position (at most 1000 ms
+  old). Short notes last 1/16 to 4 bars (new synchronized notes default to
+  1/4 bar) or 20–2000 ms; Now uses the connected Live BPM and meter for its
+  release timer even while playback is stopped, and unknown musical metadata
+  blocks the note with feedback. While Held sustains until the pose or
+  control releases. Saved millisecond durations keep working. Scheduling runs
+  one lane per track (latest wins, at most 64 lanes) with an automatic
+  Note-Off; a retrigger on the same track retires the previous voice and its
+  Note-Off timer before the new note starts (`TriggerNoteClock`,
+  `TriggerNoteScheduler`).
+- Safe note lifecycle: pending notes are cancelled and sounding ones released
+  on transport stop, meter change, seek, loop jump, stale clock (over
+  1000 ms), track deletion, unbinding or disconnection. A trigger that would
+  fire more than 20 ms late is dropped as missed.
+- Contextual Trigger Note editor on the phone and in the Live panel, grouped
+  as Destination (track and Receiver v2 status; Change keeps the note and
+  timing), Note (pitch C-2 to G8, octave, MIDI number, fixed velocity) and
+  Trigger (when and how long), with direct musical-fraction buttons and a
+  Musical/ms switch. Gesture-training TEST stays MIDI-silent.
+- **Performance** recognition preset for learned static poses, with explicit
+  recognition states (`ready`, `candidate`, `held`, `releasing`, `unknown`):
+  it tolerates the natural variation of expressive poses such as Rock and
+  rearms quickly without false triggers on an open hand or a fist.
+- Trusted live-write command `testTriggerNote`, authorized through
+  `CommandExecutionContext`.
 - The landing page exists in Portuguese as its own URL,
   https://ntworm.github.io/rc-surface/pt-br.html, generated from the English
   page and `docs/site-i18n.js` by `npm run build:site` and readable without
@@ -34,8 +48,34 @@ intermediate release records are intentionally not published.
 
 ### Changed
 
-- MAP sliders and trigger note controls now share the amber CFG theme (`morph-slider` and `--range-progress`), removing the default blue slider accent.
-- Continuous mapping controls (curve canvas, min/max sliders, takeover, drive, comp, smooth) are hidden when `trigger_note` mode is active, while preserving their values across mode switches.
+- When the hand leaves the frame for a moment, vision mappings hold the last
+  real pose and value, including a sustained note, and the camera badge shows
+  the last-known state. A real pose release, Camera OFF, Panic, unbinding and
+  disconnection still release vision notes. New vision mappings default to
+  Safe loss **hold**; vision mappings saved with the former `release` default
+  migrate to `hold` once, while explicit `zero`, `center` and `custom`
+  settings and non-vision mappings are unchanged. `release` can be chosen
+  again in the editor.
+- Mapping editor: an unmapped control starts by choosing Bind or Trigger
+  Note, and existing mappings form a labelled group showing type and
+  destination. Bind offers direct Continuous/Toggle and Linear/Exp/Log/S
+  buttons above a full-width graph whose handles are no longer clipped at the
+  edges, smaller fader thumbs that keep a large touch area and double-click
+  reset, and the uncommon settings under Advanced. The five maintenance
+  actions (Bind, Trigger Note, Unbind Target, Clear Control, Clear All
+  Mappings) sit right under the control title and stay reachable while
+  scrolling; Advanced and Presets start collapsed. The mapping Test Note
+  button and the redundant chord shortcuts are removed, and empty note
+  feedback is hidden.
+- In `trigger_note` mode the continuous controls (curve, ranges, drive,
+  compression, smoothing) are hidden; their values survive a mode switch.
+- MAP sliders and Trigger Note controls use the amber CFG theme
+  (`morph-slider` and `--range-progress`) instead of the default blue accent.
+- Repository renamed from `ntworm/ableton-rc-surface` to `ntworm/rc-surface`
+  and the npm package name follows; GitHub redirects the old repository URL,
+  the landing page now lives at https://ntworm.github.io/rc-surface/. The data
+  folder name, the `ableton-rc:*` browser storage keys, the log prefix, the
+  certificate common name and the project file format id are unchanged.
 - The Portuguese text of the docs, the landing page and the phone reads the
   way Brazilian musicians talk, keeps their English jargon in English, and
   names the labels the Portuguese interface actually shows.
@@ -44,10 +84,30 @@ intermediate release records are intentionally not published.
 
 ### Fixed
 
+- Curve handles follow the shaped response under Drive and Compression, with
+  matching hit testing and drag math. The preview uses the same safe
+  compression bounds as Live, and a saturated or flat response keeps dragged
+  values finite.
+- Switching directly from one learned pose to another fires the new slot once
+  it is held, without first releasing the hand.
+- Incomplete MediaPipe landmark frames count as a briefly missing hand and
+  recover on the next valid frame.
+- The host no longer requires `globalThis.performance`, which Live's
+  extension host may not provide; timing falls back to `Date.now()`.
+- The transport clock recognises Live's play state (`isPlaying`) and clients
+  receive clock snapshots on connect and on every update; an invalid scene
+  time signature falls back to 4/4.
+- The tester kit's `Migrate-RC-Surface-Data.ps1` no longer copies files to the
+  wrong place when `LOCALAPPDATA` is given in 8.3 short form.
 - Seven labels on the Portuguese landing page rendered in English.
 - The VID pose status lines, the pose toasts and the MAP In/Out readout stayed
   in English in a Portuguese session.
 - Two Receiver messages fell back to Portuguese text instead of English.
+- The landing VID card keeps its example count inside the card on platforms
+  that substitute wider glyphs.
+- Docs: the README lists one direct XY pad (`xy-1`) and one physics joystick
+  (`xy-2`), the CFG scope is described per control, and obsolete UDP 9000
+  references are gone.
 
 ## [1.0.0] — 2026-09-21
 
@@ -77,11 +137,6 @@ intermediate release records are intentionally not published.
   a trigger note plays without clicking the device first. Device Off/On
   disarms and re-arms; Panic still disarms until clicked. Audio Sender input
   stays an explicit opt-in.
-- Repository renamed from `ntworm/ableton-rc-surface` to `ntworm/rc-surface`
-  and the npm package name follows; GitHub redirects the old repository URL,
-  the landing page now lives at https://ntworm.github.io/rc-surface/. The data
-  folder name, the `ableton-rc:*` browser storage keys, the log prefix, the
-  certificate common name and the project file format id are unchanged.
 - The Live context-menu entry reads "RC Surface: Panel" instead of
   "RC Surface: RC Surface: Panel" (Live prefixes the extension name itself).
 - The Live selection is no longer polled twice a second. AbletonOSC raises

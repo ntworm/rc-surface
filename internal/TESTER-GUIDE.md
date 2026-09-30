@@ -1,8 +1,34 @@
 # Tester Guide
 
-Thank you for testing RC Surface v1.0.0.
+Thank you for testing RC Surface v1.0.1.
 
-## Current candidate r12: Stutter regression fix
+## Current kit: 1.0.1
+
+Install `RC-Surface-1.0.1.ablx` the same way as 1.0.0 and reload the phone page. The two
+Max for Live devices are the same files as in 1.0.0 (Receiver v2.2 and Audio
+Sender v2, identical SHA256), so no device replacement is needed. The data
+folder stays `worm.rc-surface`. On first load, vision mappings saved with the
+former `release` Safe loss default switch to `hold`.
+
+What changed and is worth a short check (full list in `CHANGELOG.md`):
+
+- MAP → Trigger Note: timing Now, Next Beat and Bar; Short with musical
+  fractions (1/16 to 4 bars, default 1/4 bar) or ms; While Held. Next Beat
+  and Bar need AbletonOSC and Live playing.
+- Retrigger the same note on one track: the previous note ends before the new
+  one starts, and the new note gets its full duration.
+- VID: when the hand leaves the frame briefly, the last pose, value and any
+  sustained note hold (badge LAST KNOWN). Camera OFF, Panic, unbinding or
+  disconnecting stops held and scheduled notes.
+- Bind editor: direct mode/curve buttons, curve points that follow Drive and
+  Compression, maintenance actions under the control title, Advanced and
+  Presets collapsed. Presets were not part of the owner bench for this kit.
+
+The functional build in this kit was accepted on hardware as a 1.0.0-labelled
+bench package; the 1.0.1 file differs only in its manifest version. Report
+anything that behaves differently after installing it.
+
+## Earlier candidate r12 (1.0.0 cycle): Stutter regression fix
 
 Use `stutter-fix-r12/RC-Surface-1.0.0-stutter-fix-r12.ablx` and reload the browser;
 no AMXD replacement. One integrated check on the existing target: at 120 BPM,
@@ -16,7 +42,7 @@ rates may differ from r11. No fixed high-rate visual or fake slower pulse.
 Animation is local, not proof of delivery; slow frames may miss pulses and never
 replay them. LFO shapes/ceilings and the deferred AUDIO bench are unchanged.
 
-## Previous experimental candidate r11: shape limits and Stutter feedback
+## Earlier experimental candidate r11 (1.0.0 cycle): shape limits and Stutter feedback
 
 Use `shape-limits-r11/RC-Surface-1.0.0-shape-limits-r11.ablx`, then reload the
 browser. No AMXD replacement. Keep r10 for comparison; use a copy of your Set.
@@ -106,7 +132,7 @@ Use the descriptor checks below; physical microphone tests remain required.
 
 | File | Purpose |
 |---|---|
-| `RC-Surface-1.0.0.ablx` | The extension to install in Live |
+| `RC-Surface-1.0.1.ablx` | The extension to install in Live |
 | `RC-Midi-Receiver.amxd` | Max for Live receiver device for MIDI trigger notes |
 | `RC-Audio-Sender.amxd` | Max for Live audio-track pitch sender |
 | `README.md` | Quick start and architecture summary |
@@ -134,7 +160,7 @@ inspect the zip before installing.
 ## Migrating from a previous Ableton-RC-Surface install
 
 If you tested earlier candidates that still used the old name, your data
-folder is `worm.ableton-rc-surface`. Installing `RC-Surface-1.0.0.ablx` moves
+folder is `worm.ableton-rc-surface`. Installing `RC-Surface-1.0.1.ablx` moves
 Live's data identity to `worm.rc-surface` (derived from the manifest `name`).
 Before installing the new `.ablx`, run the kit's migrator to copy your
 previous data into the new folder without overwriting anything:
@@ -203,7 +229,7 @@ been completed on the target Ableton, OS, browser, and phone matrix.
 ## Install the `.ablx`
 
 1. **Quit Ableton Live** if it is running.
-2. **Double-click** `RC-Surface-1.0.0.ablx`.
+2. **Double-click** `RC-Surface-1.0.1.ablx`.
 3. Live's extension installer opens. Click **Install**.
 4. Live places the file under your **User Library / Extensions**.
 5. **Restart Live** if it was already running.
@@ -517,7 +543,7 @@ Please include:
 
 - **OS**: Windows 11 / macOS 14 / iOS 17 / Android 14 / etc.
 - **Ableton Live version**: Help → About Live.
-- **Extension version**: 1.0.0 (this kit).
+- **Extension version**: 1.0.1 (this kit).
 - **Phone browser**: Chrome 124 / Safari 17 / Edge 124 / etc.
 - **Phone model** (only if vision / sensor behavior is involved).
 - **Steps**: the exact sequence you ran before the bug.

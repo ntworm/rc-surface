@@ -1,6 +1,6 @@
 # Third-Party Notices — RC Surface
 
-Build `1.0.0`. This file lists the third-party components that are actually
+Build `1.0.1`. This file lists the third-party components that are actually
 packaged in the ABLX payload and in the host bundle, with the notices their
 licenses require. The canonical distribution matrix lives in the internal
 distribution review document.

@@ -429,13 +429,13 @@ notes are treated as different trigger targets.
 
 When mapping a control to play notes on a MIDI track equipped with an `RcReceiver v2` device, set the target mode to `trigger_note`. The editor displays a dedicated contextual interface tailored for musical chord and note triggering:
 
-- **Destination Track & Switch:** Displays the target MIDI track name and an indicator badge for the `RcReceiver v2` device. Tap **[TROCAR]** to reassign the target track while preserving your existing note, velocity, and timing configurations.
+- **Destination Track & Switch:** Displays the target MIDI track name and an indicator badge for the `RcReceiver v2` device. Tap **Change** to reassign the target track while preserving your existing note, velocity, and timing configurations.
 - **Pitch and Octave:** Pick the note pitch (C through B) and octave (-2 through 8). The editor calculates the standard MIDI note number (C-2 = 0, C2 = 48, G8 = 127). Pitches above G8 (MIDI 128+) are rejected.
 - **Velocity:** Adjust the outgoing MIDI velocity (1 to 127, default 100).
 - **Timing:**
-  - `immediate`: Fires the note immediately upon gesture recognition.
-  - `beat` (Próx. Tempo): Quantizes Note-On to the next quarter-note beat based on fresh OSC transport position.
-  - `bar` (Compasso): Quantizes Note-On to the next bar boundary.
+  - `immediate` (Now): Fires the note immediately upon gesture recognition.
+  - `beat` (Next Beat): Quantizes Note-On to the next quarter-note beat based on fresh OSC transport position.
+  - `bar` (Bar): Quantizes Note-On to the next bar boundary.
 - **Gate:**
   - `pulse` (Short): Plays for a chosen duration. New synchronized notes default to **1/4 bar**; choose 1/16, 1/8, 1/4, 1/2, 1, 2, or 4 bars, or switch to free milliseconds (20–2000 ms). Existing millisecond mappings retain their saved duration.
   - `hold` (While Held): Sustains the note until the triggering control or gesture is released.

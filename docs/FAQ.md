@@ -177,7 +177,7 @@ See `docs/CUSTOMIZATION.md`.
 
 ### Can I save and share mappings?
 
-Save and load local mapping presets, yes. v1.0.0 does not include
+Save and load local mapping presets, yes. RC Surface 1.0.x does not include
 export/import of shareable mapping bundles; presets remain local to the
 extension storage.
 

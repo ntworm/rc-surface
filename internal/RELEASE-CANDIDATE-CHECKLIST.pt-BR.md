@@ -1,6 +1,25 @@
-# RC Surface 1.0.0 — candidata de teste r3
+# RC Surface — candidatas de teste
 
-## Atualização — Receiver v2.1.1 aceito para prosseguir (2026-09-09)
+## Candidata 1.0.1 — 2026-09-29
+
+- Pacote: `release-kits/RC-Surface-1.0.1-test/RC-Surface-1.0.1.ablx`,
+  13.738.064 bytes, 91 entradas ZIP, manifest `1.0.1`, entrada `dist/extension.js`.
+- SHA256 ABLX: `80FDD74D52865557A7792CB9A42448589C23818FF85A15D32E7B71DA3E5AFB03`.
+- Kit: `release-kits/RC-Surface-1.0.1-test.zip`, 39 entradas, `SHA256SUMS.txt` com
+  33 arquivos conferidos. AMXD iguais aos da v1.0.0 (Receiver
+  `CEFDD7CA…4022`, Audio Sender `F64862CC…C0C0`).
+- Conteúdo: as 91 entradas têm o mesmo SHA256 do pacote de bancada
+  `245D7C6E` aceito pelo dono em 2026-09-29, exceto `manifest.json`, que só
+  muda a versão. `verify-release-package` contra `dist`: sem diferenças.
+- Aceite físico: vale para o conteúdo funcional de `245D7C6E` (hand loss HOLD,
+  retrigger e timing de nota, editor Bind/Trigger Note, handles alinhados).
+  O arquivo 1.0.1 não foi reinstalado em bancada; presets ficaram adiados.
+- Versão, changelog, docs EN/PT, landing e gates alinhados a 1.0.1. Tag,
+  release e Pages ainda não publicados.
+
+As seções abaixo são o histórico do ciclo 1.0.0 (r3 e anteriores).
+
+## 1.0.0 r3 — Atualização: Receiver v2.1.1 aceito para prosseguir (2026-09-09)
 
 O dono confirmou funcionamento normal, OFF/ON, Panic, desativação/reativação e
 save/reopen básico. Nome/range/tipo e um Note Off também foram lidos no Live.

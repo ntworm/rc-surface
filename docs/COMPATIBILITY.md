@@ -1,6 +1,6 @@
 # Compatibility — RC Surface
 
-Build `1.0.0`. What the 1.0 release candidate supports. Physical (hardware) compatibility is tracked separately under gate `physical-hardware` (P09) and `internal/TESTER-GUIDE.md`.
+Build `1.0.1`. What the 1.0.1 release supports. Physical (hardware) compatibility is tracked separately under gate `physical-hardware` (P09) and `internal/TESTER-GUIDE.md`.
 
 ## Live
 

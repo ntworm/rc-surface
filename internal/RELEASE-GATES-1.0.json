@@ -1,15 +1,24 @@
 {
   "schema_version": 1,
   "candidate": {
-    "packagePath": "release-kits/RC-Surface-1.0.0-test/RC-Surface-1.0.0.ablx",
-    "sha256": "520c0746e2e233419a1e11385623d4386986353a6c312f71da06bc869d344dbf",
+    "packagePath": "release-kits/RC-Surface-1.0.1-test/RC-Surface-1.0.1.ablx",
+    "sha256": "80fdd74d52865557a7792cb9a42448589c23818ff85a15d32e7b71da3e5afb03",
     "sourceDigest": null,
-    "expectedVersion": "1.0.0",
+    "expectedVersion": "1.0.1",
     "expectedCompanions": [
       "RC-Audio-Sender.amxd",
       "RC-Midi-Receiver.amxd"
     ]
   },
+  "previousCandidates": [
+    {
+      "version": "1.0.0",
+      "release": "v1.0.0",
+      "packagePath": "release-kits/RC-Surface-1.0.0-test/RC-Surface-1.0.0.ablx",
+      "sha256": "520c0746e2e233419a1e11385623d4386986353a6c312f71da06bc869d344dbf",
+      "note": "Published as the v1.0.0 release asset on 2026-09-21; kept for history."
+    }
+  ],
   "gates": [
     {
       "id": "physical-hardware",
@@ -106,6 +115,14 @@
       "status": "passed",
       "owner": "argos-main-2ecffebf-20260914",
       "rationale": "scripts/verify-release.mjs runs the local-only release verification flow (CI + package + gates). The package verifier accepts --package, --build-dir, --report and refuses packagePath with '..'. The gates document records every gate with explicit status; unknown statuses cannot be converted into pass."
+    },
+    {
+      "id": "patch-1.0.1-owner-bench",
+      "phase": "P11",
+      "stage": "local",
+      "status": "passed",
+      "owner": "responsible-party",
+      "rationale": "Owner acceptance on 2026-09-29 (Gabriel Worm) of bench package 245D7C6E (SHA256 245D7C6E8B71F9638D0DDF7B12F539CF6DA80C89E65BC80BB0696426291D0D6F, source dd83dd6, manifest 1.0.0) on physical hardware: temporary hand loss holds, retrigger and note timing, Bind/Trigger Note editor and aligned curve handles. Presets were deferred by the owner and not tested. The 1.0.1 candidate has the same 91 package entries with identical content except manifest.json version (entry-by-entry SHA256 comparison); the 1.0.1 file itself was not reinstalled on hardware, so this gate does not claim a separate hardware session for it. The 2026-09-21 physical-hardware gate above remains the 1.0.0 record."
     }
   ]
 }
