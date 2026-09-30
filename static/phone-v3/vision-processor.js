@@ -233,6 +233,16 @@
 
   const WORKER_READY_TIMEOUT_MS = 20000;
 
+  // The preview is the live video, but landmarks describe a frame captured
+  // one inference earlier. The overlay is redrawn every display frame with
+  // each point carried forward along its measured velocity by the time since
+  // its frame was captured, so the skeleton stays on the moving hand. Drawing
+  // only: wire values never use the prediction.
+  const OVERLAY_MAX_LEAD_MS = 150;      // never predict further than this
+  const OVERLAY_MAX_GAP_MS = 250;       // older neighbours give no velocity
+  const OVERLAY_VELOCITY_SMOOTHING = 0.6;
+  const OVERLAY_MAX_SPEED = 0.006;      // frame widths per ms (6 per second)
+
   // MediaPipe Hands in a dedicated worker, behind the same setOptions /
   // onResults / send / close surface as the page-side solution. On the page,
   // every inference blocked the main thread for its whole duration, so the
@@ -780,6 +790,8 @@
       // overlay: a readback-optimized canvas lives on the CPU, and drawing the
       // camera into one every frame stalled the GPU MediaPipe runs on.
       this.colorSampler = undefined;
+      this.overlayState = null;
+      this.overlayFrame = null;
       this.lastGestureProgressAt = -Infinity;
       // MediaPipe confidence threshold; default to medium (0.5). The UI
       // confidence selector calls setConfidence() before the camera
@@ -1257,9 +1269,7 @@
       this.pinchClutch.reset();
       this.poseDropFrames = 0;
       this.lastPinchSignal = 0;
-      if (this.ctx && this.canvas) {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      }
+      this.clearOverlay();
       this.video = null;
       this.canvas = null;
       this.ctx = null;
@@ -1267,6 +1277,9 @@
 
     processResults(results, frameTimestamp = nowMs()) {
       if (!this.active) return;
+      // When the analysed frame was on screen: the overlay predicts forward
+      // from here to wherever the live video has moved on to.
+      const capturedAt = this.lastSendTime || frameTimestamp;
       if (this.lastSendTime) {
         const latency = nowMs() - this.lastSendTime;
         this.lastSendTime = null;
@@ -1287,11 +1300,7 @@
       // CPU-backed canvas) cost the main thread and made the preview only as
       // smooth as inference.
       const canRender = Boolean(this.ctx && this.canvas);
-      if (canRender) {
-        this.ctx.save();
-        this.matchOverlayToFrame(results.image);
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      }
+      if (canRender) this.matchOverlayToFrame(results.image);
       if (this.onColorUpdate && frameTimestamp - this.lastColorSampleAt >= this.colorSampleIntervalMs) {
         const avgColor = this.calculateAverageColor(results.image || this.video);
         this.onColorUpdate(avgColor);
@@ -1323,7 +1332,7 @@
           }
         }
         this.wasHandPresent = true;
-        if (canRender) this.drawLandmarks(landmarks);
+        if (canRender) this.updateOverlay(landmarks, capturedAt);
         // Filter the position before anything downstream reads it, so the
         // gesture layer, the HUD and the wire all see the same steady value.
         const handedness = results.multiHandedness?.[0] ?? null;
@@ -1331,13 +1340,77 @@
         handData = this.processHandData(raw, frameTimestamp, landmarks);
       } else {
         this.wasHandPresent = false;
+        if (canRender) this.clearOverlay();
         handData = this.processMissing(frameTimestamp);
       }
 
       if (this.onHandUpdate) {
         this.onHandUpdate(handData);
       }
-      if (canRender) this.ctx.restore();
+    }
+
+    updateOverlay(landmarks, capturedAt) {
+      const previous = this.overlayState;
+      const points = landmarks.slice(0, 21).map((point) => ({ x: point.x, y: point.y }));
+      const gap = previous ? capturedAt - previous.capturedAt : 0;
+      const clampSpeed = (value) => Math.max(-OVERLAY_MAX_SPEED, Math.min(OVERLAY_MAX_SPEED, value));
+      const velocity = points.map((point, index) => {
+        if (!previous || !(gap > 0) || gap > OVERLAY_MAX_GAP_MS) return { x: 0, y: 0 };
+        const before = previous.points[index];
+        const last = previous.velocity[index];
+        return {
+          x: last.x + OVERLAY_VELOCITY_SMOOTHING * (clampSpeed((point.x - before.x) / gap) - last.x),
+          y: last.y + OVERLAY_VELOCITY_SMOOTHING * (clampSpeed((point.y - before.y) / gap) - last.y),
+        };
+      });
+      this.overlayState = { points, velocity, capturedAt };
+      if (typeof global.requestAnimationFrame === 'function') this.scheduleOverlay();
+      else this.drawOverlay(capturedAt);
+    }
+
+    // Where each landmark should be drawn at `now`: its analysed position
+    // carried forward by the capped time since that frame was on screen.
+    predictOverlay(now) {
+      const state = this.overlayState;
+      if (!state) return null;
+      const lead = Math.min(Math.max(0, now - state.capturedAt), OVERLAY_MAX_LEAD_MS);
+      return state.points.map((point, index) => ({
+        x: point.x + state.velocity[index].x * lead,
+        y: point.y + state.velocity[index].y * lead,
+      }));
+    }
+
+    drawOverlay(now) {
+      const points = this.predictOverlay(now);
+      if (!points || !this.ctx || !this.canvas) return;
+      this.ctx.save();
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.drawLandmarks(points);
+      this.ctx.restore();
+    }
+
+    scheduleOverlay() {
+      if (this.overlayFrame !== null) return;
+      this.overlayFrame = global.requestAnimationFrame(() => {
+        this.overlayFrame = null;
+        const state = this.overlayState;
+        if (!this.active || !state || !this.ctx || !this.canvas) return;
+        const now = nowMs();
+        // A hidden VID page draws nothing; the next result restarts the loop.
+        if (this.canvas.offsetParent !== null) this.drawOverlay(now);
+        // Past the prediction cap the drawing no longer changes: rest until
+        // the next result instead of repainting the same frame.
+        if (now - state.capturedAt < OVERLAY_MAX_LEAD_MS) this.scheduleOverlay();
+      });
+    }
+
+    clearOverlay() {
+      this.overlayState = null;
+      if (this.overlayFrame !== null) {
+        global.cancelAnimationFrame?.(this.overlayFrame);
+        this.overlayFrame = null;
+      }
+      if (this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     // Give the overlay the frame's aspect ratio at a fixed small width. The

@@ -18,7 +18,11 @@ intermediate release records are intentionally not published.
   mid-set all fall back to tracking on the page. The Live panel's MediaPipe
   Latency reads `worker` or `main thread`.
 - The VID preview is the live `<video>` element, composited at the camera's
-  own rate, with a transparent overlay that only draws the landmarks. Frames
+  own rate, with a transparent overlay that only draws the landmarks. The
+  landmarks describe a frame one inference old, so the overlay is redrawn
+  every display frame with each point carried forward along its smoothed
+  velocity (at most 150 ms ahead) and the skeleton stays on the moving hand;
+  mapped values never use the prediction. Frames
   are no longer copied twice per inference into a CPU-backed canvas, the
   ambient colour sampler reads a private 32×24 canvas, and the preview's
   `backdrop-filter` blur, invisible behind an opaque background but
