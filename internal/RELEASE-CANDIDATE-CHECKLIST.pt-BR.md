@@ -1,5 +1,27 @@
 # RC Surface — candidatas de teste
 
+## Candidata 1.0.2 — 2026-09-30
+
+- Pacote: `RC-Surface-1.0.2.ablx`, gerado pelo workflow de release a partir da
+  tag `v1.0.2`; o SHA256 sai no `SHA256SUMS.txt` da release, junto com os dois
+  AMXD (iguais aos da v1.0.0 e v1.0.1: Receiver `CEFDD7CA…4022`, Audio Sender
+  `F64862CC…DAEE`).
+- Aceite do dono em 2026-09-30, num Android com Chrome e num navegador de
+  desktop, do build de teste `RC-Surface-1.0.1-test-73ece73` (GitHub Actions,
+  run 36740029777): celular leve e responsivo com a câmera ligada (rastreio no
+  worker, sem esqueleto desenhado), detecção de poses, layout novo da VID,
+  STAGE e prévia do desktop com a mão desenhada em sincronia.
+- Entre `73ece73` e o commit de release, as entradas do pacote (`src/`,
+  `static/`, `build.ts`, `LICENSE`, `NOTICE`) são idênticas; só `package.json`,
+  `package-lock.json` e `manifest.json` mudam a versão. Este ambiente não
+  conseguiu baixar os artefatos do workflow, então não há comparação entrada a
+  entrada entre os dois `.ablx`.
+- Não retestados em hardware neste ciclo: Trigger Note, presets, Panic e
+  desconexão.
+- Versão, changelog, docs EN/PT, landing (planta da VID redesenhada), cartão
+  social e gates alinhados a 1.0.2. Notas da release em
+  `.github/release-notes/v1.0.2.md`; o workflow cria o rascunho e o dono publica.
+
 ## Candidata 1.0.1 — 2026-09-29
 
 - Pacote: `release-kits/RC-Surface-1.0.1-test/RC-Surface-1.0.1.ablx`,
