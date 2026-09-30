@@ -4,7 +4,18 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
-## [Unreleased]
+## [1.0.2] — 2026-09-30
+
+### Added
+
+- Test builds: every push to a branch other than `main` (or a manual run) builds an
+  installable `.ablx` in GitHub Actions and keeps it for 14 days as a workflow
+  artifact named after the commit, so a change can be tried in Live before it
+  is merged. Nothing is published, and the workflow's token is read-only.
+- The release workflow attaches the two Max for Live devices and a
+  `SHA256SUMS.txt` next to the `.ablx`, and takes its notes from
+  `.github/release-notes/<tag>.md`. It still creates a draft for the owner to
+  publish.
 
 ### Changed
 
@@ -13,11 +24,10 @@ intermediate release records are intentionally not published.
   On the page, every MediaPipe inference blocked the main thread for its
   whole duration, so with the camera on the phone's whole interface repainted
   only as fast as frames were analysed (21 FPS on a phone at ~46 ms per
-  inference). The page now transfers
-  one `ImageBitmap` per frame and receives plain landmarks back. A browser
-  without worker support, a worker that fails to start and a worker that dies
-  mid-set all fall back to tracking on the page. The Live panel's MediaPipe
-  Latency reads `worker` or `main thread`.
+  inference). The page now transfers one `ImageBitmap` per frame and receives
+  plain landmarks back. A browser without worker support, a worker that fails
+  to start and a worker that dies mid-set all fall back to tracking on the
+  page. The Live panel's MediaPipe Latency reads `worker` or `main thread`.
 - On touch devices the VID preview is the live `<video>` element, composited
   at the camera's own rate, and the hand is not drawn: landmarks describe a
   frame one inference old, so a skeleton over the live video trails the hand,
@@ -34,6 +44,9 @@ intermediate release records are intentionally not published.
   the status line), the detectors and the MAP/CLUTCH readouts share the
   right-hand column. On a 891×411 phone the preview grows from 303×228 to
   433×325. Tablets and desktop keep the previous arrangement.
+- The landing page's VID plan view is redrawn to the new phone layout, and its
+  numbered markers appear once each. The masthead, generated SEO block,
+  `pt-br.html`, `llms-full.txt` and the social card read v1.0.2.
 
 ### Fixed
 

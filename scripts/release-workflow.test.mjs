@@ -88,13 +88,18 @@ test("release workflow packages once after CI and publishes one generic asset", 
   assert.match(buildJob, /run: npm run build:prod-ablx/);
   assert.match(
     buildJob,
-    /path: RC-Surface-\$\{\{ steps\.package\.outputs\.version \}\}\.ablx/,
+    /path: \|\n\s+RC-Surface-\$\{\{ steps\.package\.outputs\.version \}\}\.ablx\n\s+RC-Midi-Receiver\.amxd\n\s+RC-Audio-Sender\.amxd\n\s+SHA256SUMS\.txt\n/,
   );
+  assert.match(buildJob, /Copy-Item static\/RC-Midi-Receiver\.amxd, static\/RC-Audio-Sender\.amxd/);
+  assert.match(buildJob, /Get-FileHash -Algorithm SHA256/);
   assert.match(releaseJob, /needs: build-asset/);
   assert.match(
     releaseJob,
-    /files: dist-release\/RC-Surface-\$\{\{ needs\.build-asset\.outputs\.version \}\}\.ablx/,
+    /files: \|\n\s+dist-release\/RC-Surface-\$\{\{ needs\.build-asset\.outputs\.version \}\}\.ablx\n\s+dist-release\/RC-Midi-Receiver\.amxd\n\s+dist-release\/RC-Audio-Sender\.amxd\n\s+dist-release\/SHA256SUMS\.txt\n/,
   );
+  assert.match(releaseJob, /body_path: \.github\/release-notes\/\$\{\{ inputs\.tag \}\}\.md/);
+  assert.match(releaseJob, /draft: true/, 'the owner publishes the release');
+  assert.doesNotMatch(releaseJob, /generate_release_notes: true/);
   assert.equal((workflow.match(/npm run build:prod-ablx/g) ?? []).length, 1);
   assert.doesNotMatch(workflow, /RC-Surface-.*-(?:Windows|macOS)\.ablx/);
   assert.doesNotMatch(workflow, /ablx-\$\{\{ matrix\.os \}\}/);
@@ -157,4 +162,14 @@ test("test builds stay private to the workflow and never touch Live or releases"
   assert.match(workflow, /retention-days: 14/);
   assert.doesNotMatch(workflow, /action-gh-release|contents: write|gh release/);
   assert.equal((workflow.match(/npm run build:prod-ablx/g) ?? []).length, 1);
+});
+
+test("the release for the current version has hand-written notes and the tag job requires them", async () => {
+  const workflow = await readFile(workflowPath, "utf8");
+  assert.match(jobBlock(workflow, "validate-tag"), /test -s "\.github\/release-notes\/\$\{RELEASE_TAG\}\.md"/);
+  const notes = await readFile(join(repoRoot, ".github", "release-notes", `${expectedTag}.md`), "utf8");
+  assert.match(notes, new RegExp(`RC Surface ${pkg.version.replaceAll(".", "\\.")}`));
+  assert.match(notes, new RegExp(`RC-Surface-${pkg.version.replaceAll(".", "\\.")}\\.ablx`));
+  assert.match(notes, /SHA256SUMS\.txt/);
+  assert.match(notes, /USER-GUIDE\.pt-BR\.md/, "the notes link the Portuguese guide");
 });

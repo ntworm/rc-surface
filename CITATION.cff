@@ -12,8 +12,8 @@ authors:
   - given-names: Gabriel
     family-names: Worm
     alias: ntworm
-version: 1.0.1
-date-released: 2026-09-29
+version: 1.0.2
+date-released: 2026-09-30
 license: PolyForm-Noncommercial-1.0.0
 repository-code: "https://github.com/ntworm/rc-surface"
 url: "https://ntworm.github.io/rc-surface/"

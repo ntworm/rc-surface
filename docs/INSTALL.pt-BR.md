@@ -52,7 +52,7 @@ A extensão em si é construída sobre o
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
    do projeto, ou use o pacote de teste enviado pelo mantenedor. A versão do
-   código é **1.0.1**; ter uma versão candidata local não significa que já existe
+   código é **1.0.2**; ter uma versão candidata local não significa que já existe
    a release pública correspondente. Siga a versão e as instruções de verificação do pacote recebido.
 2. Dê dois cliques no arquivo. O instalador de extensões do Live abre.
 3. Clique em *Install*. O Live coloca o arquivo em
