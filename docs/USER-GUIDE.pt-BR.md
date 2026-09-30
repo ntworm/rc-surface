@@ -918,13 +918,15 @@ O rastreio de mãos por câmera carrega o runtime e os arquivos de modelo do
 MediaPipe Hands que vêm junto com a extensão. Funciona numa rede local
 totalmente offline, depois que a extensão está instalada.
 
-Quando o navegador permite (Web Worker com `OffscreenCanvas`), o rastreio de
-mãos roda num worker em segundo plano, e a inferência deixa de travar o resto
-da interface do celular enquanto a câmera está ligada. A prévia é a imagem ao
-vivo da câmera com a mão rastreada desenhada por cima. No painel do Live,
+No celular ou tablet, a prévia é a imagem ao vivo da câmera, sem a mão
+desenhada por cima, e o rastreio de mãos roda num worker em segundo plano
+quando o navegador permite (Web Worker com `OffscreenCanvas`), então a
+inferência deixa de travar o resto da interface enquanto a câmera está ligada.
+Num computador com mouse, a prévia mostra o quadro analisado com a mão
+rastreada desenhada por cima, e o rastreio roda na página. No painel do Live,
 **Latência do MediaPipe** mostra `worker` ou `thread principal` ao lado do
 tempo; um navegador sem suporte a worker, ou um worker que falhe, rastreia na
-página como antes.
+página.
 
 Valores de saída:
 

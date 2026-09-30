@@ -8,25 +8,26 @@ intermediate release records are intentionally not published.
 
 ### Changed
 
-- Hand tracking runs in a dedicated Web Worker (`vision-hands-worker.js`)
-  where the browser supports `OffscreenCanvas`. On the page, every MediaPipe
-  inference blocked the main thread for its whole duration, so with the camera
-  on the phone's whole interface repainted only as fast as frames were
-  analysed (21 FPS on a phone at ~46 ms per inference). The page now transfers
+- On touch devices, hand tracking runs in a dedicated Web Worker
+  (`vision-hands-worker.js`) where the browser supports `OffscreenCanvas`.
+  On the page, every MediaPipe inference blocked the main thread for its
+  whole duration, so with the camera on the phone's whole interface repainted
+  only as fast as frames were analysed (21 FPS on a phone at ~46 ms per
+  inference). The page now transfers
   one `ImageBitmap` per frame and receives plain landmarks back. A browser
   without worker support, a worker that fails to start and a worker that dies
   mid-set all fall back to tracking on the page. The Live panel's MediaPipe
   Latency reads `worker` or `main thread`.
-- The VID preview is the live `<video>` element, composited at the camera's
-  own rate, with a transparent overlay that only draws the landmarks. The
-  landmarks describe a frame one inference old, so the overlay is redrawn
-  every display frame with each point carried forward along its smoothed
-  velocity (at most 150 ms ahead) and the skeleton stays on the moving hand;
-  mapped values never use the prediction. Frames
-  are no longer copied twice per inference into a CPU-backed canvas, the
-  ambient colour sampler reads a private 32×24 canvas, and the preview's
-  `backdrop-filter` blur, invisible behind an opaque background but
-  recomputed on every frame, is gone. VID readouts skip unchanged text writes.
+- On touch devices the VID preview is the live `<video>` element, composited
+  at the camera's own rate, and the hand is not drawn: landmarks describe a
+  frame one inference old, so a skeleton over the live video trails the hand,
+  and predicting it forward distorted it on fast moves. A computer with a mouse
+  keeps the previous preview, the analysed frame with its hand drawn on top in
+  sync, tracked on the page. Frames are no longer copied twice per inference
+  into a CPU-backed canvas, the ambient colour sampler reads a private 32×24
+  canvas, and the preview's `backdrop-filter` blur, invisible behind an opaque
+  background but recomputed on every frame, is gone. VID readouts skip
+  unchanged text writes.
 - VID on a landscape phone gives the camera the whole left column at the full
   height (its width follows the height at 4:3). Camera commands, the three
   learned poses as compact one-line rows (CAPTURE, TEST, DELETE LAST, CLR and

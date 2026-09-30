@@ -233,15 +233,19 @@
 
   const WORKER_READY_TIMEOUT_MS = 20000;
 
-  // The preview is the live video, but landmarks describe a frame captured
-  // one inference earlier. The overlay is redrawn every display frame with
-  // each point carried forward along its measured velocity by the time since
-  // its frame was captured, so the skeleton stays on the moving hand. Drawing
-  // only: wire values never use the prediction.
-  const OVERLAY_MAX_LEAD_MS = 150;      // never predict further than this
-  const OVERLAY_MAX_GAP_MS = 250;       // older neighbours give no velocity
-  const OVERLAY_VELOCITY_SMOOTHING = 0.6;
-  const OVERLAY_MAX_SPEED = 0.006;      // frame widths per ms (6 per second)
+  // A touch-first device (phone, tablet) shows the live camera and tracks in
+  // the worker without drawing the hand: landmarks describe a frame one
+  // inference old, so a skeleton over the live video always trails the hand,
+  // and predicting it forward distorts it. A mouse-first computer keeps the
+  // original preview: the analysed frame with its hand drawn on top, in sync,
+  // tracked on the page.
+  function prefersTouch(scope = global) {
+    try {
+      return Boolean(scope.matchMedia?.('(pointer: coarse)')?.matches);
+    } catch {
+      return false;
+    }
+  }
 
   // MediaPipe Hands in a dedicated worker, behind the same setOptions /
   // onResults / send / close surface as the page-side solution. On the page,
@@ -790,8 +794,7 @@
       // overlay: a readback-optimized canvas lives on the CPU, and drawing the
       // camera into one every frame stalled the GPU MediaPipe runs on.
       this.colorSampler = undefined;
-      this.overlayState = null;
-      this.overlayFrame = null;
+      this.drawHands = !prefersTouch(global);
       this.lastGestureProgressAt = -Infinity;
       // MediaPipe confidence threshold; default to medium (0.5). The UI
       // confidence selector calls setConfidence() before the camera
@@ -1097,7 +1100,7 @@
         minTrackingConfidence: this.trackingConfidenceFor(this.confidence),
       };
       const onResults = (results) => this.processResults(results);
-      if (this.useWorker !== false && WorkerHands.isSupported(global)) {
+      if (this.useWorker !== false && !this.drawHands && WorkerHands.isSupported(global)) {
         let worker = null;
         try {
           worker = new WorkerHands({
@@ -1161,8 +1164,8 @@
       this.video = videoElement;
       this.canvas = canvasElement;
       if (this.canvas) {
-        // The <video> element is the preview; this canvas only carries the
-        // landmark overlay, so it stays GPU-backed and is never read back.
+        // Only drawn on a mouse-first computer, never read back: it stays
+        // GPU-backed. On a phone the <video> element alone is the preview.
         this.ctx = this.canvas.getContext('2d');
       }
 
@@ -1269,7 +1272,9 @@
       this.pinchClutch.reset();
       this.poseDropFrames = 0;
       this.lastPinchSignal = 0;
-      this.clearOverlay();
+      if (this.ctx && this.canvas) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      }
       this.video = null;
       this.canvas = null;
       this.ctx = null;
@@ -1277,9 +1282,6 @@
 
     processResults(results, frameTimestamp = nowMs()) {
       if (!this.active) return;
-      // When the analysed frame was on screen: the overlay predicts forward
-      // from here to wherever the live video has moved on to.
-      const capturedAt = this.lastSendTime || frameTimestamp;
       if (this.lastSendTime) {
         const latency = nowMs() - this.lastSendTime;
         this.lastSendTime = null;
@@ -1294,13 +1296,21 @@
       // example with hardware acceleration disabled).  Previously all hand
       // processing lived inside this block, so the camera could be visible
       // while every vision mapping stayed permanently inactive.
-      // The camera image itself is shown by the <video> element, which the
-      // compositor updates at the camera's own rate whatever the main thread
-      // is doing. Copying every frame into this canvas (twice, into a
-      // CPU-backed canvas) cost the main thread and made the preview only as
-      // smooth as inference.
-      const canRender = Boolean(this.ctx && this.canvas);
-      if (canRender) this.matchOverlayToFrame(results.image);
+      // On a phone the <video> element is the preview, composited at the
+      // camera's own rate whatever the main thread is doing, and nothing is
+      // drawn here. On a computer the analysed frame and its landmarks are
+      // drawn together, so the skeleton sits exactly on the hand.
+      const canRender = Boolean(this.drawHands && this.ctx && this.canvas);
+      if (canRender) {
+        this.ctx.save();
+        this.matchOverlayToFrame(results.image);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (results.image) {
+          try {
+            this.ctx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
+          } catch { /* a frame that cannot be drawn leaves the live video visible */ }
+        }
+      }
       if (this.onColorUpdate && frameTimestamp - this.lastColorSampleAt >= this.colorSampleIntervalMs) {
         const avgColor = this.calculateAverageColor(results.image || this.video);
         this.onColorUpdate(avgColor);
@@ -1332,7 +1342,7 @@
           }
         }
         this.wasHandPresent = true;
-        if (canRender) this.updateOverlay(landmarks, capturedAt);
+        if (canRender) this.drawLandmarks(landmarks);
         // Filter the position before anything downstream reads it, so the
         // gesture layer, the HUD and the wire all see the same steady value.
         const handedness = results.multiHandedness?.[0] ?? null;
@@ -1340,82 +1350,18 @@
         handData = this.processHandData(raw, frameTimestamp, landmarks);
       } else {
         this.wasHandPresent = false;
-        if (canRender) this.clearOverlay();
         handData = this.processMissing(frameTimestamp);
       }
 
       if (this.onHandUpdate) {
         this.onHandUpdate(handData);
       }
+      if (canRender) this.ctx.restore();
     }
 
-    updateOverlay(landmarks, capturedAt) {
-      const previous = this.overlayState;
-      const points = landmarks.slice(0, 21).map((point) => ({ x: point.x, y: point.y }));
-      const gap = previous ? capturedAt - previous.capturedAt : 0;
-      const clampSpeed = (value) => Math.max(-OVERLAY_MAX_SPEED, Math.min(OVERLAY_MAX_SPEED, value));
-      const velocity = points.map((point, index) => {
-        if (!previous || !(gap > 0) || gap > OVERLAY_MAX_GAP_MS) return { x: 0, y: 0 };
-        const before = previous.points[index];
-        const last = previous.velocity[index];
-        return {
-          x: last.x + OVERLAY_VELOCITY_SMOOTHING * (clampSpeed((point.x - before.x) / gap) - last.x),
-          y: last.y + OVERLAY_VELOCITY_SMOOTHING * (clampSpeed((point.y - before.y) / gap) - last.y),
-        };
-      });
-      this.overlayState = { points, velocity, capturedAt };
-      if (typeof global.requestAnimationFrame === 'function') this.scheduleOverlay();
-      else this.drawOverlay(capturedAt);
-    }
-
-    // Where each landmark should be drawn at `now`: its analysed position
-    // carried forward by the capped time since that frame was on screen.
-    predictOverlay(now) {
-      const state = this.overlayState;
-      if (!state) return null;
-      const lead = Math.min(Math.max(0, now - state.capturedAt), OVERLAY_MAX_LEAD_MS);
-      return state.points.map((point, index) => ({
-        x: point.x + state.velocity[index].x * lead,
-        y: point.y + state.velocity[index].y * lead,
-      }));
-    }
-
-    drawOverlay(now) {
-      const points = this.predictOverlay(now);
-      if (!points || !this.ctx || !this.canvas) return;
-      this.ctx.save();
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.drawLandmarks(points);
-      this.ctx.restore();
-    }
-
-    scheduleOverlay() {
-      if (this.overlayFrame !== null) return;
-      this.overlayFrame = global.requestAnimationFrame(() => {
-        this.overlayFrame = null;
-        const state = this.overlayState;
-        if (!this.active || !state || !this.ctx || !this.canvas) return;
-        const now = nowMs();
-        // A hidden VID page draws nothing; the next result restarts the loop.
-        if (this.canvas.offsetParent !== null) this.drawOverlay(now);
-        // Past the prediction cap the drawing no longer changes: rest until
-        // the next result instead of repainting the same frame.
-        if (now - state.capturedAt < OVERLAY_MAX_LEAD_MS) this.scheduleOverlay();
-      });
-    }
-
-    clearOverlay() {
-      this.overlayState = null;
-      if (this.overlayFrame !== null) {
-        global.cancelAnimationFrame?.(this.overlayFrame);
-        this.overlayFrame = null;
-      }
-      if (this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    // Give the overlay the frame's aspect ratio at a fixed small width. The
-    // video and the overlay are both `object-fit: contain` in the same box,
-    // so matching aspect ratios is what keeps the landmarks on the hand.
+    // Give the canvas the frame's aspect ratio at a fixed small width. The
+    // video and the canvas are both `object-fit: contain` in the same box,
+    // so matching aspect ratios keeps the drawn frame over the live one.
     matchOverlayToFrame(image) {
       const frameWidth = image?.videoWidth || image?.width || 0;
       const frameHeight = image?.videoHeight || image?.height || 0;
