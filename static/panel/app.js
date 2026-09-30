@@ -1401,7 +1401,18 @@ function updatePerformanceStatus() {
   const rtt = typeof network.rtt === "number" ? `${network.rtt} ms` : "—";
   document.getElementById("perf-rtt").textContent = rtt;
 
-  const mpLatency = typeof network.mpLatency === "number" ? `${network.mpLatency} ms` : "—";
+  // Which thread runs hand tracking: in the worker the phone's UI keeps its
+  // frame rate; on the main thread every inference blocks a UI frame.
+  const translate = (key, fallback) => {
+    const value = window.RcSurfaceI18n?.t?.(key);
+    return value && value !== key ? value : fallback;
+  };
+  const mpThread = network.mpInference === "worker"
+    ? translate("panel.mpWorker", "worker")
+    : network.mpInference === "page" ? translate("panel.mpMainThread", "main thread") : "";
+  const mpLatency = typeof network.mpLatency === "number"
+    ? `${network.mpLatency} ms${mpThread ? ` · ${mpThread}` : ""}`
+    : "—";
   document.getElementById("perf-mediapipe").textContent = mpLatency;
 }
 

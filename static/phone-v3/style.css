@@ -1016,7 +1016,7 @@ body.stage-mode .fader {
 }
 .vision-gesture-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
 }
 .vision-gesture-list button {
@@ -1459,22 +1459,28 @@ body.stage-mode .fader {
   display: flex;
   flex-direction: column;
   padding: 4px;
-  backdrop-filter: blur(8px);
+  /* No backdrop-filter: over a live camera it re-blurred the region on the
+     GPU every frame, competing with MediaPipe for nothing visible. */
   pointer-events: none;
   touch-action: auto;
   user-select: none;
   cursor: default;
 }
-.vision-hud-container canvas {
+/* The video is the preview and the canvas a transparent landmark overlay.
+   Both are contained in the same box with the same aspect ratio, so the
+   overlay lines up with the picture. */
+.vision-hud-container > video,
+.vision-hud-container > canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  min-height: 0;
-  flex: 1;
-  object-fit: cover;
-  background: #000;
+  height: 100%;
+  object-fit: contain;
   border-radius: 0;
   display: block;
 }
+.vision-hud-container > video { background: #000; }
+.vision-hud-container > canvas { background: transparent; }
 .hud-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3563,18 +3569,16 @@ body.mapping-mode [data-name].selected-control {
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * Vision Studio v3 â€” one-screen landscape performance layout (redesigned).
  *
- * Priority order, hard:
- *   1. Three pose slots with touchable action buttons (CAP/TEST/DEL LAST/CLR)
- *   2. Camera preview
- *   3. Camera controls (toggle, CONF, REC)
+ * On a phone held sideways the camera is the page: it owns the whole left
+ * column and its width follows the available height at 4:3. Everything the
+ * performer touches lives in the right column:
+ *   1. Camera controls (toggle, CONF, REC)
+ *   2. Three pose slots, one compact row each (CAP/TEST/DEL LAST/CLR)
+ *   3. Built-in detector toggles (Open/Fist/Pinch/Victory)
+ *   4. Live readouts (MAP X/Y/Z, CLUTCH), under the controls
  *
- * Secondary â€” may compress, collapse, or hide:
- *   4. Built-in detector toggles (Open/Fist/Pinch/Victory/Fingers)
- *   5. Live readout strip (DIRECT MAP, GESTURE, AMBIENT)
- *
- * Camera and gesture studio share the flexible top row. The readout deck
- * spans the full-width second row, so readout height is no longer taken only
- * from G1/G2/G3. The studio keeps a measured minimum and the deck stays compact.
+ * Secondary sections compress or hide first when height runs short; the
+ * right column keeps a measured minimum width so every action stays usable.
  * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .page-video {
   overflow: hidden;
@@ -3673,17 +3677,23 @@ body.mapping-mode [data-name].selected-control {
   min-height: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(438px, 1.3fr);
+  /* The left column sets its own width from this container's height. */
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 8px;
   overflow: hidden;
+  container-type: size;
 }
 .vision-console-main { display: grid; }
 
 /* â”€â”€ Left column: camera preview + controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .vision-left-column {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 1 / -1;
+  /* 4:3 video at the full height: 24px of stage border, header and inset
+     come off the height, 8px of border and inset go back on the width. The
+     right column always keeps 290px for its controls. */
+  width: min(calc((100cqh - 24px) * 4 / 3 + 8px), calc(100cqw - 298px));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -3778,11 +3788,6 @@ body.mapping-mode [data-name].selected-control {
   border-radius: 0;
   background: #050506;
 }
-.vision-camera-stage .vision-hud-container canvas {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
 .vision-performance-badge {
   position: absolute;
   top: 8px;
@@ -3824,7 +3829,7 @@ body.mapping-mode [data-name].selected-control {
   grid-column: 2;
   grid-row: 1;
   display: grid;
-  grid-template-rows: minmax(136px, 1fr) auto;
+  grid-template-rows: auto minmax(120px, 1fr) auto;
   height: 100%;
   min-height: 0;
   gap: 6px;
@@ -3864,51 +3869,53 @@ body.mapping-mode [data-name].selected-control {
 }
 .vision-studio-head span { font-size: 10px; color: #8e8e8e; }
 
-/* Three slots share the studio's width so their 2x2 controls keep usable height. */
+/* Three stacked rows: one line per pose leaves the width to the camera. */
 .vision-gesture-slots {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
 .vision-pose-grid {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
 
 /*
- * One slot = vertically stacked card.
+ * One slot = one row.
  *
- *   [ G1  0/3 ]           <-- Centered header badge
- *   [ CAP ] [ TEST ]       <-- Row 1 of 2x2 grid
- *   [DEL LAST] [ CLR ]     <-- Row 2 of 2x2 grid
- *   Empty · capture 3...  <-- Centered status line
+ *   [ G1 ] [ CAP ] [ TEST ] [ DEL LAST ] [ CLR ]
+ *   [ 0/3] Empty · capture 3...                  <-- status line
  */
 .vision-gesture-slot {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: stretch;
-  gap: 2px;
-  padding: 4px 6px;
+  gap: 2px 6px;
+  padding: 3px 5px;
   border-radius: 0;
   background: #1f1f1f;
   border: 1px solid #34343a;
 }
 .vision-gesture-slot > header {
+  grid-column: 1;
+  grid-row: 1 / 3;
   min-width: 0;
-  flex: 0 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   line-height: 1.1;
 }
 .vision-gesture-slot > header span {
@@ -3928,20 +3935,22 @@ body.mapping-mode [data-name].selected-control {
   border-radius: 0;
 }
 
-/* ── Slot action buttons: 2x2 grid ────────────────────────────────────── */
+/* ── Slot action buttons: one row of four ─────────────────────────────── */
 .vision-slot-actions {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   min-height: 0;
-  flex: 1 1 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  /* CAPTURE carries the longest label in both languages (CAPTURAR). */
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
   gap: 3px;
 }
 .vision-slot-actions button {
-  min-width: 63px;
+  min-width: 0;
   height: 100%;
-  min-height: 47px;
+  min-height: 30px;
   padding: 1px 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0;
@@ -3978,15 +3987,16 @@ body.mapping-mode [data-name].selected-control {
 .vision-slot-actions .vision-slot-delete { color: #ff7b72; }
 .vision-slot-actions button:disabled { opacity: .32; filter: grayscale(1); }
 
-/* Status text: centered below 2x2 grid */
+/* Status text: one line under the four actions */
 .vision-slot-status {
+  grid-column: 2;
+  grid-row: 2;
   min-width: 0;
   min-height: 0;
-  flex: 0 0 auto;
   padding: 0 2px;
   font-size: 10px;
   line-height: 1.1;
-  text-align: center;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4025,7 +4035,7 @@ body.mapping-mode [data-name].selected-control {
 
 /* ── Live readout strip (Expanded double size for DIRECT MAP, GESTURE, AMBIENT) ── */
 .vision-sensor-deck {
-  grid-column: 1 / -1;
+  grid-column: 2;
   grid-row: 2;
   width: 100%;
   min-width: 0;
@@ -4035,12 +4045,12 @@ body.mapping-mode [data-name].selected-control {
 }
 .vision-signal-strip { display: block; overflow: hidden; }
 .vision-sensor-deck .vision-readout-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 4px;
 }
 .vision-sensor-deck .vision-readout-card:nth-child(1) { grid-column: 1; grid-row: 1; }
-.vision-sensor-deck .vision-readout-card:nth-child(2) { grid-column: 2; grid-row: 1; }
+.vision-sensor-deck .vision-readout-card:nth-child(2) { grid-column: 1; grid-row: 2; }
 .vision-sensor-deck .vision-readout-card {
   min-height: 0;
   padding: 2px 5px;
@@ -4136,24 +4146,31 @@ body.mapping-mode [data-name].selected-control {
  * they are never hidden or reduced below touch-target size.
  */
 @media (max-height: 460px) {
+  .media-card-vision > .media-card-head { display: none; }
   .vision-detector-section > header { display: none; }
   .vision-studio-head { display: none; }
-  .vision-slot-status { display: none; }
   .vision-gesture-studio { padding: 4px; }
   .vision-gesture-slots { gap: 3px; }
   .vision-gesture-slot { padding: 2px 4px; }
 }
 
+/* The smallest phones: the status line goes, and the readouts return to a
+   full-width strip under the camera so the controls keep their height. */
+@media (max-height: 380px) {
+  .vision-slot-status { display: none; }
+  .vision-left-column {
+    grid-row: 1;
+    width: min(calc((100cqh - 58px) * 4 / 3 + 8px), calc(100cqw - 298px));
+  }
+  .vision-sensor-deck { grid-column: 1 / -1; grid-row: 2; }
+  .vision-sensor-deck .vision-readout-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .vision-sensor-deck .vision-readout-card:nth-child(2) { grid-column: 2; grid-row: 1; }
+}
+
 @media (max-width: 640px) and (orientation: landscape) {
-  .vision-command-bar {
-    flex-direction: column;
-    gap: 3px;
-  }
-  .vision-command-bar > label {
-    flex: 0 0 32px;
-    width: 100%;
-    min-width: 0;
-  }
   .vision-camera-toggle {
     padding: 0 3px;
     gap: 3px;
@@ -4544,8 +4561,29 @@ body.mapping-mode [data-name].selected-control {
   .media-card-vision { padding: 12px; gap: 12px; }
   .media-card-vision > .media-card-head { height: 24px; min-height: 24px; }
   .media-card-vision .media-card-title { font-size: 16px; }
-  .vision-workspace { grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr); gap: 16px; }
-  .vision-left-column { gap: 12px; }
+  /* Large screens have height to spare: the camera commands sit above the
+     preview and the studio gets the full right-hand height beside both. */
+  .vision-workspace {
+    grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "commands studio"
+      "camera studio"
+      "camera detectors"
+      "deck deck";
+    gap: 12px 16px;
+  }
+  .vision-right-column { display: contents; }
+  .vision-command-bar { grid-area: commands; }
+  .vision-left-column { grid-area: camera; width: auto; gap: 12px; }
+  .vision-gesture-studio { grid-area: studio; }
+  .vision-detector-section { grid-area: detectors; }
+  .vision-sensor-deck { grid-area: deck; }
+  .vision-sensor-deck .vision-readout-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .vision-sensor-deck .vision-readout-card:nth-child(2) { grid-column: 2; grid-row: 1; }
   .vision-command-bar { min-height: 44px; }
   .vision-camera-toggle,
   .vision-confidence-field { height: 44px; font-size: 12px; }
@@ -4553,9 +4591,9 @@ body.mapping-mode [data-name].selected-control {
   .vision-camera-sidebar { justify-content: flex-start; container-type: size; }
   .vision-camera-stage {
     flex: 0 0 auto;
-    width: min(100%, calc((100cqh - 50px) * 4 / 3));
+    width: min(100%, calc(100cqh * 4 / 3));
     aspect-ratio: 4 / 3;
-    max-height: calc(100% - 50px);
+    max-height: 100%;
   }
   .vision-camera-stage > header { height: 28px; font-size: 12px; }
   .vision-camera-stage .vision-hud-container { inset: 31px 3px 3px; }
@@ -4563,7 +4601,6 @@ body.mapping-mode [data-name].selected-control {
   .vision-camera-placeholder strong { font-size: 16px; }
   .vision-camera-placeholder span,
   .vision-camera-diagnostics span { font-size: 12px; }
-  .vision-right-column { grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
   .vision-studio-head { min-height: 36px; }
   .vision-studio-head strong,
   .vision-detector-section header strong { font-size: 14px; }
@@ -4580,9 +4617,17 @@ body.mapping-mode [data-name].selected-control {
   .vision-gesture-slot > header { grid-column: 1; grid-row: 1 / 3; flex-direction: column; }
   .vision-gesture-slot > header span { font-size: 18px; }
   .vision-gesture-slot > header strong { font-size: 14px; }
-  .vision-slot-actions { grid-column: 2; grid-row: 1; height: 100%; max-height: 160px; align-self: center; }
+  .vision-slot-actions {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    height: 100%;
+    max-height: 160px;
+    align-self: center;
+  }
   .vision-slot-actions button { min-width: 0; min-height: 40px; font-size: 14px; }
-  .vision-slot-status { grid-column: 2; grid-row: 2; font-size: 12px; }
+  .vision-slot-status { grid-column: 2; grid-row: 2; font-size: 12px; text-align: center; }
   .vision-gesture-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .vision-gesture-list button { min-height: 40px; font-size: 14px; }
   .vision-sensor-deck .vision-readout-card { padding: 6px; gap: 8px; }

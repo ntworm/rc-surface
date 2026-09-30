@@ -5,9 +5,10 @@
 // Structural assertions for the redesigned Vision page layout.
 //
 // These tests guard the layout contract that keeps the page usable on a
-// phone held sideways: the three learned-pose slots are the highest
-// priority, the camera and its controls are second, and everything else
-// (detectors, readouts) compresses or hides when space is tight.
+// phone held sideways: the camera owns the left column at the full height,
+// and the controls column carries the camera commands, the three learned-pose
+// rows, the detectors and the readouts. Secondary copy compresses or hides
+// when space is tight; the pose actions never do.
 //
 // They assert structural CSS properties — not pixel measurements — so they
 // protect against the class of bug that produced the original overlap
@@ -26,7 +27,7 @@ function cssBlock(css, selector) {
   return match ? match[1] : '';
 }
 
-test('the top row reserves usable height for the studio and keeps the deck out of its column', () => {
+test('the controls column gives the studio the flexible row between commands and detectors', () => {
   const css = read('style.css');
   const workspace = cssBlock(css, '.vision-workspace');
   const column = cssBlock(css, '.vision-right-column');
@@ -35,11 +36,22 @@ test('the top row reserves usable height for the studio and keeps the deck out o
   assert.match(column, /display:\s*grid/, 'right column uses grid for row priority');
   assert.match(
     column,
-    /grid-template-rows:\s*minmax\(136px,\s*1fr\)\s+auto/,
-    'studio has a non-zero floor and only competes with detectors',
+    /grid-template-rows:\s*auto\s+minmax\(120px,\s*1fr\)\s+auto/,
+    'commands and detectors keep their height; the studio has a non-zero floor',
   );
   assert.match(column, /min-height:\s*0/);
   assert.match(column, /overflow:\s*hidden/);
+});
+
+test('the camera column takes its width from the height, at 4:3, and leaves the controls a floor', () => {
+  const css = read('style.css');
+  const workspace = cssBlock(css, '.vision-workspace');
+  const left = cssBlock(css, '.vision-left-column');
+
+  assert.match(workspace, /container-type:\s*size/, 'the column measures the workspace, not the viewport');
+  assert.match(workspace, /grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\)/);
+  assert.match(left, /grid-row:\s*1\s*\/\s*-1/, 'the camera spans the full height');
+  assert.match(left, /width:\s*min\(calc\(\(100cqh - \d+px\) \* 4 \/ 3 \+ \d+px\),\s*calc\(100cqw - \d+px\)\)/);
 });
 
 test('a slot is contained and cannot spill out of its row', () => {
@@ -49,7 +61,7 @@ test('a slot is contained and cannot spill out of its row', () => {
   assert.match(slot, /overflow:\s*hidden/, 'nothing may draw outside the slot');
   assert.match(slot, /min-width:\s*0/);
   assert.match(slot, /min-height:\s*0/);
-  assert.match(slot, /display:\s*flex/, 'slot uses flex for horizontal row layout');
+  assert.match(slot, /display:\s*grid/, 'slot lays out its label, actions and status on a grid');
 });
 
 test('the slot status truncates and cannot overflow', () => {
@@ -70,29 +82,30 @@ test('the secondary sections cannot squeeze the slots out', () => {
   assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card'), /overflow:\s*hidden/);
 });
 
-test('the three slots share the studio width instead of splitting its scarce height', () => {
+test('the three slots stack as equal rows, leaving the width to the camera', () => {
   const css = read('style.css');
   for (const selector of ['.vision-gesture-slots', '.vision-pose-grid']) {
     const block = cssBlock(css, selector);
+    assert.match(block, /grid-template-columns:\s*minmax\(0,\s*1fr\)/, `${selector} is one column`);
     assert.match(
       block,
-      /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
-      `${selector} must give each slot an equal, shrinkable column`,
+      /grid-template-rows:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+      `${selector} must give each slot an equal, shrinkable row`,
     );
-    assert.doesNotMatch(block, /grid-template-rows:\s*repeat\(3,/);
   }
 });
 
-test('the four slot actions are arranged in a 2x2 grid to maximize touch targets', () => {
+test('the four slot actions share one row and keep a touch floor', () => {
   const css = read('style.css');
   const actions = cssBlock(css, '.vision-slot-actions');
   const buttons = cssBlock(css, '.vision-slot-actions button');
 
-  assert.match(actions, /grid-template-columns:\s*repeat\(2,/);
-  assert.match(actions, /grid-template-rows:\s*repeat\(2,/);
+  assert.match(actions, /grid-template-columns:\s*minmax\(0,\s*1\.3fr\)\s+repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    'CAPTURE gets the extra width its longest label needs');
+  assert.match(actions, /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
   assert.match(actions, /min-width:\s*0/);
-  assert.match(buttons, /min-width:\s*63px/, 'each action preserves the measured phone-width target');
-  assert.match(buttons, /min-height:\s*47px/, 'each action preserves the measured phone-height target');
+  assert.match(buttons, /min-width:\s*0/);
+  assert.match(buttons, /min-height:\s*30px/, 'the smallest phones still get a thumb-sized action');
 });
 
 test('compact card labels and controls survive the primary short-screen layout', () => {
@@ -112,18 +125,23 @@ test('compact card labels and controls survive the primary short-screen layout',
   );
 });
 
-test('the focused readout deck spans the workspace in one two-card row', () => {
+test('the readouts sit under the controls and return to a full-width strip on the smallest phones', () => {
   const css = read('style.css');
   const deck = cssBlock(css, '.vision-sensor-deck');
   const grid = cssBlock(css, '.vision-sensor-deck .vision-readout-grid');
 
-  assert.match(deck, /grid-column:\s*1\s*\/\s*-1/);
+  assert.match(deck, /grid-column:\s*2/);
   assert.match(deck, /grid-row:\s*2/);
-  assert.match(grid, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(grid, /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
-  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(1)'), /grid-column:\s*1/);
-  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(2)'), /grid-column:\s*2/);
+  assert.match(grid, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(grid, /grid-template-rows:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(1)'), /grid-row:\s*1/);
+  assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(2)'), /grid-row:\s*2/);
   assert.equal(cssBlock(css, '.vision-sensor-deck .vision-readout-card:nth-child(3)'), '');
+
+  const smallest = css.match(/@media \(max-height: 380px\)\s*\{([\s\S]*?)\n\}/);
+  assert.ok(smallest, 'a smallest-phone rule must exist');
+  assert.match(smallest[1], /\.vision-sensor-deck\s*\{\s*grid-column:\s*1\s*\/\s*-1;\s*grid-row:\s*2;/);
+  assert.match(smallest[1], /\.vision-left-column\s*\{[^}]*grid-row:\s*1;/);
 });
 
 test('MAP and CLUTCH use explicit track counts instead of content-driven auto-fit', () => {
@@ -145,10 +163,10 @@ test('the page itself still refuses to scroll', () => {
   assert.match(cssBlock(css, '.vision-workspace'), /overflow:\s*hidden/);
 });
 
-test('the camera and its controls are still in the left column', () => {
+test('the camera owns the left column and its commands lead the controls column', () => {
   const html = read('index.html');
-  assert.match(html, /<div class="vision-left-column">[\s\S]*vision-command-bar/);
-  assert.match(html, /<div class="vision-left-column">[\s\S]*vision-camera-stage/);
+  assert.match(html, /<div class="vision-left-column">\s*<div class="vision-camera-sidebar">\s*<aside class="vision-camera-stage"/);
+  assert.match(html, /<div class="vision-right-column">\s*<div class="vision-command-bar">/);
   assert.match(html, /id="chk-vision-enable"/);
   assert.match(html, /id="vision-confidence"/);
   assert.match(html, /id="vision-recognition-preset"/);

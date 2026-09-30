@@ -140,12 +140,12 @@ test('vision performance layout fits one screen with compact controls and fixed 
     assert.match(block, /min-height:\s*0/, `${shrinkable} needs min-height:0 to actually shrink`);
     assert.doesNotMatch(block, /height:\s*auto/, `${shrinkable} must not opt out with height:auto`);
   }
-  // Each slot is a shrinkable flex card. Its container gives the three cards
-  // equal columns, while vision-layout-fit.test.mjs holds the containment
-  // contract that keeps every card inside its column.
+  // Each slot is a shrinkable one-row card. Its container stacks the three
+  // cards, while vision-layout-fit.test.mjs holds the containment contract
+  // that keeps every card inside its row.
   const slot = cssBlock(css, '.vision-gesture-slot');
   assert.match(slot, /min-height:\s*0/);
-  assert.match(slot, /display:\s*flex/);
+  assert.match(slot, /display:\s*grid/);
   assert.doesNotMatch(slot, /height:\s*auto/);
   // The focused full-width deck gives MAP and CLUTCH explicit track counts.
   assert.match(cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
@@ -154,11 +154,12 @@ test('vision performance layout fits one screen with compact controls and fixed 
     /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   // The readout cards keep their compact label beside the chips.
   assert.match(cssBlock(css, '.vision-readout-card'), /flex-direction:\s*row/);
-  assert.match(cssBlock(css, '.vision-gesture-list'), /grid-template-columns:\s*repeat\(5,/);
+  assert.match(cssBlock(css, '.vision-gesture-list'), /grid-template-columns:\s*repeat\(4,/);
   assert.doesNotMatch(cssBlock(css, '.vision-sensor-deck'), /grid-template-rows:\s*auto\s+1fr/);
-  // Slot actions arranged in a 2x2 grid to maximize button touch targets within cards.
-  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-columns:\s*repeat\(2,/);
-  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-rows:\s*repeat\(2,/);
+  // On a phone the four slot actions share one row, so a pose costs one line
+  // of height and the camera keeps the width.
+  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-columns:\s*minmax\(0,\s*1\.3fr\)\s+repeat\(3,/);
+  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
 });
 
 test('camera is non-interactive and boxed into its own column, never over the signal strip', () => {

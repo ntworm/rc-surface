@@ -1775,11 +1775,19 @@
     const btn = document.getElementById('btn-stage-mode');
     if (!btn) return;
 
+    // True once this STAGE session actually holds fullscreen. Browsers that
+    // refuse or lack fullscreen (iPhone Safari) keep the visual stage mode.
+    let heldFullscreen = false;
+
     function render(active) {
       document.body.classList.toggle('stage-mode', active);
       btn.classList.toggle('on', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      btn.textContent = active ? 'EXIT' : 'STAGE';
+      // The i18n handle follows the state, so a language change while on
+      // stage repaints EXIT/SAIR instead of reverting the label to STAGE.
+      const key = active ? 'hdr.exit' : 'hdr.stage';
+      btn.setAttribute('data-i18n', key);
+      btn.textContent = window.RcSurfaceI18n?.t?.(key) || (active ? 'EXIT' : 'STAGE');
       window.dispatchEvent(new Event('resize'));
     }
 
@@ -1791,9 +1799,11 @@
           await root.requestFullscreen();
         } catch {}
       }
+      heldFullscreen = Boolean(document.fullscreenElement);
     }
 
     async function exit() {
+      heldFullscreen = false;
       render(false);
       if (document.fullscreenElement && document.exitFullscreen) {
         try {
@@ -1801,6 +1811,20 @@
         } catch {}
       }
     }
+
+    // Leaving fullscreen by a system gesture, the back button, or a camera or
+    // microphone permission prompt used to leave the page on stage with an
+    // EXIT button and no fullscreen. Follow the browser instead: losing
+    // fullscreen leaves stage mode, as the user guide describes.
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        if (document.body.classList.contains('stage-mode')) heldFullscreen = true;
+        return;
+      }
+      if (!heldFullscreen) return;
+      heldFullscreen = false;
+      if (document.body.classList.contains('stage-mode')) render(false);
+    });
 
     btn.addEventListener('click', () => {
       if (document.body.classList.contains('stage-mode')) exit();

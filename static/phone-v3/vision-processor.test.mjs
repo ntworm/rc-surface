@@ -159,10 +159,10 @@ test('VisionProcessor: lifecycle load, start, process, stop', async () => {
   assert.equal(CameraMock.instance.config.height, 240);
   assert.equal(HandsMock.instance.options.maxNumHands, 1);
   assert.equal(canvasContextRequest.type, '2d');
-  assert.equal(
+  assert.notEqual(
     canvasContextRequest.options?.willReadFrequently,
     true,
-    'the color sampler reads pixels repeatedly and must request a readback-optimized canvas',
+    'the overlay only draws landmarks; a readback-optimized canvas would move it to the CPU',
   );
 
   // Simulate MediaPipe results callback with handedness metadata so the
@@ -393,6 +393,7 @@ test('VisionProcessor: ambient color detection processes canvas frames and calcu
   const vp = new VisionProcessor();
 
   const mockVideo = {};
+  let overlayReads = 0;
   const mockCanvas = {
     width: 160,
     height: 120,
@@ -401,17 +402,24 @@ test('VisionProcessor: ambient color detection processes canvas frames and calcu
       restore: () => {},
       clearRect: () => {},
       drawImage: () => {},
-      getImageData: () => {
-        const data = new Uint8ClampedArray(160 * 120 * 4);
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = 255;
-          data[i + 1] = 127;
-          data[i + 2] = 0;
-          data[i + 3] = 255;
-        }
-        return { data };
-      }
+      getImageData: () => { overlayReads += 1; return { data: new Uint8ClampedArray(4) }; },
     })
+  };
+  // The colour comes from a small private sampler, never from the overlay.
+  const sampledImages = [];
+  vp.colorSampler = {
+    canvas: { width: 32, height: 24 },
+    drawImage: (image) => { sampledImages.push(image); },
+    getImageData: () => {
+      const data = new Uint8ClampedArray(32 * 24 * 4);
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = 255;
+        data[i + 1] = 127;
+        data[i + 2] = 0;
+        data[i + 3] = 255;
+      }
+      return { data };
+    }
   };
 
   let colorUpdateData = null;
@@ -421,12 +429,15 @@ test('VisionProcessor: ambient color detection processes canvas frames and calcu
 
   await vp.start(mockVideo, mockCanvas);
 
+  const frame = { width: 320, height: 240 };
   HandsMock.instance.resultsCallback({
-    image: {},
+    image: frame,
     multiHandLandmarks: []
   });
 
   assert.ok(colorUpdateData);
+  assert.deepEqual(sampledImages, [frame], 'the sampler reads the inferred camera frame');
+  assert.equal(overlayReads, 0, 'the overlay canvas is never read back');
   assert.ok(Math.abs(colorUpdateData.r - 1.0) < 0.01);
   assert.ok(Math.abs(colorUpdateData.g - 0.498) < 0.01);
   assert.ok(Math.abs(colorUpdateData.b - 0.0) < 0.01);
@@ -1570,6 +1581,36 @@ test('VisionProcessor: ambient color sampling is throttled without throttling ha
   assert.equal(colorUpdates, 2);
 });
 
+test('VisionProcessor: the overlay carries landmarks only and follows the frame aspect ratio', async () => {
+  const { VisionProcessor, HandsMock, CameraMock } = loadVisionProcessor();
+  const vp = new VisionProcessor();
+  const drawn = [];
+  const mockCanvas = {
+    width: 320,
+    height: 240,
+    getContext: () => ({
+      save: () => {}, restore: () => {}, clearRect: () => {},
+      drawImage: (image) => { drawn.push(image); },
+      beginPath: () => {}, arc: () => {}, moveTo: () => {}, lineTo: () => {}, stroke: () => {}, fill: () => {},
+    }),
+  };
+  const mockVideo = { readyState: 4 };
+  await vp.start(mockVideo, mockCanvas);
+
+  HandsMock.instance.send = async () => {};
+  await CameraMock.instance.config.onFrame();
+  HandsMock.instance.resultsCallback({
+    image: { width: 640, height: 360 },
+    multiHandLandmarks: [makeOpenHand()],
+    multiHandedness: [{ label: 'Right' }],
+  });
+
+  assert.deepEqual(drawn, [], 'the <video> element is the preview; no frame is copied into the overlay');
+  assert.equal(mockCanvas.width, 320);
+  assert.equal(mockCanvas.height, 180, 'a 16:9 camera gets a 16:9 overlay so landmarks stay on the hand');
+  vp.stop();
+});
+
 test('VisionProcessor: gesture persistence and confidence control are exposed', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
@@ -2296,4 +2337,124 @@ test('VisionProcessor: onGestureProgress includes recognitionState and safetyCon
   restoredVp.importSafetyConfig(exported);
   assert.equal(restoredVp.gestureSampleCount('Rock'), 3, 'Templates survive reload intact');
   assert.equal(restoredVp.gestures.getRecognitionState(), 'ready', 'Initial state of restored library is ready');
+});
+
+// Inference runs in a dedicated worker when the browser can host it, so the
+// phone's UI thread is never blocked by MediaPipe.
+function installFakeWorker(windowContext, { initReply = 'ready', frameReply = 'results' } = {}) {
+  class FakeWorker {
+    constructor(url) {
+      this.url = url;
+      this.posted = [];
+      this.terminated = false;
+      FakeWorker.instances.push(this);
+    }
+    postMessage(message, transfer) {
+      this.posted.push({ message, transfer });
+      if (message.type === 'init') {
+        queueMicrotask(() => this.onmessage?.({ data: initReply === 'ready'
+          ? { type: 'ready' } : { type: 'error', message: 'no WebGL in worker' } }));
+      } else if (message.type === 'frame') {
+        queueMicrotask(() => this.onmessage?.({ data: frameReply === 'results'
+          ? { type: 'results', id: message.id, multiHandLandmarks: [makeOpenHand()], multiHandedness: [{ label: 'Right', score: 0.9 }] }
+          : { type: 'frame-error', id: message.id, message: 'context lost' } }));
+      }
+    }
+    terminate() { this.terminated = true; }
+  }
+  FakeWorker.instances = [];
+  const bitmaps = [];
+  // The worker start is bounded by a timer, as it is in the browser.
+  windowContext.setTimeout = setTimeout;
+  windowContext.clearTimeout = clearTimeout;
+  windowContext.Worker = FakeWorker;
+  windowContext.OffscreenCanvas = class {};
+  windowContext.createImageBitmap = async (image) => {
+    const bitmap = { image, closed: false, close() { this.closed = true; } };
+    bitmaps.push(bitmap);
+    return bitmap;
+  };
+  return { FakeWorker, bitmaps };
+}
+
+test('VisionProcessor: hand tracking runs in the worker and results reach the page', async () => {
+  const { VisionProcessor, windowContext, HandsMock, CameraMock } = loadVisionProcessor();
+  const { FakeWorker, bitmaps } = installFakeWorker(windowContext);
+  HandsMock.instance = null;
+  const vp = new VisionProcessor();
+  const video = { videoWidth: 320, videoHeight: 240 };
+  let handData = null;
+  vp.onHandUpdate = (data) => { handData = data; };
+
+  await vp.start(video, { getContext: () => null });
+
+  assert.equal(vp.visionStatus.inference, 'worker');
+  assert.equal(HandsMock.instance, null, 'no page-side MediaPipe instance when the worker is up');
+  const [worker] = FakeWorker.instances;
+  assert.match(worker.url, /vision-hands-worker\.js$/);
+  const init = worker.posted[0].message;
+  assert.equal(init.type, 'init');
+  assert.match(init.handsUrl, /vendor\/mediapipe\/hands\/hands\.js$/);
+  assert.equal(init.options.maxNumHands, 1);
+  assert.equal(init.options.modelComplexity, 0);
+
+  await CameraMock.instance.config.onFrame();
+  const frame = worker.posted.find((entry) => entry.message.type === 'frame');
+  assert.equal(frame.message.bitmap.image, video, 'the page only grabs the current video frame');
+  assert.equal(frame.transfer.length, 1);
+  assert.equal(frame.transfer[0], frame.message.bitmap, 'the bitmap is transferred, not copied');
+  assert.equal(bitmaps.length, 1);
+  assert.equal(handData?.active, true);
+  assert.equal(handData?.open, true);
+
+  vp.setConfidence('high');
+  assert.equal(worker.posted.at(-1).message.type, 'options');
+  assert.equal(worker.posted.at(-1).message.options.minDetectionConfidence, 0.7);
+
+  vp.stop();
+  assert.equal(worker.terminated, true);
+});
+
+test('VisionProcessor: a worker that cannot start falls back to tracking on the page', async () => {
+  const { VisionProcessor, windowContext, HandsMock } = loadVisionProcessor();
+  const { FakeWorker } = installFakeWorker(windowContext, { initReply: 'error' });
+  const vp = new VisionProcessor();
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await vp.start({}, { getContext: () => null });
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert.equal(vp.visionStatus.inference, 'page');
+  assert.equal(FakeWorker.instances[0].terminated, true);
+  assert.ok(HandsMock.instance, 'page-side MediaPipe takes over');
+  assert.equal(vp.hands, HandsMock.instance);
+  vp.stop();
+});
+
+test('VisionProcessor: a worker that dies mid-session hands tracking back to the page', async () => {
+  const { VisionProcessor, windowContext, HandsMock, CameraMock } = loadVisionProcessor();
+  const { FakeWorker } = installFakeWorker(windowContext, { frameReply: 'error' });
+  HandsMock.instance = null;
+  const vp = new VisionProcessor();
+  await vp.start({}, { getContext: () => null });
+  assert.equal(vp.visionStatus.inference, 'worker');
+
+  const worker = FakeWorker.instances[0];
+  // A frame error alone is not fatal; a dead worker (onerror) is.
+  worker.onerror({ message: 'worker crashed', preventDefault() {} });
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    await CameraMock.instance.config.onFrame();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(worker.terminated, true);
+  assert.ok(HandsMock.instance, 'page-side MediaPipe takes over after the crash');
+  assert.equal(vp.hands, HandsMock.instance);
+  assert.equal(vp.visionStatus.inference, 'page');
+  vp.stop();
 });

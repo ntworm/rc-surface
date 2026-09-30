@@ -359,7 +359,9 @@ the largest possible surface for the controls.
 > while Stage Mode is fullscreen can make Chrome exit fullscreen. On the
 > tested Samsung S25F, fullscreen may not become available again until the
 > controller tab is closed and reopened. Enable audio/camera before entering
-> Stage Mode when possible.
+> Stage Mode when possible. When fullscreen ends this way, Stage Mode now ends
+> with it instead of leaving an **EXIT** button on a page that is no longer
+> fullscreen.
 
 ---
 
@@ -887,9 +889,12 @@ a changed pitch to remain stable for `70 ms` before sending it.
 
 ### VID performance console
 
-Open **VID** with the phone in landscape. The camera preview stays on the
-left, the three learned-pose cards stay side by side, and the direct signal
-strip stays at the bottom. Tap **Camera** to grant access. The vision system
+Open **VID** with the phone in landscape. The camera preview fills the left
+side at the full screen height. Everything you touch sits in the column on the
+right: the camera commands (**Camera**, **CONF**, **REC**), the three
+learned-pose rows, the built-in detectors and the direct signal readouts. On a
+tablet or desktop the commands sit above the preview and the readouts run
+along the bottom. Tap **Camera** to grant access. The vision system
 is **single-hand** by design: it tracks one hand in front of the phone.
 
 If camera access fails, the error stays inside the preview. Fix the reported
@@ -899,6 +904,13 @@ is not required.
 Camera hand tracking loads the MediaPipe Hands runtime/model files bundled
 with the extension. It works on a fully offline local network after the
 extension is installed.
+
+Where the browser supports it (a Web Worker with `OffscreenCanvas`), hand
+tracking runs in a background worker, so inference no longer holds up the rest
+of the phone interface while the camera is on. The preview is the live camera
+image with the tracked hand drawn over it. The Live panel's **MediaPipe
+Latency** reads `worker` or `main thread` next to the time; a browser without
+worker support, or a worker that fails, tracks on the page as before.
 
 Output values:
 

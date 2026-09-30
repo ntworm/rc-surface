@@ -4,6 +4,40 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
+## [Unreleased]
+
+### Changed
+
+- Hand tracking runs in a dedicated Web Worker (`vision-hands-worker.js`)
+  where the browser supports `OffscreenCanvas`. On the page, every MediaPipe
+  inference blocked the main thread for its whole duration, so with the camera
+  on the phone's whole interface repainted only as fast as frames were
+  analysed (21 FPS on a phone at ~46 ms per inference). The page now transfers
+  one `ImageBitmap` per frame and receives plain landmarks back. A browser
+  without worker support, a worker that fails to start and a worker that dies
+  mid-set all fall back to tracking on the page. The Live panel's MediaPipe
+  Latency reads `worker` or `main thread`.
+- The VID preview is the live `<video>` element, composited at the camera's
+  own rate, with a transparent overlay that only draws the landmarks. Frames
+  are no longer copied twice per inference into a CPU-backed canvas, the
+  ambient colour sampler reads a private 32×24 canvas, and the preview's
+  `backdrop-filter` blur, invisible behind an opaque background but
+  recomputed on every frame, is gone. VID readouts skip unchanged text writes.
+- VID on a landscape phone gives the camera the whole left column at the full
+  height (its width follows the height at 4:3). Camera commands, the three
+  learned poses as compact one-line rows (CAPTURE, TEST, DELETE LAST, CLR and
+  the status line), the detectors and the MAP/CLUTCH readouts share the
+  right-hand column. On a 891×411 phone the preview grows from 303×228 to
+  433×325. Tablets and desktop keep the previous arrangement.
+
+### Fixed
+
+- STAGE followed only its own button: leaving fullscreen by a system gesture,
+  the back button or a camera/microphone permission prompt left the page in
+  stage mode with an EXIT button and no fullscreen. Losing fullscreen now
+  leaves stage mode, as the user guide describes. The exit label is
+  translated (EXIT/SAIR) and survives a language change while on stage.
+
 ## [1.0.1] — 2026-09-29
 
 ### Added

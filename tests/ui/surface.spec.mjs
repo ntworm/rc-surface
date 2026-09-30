@@ -309,13 +309,53 @@ test.describe('RC Surface UI & E2E Suite', () => {
     expect(recalledVal).toBeCloseTo(0.95, 2);
   });
 
+  test('STAGE leaves with the browser when fullscreen drops outside its button', async ({ page }) => {
+    await page.setViewportSize({ width: 851, height: 393 });
+    const stage = page.locator('#btn-stage-mode');
+    await stage.click();
+    await expect(page.locator('body')).toHaveClass(/stage-mode/);
+    await expect(stage).toHaveText('EXIT');
+    await expect(stage).toHaveAttribute('aria-pressed', 'true');
+    const fullscreen = await page.evaluate(() => Boolean(document.fullscreenElement));
+    test.skip(!fullscreen, 'this browser refused fullscreen, so there is nothing to drop');
+
+    // A system gesture or a permission prompt ends fullscreen without the
+    // button. The page must not stay on stage with an EXIT and no fullscreen.
+    await page.evaluate(() => document.exitFullscreen());
+    await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
+    await expect(stage).toHaveText('STAGE');
+    await expect(stage).toHaveAttribute('aria-pressed', 'false');
+
+    // The button still toggles both ways afterwards.
+    await stage.click();
+    await expect(page.locator('body')).toHaveClass(/stage-mode/);
+    await stage.click();
+    await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
+    expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+  });
+
+  test('STAGE labels its exit in the interface language', async ({ page }) => {
+    await page.setViewportSize({ width: 851, height: 393 });
+    await page.evaluate(() => window.RcSurfaceI18n.setLocale('pt-BR'));
+    const stage = page.locator('#btn-stage-mode');
+    await stage.click();
+    await expect(stage).toHaveText('SAIR');
+    // A language change while on stage keeps the exit label, not STAGE.
+    await page.evaluate(() => window.RcSurfaceI18n.setLocale('en'));
+    await expect(stage).toHaveText('EXIT');
+    await stage.click();
+    await expect(stage).toHaveText('STAGE');
+  });
+
   test('VID camera controls remain usable at 568px landscape width', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 320 });
     await page.locator('.tabs .tab[data-page="video"]').evaluate((el) => el.click());
     await page.waitForTimeout(100);
 
     const geometry = await page.evaluate(() => {
-      const left = document.querySelector('.vision-left-column').getBoundingClientRect();
+      // On a phone the camera owns the left column; its commands head the
+      // right-hand controls column.
+      const left = document.querySelector('.vision-right-column').getBoundingClientRect();
       const bar = document.querySelector('.vision-command-bar');
       const controls = [
         document.querySelector('.vision-camera-toggle'),

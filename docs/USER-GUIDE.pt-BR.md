@@ -359,7 +359,9 @@ para os controles.
 > o modo palco em tela cheia pode fazer o Chrome sair da tela cheia. No Samsung
 > S25F testado, a tela cheia pode não voltar a ficar disponível até a aba do
 > controlador ser fechada e aberta de novo. Quando der, ligue áudio e câmera
-> antes de entrar no modo palco.
+> antes de entrar no modo palco. Quando a tela cheia cai desse jeito, o modo
+> palco agora sai junto, em vez de deixar um botão **SAIR** numa página que já
+> não está em tela cheia.
 
 ---
 
@@ -899,9 +901,12 @@ enviá-la.
 
 ### Console de performance da VID
 
-Abra a **VID** com o celular na horizontal. A prévia da câmera fica à esquerda,
-os três cartões de pose aprendida ficam lado a lado, e a faixa de sinal direto
-fica embaixo. Toque em **Câmera** para liberar o acesso. O sistema de visão é
+Abra a **VID** com o celular na horizontal. A prévia da câmera ocupa o lado
+esquerdo na altura toda da tela. Tudo o que você toca fica na coluna da
+direita: os comandos da câmera (**Câmera**, **CONF**, **REC**), as três linhas
+de pose aprendida, os detectores integrados e as leituras de sinal direto. Num
+tablet ou desktop os comandos ficam acima da prévia e as leituras ficam
+embaixo, na largura toda. Toque em **Câmera** para liberar o acesso. O sistema de visão é
 de **uma mão só**, por decisão de projeto: ele rastreia uma mão na frente do
 celular.
 
@@ -912,6 +917,14 @@ recarregar a página.
 O rastreio de mãos por câmera carrega o runtime e os arquivos de modelo do
 MediaPipe Hands que vêm junto com a extensão. Funciona numa rede local
 totalmente offline, depois que a extensão está instalada.
+
+Quando o navegador permite (Web Worker com `OffscreenCanvas`), o rastreio de
+mãos roda num worker em segundo plano, e a inferência deixa de travar o resto
+da interface do celular enquanto a câmera está ligada. A prévia é a imagem ao
+vivo da câmera com a mão rastreada desenhada por cima. No painel do Live,
+**Latência do MediaPipe** mostra `worker` ou `thread principal` ao lado do
+tempo; um navegador sem suporte a worker, ou um worker que falhe, rastreia na
+página como antes.
 
 Valores de saída:
 
