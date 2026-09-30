@@ -19,6 +19,7 @@ const repoRoot = join(import.meta.dirname, "..");
 const validatorPath = join(repoRoot, "scripts", "validate-release-tag.mjs");
 const workflowPath = join(repoRoot, ".github", "workflows", "release.yml");
 const ciWorkflowPath = join(repoRoot, ".github", "workflows", "ci.yml");
+const testBuildWorkflowPath = join(repoRoot, ".github", "workflows", "test-build.yml");
 const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8"));
 const expectedTag = `v${pkg.version}`;
 
@@ -100,7 +101,7 @@ test("release workflow packages once after CI and publishes one generic asset", 
 });
 
 test("workflows default to read-only tokens and pin every action by commit", async () => {
-  for (const path of [ciWorkflowPath, workflowPath]) {
+  for (const path of [ciWorkflowPath, workflowPath, testBuildWorkflowPath]) {
     const workflow = await readFile(path, "utf8");
     const jobsIndex = workflow.indexOf("\njobs:\n");
     assert.notEqual(jobsIndex, -1, `${path} must define jobs`);
@@ -147,4 +148,13 @@ test("CI installs Playwright system dependencies only on Linux", async () => {
     /name: Install Playwright browser\n        if: runner\.os != 'Linux'\n        run: npx playwright install chromium/,
   );
   assert.equal((workflow.match(/--with-deps/g) ?? []).length, 1);
+});
+
+test("test builds stay private to the workflow and never touch Live or releases", async () => {
+  const workflow = await readFile(testBuildWorkflowPath, "utf8");
+  assert.match(workflow, /ABLETON_RC_DEV_SYNC: '0'/);
+  assert.match(workflow, /actions\/upload-artifact@/);
+  assert.match(workflow, /retention-days: 14/);
+  assert.doesNotMatch(workflow, /action-gh-release|contents: write|gh release/);
+  assert.equal((workflow.match(/npm run build:prod-ablx/g) ?? []).length, 1);
 });
