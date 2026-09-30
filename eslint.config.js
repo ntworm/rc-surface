@@ -92,6 +92,7 @@ export default [
       "static/phone-v3/audio-timeline.js",
       "static/phone-v3/camera-lifecycle.js",
       "static/phone-v3/vision-processor.js",
+      "static/phone-v3/vision-hands-worker.js",
       "static/shared/*.js",
     ],
     rules: {

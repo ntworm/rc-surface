@@ -1687,16 +1687,22 @@
     return Number.isFinite(number) ? Math.max(0, Math.min(1, (number + 1) / 2)) : 0.5;
   }
 
+  // Readouts repaint on every inference frame. Writing an unchanged string
+  // still replaces the text node and invalidates layout, so skip it.
+  function setTextIfChanged(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
   function renderVisionReadouts() {
     const h = state.vision && state.vision.hand;
     if (!h) return;
 
     const gesture = getVisionGestureLabel(h);
     const lblGesture = document.getElementById('lbl-vision-gesture');
-    if (lblGesture) lblGesture.textContent = gesture;
+    setTextIfChanged(lblGesture, gesture);
     for (const channel of ['x', 'y', 'z']) {
       const value = document.getElementById(`vision-value-${channel}`);
-      if (value) value.textContent = Number(h[channel] ?? (channel === 'z' ? 0 : 0.5)).toFixed(2);
+      setTextIfChanged(value, Number(h[channel] ?? (channel === 'z' ? 0 : 0.5)).toFixed(2));
     }
     // The number the Z window is cut from. Shown so the window can be set by
     // measurement on the actual phone rather than copied from other optics.
@@ -1704,11 +1710,11 @@
     // Two decimals, not three: palm size runs roughly 0.10 to 0.35, so 0.01 is
     // ample to cut a Z window from, and the shorter string is what lets the
     // chip sit on one row with the other four.
-    if (palm) palm.textContent = Number(h.palmSize ?? 0).toFixed(2);
+    setTextIfChanged(palm, Number(h.palmSize ?? 0).toFixed(2));
     const facing = document.getElementById('vision-value-facing');
     if (facing) {
       const signedFacing = Number(h.facing ?? 0);
-      facing.textContent = `${signedFacing < 0 ? '-' : '+'}${Math.abs(signedFacing).toFixed(2)}`;
+      setTextIfChanged(facing, `${signedFacing < 0 ? '-' : '+'}${Math.abs(signedFacing).toFixed(2)}`);
     }
     // The clutch was only observable on the wire, which meant the one thing
     // worth checking on the phone — did it engage, and does it hold when I
@@ -1716,12 +1722,12 @@
     const clutchState = document.getElementById('vision-clutch-state');
     if (clutchState) {
       const engaged = Boolean(h.pinch_engaged);
-      clutchState.textContent = engaged ? 'HELD' : 'OFF';
+      setTextIfChanged(clutchState, engaged ? 'HELD' : 'OFF');
       clutchState.classList.toggle('is-engaged', engaged);
     }
     for (const axis of ['x', 'y', 'z']) {
       const cell = document.getElementById(`vision-value-pinch-${axis}`);
-      if (cell) cell.textContent = Number(h[`pinch_${axis}`] ?? 0.5).toFixed(2);
+      setTextIfChanged(cell, Number(h[`pinch_${axis}`] ?? 0.5).toFixed(2));
     }
     renderVisionGestureBadges(h);
   }
@@ -1742,10 +1748,12 @@
       if (badgePose) parts.push(`${badgePose} · ${badgeTrackingLost
         ? T('vid.poseLastKnown', 'LAST KNOWN') : T('vid.poseHeld', 'HELD')}`);
       if (badgeNoteState) parts.push(`${T('vid.noteBadge', 'NOTE')}: ${badgeNoteState}`);
-      performanceBadge.textContent = parts.join(' · ');
-      if (performanceBadge.dataset) performanceBadge.dataset.tracking = badgeTrackingLost ? 'lost' : 'live';
-      if (parts.length) performanceBadge.classList.remove('hidden');
-      else performanceBadge.classList.add('hidden');
+      setTextIfChanged(performanceBadge, parts.join(' · '));
+      const tracking = badgeTrackingLost ? 'lost' : 'live';
+      if (performanceBadge.dataset && performanceBadge.dataset.tracking !== tracking) {
+        performanceBadge.dataset.tracking = tracking;
+      }
+      performanceBadge.classList.toggle('hidden', parts.length === 0);
     };
     window.onVisionTriggerNoteState = (message) => {
       if (!String(message?.control || '').startsWith('sensor.vision.')) return;
@@ -1833,7 +1841,6 @@
 
     if (!chk || !video || !canvas || !hud) return;
     if (cameraStage?.appendChild) {
-      cameraStage.appendChild(video);
       cameraStage.appendChild(hud);
     }
 

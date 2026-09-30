@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# NOTE (2026-09-19, claude-executor): this generator used to stamp every row as
+# NOTE (2026-09-19): this generator used to stamp every row as
 # "audited-*". Those values were not backed by evidence and were reverted. The
 # status/review_state columns are now assigned only by relabel-evidence-states.py,
 # which must be run after this script. This script writes "unlabeled" instead.

@@ -125,6 +125,7 @@
     'hdr.sync': { en: 'SYNC', 'pt-BR': 'SYNC' },
     'hdr.calibrate': { en: 'CALIBRATE', 'pt-BR': 'CALIBRAR' },
     'hdr.stage': { en: 'STAGE', 'pt-BR': 'STAGE' },
+    'hdr.exit': { en: 'EXIT', 'pt-BR': 'SAIR' },
 
     // ── PERF ─────────────────────────────────────────────────────────────
     'perf.pads': { en: 'PADS', 'pt-BR': 'PADS' },
@@ -360,6 +361,8 @@
     'panel.frameRate': { en: 'Phone Frame Rate', 'pt-BR': 'Taxa de quadros do celular' },
     'panel.rtt': { en: 'Command Latency (RTT)', 'pt-BR': 'Latência de comando (RTT)' },
     'panel.mediapipe': { en: 'MediaPipe Latency', 'pt-BR': 'Latência do MediaPipe' },
+    'panel.mpWorker': { en: 'worker', 'pt-BR': 'worker' },
+    'panel.mpMainThread': { en: 'main thread', 'pt-BR': 'thread principal' },
     'panel.startForQr': {
       en: 'Start the server to get QR codes and LAN URLs.',
       'pt-BR': 'Inicie o servidor para gerar o QR e os endereços da rede local.',

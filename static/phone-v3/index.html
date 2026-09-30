@@ -455,30 +455,6 @@
       <div class="vision-workspace vision-overview vision-console-main">
       <div class="vision-left-column">
         <div class="vision-camera-sidebar">
-          <div class="vision-command-bar">
-            <label class="vision-camera-toggle">
-              <span data-i18n="vid.camera">CAMERA</span>
-              <input class="switch-input" type="checkbox" id="chk-vision-enable">
-              <span class="switch-rail" aria-hidden="true"></span>
-            </label>
-            <label class="vision-confidence-field" aria-label="Vision confidence" data-i18n-aria-label="vid.confidence">
-              <span data-i18n="vid.conf">CONF</span>
-              <select id="vision-confidence">
-                <option value="low" data-i18n="vid.low">Low</option>
-                <option value="medium" selected data-i18n="vid.medium">Medium</option>
-                <option value="high" data-i18n="vid.high">High</option>
-              </select>
-            </label>
-            <label class="vision-confidence-field" aria-label="Recognition" data-i18n-aria-label="vid.recognition">
-              <span data-i18n="vid.rec">REC</span>
-              <select id="vision-recognition-preset">
-                <option value="precision" data-i18n="vid.precision">Precision</option>
-                <option value="balanced" selected data-i18n="vid.balanced">Balanced</option>
-                <option value="performance" data-i18n="vid.performance">Performance</option>
-                <option value="flexible" data-i18n="vid.flexible">Flexible</option>
-              </select>
-            </label>
-          </div>
           <aside class="vision-camera-stage" aria-label="Camera preview status" data-i18n-aria-label="vid.previewStatus">
             <header><strong data-i18n="vid.camera">CAMERA</strong><span data-i18n="vid.liveCheck">LIVE CHECK</span></header>
             <div class="vision-camera-diagnostics" aria-label="Camera calibration readings" data-i18n-aria-label="vid.calibration">
@@ -494,6 +470,30 @@
         </div>
       </div>
       <div class="vision-right-column">
+        <div class="vision-command-bar">
+          <label class="vision-camera-toggle">
+            <span data-i18n="vid.camera">CAMERA</span>
+            <input class="switch-input" type="checkbox" id="chk-vision-enable">
+            <span class="switch-rail" aria-hidden="true"></span>
+          </label>
+          <label class="vision-confidence-field" aria-label="Vision confidence" data-i18n-aria-label="vid.confidence">
+            <span data-i18n="vid.conf">CONF</span>
+            <select id="vision-confidence">
+              <option value="low" data-i18n="vid.low">Low</option>
+              <option value="medium" selected data-i18n="vid.medium">Medium</option>
+              <option value="high" data-i18n="vid.high">High</option>
+            </select>
+          </label>
+          <label class="vision-confidence-field" aria-label="Recognition" data-i18n-aria-label="vid.recognition">
+            <span data-i18n="vid.rec">REC</span>
+            <select id="vision-recognition-preset">
+              <option value="precision" data-i18n="vid.precision">Precision</option>
+              <option value="balanced" selected data-i18n="vid.balanced">Balanced</option>
+              <option value="performance" data-i18n="vid.performance">Performance</option>
+              <option value="flexible" data-i18n="vid.flexible">Flexible</option>
+            </select>
+          </label>
+        </div>
         <section class="vision-gesture-studio">
           <header class="vision-studio-head">
             <div><strong data-i18n="vid.learnedPoses">LEARNED POSES</strong><span><span data-i18n="vid.examplesEach">3 examples each</span> <span data-i18n="vid.momentary">· momentary 0 → 1</span></span></div>
@@ -588,8 +588,10 @@
     </section>
   </main>
 
-  <video id="vision-video" style="display:none;" autoplay playsinline muted></video>
   <div id="vision-hud" class="vision-hud-container hidden">
+    <!-- The video is the preview (composited at the camera's own rate); the
+         canvas above it only draws the hand landmarks. -->
+    <video id="vision-video" autoplay playsinline muted></video>
     <canvas id="vision-canvas" width="320" height="240"></canvas>
     <div id="vision-performance-badge" class="vision-performance-badge hidden" role="status" aria-live="polite"></div>
     <div class="hud-stats">

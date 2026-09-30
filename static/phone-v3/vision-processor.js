@@ -231,6 +231,132 @@
     }
   }
 
+  const WORKER_READY_TIMEOUT_MS = 20000;
+
+  // MediaPipe Hands in a dedicated worker, behind the same setOptions /
+  // onResults / send / close surface as the page-side solution. On the page,
+  // every inference blocked the main thread for its whole duration, so the
+  // phone's interface only repainted as fast as the camera was analysed
+  // (21 FPS on a phone that needs ~46 ms per frame). The solution supports
+  // workers itself (importScripts + OffscreenCanvas); the page only grabs an
+  // ImageBitmap of the current video frame and hands it over.
+  class WorkerHands {
+    static isSupported(scope = global) {
+      return typeof scope.Worker === 'function'
+        && typeof scope.OffscreenCanvas === 'function'
+        && typeof scope.createImageBitmap === 'function';
+    }
+
+    constructor({ workerUrl, handsUrl, assetBase, options = {}, WorkerCtor = global.Worker,
+      createBitmap = (image) => global.createImageBitmap(image) } = {}) {
+      this.options = { ...options };
+      this.createBitmap = createBitmap;
+      this.listener = null;
+      this.pending = null;
+      this.nextFrameId = 1;
+      this.closed = false;
+      this.failure = null;
+      this.ready = new Promise((resolve, reject) => {
+        this.resolveReady = resolve;
+        this.rejectReady = reject;
+      });
+      // A rejection nobody awaits yet must not surface as unhandled.
+      this.ready.catch(() => {});
+      this.worker = new WorkerCtor(workerUrl);
+      this.worker.onmessage = (event) => this.handleMessage(event?.data || {});
+      this.worker.onerror = (event) => {
+        event?.preventDefault?.();
+        this.fail(new Error(event?.message || 'Vision worker failed'));
+      };
+      this.worker.postMessage({ type: 'init', handsUrl, assetBase, options: this.options });
+    }
+
+    handleMessage(message) {
+      if (message.type === 'ready') {
+        this.resolveReady();
+        return;
+      }
+      if (message.type === 'error') {
+        this.fail(new Error(message.message || 'Vision worker failed'));
+        return;
+      }
+      if (message.type !== 'results' && message.type !== 'frame-error') return;
+      const pending = this.pending;
+      if (!pending || pending.id !== message.id) return;
+      this.pending = null;
+      if (message.type === 'frame-error') {
+        pending.reject(new Error(message.message || 'Hand tracking failed in the vision worker'));
+        return;
+      }
+      try {
+        this.listener?.({
+          image: pending.image,
+          multiHandLandmarks: message.multiHandLandmarks || [],
+          multiHandedness: message.multiHandedness || [],
+        });
+        pending.resolve();
+      } catch (error) {
+        pending.reject(error);
+      }
+    }
+
+    fail(error) {
+      if (this.failure) return;
+      this.failure = error;
+      this.rejectReady(error);
+      const pending = this.pending;
+      this.pending = null;
+      pending?.reject(error);
+    }
+
+    setOptions(options = {}) {
+      Object.assign(this.options, options);
+      if (!this.closed) this.worker.postMessage({ type: 'options', options: { ...options } });
+    }
+
+    onResults(listener) {
+      this.listener = listener;
+    }
+
+    async send({ image } = {}) {
+      if (this.closed) return;
+      if (this.failure) throw this.failure;
+      // The camera loop is single-flight; a second frame would only queue
+      // behind the first and arrive stale.
+      if (this.pending) return;
+      const bitmap = await this.createBitmap(image);
+      if (this.closed || this.failure) {
+        bitmap?.close?.();
+        if (this.failure) throw this.failure;
+        return;
+      }
+      const id = this.nextFrameId++;
+      await new Promise((resolve, reject) => {
+        this.pending = { id, image, resolve, reject };
+        this.worker.postMessage({ type: 'frame', id, bitmap }, [bitmap]);
+      });
+    }
+
+    close() {
+      if (this.closed) return;
+      this.closed = true;
+      const pending = this.pending;
+      this.pending = null;
+      pending?.resolve();
+      this.rejectReady(cameraCancellationError());
+      try { this.worker.postMessage({ type: 'close' }); } catch { /* already gone */ }
+      this.worker.terminate?.();
+    }
+  }
+
+  function withTimeout(promise, ms, message) {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
   // Pure helper: derive the 14 scalar features for one hand from its 21
   // MediaPipe landmarks. Pulled out of processResults so unit tests can
   // exercise it without spinning up MediaPipe or a canvas.
@@ -650,6 +776,10 @@
       this.gestureLearnReady = false;
       this.colorSampleIntervalMs = 120;
       this.lastColorSampleAt = -Infinity;
+      // Ambient colour is read from a tiny private canvas, never from the
+      // overlay: a readback-optimized canvas lives on the CPU, and drawing the
+      // camera into one every frame stalled the GPU MediaPipe runs on.
+      this.colorSampler = undefined;
       this.lastGestureProgressAt = -Infinity;
       // MediaPipe confidence threshold; default to medium (0.5). The UI
       // confidence selector calls setConfidence() before the camera
@@ -947,9 +1077,65 @@
       }
     }
 
+    async createHands() {
+      const options = {
+        maxNumHands: 1,
+        modelComplexity: 0,
+        minDetectionConfidence: this.confidence,
+        minTrackingConfidence: this.trackingConfidenceFor(this.confidence),
+      };
+      const onResults = (results) => this.processResults(results);
+      if (this.useWorker !== false && WorkerHands.isSupported(global)) {
+        let worker = null;
+        try {
+          worker = new WorkerHands({
+            workerUrl: resolveAssetUrl('vision-hands-worker.js'),
+            handsUrl: resolveAssetUrl('vendor/mediapipe/hands/hands.js'),
+            assetBase: resolveAssetUrl('vendor/mediapipe/hands/'),
+            options,
+          });
+          worker.onResults(onResults);
+          await withTimeout(worker.ready, WORKER_READY_TIMEOUT_MS, 'Vision worker did not start in time');
+          this.setVisionStatus({ inference: 'worker' });
+          return worker;
+        } catch (error) {
+          worker?.close();
+          if (!this.active) throw cameraCancellationError();
+          console.warn('[RC Surface] Vision worker unavailable; tracking hands on the page instead:',
+            error && error.message ? error.message : String(error));
+        }
+      }
+      const hands = new global.Hands({
+        locateFile: (file) => resolveAssetUrl(`vendor/mediapipe/hands/${file}`)
+      });
+      hands.setOptions(options);
+      hands.onResults(onResults);
+      this.setVisionStatus({ inference: 'page' });
+      return hands;
+    }
+
+    // A worker that dies mid-set (lost GPU context, out of memory) must not
+    // leave vision dead until the camera is toggled: keep tracking on the page.
+    fallBackToPageHands() {
+      const failed = this.hands;
+      const session = this.startSession;
+      this.hands = null;
+      failed?.close();
+      this.useWorker = false;
+      this.createHands().then((hands) => {
+        if (this.active && this.startSession === session && !this.hands) this.hands = hands;
+        else hands.close();
+      }).catch((error) => {
+        console.error('[RC Surface] Hand tracking could not restart on the page:',
+          error && error.message ? error.message : String(error));
+      });
+    }
+
     async start(videoElement, canvasElement) {
       if (this.active) return;
       this.active = true;
+      const session = {};
+      this.startSession = session;
       this.lastColorSampleAt = -Infinity;
       this.setVisionStatus({
         stage: 'starting',
@@ -963,18 +1149,15 @@
       this.video = videoElement;
       this.canvas = canvasElement;
       if (this.canvas) {
-        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+        // The <video> element is the preview; this canvas only carries the
+        // landmark overlay, so it stays GPU-backed and is never read back.
+        this.ctx = this.canvas.getContext('2d');
       }
 
       try {
         const hasNativeCapture = Boolean(global.navigator?.mediaDevices?.getUserMedia);
         const cameraOptions = {
           onFrame: async () => {
-            if (this.active && this.ctx && this.canvas && this.video && this.video.readyState >= 2) {
-              this.ctx.save();
-              this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-              this.ctx.restore();
-            }
             if (this.active && this.hands) {
               this.lastSendTime = nowMs();
               try {
@@ -987,6 +1170,7 @@
                 const detail = err && err.message ? err.message : String(err);
                 console.error('[RC Surface] MediaPipe inference failed:', detail);
                 this.setVisionStatus({ stage: 'error', lastError: detail });
+                if (this.hands instanceof WorkerHands && this.hands.failure) this.fallBackToPageHands();
               }
             }
           },
@@ -1021,25 +1205,17 @@
         }
 
         await this.loadDependencies();
-        if (!this.active) throw cameraCancellationError();
-        this.setVisionStatus({ mediapipeLoaded: true });
+        if (!this.active || this.startSession !== session) throw cameraCancellationError();
 
         if (!this.hands) {
-          this.hands = new global.Hands({
-            locateFile: (file) => resolveAssetUrl(`vendor/mediapipe/hands/${file}`)
-          });
-
-          this.hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 0,
-            minDetectionConfidence: this.confidence,
-            minTrackingConfidence: this.trackingConfidenceFor(this.confidence),
-          });
-
-          this.hands.onResults((results) => {
-            this.processResults(results);
-          });
+          const hands = await this.createHands();
+          if (!this.active || this.startSession !== session) {
+            hands.close();
+            throw cameraCancellationError();
+          }
+          this.hands = hands;
         }
+        this.setVisionStatus({ mediapipeLoaded: true });
 
         // Tests and very old browsers without native mediaDevices keep the
         // bundled camera_utils fallback, after its constructor has loaded.
@@ -1050,6 +1226,9 @@
         this.setVisionStatus({ stage: 'waiting-hand' });
       } catch (error) {
         const detail = error && error.message ? error.message : String(error);
+        // A start superseded by stop() + a newer start() must not tear the
+        // newer session down on its way out.
+        if (this.startSession !== session) throw error;
         this.stop();
         if (!error || error.name !== 'AbortError') {
           this.setVisionStatus({ stage: 'error', lastError: detail });
@@ -1093,6 +1272,7 @@
         this.lastSendTime = null;
         if (typeof window !== 'undefined' && window.state && window.state.sensors && window.state.sensors.network) {
           window.state.sensors.network.mpLatency = Math.round(latency);
+          window.state.sensors.network.mpInference = this.visionStatus.inference || null;
         }
       }
 
@@ -1101,21 +1281,21 @@
       // example with hardware acceleration disabled).  Previously all hand
       // processing lived inside this block, so the camera could be visible
       // while every vision mapping stayed permanently inactive.
+      // The camera image itself is shown by the <video> element, which the
+      // compositor updates at the camera's own rate whatever the main thread
+      // is doing. Copying every frame into this canvas (twice, into a
+      // CPU-backed canvas) cost the main thread and made the preview only as
+      // smooth as inference.
       const canRender = Boolean(this.ctx && this.canvas);
       if (canRender) {
         this.ctx.save();
+        this.matchOverlayToFrame(results.image);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Draw video frame
-        if (results.image) {
-          this.ctx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
-        }
-
-        if (this.onColorUpdate && frameTimestamp - this.lastColorSampleAt >= this.colorSampleIntervalMs) {
-          const avgColor = this.calculateAverageColor();
-          this.onColorUpdate(avgColor);
-          this.lastColorSampleAt = frameTimestamp;
-        }
+      }
+      if (this.onColorUpdate && frameTimestamp - this.lastColorSampleAt >= this.colorSampleIntervalMs) {
+        const avgColor = this.calculateAverageColor(results.image || this.video);
+        this.onColorUpdate(avgColor);
+        this.lastColorSampleAt = frameTimestamp;
       }
 
       const landmarks = results.multiHandLandmarks?.[0];
@@ -1160,32 +1340,59 @@
       if (canRender) this.ctx.restore();
     }
 
-    calculateAverageColor() {
-      if (!this.ctx || !this.canvas) return { r: 0, g: 0, b: 0 };
-      
-      const width = this.canvas.width;
-      const height = this.canvas.height;
+    // Give the overlay the frame's aspect ratio at a fixed small width. The
+    // video and the overlay are both `object-fit: contain` in the same box,
+    // so matching aspect ratios is what keeps the landmarks on the hand.
+    matchOverlayToFrame(image) {
+      const frameWidth = image?.videoWidth || image?.width || 0;
+      const frameHeight = image?.videoHeight || image?.height || 0;
+      if (!this.canvas || !(frameWidth > 0) || !(frameHeight > 0)) return;
+      const width = 320;
+      const height = Math.max(1, Math.round((width * frameHeight) / frameWidth));
+      if (this.canvas.width !== width) this.canvas.width = width;
+      if (this.canvas.height !== height) this.canvas.height = height;
+    }
+
+    getColorSampler() {
+      if (this.colorSampler === undefined) {
+        this.colorSampler = null;
+        try {
+          const canvas = global.document?.createElement?.('canvas');
+          if (canvas) {
+            canvas.width = 32;
+            canvas.height = 24;
+            this.colorSampler = canvas.getContext('2d', { willReadFrequently: true }) || null;
+          }
+        } catch {
+          this.colorSampler = null;
+        }
+      }
+      return this.colorSampler;
+    }
+
+    calculateAverageColor(image = this.video) {
+      const sampler = this.getColorSampler();
+      if (!sampler || !image) return { r: 0, g: 0, b: 0 };
+
+      const width = sampler.canvas?.width || 32;
+      const height = sampler.canvas?.height || 24;
       let imgData;
       try {
-        imgData = this.ctx.getImageData(0, 0, width, height);
+        sampler.drawImage(image, 0, 0, width, height);
+        imgData = sampler.getImageData(0, 0, width, height);
       } catch {
         return { r: 0, g: 0, b: 0 };
       }
-      
+
       const data = imgData.data;
       let rSum = 0, gSum = 0, bSum = 0, count = 0;
-      
-      const step = 16; 
-      for (let y = 0; y < height; y += step) {
-        for (let x = 0; x < width; x += step) {
-          const idx = (y * width + x) * 4;
-          rSum += data[idx];
-          gSum += data[idx + 1];
-          bSum += data[idx + 2];
-          count++;
-        }
+      for (let idx = 0; idx + 2 < data.length; idx += 4) {
+        rSum += data[idx];
+        gSum += data[idx + 1];
+        bSum += data[idx + 2];
+        count++;
       }
-      
+
       if (count === 0) return { r: 0, g: 0, b: 0 };
       
       return {
@@ -1230,6 +1437,7 @@
   global.OneEuroFilter = OneEuroFilter;
   global.ManagedCameraSession = ManagedCameraSession;
   global.VisionProcessor = VisionProcessor;
+  global.VisionWorkerHands = WorkerHands;
   global.dist3D = dist3D;
   global.computeHandData = computeHandData;
   global.PinchClutch = PinchClutch;
