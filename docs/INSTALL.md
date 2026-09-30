@@ -52,7 +52,7 @@ The extension itself is built on the
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.
-   The source version is **1.0.1**; a local candidate is not a declaration
+   The source version is **1.0.2**; a local candidate is not a declaration
    that the matching public release exists. Use the version and verification instructions
    supplied with the actual package.
 2. Double-click the file. Live's extension installer opens.

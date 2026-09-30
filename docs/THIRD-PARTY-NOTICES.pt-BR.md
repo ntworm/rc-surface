@@ -1,6 +1,6 @@
 # Avisos de Terceiros — RC Surface
 
-Build `1.0.1`. Este arquivo lista os componentes de terceiros efetivamente
+Build `1.0.2`. Este arquivo lista os componentes de terceiros efetivamente
 empacotados no payload ABLX e no bundle do host, com os avisos exigidos pelas
 respectivas licenças. A matriz canônica de distribuição está no documento
 interno de revisão de distribuição.

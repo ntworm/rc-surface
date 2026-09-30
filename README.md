@@ -1,7 +1,7 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v1.0.1](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v1.0.2](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/ntworm/rc-surface/releases)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
@@ -66,8 +66,8 @@ To use the AbletonOSC features, ensure the **AbletonOSC** extension is running i
 
 ## Candidate status
 
-The source version is 1.0.1. A package you build from this repository is a
-local candidate until the matching v1.0.1 release is published on the Releases
+The source version is 1.0.2. A package you build from this repository is a
+local candidate until the matching v1.0.2 release is published on the Releases
 page. Native Track and measured end-to-end latency remain pending owner
 validation.
 

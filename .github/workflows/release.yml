@@ -31,6 +31,11 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: node scripts/validate-release-tag.mjs "$RELEASE_TAG"
 
+      - name: Require release notes for the tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: test -s ".github/release-notes/${RELEASE_TAG}.md"
+
   ci-multiplatform:
     name: CI (${{ matrix.os }})
     needs: validate-tag
@@ -116,11 +121,27 @@ jobs:
       - name: Build and package extension
         run: npm run build:prod-ablx
 
+      # The Max for Live devices ship unchanged from static/; the checksums
+      # cover the three files a user downloads.
+      - name: Stage devices and checksums
+        shell: pwsh
+        run: |
+          $version = "${{ steps.package.outputs.version }}"
+          Copy-Item static/RC-Midi-Receiver.amxd, static/RC-Audio-Sender.amxd -Destination .
+          $files = @("RC-Surface-$version.ablx", "RC-Midi-Receiver.amxd", "RC-Audio-Sender.amxd")
+          $lines = foreach ($file in $files) { "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $file).Hash.ToLower(), $file }
+          [IO.File]::WriteAllText("SHA256SUMS.txt", ($lines -join "`n") + "`n")
+          Get-Content SHA256SUMS.txt
+
       - name: Upload release asset
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ablx
-          path: RC-Surface-${{ steps.package.outputs.version }}.ablx
+          path: |
+            RC-Surface-${{ steps.package.outputs.version }}.ablx
+            RC-Midi-Receiver.amxd
+            RC-Audio-Sender.amxd
+            SHA256SUMS.txt
           if-no-files-found: error
 
   create-release:
@@ -130,6 +151,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          sparse-checkout: .github/release-notes
+
       - name: Download release asset
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -140,8 +167,13 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ inputs.tag }}
-          files: dist-release/RC-Surface-${{ needs.build-asset.outputs.version }}.ablx
+          name: RC Surface ${{ needs.build-asset.outputs.version }}
+          body_path: .github/release-notes/${{ inputs.tag }}.md
+          files: |
+            dist-release/RC-Surface-${{ needs.build-asset.outputs.version }}.ablx
+            dist-release/RC-Midi-Receiver.amxd
+            dist-release/RC-Audio-Sender.amxd
+            dist-release/SHA256SUMS.txt
           draft: true
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

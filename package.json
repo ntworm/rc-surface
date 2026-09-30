@@ -1,6 +1,6 @@
 {
   "name": "rc-surface",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "main": "dist/extension.js",
   "engines": {
