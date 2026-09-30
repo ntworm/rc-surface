@@ -1581,21 +1581,30 @@ test('VisionProcessor: ambient color sampling is throttled without throttling ha
   assert.equal(colorUpdates, 2);
 });
 
-test('VisionProcessor: the overlay carries landmarks only and follows the frame aspect ratio', async () => {
-  const { VisionProcessor, HandsMock, CameraMock } = loadVisionProcessor();
-  const vp = new VisionProcessor();
+function drawingCanvas() {
   const drawn = [];
-  const mockCanvas = {
+  const arcs = [];
+  const canvas = {
     width: 320,
     height: 240,
     getContext: () => ({
       save: () => {}, restore: () => {}, clearRect: () => {},
       drawImage: (image) => { drawn.push(image); },
-      beginPath: () => {}, arc: () => {}, moveTo: () => {}, lineTo: () => {}, stroke: () => {}, fill: () => {},
+      beginPath: () => {}, arc: () => { arcs.push(1); }, moveTo: () => {}, lineTo: () => {}, stroke: () => {}, fill: () => {},
     }),
   };
-  const mockVideo = { readyState: 4 };
-  await vp.start(mockVideo, mockCanvas);
+  return { canvas, drawn, arcs };
+}
+
+test('VisionProcessor: a touch device shows the live video and draws no hand', async () => {
+  const { VisionProcessor, windowContext, HandsMock, CameraMock } = loadVisionProcessor();
+  windowContext.matchMedia = (query) => ({ matches: query === '(pointer: coarse)' });
+  const vp = new VisionProcessor();
+  assert.equal(vp.drawHands, false);
+  const { canvas, drawn, arcs } = drawingCanvas();
+  let handData = null;
+  vp.onHandUpdate = (data) => { handData = data; };
+  await vp.start({ readyState: 4 }, canvas);
 
   HandsMock.instance.send = async () => {};
   await CameraMock.instance.config.onFrame();
@@ -1605,9 +1614,32 @@ test('VisionProcessor: the overlay carries landmarks only and follows the frame 
     multiHandedness: [{ label: 'Right' }],
   });
 
-  assert.deepEqual(drawn, [], 'the <video> element is the preview; no frame is copied into the overlay');
-  assert.equal(mockCanvas.width, 320);
-  assert.equal(mockCanvas.height, 180, 'a 16:9 camera gets a 16:9 overlay so landmarks stay on the hand');
+  assert.deepEqual(drawn, [], 'no frame is copied over the live video');
+  assert.equal(arcs.length, 0, 'no skeleton trails the live hand');
+  assert.equal(handData?.active, true, 'tracking still reaches the page');
+  vp.stop();
+});
+
+test('VisionProcessor: a computer draws the analysed frame and its hand together, in sync', async () => {
+  const { VisionProcessor, windowContext, HandsMock } = loadVisionProcessor();
+  windowContext.matchMedia = () => ({ matches: false });
+  const vp = new VisionProcessor();
+  assert.equal(vp.drawHands, true);
+  const { canvas, drawn, arcs } = drawingCanvas();
+  await vp.start({ readyState: 4 }, canvas);
+
+  const frame = { width: 640, height: 360 };
+  HandsMock.instance.resultsCallback({
+    image: frame,
+    multiHandLandmarks: [makeOpenHand()],
+    multiHandedness: [{ label: 'Right' }],
+  });
+
+  assert.deepEqual(drawn, [frame], 'the frame MediaPipe analysed is the one under the skeleton');
+  assert.equal(arcs.length, 21, 'every landmark is drawn on it');
+  assert.equal(canvas.width, 320);
+  assert.equal(canvas.height, 180, 'a 16:9 camera keeps its proportions');
+  assert.equal(vp.visionStatus.inference, 'page', 'the drawn preview keeps tracking on the page, as before');
   vp.stop();
 });
 
@@ -2364,6 +2396,8 @@ function installFakeWorker(windowContext, { initReply = 'ready', frameReply = 'r
   }
   FakeWorker.instances = [];
   const bitmaps = [];
+  // The worker runs where the hand is not drawn: a touch device.
+  windowContext.matchMedia = (query) => ({ matches: query === '(pointer: coarse)' });
   // The worker start is bounded by a timer, as it is in the browser.
   windowContext.setTimeout = setTimeout;
   windowContext.clearTimeout = clearTimeout;
@@ -2457,116 +2491,4 @@ test('VisionProcessor: a worker that dies mid-session hands tracking back to the
   assert.equal(vp.hands, HandsMock.instance);
   assert.equal(vp.visionStatus.inference, 'page');
   vp.stop();
-});
-
-// The preview is the live video; landmarks describe a frame one inference
-// old. The overlay carries each point forward along its velocity so the
-// skeleton stays on the moving hand. Wire values never use the prediction.
-function shiftedHand(dx) {
-  return makeOpenHand().map((point) => ({ ...point, x: point.x + dx }));
-}
-
-function overlayHarness(windowContext, VisionProcessor) {
-  const vp = new VisionProcessor();
-  const arcs = [];
-  let clears = 0;
-  vp.active = true;
-  vp.canvas = { width: 320, height: 240, offsetParent: {} };
-  vp.ctx = {
-    save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, fill() {},
-    clearRect() { clears += 1; },
-    arc(x, y) { arcs.push({ x, y }); },
-  };
-  return { vp, arcs, clears: () => clears };
-}
-
-test('VisionProcessor: the overlay leads each landmark by its velocity, capped', () => {
-  const { VisionProcessor, windowContext } = loadVisionProcessor();
-  const { vp } = overlayHarness(windowContext, VisionProcessor);
-  const start = makeOpenHand();
-
-  vp.updateOverlay(shiftedHand(0), 1000);
-  vp.updateOverlay(shiftedHand(0.01), 1040);
-
-  // 0.01 of the frame in 40 ms, smoothed at 0.6: 0.00015 per ms.
-  const at100 = vp.predictOverlay(1140);
-  assert.ok(Math.abs(at100[0].x - (start[0].x + 0.01 + 0.015)) < 1e-9, 'leads by 100 ms of motion');
-  assert.ok(Math.abs(at100[0].y - start[0].y) < 1e-9, 'no invented vertical motion');
-  const farLater = vp.predictOverlay(5000);
-  assert.ok(Math.abs(farLater[0].x - (start[0].x + 0.01 + 0.0225)) < 1e-9, 'never leads by more than 150 ms');
-  assert.ok(Math.abs(vp.predictOverlay(1040)[0].x - (start[0].x + 0.01)) < 1e-9, 'no lead at capture time');
-});
-
-test('VisionProcessor: overlay prediction ignores stale neighbours and tracking jumps', () => {
-  const { VisionProcessor, windowContext } = loadVisionProcessor();
-  const { vp } = overlayHarness(windowContext, VisionProcessor);
-  const start = makeOpenHand();
-
-  vp.updateOverlay(shiftedHand(0), 1000);
-  vp.updateOverlay(shiftedHand(0.05), 1400);
-  assert.ok(Math.abs(vp.predictOverlay(1500)[0].x - (start[0].x + 0.05)) < 1e-9,
-    'a hand seen 400 ms ago gives no velocity');
-
-  vp.updateOverlay(shiftedHand(0.55), 1410);
-  // 0.5 of the frame in 10 ms is a tracking jump; the speed is capped at
-  // 0.006 per ms before smoothing: 0.0036 per ms, 0.36 over 100 ms.
-  assert.ok(Math.abs(vp.predictOverlay(1510)[0].x - (start[0].x + 0.55 + 0.36)) < 1e-9);
-});
-
-test('VisionProcessor: overlay draws at once without a display loop and clears when the hand goes', async () => {
-  const { VisionProcessor, windowContext, HandsMock } = loadVisionProcessor();
-  const vp = new VisionProcessor();
-  const arcs = [];
-  let clears = 0;
-  const canvas = {
-    width: 320,
-    height: 240,
-    getContext: () => ({
-      save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, fill() {}, drawImage() {},
-      clearRect() { clears += 1; },
-      arc(x, y) { arcs.push({ x, y }); },
-    }),
-  };
-  await vp.start({}, canvas);
-
-  HandsMock.instance.resultsCallback({ image: { width: 320, height: 240 }, multiHandLandmarks: [makeOpenHand()] });
-  assert.equal(arcs.length, 21, 'without requestAnimationFrame the skeleton is drawn with the result');
-  assert.ok(vp.overlayState);
-
-  const clearsBefore = clears;
-  HandsMock.instance.resultsCallback({ image: { width: 320, height: 240 }, multiHandLandmarks: [] });
-  assert.equal(vp.overlayState, null, 'a missing hand drops the prediction');
-  assert.ok(clears > clearsBefore, 'and wipes the skeleton');
-  vp.stop();
-});
-
-test('VisionProcessor: the overlay repaints per display frame until the prediction cap, then rests', () => {
-  const { VisionProcessor, windowContext } = loadVisionProcessor();
-  const frames = [];
-  // The result for the frame captured at 1040 lands 50 ms later.
-  let clock = 1090;
-  windowContext.performance = { now: () => clock };
-  windowContext.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
-  windowContext.cancelAnimationFrame = () => {};
-  const { vp, arcs } = overlayHarness(windowContext, VisionProcessor);
-
-  vp.updateOverlay(makeOpenHand(), 1000);
-  vp.updateOverlay(shiftedHand(0.01), 1040);
-  assert.equal(frames.length, 1, 'one display loop, however many results arrive');
-
-  let painted = 0;
-  while (frames.length && painted < 50) {
-    clock += 16;
-    frames.shift()();
-    painted += 1;
-  }
-  assert.equal(frames.length, 0, 'the loop stops once the lead reaches its cap');
-  assert.ok(painted >= 5 && painted <= 10, `repainted ${painted} times between the result and the cap`);
-  assert.equal(arcs.length, painted * 21);
-  assert.ok(arcs.at(-1).x > arcs[20].x, 'later frames draw the moving hand further along');
-
-  vp.canvas.offsetParent = null;
-  vp.updateOverlay(shiftedHand(0.02), clock);
-  frames.shift()();
-  assert.equal(arcs.length, painted * 21, 'a hidden VID page paints nothing');
 });

@@ -1504,12 +1504,14 @@ Camera hand tracking loads the MediaPipe Hands runtime/model files bundled
 with the extension. It works on a fully offline local network after the
 extension is installed.
 
-Where the browser supports it (a Web Worker with `OffscreenCanvas`), hand
-tracking runs in a background worker, so inference no longer holds up the rest
-of the phone interface while the camera is on. The preview is the live camera
-image with the tracked hand drawn over it. The Live panel's **MediaPipe
-Latency** reads `worker` or `main thread` next to the time; a browser without
-worker support, or a worker that fails, tracks on the page as before.
+On a phone or tablet the preview is the live camera image, without the hand
+drawn over it, and hand tracking runs in a background worker where the browser
+supports it (a Web Worker with `OffscreenCanvas`), so inference no longer holds
+up the rest of the interface while the camera is on. On a computer with a mouse
+the preview shows the analysed frame with the tracked hand drawn on top, and
+tracking runs on the page. The Live panel's **MediaPipe Latency** reads
+`worker` or `main thread` next to the time; a browser without worker support,
+or a worker that fails, tracks on the page.
 
 Output values:
 
