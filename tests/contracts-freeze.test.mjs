@@ -65,6 +65,26 @@ test("OSC addresses are frozen", async () => {
   assert.equal(osc.CMD.jumpToNextCue, "/live/song/jump_to_next_cue");
   assert.equal(osc.CMD.cuePointJump, "/live/song/cue_point/jump");
   assert.equal(osc.LISTENER_QUIET_MS, 1_500);
+  // Launch Clip: fire, stop, listen and read only — never a `set`.
+  assert.deepEqual(osc.CLIP, {
+    fireSlot: "/live/clip_slot/fire",
+    stopTrack: "/live/track/stop_all_clips",
+    listenFiredSlot: "/live/track/start_listen/fired_slot_index",
+    unlistenFiredSlot: "/live/track/stop_listen/fired_slot_index",
+    listenPlayingSlot: "/live/track/start_listen/playing_slot_index",
+    unlistenPlayingSlot: "/live/track/stop_listen/playing_slot_index",
+    listenPlayingPosition: "/live/clip/start_listen/playing_position",
+    unlistenPlayingPosition: "/live/clip/stop_listen/playing_position",
+    getLaunchQuantization: "/live/clip/get/launch_quantization",
+    getLaunchMode: "/live/clip/get/launch_mode",
+    getLegato: "/live/clip/get/legato",
+    listenGlobalQuantization: "/live/song/start_listen/clip_trigger_quantization",
+    getGlobalQuantization: "/live/song/get/clip_trigger_quantization",
+    getTrackNames: "/live/song/get/track_names",
+  });
+  for (const address of [...Object.values(osc.CLIP), ...Object.values(osc.CLIP_RESPONSE)]) {
+    assert.ok(!address.includes("/set/"), `${address} must not write Live state`);
+  }
 });
 
 // ── osc-transport.ts must route through osc-tokens.ts ──────────────────────

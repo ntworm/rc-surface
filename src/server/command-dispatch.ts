@@ -39,6 +39,8 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   getSelectedLiveContext: "read",
   getClients: "read",
   getTransportLiteState: "read",
+  getClipTargets: "read",
+  getClipLaunchStatus: "read",
 
   // Live-write side effects (controller, admin)
   transportPlay: "live-write",
@@ -56,6 +58,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   addUdpReceiverToTrack: "live-write",
   highlightControl: "live-write",
   testTriggerNote: "live-write",
+  testClipLaunch: "live-write",
 
   // Mapping-write side effects (controller, admin) — everything the phone's
   // own MAP panel needs to bind a control and manage its presets.

@@ -340,7 +340,51 @@ function makeKnob(container, labelText, value, min, max, isPercent, isMs, step, 
   return wrapper;
 }
 
+/**
+ * Launch Clip targets are edited on the phone's MAP. The panel shows what the
+ * control asks Live for, lets it be removed, and never rewrites it.
+ */
+function renderClipLaunchChip(targetContainer, t, idx) {
+  const tr = (key, fallback) => window.RcSurfaceI18n?.t?.(key) || fallback;
+  const chip = document.createElement("div");
+  chip.className = "bound-chip bound-chip-clip";
+  chip.dataset.targetIdx = String(idx);
+  chip.style.cssText = "position:relative; display:flex; flex-direction:column; gap:6px; width:100%; box-sizing:border-box;";
+  const removeBtn = document.createElement("span");
+  removeBtn.className = "remove";
+  removeBtn.title = "Remove mapping";
+  removeBtn.style.cssText = "position:absolute; top:8px; right:8px; cursor:pointer; color:#888; font-size:12px; padding:2px; line-height:1; z-index:10;";
+  removeBtn.textContent = "✕";
+  removeBtn.addEventListener("click", () => window.removeBoundTarget(idx));
+  chip.appendChild(removeBtn);
+  const title = document.createElement("span");
+  title.style.cssText = "font-size:11px; font-weight:600; color:#fff; padding-right:15px;";
+  const track = t.track?.trackName || `Track ${(t.trackIndex ?? 0) + 1}`;
+  const what = t.launchMode === "stop"
+    ? tr("lc.modeStop", "Stop track")
+    : t.launchMode === "list"
+      ? (t.clips || []).map((clip) => clip.clipName).join(" → ")
+      : t.clip?.clipName || "";
+  title.textContent = `${tr("mm.launchClip", "Launch Clip")} · ${track} · ${what}`;
+  chip.appendChild(title);
+  if (t.relinkStatus && t.relinkStatus !== "loaded") {
+    const relinkBadge = document.createElement("span");
+    relinkBadge.className = `relink-status relink-${t.relinkStatus}`;
+    relinkBadge.textContent = t.relinkStatus;
+    chip.appendChild(relinkBadge);
+  }
+  const hint = document.createElement("span");
+  hint.style.cssText = "font-size:10px; color:var(--text3);";
+  hint.textContent = tr("lc.editOnPhone", "Launch Clip is edited from MAP on the phone.");
+  chip.appendChild(hint);
+  targetContainer.appendChild(chip);
+}
+
 function renderTargetChip(targetContainer, t, idx) {
+  if (t && t.type === "clip_launch") {
+    renderClipLaunchChip(targetContainer, t, idx);
+    return;
+  }
   const chip = document.createElement("div");
   chip.className = "bound-chip";
   chip.dataset.targetIdx = String(idx);
@@ -1732,6 +1776,7 @@ function doApplyBind(t, { replaceOtherControl = null } = {}) {
 
 window.getTargetLabel = function(t) {
   if (t.type === "tempo") return "Song Tempo";
+  if (t.type === "clip_launch") return `Launch Clip · ${t.track?.trackName || `Track ${(t.trackIndex ?? 0) + 1}`}`;
   let label = `Track ${t.trackIndex + 1}`;
   if (t.trackName) label = t.trackName;
   if (t.deviceName) label += ` > ${t.deviceName}`;

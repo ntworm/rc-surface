@@ -448,6 +448,108 @@ Ao mapear um controle para disparar notas em uma track MIDI com o dispositivo `R
 - **Bind:** Botões diretos de Contínuo/Alternar e Linear/Exp/Log/S precedem o gráfico interativo ocupando a largura disponível. Saída mínima/máxima, Drive, Compressão e Suavização são os faders principais. Os três pontos do gráfico seguem a saída efetiva após Drive e Compressão; saída mínima/máxima continuam sendo os limites usados para escalar essa resposta. Arrastar um ponto considera essas configurações, e uma resposta saturada ou plana mantém os valores limitados. Entrada mínima/máxima, escala do alvo, retomada, perda de sinal, valor inativo e neutro ficam em Avançado. Alças menores conservam área de interação maior e reset por duplo clique.
 - **Ciclo Seguro e Cancelamento:** Notas Próx. Tempo/Compasso ainda não enviadas são canceladas ao parar o transporte, mudar fórmula, saltar em seek/loop, detectar OSC desatualizado (>1000 ms), remover bind ou perder conexão. Uma nota Próx. Tempo/Compasso que já está soando é desligada ao parar o transporte, perder o relógio, remover bind ou perder conexão; depois de seek, salto de loop ou mudança de fórmula, ela termina no próprio Note-Off. Notas Agora não dependem do transporte: Curta termina no próprio Note-Off e Enquanto Pressionado quando o gesto ou controle é solto; remover bind ou perder conexão as desliga antes. Eventos mais de 20 ms atrasados são descartados. Na mesma track, uma nota nova aposenta o timer e envia o OFF anterior antes de seu ON, recebendo a duração integral. O limite é 64 tracks ativas.
 
+### Launch Clip (`clip_launch`)
+
+Use **Launch Clip** quando um controle — normalmente uma pose aprendida G1,
+G2 ou G3 — deve pedir ao Live um clip da Session que já está no seu Set. Tudo
+é configurado pelo MAP: sem loopMIDI, sem track auxiliar e sem mapeamento por
+Ctrl+M. O Launch Clip precisa do AbletonOSC (veja o
+[INSTALL](INSTALL.pt-BR.md)); o SDK de Extensions lista tracks e clips, mas
+não lança clips.
+
+1. Selecione o controle no MAP e toque em **Launch Clip**.
+2. Escolha a track. Só aparecem tracks comuns que têm clips, com os nomes
+   reais; tracks de grupo ficam de fora, porque lançar o slot de um grupo
+   dispara uma linha inteira.
+3. Escolha o clip (número do slot e nome real do clip).
+
+**Escolha** — uma por mapeamento:
+
+- **Lançar clip** (padrão): cada ativação pede aquele clip. Manter a pose não
+  repete, soltar deixa o clip tocando e outra pose escolhe outro clip direto,
+  sem pose neutra no meio. Se o Live já tem aquele clip aguardando ou
+  tocando, nada é enviado.
+- **Avançar lista**: de 2 a 8 clips da mesma track. Cada nova ativação pede o
+  clip seguinte ao que o Live está tocando e volta ao primeiro no fim. Só um
+  avanço por entrada quantizada: enquanto o clip pedido ainda aguarda no
+  Live, novas ativações não avançam de novo.
+- **Parar track**: o stop da track do Live, quantizado pelo Live. Também
+  cancela um lançamento que ainda aguarda naquela track.
+
+A **quantização** é sempre a do Live: a quantização de lançamento do próprio
+clip, ou a da música quando o clip está em Global. O editor mostra o valor
+efetivo só para leitura. O RC Surface nunca altera um ajuste de clip, track
+ou música.
+
+O **estado** vem só do que o Live informa: Pronto, Enviado — aguardando o
+Live, Aguardando no Live (próximo limite), Tocando, Parada aguardando no
+Live, Track parada, Sem confirmação do Live, AbletonOSC desconectado, Destino
+ausente, Mais de um candidato e um estado de bloqueio quando o Live e o
+AbletonOSC listam as tracks de forma diferente. Enviar uma mensagem nunca
+aparece como reprodução. **Testar** executa uma ativação com as mesmas regras
+do gesto.
+
+A mão sair do quadro não é soltar a pose, e o celular desconectar também não:
+o estado da pose fica guardado, então não há disparo duplo. Reconectar nunca
+reenvia nada. Pequenas oscilações são filtradas pelo reconhecedor de poses e,
+além disso, um pedido que o Live já recebeu não é repetido.
+
+Mudar de ideia antes do limite (por exemplo G2 e logo depois G1 com a Base
+tocando): a API não tem "cancelar lançamento", então pedir a Base de novo
+substitui o clip que aguardava e, como documentado na API do Live, reinicia a
+Base no limite.
+
+**Depois que entra** — só no modo Lançar clip, separado da escolha:
+
+- **Deixar o Live decidir** (padrão): o clip repete, ou a Follow Action nativa
+  do Live assume.
+- **RC: ir para clip** após N passagens (1 a 8), por exemplo Virada → Base
+  depois de uma passagem.
+- **RC: parar track** após N passagens.
+
+Estas são regras do RC Surface. Elas não leem nem alteram as Follow Actions
+do Live, que nenhuma API disponível expõe. Se o clip também tiver uma Follow
+Action nativa, as duas agem: use uma ou outra.
+
+Como a regra conta: com start marker S, início do loop A, fim do loop E e end
+marker F, a primeira passagem dura `E − S` e cada passagem seguinte `E − A`,
+então N passagens duram `T = (E − S) + (N − 1)(E − A)`. Um clip sem loop
+toca uma vez (`T = F − S`, N precisa ser 1). A regra espera o Live confirmar
+que o clip está tocando, acompanha a posição do clip informada pelo Live e
+entrega o próximo pedido ao Live dentro do último quantum antes de `T`; a
+quantização continua sendo do Live. O editor mostra a previsão: o retorno
+entra no fim da passagem N, ou o clip toca alguns tempos a mais (clip em
+loop), ou há alguns tempos de silêncio (clip sem loop).
+
+A regra é recusada quando a quantização do Live é None, o quantum é curto
+demais no andamento atual (janela menor que 250 ms), o clip está com Legato
+ou com modo de lançamento diferente de Trigger, o clip é áudio sem warp, ou
+um clip sem loop recebe mais de uma passagem. A regra é cancelada — e nunca
+reenviada — quando outro clip é escolhido na track (pelo RC Surface ou no
+Live), a track ou o transporte param, o mapeamento é removido ou alterado, o
+link do AbletonOSC cai, ou as atualizações de posição não provam quantas
+passagens tocaram (ela não chuta). Uma desconexão do celular não cancela uma
+regra armada. Se a janela passar com a regra ainda válida, o próximo pedido é
+enviado uma vez e marcado como **Retorno atrasado**.
+
+A precisão do retorno é uma hipótese ainda em validação no Live 12, não uma
+garantia. Quando o tempo exato importa mais que o gesto, configure a Follow
+Action no Live e escolha Deixar o Live decidir.
+
+Os **destinos** são guardados pelo nome da track e do clip, mais a identidade
+do Live na sessão aberta. Reordenar tracks ou cenas mantém o mesmo clip. Um
+clip renomeado, apagado ou duplicado não é lançado: o editor pede para
+escolher de novo. Um slot vazio nunca é disparado. Mapeamentos, presets,
+exportação e importação mantêm os alvos de Launch Clip e os reassociam pelo
+nome quando um Set é reaberto.
+
+Limites da API, em resumo: o SDK de Extensions não lança clips; o Live não
+oferece chamada para cancelar um lançamento na fila (só um stop ou outro
+lançamento); lançar um clip que já toca o reinicia; o AbletonOSC endereça
+tracks e clips por índice e não devolve erros, então o RC Surface confere o
+destino antes de cada pedido e só confia nos estados que o próprio Live
+informa.
+
 ### Campos do editor de mapeamento
 
 Cada destino mapeado pode ser ajustado pelo celular:

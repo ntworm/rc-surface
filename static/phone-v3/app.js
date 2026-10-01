@@ -2776,6 +2776,11 @@
         if (typeof window.handleTriggerNoteState === 'function') {
           window.handleTriggerNoteState(msg);
         }
+      } else if (msg.type === 'clip_launch_state') {
+        // Launch Clip state as Live reports it; MAP draws it.
+        if (typeof window.handleClipLaunchState === 'function') {
+          window.handleClipLaunchState(msg);
+        }
       } else if (msg.type === 'tempo') {
         if (typeof msg.tempo === 'number') {
           window.lastSessionBpm = msg.tempo;

@@ -4757,3 +4757,76 @@ body.mapping-mode [data-name].selected-control {
 @media (min-width: 1000px) and (min-height: 650px) {
   .audio-descriptor-group h3 { font-size: 12px; line-height: 15px; }
 }
+
+/* ── Launch Clip editor ──────────────────────────────────────────────────
+   Reuses the Trigger Note sections. State colour carries Live's report:
+   amber (focus) while a request waits, mode-C green while the clip plays,
+   mode-D red when the destination or the link is not usable. */
+.map-clip-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.map-clip-status {
+  flex: 1;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.map-clip-status[data-state="requested"],
+.map-clip-status[data-state="queued"],
+.map-clip-status[data-state="stopping"] { color: var(--accent); border-color: var(--accent); }
+.map-clip-status[data-state="playing"] { color: var(--mode-c); border-color: var(--mode-c); }
+.map-clip-status[data-state="missing"],
+.map-clip-status[data-state="ambiguous"],
+.map-clip-status[data-state="index_mismatch"],
+.map-clip-status[data-state="unavailable"],
+.map-clip-status[data-state="no_confirmation"] { color: var(--mode-d); border-color: var(--mode-d); }
+.map-clip-test { min-height: 44px; min-width: 64px; }
+.map-clip-note,
+.map-clip-rule-label {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text2);
+}
+.map-clip-rule-label { color: var(--text); }
+.map-clip-warning {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--mode-b);
+}
+.map-clip-warning:empty { display: none; }
+.map-clip-rule-state,
+.map-clip-quantization {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+.map-clip-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.map-clip-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 11px;
+}
+.map-clip-list-item .map-mini-btn,
+.map-clip-add { min-height: 44px; }

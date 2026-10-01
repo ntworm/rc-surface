@@ -6,6 +6,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { resolveTriggerNoteOptions } from "./trigger-note-clock.js";
 
+import { relinkClipLaunchTarget, validateClipLaunchTarget } from "./clip-launch.js";
+
 export const PROJECT_CONFIG_FORMAT = "ableton-rc-surface-project";
 export const PROJECT_CONFIG_VERSION = 1;
 
@@ -129,6 +131,8 @@ function trackOnlySignature(signature: SemanticTargetSignature): SemanticTargetS
 
 export function captureTargetSignature(song: any, target: Record<string, any>): SemanticTargetSignature {
   if (isMidiNoteTarget(target)) return captureTrackTargetSignature(song, target);
+  // Launch Clip keeps its identity in its own track/clip references.
+  if (target.type === "clip_launch") return { targetType: "clip_launch" };
   if (target.type === "tempo") return { targetType: "tempo" };
   const track = getTrack(song, target);
   const mixerTarget = target.type === "mixer_volume" || target.type === "mixer_pan" || target.type === "mixer_send";
@@ -329,6 +333,15 @@ export function validateProjectConfig(value: unknown): ProjectConfig {
         && !resolveTriggerNoteOptions(target).valid)) {
       throw new Error('Invalid .rcsurface note duration grid');
     }
+    for (const target of targets) {
+      if (target.type !== "clip_launch") continue;
+      const { signature: _signature, ...rest } = target;
+      try {
+        validateClipLaunchTarget(rest);
+      } catch (error) {
+        throw new Error(`Invalid .rcsurface Launch Clip mapping: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
   }
   return config as ProjectConfig;
 }
@@ -433,6 +446,18 @@ export function relinkProjectConfig(configValue: ProjectConfig, song: any): {
     for (const original of targets) {
       const { relinkCandidates: _untrustedCandidates, ...originalWithoutCandidates } = original;
       report.total++;
+      if (original.type === "clip_launch") {
+        const { signature: _signature, ...stored } = originalWithoutCandidates;
+        const relinked = relinkClipLaunchTarget(song, validateClipLaunchTarget(stored));
+        const status = relinked.relinkStatus ?? "missing";
+        if (status === "loaded") report.loaded++;
+        else if (status === "relinked") report.relinked++;
+        else if (status === "ambiguous") report.ambiguous++;
+        else if (status === "review") report.review++;
+        else report.missing++;
+        resolved.push(relinked as unknown as ProjectMappingTarget);
+        continue;
+      }
       const signature = isMidiNoteTarget(original)
         ? trackOnlySignature(original.signature ?? {})
         // Tempo is a singleton owned by Song. Old profiles accidentally stored

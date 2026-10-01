@@ -263,3 +263,117 @@ Temporary missing-hand or malformed-landmark frames hold the last real vision ou
 - `testTriggerNote({ control, targetIndex })`: Live-write command executed only on saved mapping bindings.
 - Evaluates within a trusted `CommandExecutionContext` (`clientId`, `isCurrent()`) created by the server from socket connection context (never from client request parameters).
 - Authorized only for `controller` or `admin` roles; unauthorized or stale sessions are rejected.
+
+## Launch Clip (`clip_launch`)
+
+A control asks Live for a Session clip through the existing AbletonOSC link.
+The Extensions SDK lists tracks, slots and clips (names, markers, session
+handles) but has no launch, stop, launch-quantization or Follow Action API.
+
+### OSC addresses (`CLIP` / `CLIP_RESPONSE`, frozen)
+
+Fire, stop, listen and read only. There is no `set` address: RC Surface never
+changes a clip, track or song property. A launch carries no extra argument,
+so Live applies its own launch quantization.
+
+```
+/live/clip_slot/fire                               track slot
+/live/track/stop_all_clips                         track (Live default: quantized)
+/live/track/start_listen|stop_listen/fired_slot_index     track
+/live/track/start_listen|stop_listen/playing_slot_index   track
+/live/clip/start_listen|stop_listen/playing_position      track slot
+/live/clip/get/launch_quantization                 track slot
+/live/clip/get/launch_mode                         track slot
+/live/clip/get/legato                              track slot
+/live/song/start_listen/clip_trigger_quantization
+/live/song/get/clip_trigger_quantization
+/live/song/get/track_names
+```
+
+The Launch Clip listeners are registered only while at least one Launch Clip
+mapping exists, and are re-registered with the song listeners. Replies to the
+getters are counted as replies, not as listener pushes.
+
+### Target schema
+
+| Field | Type | Rules |
+| ----- | ---- | ----- |
+| `type` | `'clip_launch'` | Required. |
+| `launchMode` | string | `'clip'`, `'list'` or `'stop'`. |
+| `track` | object | `{ trackIndex, trackName, trackSessionId? }`; regular tracks only (`trackKind` absent or `'track'`). |
+| `clip` | object | `clip` mode only: `{ slotIndex, clipName, clipSessionId? }`. |
+| `clips` | array | `list` mode only: 2 to 8 slot references, no repeated slot. |
+| `then` | object | `clip` mode only: `{ action: 'none' \| 'clip' \| 'stop', passes: 1..8, clip? }`; `clip` required for the `clip` action and different from the launched clip. |
+| `threshold` | number | Optional, `0.05..0.95`, default `0.5`. |
+
+Names are at most 128 characters; session ids are numeric strings. Unknown
+fields are rejected; generic editor fields (curve, ranges, safe loss) are
+dropped. Stored targets (profile, mappings file, preset, import) pass the same
+validation and are re-pointed at the open set by track and clip name: unique
+→ `loaded` or `relinked`, several → `ambiguous`, none → `missing`. Ambiguous
+and missing targets are never dispatched.
+
+### Dispatch
+
+- Activation: the real value rises through the threshold; continuous controls
+  re-arm 0.1 below it. `lost` values and disconnects change nothing. The edge
+  state is kept per stable client id.
+- Before every request the destination is resolved by session handle **and**
+  name, else by a unique name; the slot must hold the expected clip; group
+  tracks are refused; after any change in the track list the SDK names must
+  equal AbletonOSC `track_names`, otherwise the request is blocked
+  (`index_mismatch`).
+- Idempotence against Live's `fired_slot_index` / `playing_slot_index`: a clip
+  already waiting, or playing with nothing else waiting, or playing with its
+  own RC return waiting, sends nothing. A request Live has not acknowledged
+  yet blocks a duplicate for up to 1.5 s, then reports `no_confirmation`.
+- Advance list: the item after the playing clip; wraps; no new advance while
+  the requested item is waiting or unacknowledged.
+- Stop: `/live/track/stop_all_clips`, nothing when the track is stopped or a
+  stop (`-2`) is already waiting.
+
+### State message (`clip_launch_state`)
+
+Broadcast to every surface: `{ type, control, targetIndex, state, reason?,
+listIndex?, quantization?: { source: 'clip'|'global'|'unknown', label },
+warnings?, rule?: { state, reason?, refusal?, prediction? } }`. `state` is one
+of `idle`, `requested`, `queued`, `playing`, `stopping`, `stopped`,
+`no_confirmation`, `unavailable`, `missing`, `ambiguous`, `index_mismatch`.
+`queued` and `playing` are only reported from Live's listeners.
+
+### Continuation ("After it starts")
+
+RC Surface rules, not native Follow Actions. With start marker S, loop start
+A, loop end E and end marker F: `P1 = E − S`, `L = E − A`,
+`T(N) = P1 + (N − 1)L`; a non-loop clip allows N = 1 with `T = F − S`. Q is
+the effective quantum of the follow-up (the target clip's launch
+quantization, Global → song; the song setting for a stop) in beats with the
+current time signature.
+
+- The rule arms only after Live confirms the launched clip playing.
+- `T ≤ Q`: the follow-up is sent at confirmation. Otherwise it is sent on the
+  first `playing_position` push with `T − Q + 0.25 ≤ e < T`.
+- Each pair of pushes must prove at most one wrap from the song time Live
+  reports (wall clock × Live BPM when song time is not fresh); otherwise the
+  rule is cancelled (`insufficient_pushes`, `inconsistent_position`,
+  `transport_jump`).
+- Refused: Q None, window `Q − 0.25` shorter than 250 ms at the current BPM,
+  legato on, launch mode not Trigger, unwarped audio, invalid markers, loop
+  shorter than one beat, non-loop with N > 1.
+- Missed window with a valid rule: one late request, `rule.state: 'late'`.
+- Cancelled, never resent: another choice on the track (RC or Live), track or
+  transport stop, user stop, mapping removed or changed, AbletonOSC lost.
+  A non-loop clip ending on its own keeps the rule. A phone disconnect does
+  not cancel it.
+- Prediction: `landing = ceil(T/Q)·Q` after the start; `exact`, `repeat`
+  (looped clip plays the difference) or `silence` (non-loop).
+- Precision is a hypothesis to validate in Live 12, not a contract.
+
+### Command Authorization
+
+- `getClipTargets`: `read`. Tracks with clips, real names, slots, session ids,
+  markers.
+- `getClipLaunchStatus`: `read`. Current state of every Launch Clip target
+  and the last 20 rule diagnostics.
+- `testClipLaunch({ control, targetIndex })`: `live-write`. One activation of
+  a saved Launch Clip target with the same rules as a gesture.

@@ -449,6 +449,104 @@ When mapping a control to play notes on a MIDI track equipped with an `RcReceive
 - **Safe Lifecycle & Cancellation:** Pending Next Beat/Bar notes are cancelled on transport stop, meter change, seek, loop jump, stale transport clock (>1000 ms), unbinding, or disconnection. A sounding Next Beat/Bar note is released on transport stop, clock loss, unbinding, or disconnection; after a seek, loop jump, or meter change it ends on its own Note-Off. Now notes are not tied to the transport: Short ends on its own Note-Off and While Held when the control or gesture releases; unbinding or disconnection releases them early. Triggers executing >20 ms late are discarded as missed. Scheduling operates per track lane with latest-wins policy (capped at 64 active lanes).
   A retrigger on the same track retires the previous voice and OFF timer before the replacement ON, so the new note receives its full duration.
 
+### Launch Clip (`clip_launch`)
+
+Use **Launch Clip** when a control — typically a learned pose G1, G2 or G3 —
+should ask Live for a Session clip that is already in your Set. Everything is
+set up from MAP: no loopMIDI, no auxiliary track and no Ctrl+M mapping.
+Launch Clip needs AbletonOSC (see [INSTALL](INSTALL.md)); the Extensions SDK
+lists tracks and clips but cannot launch them.
+
+1. Select the control in MAP mode and tap **Launch Clip**.
+2. Pick a track. Only regular tracks that hold clips are listed, with their
+   real names; group tracks are not offered, because launching a group slot
+   fires a whole row.
+3. Pick a clip (slot number and real clip name).
+
+**Choice** — one per mapping:
+
+- **Launch clip** (default): each activation asks for that clip. Holding the
+  pose does not repeat it, releasing lets the clip keep playing, and another
+  pose chooses another clip directly, without a neutral pose in between. If
+  Live already has that clip waiting or playing, nothing is sent.
+- **Advance list**: 2 to 8 clips of the same track. Each new activation asks
+  for the clip after the one Live is playing and wraps at the end. Only one
+  advance per quantized entry: while the requested clip is still waiting in
+  Live, further activations do not move the list again.
+- **Stop track**: Live's track stop, quantized by Live. It also cancels a
+  launch that is still waiting on that track.
+
+**Quantization** is always Live's: the clip's own launch quantization, or the
+song setting when the clip says Global. The editor shows the effective value
+read-only. RC Surface never changes a clip, track or song setting.
+
+**State** comes only from what Live reports back: Ready, Sent — waiting for
+Live, Waiting in Live (next boundary), Playing, Stop waiting in Live, Track
+stopped, No confirmation from Live, AbletonOSC disconnected, Destination
+missing, More than one match, and a blocked state when Live and AbletonOSC
+list the tracks differently. Sending a message is never shown as playback.
+**Test** runs one activation with the same rules as the gesture.
+
+A hand that leaves the frame is not a release, and neither is a phone that
+disconnects: the pose state is kept, so it cannot launch twice. Reconnecting
+never resends anything. Small oscillations are filtered by the pose
+recognizer and, on top of that, a request Live has already received is not
+repeated.
+
+Changing your mind before the boundary (for example G2 and then G1 while Base
+plays): the API has no "cancel launch", so asking for Base again replaces the
+waiting clip and, as documented for Live's API, restarts Base at the
+boundary.
+
+**After it starts** — only in Launch clip mode, separate from the choice:
+
+- **Let Live decide** (default): the clip loops, or its native Follow Action
+  in Live takes over.
+- **RC: go to clip** after N passes (1 to 8), for example Virada → Base after
+  one pass.
+- **RC: stop track** after N passes.
+
+These are RC Surface rules. They do not read or change the Follow Actions in
+Live, which no available API exposes. If the clip also has a native Follow
+Action, both act: use one or the other.
+
+How a rule counts: with start marker S, loop start A, loop end E and end
+marker F, the first pass lasts `E − S` and every later pass `E − A`, so N
+passes last `T = (E − S) + (N − 1)(E − A)`. A clip without loop plays once
+(`T = F − S`, N must be 1). The rule waits until Live confirms the clip is
+playing, follows the clip position Live reports, and hands the next request to
+Live inside the last quantum before `T`; Live still does the quantization. The
+editor predicts the result: the return lands at the end of pass N, or the
+clip plays some beats more (looped clip), or there are some beats of silence
+(clip without loop).
+
+A rule is refused when Live's quantization is None, the quantum is too short
+at the current tempo (under 250 ms of window), the clip has Legato on or a
+launch mode other than Trigger, the clip is unwarped audio, or a clip without
+loop is given more than one pass. A rule is cancelled — and never resent —
+when another clip is chosen on the track (from RC Surface or in Live), the
+track or the transport stops, the mapping is removed or changed, the
+AbletonOSC link drops, or the position updates cannot prove how many passes
+were played (it does not guess). A phone disconnect does not cancel an armed
+rule. If the window is missed while the rule is still valid, the next request
+is sent once and marked **Late return**.
+
+The precision of the return is a hypothesis still being validated in
+Live 12, not a guarantee. When the exact timing matters more than the
+gesture, configure the Follow Action in Live and choose Let Live decide.
+
+**Destinations** are kept by track and clip name plus Live's identity for the
+open session. Reordering tracks or scenes keeps the same clip. A renamed,
+deleted or duplicated clip is not launched: the editor asks you to choose it
+again. An empty slot is never fired. Mappings, presets, export and import
+keep Launch Clip targets and re-point them by name when a set is reopened.
+
+API limits, in short: the Extensions SDK cannot launch clips; Live offers no
+call to cancel a queued launch (only a stop or another launch); launching a
+clip that is playing restarts it; AbletonOSC addresses tracks and clips by
+index and does not report errors back, so RC Surface checks the destination
+before each request and only trusts Live's own state reports.
+
 ### Mapping editor fields
 
 Each mapped target can be adjusted from the phone:

@@ -16,7 +16,7 @@ import { TextDecoder, TextEncoder } from 'node:util';
 // (resolved at runtime by the host's module loader) instead of the wrapper.
 import * as osc from 'osc-min';
 import { EventEmitter } from 'node:events';
-import { LISTEN, GET, CMD, RESPONSE, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
+import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
 
 if (typeof (globalThis as any).TextEncoder === 'undefined') {
   (globalThis as any).TextEncoder = TextEncoder;
@@ -46,8 +46,22 @@ export const LISTENER_QUIET_MS = OSC_LISTENER_QUIET_MS;
  */
 export const LISTENER_REREGISTER_MS = 10_000;
 
-const GET_ADDRESSES: ReadonlySet<string> = new Set(Object.values(GET));
+// Launch Clip getters answer on their own address, exactly like GET: a reply
+// to them must not pass for a listener push.
+const GET_ADDRESSES: ReadonlySet<string> = new Set([
+  ...Object.values(GET),
+  CLIP.getLaunchQuantization,
+  CLIP.getLaunchMode,
+  CLIP.getLegato,
+  CLIP.getGlobalQuantization,
+  CLIP.getTrackNames,
+]);
 const PENDING_REPLY_CAP = 8;
+
+const oscInt = (value: number) => ({ type: 'integer', value: Math.trunc(value) });
+
+/** What Live reports about one clip property Launch Clip reads. */
+export type ClipPropertyName = 'launch_quantization' | 'launch_mode' | 'legato';
 
 export type TransportLiteState = {
   available: boolean;
@@ -108,6 +122,18 @@ export class OSCTransport extends EventEmitter {
    */
   public lastPushAt: number | null = null;
   private readonly pendingReplies = new Map<string, number>();
+
+  /**
+   * Launch Clip. Off until a Launch Clip mapping exists, so a set without one
+   * pays no extra OSC traffic. The listeners are remembered here so that a
+   * re-registration (AbletonOSC rebuilt, link recovered) restores them along
+   * with the song ones.
+   */
+  public clipLaunchActive = false;
+  /** Song.clip_trigger_quantization as Live last reported it. */
+  public globalQuantization: number | null = null;
+  private readonly trackSlotListeners = new Set<number>();
+  private readonly clipPositionListeners = new Map<string, [number, number]>();
 
   constructor() {
     super();
@@ -261,6 +287,12 @@ export class OSCTransport extends EventEmitter {
     }
     this.state.available = false;
     this.state.connected = false;
+    // A later start() belongs to a new session: nothing of this one is
+    // re-registered on its behalf.
+    this.clipLaunchActive = false;
+    this.globalQuantization = null;
+    this.trackSlotListeners.clear();
+    this.clipPositionListeners.clear();
   }
 
   public send(address: string, args: any[] = []): void {
@@ -410,6 +442,52 @@ export class OSCTransport extends EventEmitter {
         }
       }
       this.emit('selection', this.state);
+    } else if (address === CLIP_RESPONSE.globalQuantization) {
+      const val = args[0]?.value;
+      if (typeof val === 'number' && Number.isInteger(val)) {
+        this.globalQuantization = val;
+        this.emit('clip-global-quantization', val);
+      }
+    } else if (address === CLIP_RESPONSE.firedSlot || address === CLIP_RESPONSE.playingSlot) {
+      const trackIndex = args[0]?.value;
+      const value = args[1]?.value;
+      if (Number.isInteger(trackIndex) && typeof value === 'number' && Number.isFinite(value)) {
+        this.emit('clip-track-slot', {
+          trackIndex,
+          kind: address === CLIP_RESPONSE.firedSlot ? 'fired' : 'playing',
+          value: Math.trunc(value),
+          at: now,
+        });
+      }
+    } else if (address === CLIP_RESPONSE.playingPosition) {
+      const trackIndex = args[0]?.value;
+      const slotIndex = args[1]?.value;
+      const position = args[2]?.value;
+      if (Number.isInteger(trackIndex) && Number.isInteger(slotIndex)
+        && typeof position === 'number' && Number.isFinite(position)) {
+        this.emit('clip-position', { trackIndex, slotIndex, position, at: now });
+      }
+    } else if (
+      address === CLIP_RESPONSE.launchQuantization
+      || address === CLIP_RESPONSE.launchMode
+      || address === CLIP_RESPONSE.legato
+    ) {
+      const trackIndex = args[0]?.value;
+      const slotIndex = args[1]?.value;
+      const raw = args[2]?.value;
+      const property: ClipPropertyName = address === CLIP_RESPONSE.launchQuantization
+        ? 'launch_quantization'
+        : address === CLIP_RESPONSE.launchMode ? 'launch_mode' : 'legato';
+      const value = typeof raw === 'boolean' ? (raw ? 1 : 0) : raw;
+      if (Number.isInteger(trackIndex) && Number.isInteger(slotIndex)
+        && typeof value === 'number' && Number.isFinite(value)) {
+        this.emit('clip-property', { trackIndex, slotIndex, property, value: Math.trunc(value) });
+      }
+    } else if (address === CLIP_RESPONSE.trackNames) {
+      const names = args.map((arg: any) => arg?.value);
+      if (names.every((name: unknown) => typeof name === 'string')) {
+        this.emit('clip-track-names', names);
+      }
     }
 
     if (updated) {
@@ -434,7 +512,83 @@ export class OSCTransport extends EventEmitter {
     this.send(LISTEN.currentSongTime);
     this.send(LISTEN.beat);
     this.send(LISTEN.selectedTrack);
+    if (this.clipLaunchActive) {
+      this.send(CLIP.listenGlobalQuantization);
+      for (const trackIndex of this.trackSlotListeners) this.sendTrackSlotListen(trackIndex);
+      for (const [trackIndex, slotIndex] of this.clipPositionListeners.values()) {
+        this.send(CLIP.listenPlayingPosition, [oscInt(trackIndex), oscInt(slotIndex)]);
+      }
+    }
     this.lastListenerRegistrationAt = now;
+  }
+
+  // ── Launch Clip ──────────────────────────────────────────────────────────
+
+  /** Turned on while at least one Launch Clip mapping exists. */
+  public setClipLaunchActive(active: boolean): void {
+    if (this.clipLaunchActive === active) return;
+    this.clipLaunchActive = active;
+    if (active) {
+      this.send(CLIP.listenGlobalQuantization);
+      this.send(CLIP.getGlobalQuantization);
+      return;
+    }
+    for (const trackIndex of [...this.trackSlotListeners]) this.unlistenTrackSlots(trackIndex);
+    for (const [trackIndex, slotIndex] of [...this.clipPositionListeners.values()]) {
+      this.unlistenClipPosition(trackIndex, slotIndex);
+    }
+  }
+
+  /** Press the slot's launch button. No extra argument: Live quantizes. */
+  public fireClipSlot(trackIndex: number, slotIndex: number): void {
+    this.send(CLIP.fireSlot, [oscInt(trackIndex), oscInt(slotIndex)]);
+  }
+
+  /** Track.stop_all_clips with Live's default (quantized). */
+  public stopTrackClips(trackIndex: number): void {
+    this.send(CLIP.stopTrack, [oscInt(trackIndex)]);
+  }
+
+  private sendTrackSlotListen(trackIndex: number): void {
+    this.send(CLIP.listenFiredSlot, [oscInt(trackIndex)]);
+    this.send(CLIP.listenPlayingSlot, [oscInt(trackIndex)]);
+  }
+
+  public listenTrackSlots(trackIndex: number): void {
+    this.trackSlotListeners.add(trackIndex);
+    this.sendTrackSlotListen(trackIndex);
+  }
+
+  public unlistenTrackSlots(trackIndex: number): void {
+    if (!this.trackSlotListeners.delete(trackIndex)) return;
+    this.send(CLIP.unlistenFiredSlot, [oscInt(trackIndex)]);
+    this.send(CLIP.unlistenPlayingSlot, [oscInt(trackIndex)]);
+  }
+
+  public get listenedTrackSlots(): number[] {
+    return [...this.trackSlotListeners];
+  }
+
+  public listenClipPosition(trackIndex: number, slotIndex: number): void {
+    this.clipPositionListeners.set(`${trackIndex}:${slotIndex}`, [trackIndex, slotIndex]);
+    this.send(CLIP.listenPlayingPosition, [oscInt(trackIndex), oscInt(slotIndex)]);
+  }
+
+  public unlistenClipPosition(trackIndex: number, slotIndex: number): void {
+    if (!this.clipPositionListeners.delete(`${trackIndex}:${slotIndex}`)) return;
+    this.send(CLIP.unlistenPlayingPosition, [oscInt(trackIndex), oscInt(slotIndex)]);
+  }
+
+  /** Read-only: the clip's launch quantization, launch mode and legato. */
+  public requestClipProperties(trackIndex: number, slotIndex: number): void {
+    const args = [oscInt(trackIndex), oscInt(slotIndex)];
+    this.send(CLIP.getLaunchQuantization, args);
+    this.send(CLIP.getLaunchMode, args);
+    this.send(CLIP.getLegato, args);
+  }
+
+  public requestTrackNames(): void {
+    this.send(CLIP.getTrackNames);
   }
 
   /**

@@ -4,6 +4,26 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
+## [Unreleased]
+
+### Added
+
+- **Launch Clip** in MAP, beside Bind and Trigger Note: a control — a learned
+  pose G1–G3, a pad, a detector — asks Live for a Session clip chosen by its
+  real track and clip names, through the existing AbletonOSC link and with
+  Live's own launch quantization. Choice per mapping: launch a clip, advance a
+  list (one step per quantized entry) or stop the track. Holding a pose does
+  not repeat, hand loss and reconnection never relaunch, and a request Live
+  already has is not sent again. The editor shows destination, effective
+  quantization and the state Live reports (waiting, playing), never a sent
+  message as playback.
+- Optional **After it starts** rules, labelled as RC Surface rules and
+  separate from native Follow Actions (which no API exposes): go to another
+  clip or stop the track after N passes, counted from Live's clip position
+  with start-marker and loop-start offsets, refused or cancelled instead of
+  guessing, with one late request when the window is missed. Return precision
+  is still to be validated in Live 12.
+
 ## [1.0.2] — 2026-09-30
 
 ### Added

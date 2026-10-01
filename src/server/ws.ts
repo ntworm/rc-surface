@@ -477,6 +477,19 @@ export function broadcastTriggerNoteState(
 }
 
 /**
+ * Launch Clip state as Live reports it (queued, playing, rule sent...). Every
+ * surface shows the same mapping table, so every open client gets it.
+ */
+export function broadcastClipLaunchState(status: object): void {
+  const payload = JSON.stringify({ type: "clip_launch_state", ...status });
+  for (const c of trackedClients.values()) {
+    if (c.ws.readyState === WebSocket.OPEN) {
+      sendWithBackpressure(c.ws, payload, "critical");
+    }
+  }
+}
+
+/**
  * Minimum spacing between client_update broadcasts for the same client.
  * The admin dashboard is a monitor, not an audio path: 20 Hz is past what it
  * can render, while the producers behind it run at 30 Hz (snapshots) and

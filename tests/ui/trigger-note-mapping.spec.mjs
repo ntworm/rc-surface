@@ -168,8 +168,9 @@ test.describe('Trigger Note Mapping Editor UI', () => {
     if (testInfo.project.name === 'Desktop Chrome') await detail.screenshot({ path: 'test-results/top-mappings-note.png' });
     await page.evaluate(() => { window.mobileMappingState.currentMappings['sensor.vision.gesture.1'] = []; window.renderDetail(); });
     await expect(detail.locator('.map-detail-title + .map-detail-actions')).toHaveCount(1);
-    await expect(detail.locator('.map-detail-actions button')).toHaveCount(5);
-    await expect(detail.locator('.map-entry-choice')).toHaveCount(2);
+    // Bind, Trigger Note, Launch Clip, Unbind, Clear Control, Clear All.
+    await expect(detail.locator('.map-detail-actions button')).toHaveCount(6);
+    await expect(detail.locator('.map-entry-choice')).toHaveCount(3);
   });
   for (const vp of [
     { name: 'mobile-portrait', width: 360, height: 740 },
@@ -325,7 +326,7 @@ test.describe('Trigger Note Mapping Editor UI', () => {
     await expect(detail.locator('.map-note-mode-select')).toHaveCount(0);
     await expect(detail.locator('.map-note-management')).not.toHaveAttribute('open', '');
     const actions = detail.locator('.map-detail-actions');
-    await expect(actions.locator('button')).toHaveCount(5);
+    await expect(actions.locator('button')).toHaveCount(6);
     for (const button of await actions.locator('button').all()) await expect(button).toBeInViewport();
     const hiddenButtons = detail.locator('.map-note-management .map-detail-actions');
     await expect(hiddenButtons).toHaveCount(0);
@@ -398,7 +399,7 @@ test.describe('Trigger Note Mapping Editor UI', () => {
       window.renderDetail();
     });
     await detail.evaluate((element) => { element.scrollTop = 0; });
-    await expect(detail.locator('.map-entry-choice')).toHaveCount(2);
+    await expect(detail.locator('.map-entry-choice')).toHaveCount(3);
     if (testInfo.project.name === 'Desktop Chrome') await detail.screenshot({ path: 'test-results/mapping-entry.png' });
     await detail.locator('.map-entry-choice[data-kind="bind"]').click();
     await expect(detail.locator('.map-picker-tree')).toBeVisible();

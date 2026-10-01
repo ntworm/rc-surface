@@ -1604,3 +1604,33 @@ test('new desktop vision bindings default to hold while other controls keep rele
   assert.match(bind, /takeoverMode:\s*['"]scale['"]/);
   assert.match(source, /t\.neutralPolicy \|\| .*sensor\.vision\./);
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Launch Clip targets: shown in the panel, edited on the phone, never rewritten
+// ───────────────────────────────────────────────────────────────────────────
+
+test('a Launch Clip target shows as its own chip and survives removing a sibling target untouched', () => {
+  const { context, document } = loadMappingsModule();
+  const calls = [];
+  const launch = {
+    type: 'clip_launch', trackIndex: 1,
+    track: { trackIndex: 1, trackName: 'Drums', trackSessionId: '21' },
+    launchMode: 'clip', clip: { slotIndex: 2, clipName: 'Virada', clipSessionId: '24' },
+    then: { action: 'clip', passes: 1, clip: { slotIndex: 0, clipName: 'Base', clipSessionId: '22' } },
+  };
+  context.window.selectedControl = 'pad-1';
+  context.window.currentMappings = { 'pad-1': [{ type: 'mixer_volume', trackIndex: 0, label: 'Vol' }, launch] };
+  context.window.sendWS = (cmd, args, cb) => {
+    calls.push({ cmd, args: JSON.parse(JSON.stringify(args)) });
+    if (cb) cb({ ok: true, result: {} });
+  };
+
+  context.window.renderMappingDetail();
+  const targets = document.getElementById('map-detail-targets');
+  assert.match(collectText(targets), /Launch Clip · Drums · Virada/);
+  assert.equal(targets.querySelectorAll('select.target-curve').length, 1, 'no curve editor for a launch');
+
+  context.window.removeBoundTarget(0);
+  assert.equal(calls.at(-1).cmd, 'setMapping');
+  assert.deepEqual(calls.at(-1).args.targets, [launch]);
+});

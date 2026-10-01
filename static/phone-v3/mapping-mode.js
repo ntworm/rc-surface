@@ -30,6 +30,9 @@
     pickerFilter: '',
     pendingConflict: null,
     changeTargetIndex: null,
+    clipTargets: null,
+    clipPickerTrack: null,
+    clipPickerPurpose: null,
   };
 
   let triggerFeedbackState = {
@@ -195,6 +198,9 @@
   function targetLabel(target, includeMode = true) {
     if (!target) return '';
     if (target.type === 'tempo') return 'Song Tempo';
+    if (target.type === 'clip_launch') {
+      return includeMode ? `${clipLaunchSummary(target)} · ${T('mm.launchClip', 'Launch Clip')}` : clipLaunchSummary(target);
+    }
     const targetKind = target.trackKind || 'track';
     const track = state.allTargets.find((item) => item.trackIndex === target.trackIndex && (item.trackKind || 'track') === targetKind);
     const trackName = track ? track.name : `Track ${(target.trackIndex ?? 0) + 1}`;
@@ -215,6 +221,10 @@
 
   function isSameTarget(a, b) {
     if (!a || !b || a.type !== b.type) return false;
+    if (a.type === 'clip_launch') {
+      const slots = (t) => JSON.stringify([t.launchMode, t.track?.trackName, t.clip?.slotIndex, (t.clips || []).map((c) => c.slotIndex)]);
+      return slots(a) === slots(b);
+    }
     const aKind = a.trackKind || 'track';
     const bKind = b.trackKind || 'track';
     if (aKind !== bKind) return false;
@@ -232,6 +242,8 @@
   }
 
   function findConflict(target) {
+    // Two controls may well ask for the same clip (a pad and a pose).
+    if (target?.type === 'clip_launch') return null;
     const selectedKey = mappingKey(state.selectedControl);
     const legacySelectedKey = state.selectedClient ? `${state.selectedClient}::${state.selectedControl}` : null;
     for (const [control, targets] of Object.entries(state.currentMappings)) {
@@ -463,6 +475,8 @@
 
   function closePicker() {
     state.pickerMode = null;
+    state.clipPickerTrack = null;
+    state.clipPickerPurpose = null;
     state.midiTargetMode = 'trigger_note';
     state.pendingConflict = null;
     state.changeTargetIndex = null;
@@ -897,6 +911,14 @@
       renderMidiPicker(el);
       return;
     }
+    if (state.pickerMode === 'clipTrack') {
+      renderClipTrackPicker(el);
+      return;
+    }
+    if (state.pickerMode === 'clip') {
+      renderClipPicker(el);
+      return;
+    }
     if (!state.selectedControl) {
       el.textContent = T('mm.selectControl', 'Select a control');
       return;
@@ -1104,7 +1126,9 @@
       row.setAttribute('aria-pressed', String(i === state.selectedTargetIndex));
       const type = document.createElement('span');
       type.className = 'map-bound-type';
-      type.textContent = targets[i].mode === 'trigger_note' ? T('mm.triggerNote', 'Trigger Note') : T('mm.bind', 'Bind');
+      type.textContent = targets[i].type === 'clip_launch'
+        ? T('mm.launchClip', 'Launch Clip')
+        : targets[i].mode === 'trigger_note' ? T('mm.triggerNote', 'Trigger Note') : T('mm.bind', 'Bind');
       const destination = document.createElement('span');
       destination.className = 'map-bound-destination';
       destination.textContent = targetLabel(targets[i], false);
@@ -1148,6 +1172,12 @@
     trigger.addEventListener('click', () => openMidiTrackPicker('trigger_note'));
     actions.appendChild(trigger);
 
+    const launch = document.createElement('button');
+    launch.type = 'button';
+    launch.textContent = T('mm.launchClip', 'Launch Clip');
+    launch.addEventListener('click', () => openClipTrackPicker('new'));
+    actions.appendChild(launch);
+
     const unbind = document.createElement('button');
     unbind.type = 'button';
     unbind.className = 'map-action-danger';
@@ -1180,8 +1210,10 @@
     clearAll.textContent = T('mm.clearAllMappings', 'Clear All Mappings');
     clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
     actions.appendChild(clearAll);
-    bind.classList.toggle('active', targets.length > 0 && !isNoteEditor);
+    const isClipEditor = targets[state.selectedTargetIndex]?.type === 'clip_launch';
+    bind.classList.toggle('active', targets.length > 0 && !isNoteEditor && !isClipEditor);
     trigger.classList.toggle('active', isNoteEditor);
+    launch.classList.toggle('active', isClipEditor);
 
     if (!targets.length) {
       const entry = document.createElement('div');
@@ -1192,6 +1224,7 @@
       for (const [kind, label, description, action] of [
         ['bind', T('mm.bind', 'Bind'), T('mm.bindDescription', 'Control a Live parameter, continuously or as a toggle.'), openTargetPicker],
         ['note', T('mm.triggerNote', 'Trigger Note'), T('mm.noteDescription', 'Play a MIDI note when this control activates.'), () => openMidiTrackPicker('trigger_note')],
+        ['clip', T('mm.launchClip', 'Launch Clip'), T('mm.launchClipDescription', 'Ask Live for a Session clip when this control activates.'), () => openClipTrackPicker('new')],
       ]) {
         const choice = document.createElement('button');
         choice.type = 'button';
@@ -2072,11 +2105,576 @@
     container.appendChild(wrap);
   }
 
+  // ── Launch Clip ─────────────────────────────────────────────────────────
+  //
+  // Flow: control → Launch Clip → track → clip → editor. The editor keeps the
+  // choice of clip apart from what happens after it starts, shows the
+  // destination, the quantization Live will use and the state Live reports.
+  // Nothing here claims "playing" or "waiting" on its own: those words only
+  // come from clip_launch_state messages, which the host derives from Live.
+
+  const clipLaunchStatus = new Map();
+  // Elements of the editor on screen, so a state message can update them
+  // without redrawing (and without stealing focus from an open select).
+  let clipEditorRefs = null;
+  // English text for keys built at run time; the catalog supplies pt-BR.
+  const LC_STATE_TEXT = {
+    idle: 'Ready', requested: 'Sent — waiting for Live', queued: 'Waiting in Live (next boundary)',
+    playing: 'Playing', stopping: 'Stop waiting in Live', stopped: 'Track stopped',
+    no_confirmation: 'No confirmation from Live', unavailable: 'AbletonOSC disconnected',
+    missing: 'Destination missing — choose it again', ambiguous: 'More than one match — choose it again',
+    index_mismatch: 'Live and AbletonOSC list tracks differently — launch blocked',
+  };
+  const LC_RULE_TEXT = {
+    ready: 'Rule ready', waiting: 'Rule waits for the clip to start', armed: 'Rule counting passes',
+    sent: 'Next request sent to Live', late: 'Late return', done: 'Rule done', refused: 'Rule unavailable',
+  };
+  const LC_REFUSAL_TEXT = {
+    quantization_none: 'Needs a Live quantization other than None.',
+    window_too_short: 'Quantization too short at this tempo for a safe hand-off. Use a native Follow Action.',
+    legato: 'This clip has Legato on in Live; its start cannot be counted.',
+    launch_mode: 'This clip is not in Trigger launch mode in Live.',
+    non_loop_passes: 'A clip without loop plays once: use 1 pass.',
+    unwarped_audio: 'Unwarped audio cannot be counted in beats.',
+  };
+  const LC_REASON_TEXT = {
+    new_choice: 'new choice', new_choice_live: 'clip launched in Live', track_stop: 'track stopped',
+    transport_stopped: 'transport stopped', stopped: 'clip stopped', osc_lost: 'AbletonOSC lost',
+    mapping_changed: 'mapping changed', insufficient_pushes: 'too few position updates to count',
+    inconsistent_position: 'inconsistent position', transport_jump: 'playhead jumped',
+    follow_missing: 'next clip missing', track_missing: 'track missing',
+  };
+  const LC_WARNING_TEXT = {
+    launch_mode: 'Clip launch mode in Live is not Trigger; RC Surface only presses launch.',
+    legato: 'Clip has Legato on in Live.',
+  };
+  const has = (table, key) => Object.prototype.hasOwnProperty.call(table, key);
+
+  function clipStatusKey(control, targetIndex) {
+    return `${control}::${targetIndex}`;
+  }
+
+  window.handleClipLaunchState = function (msg) {
+    if (!msg || msg.type !== 'clip_launch_state' || typeof msg.control !== 'string') return;
+    const { type: _type, ...status } = msg;
+    clipLaunchStatus.set(clipStatusKey(status.control, Number(status.targetIndex) || 0), status);
+    if (status.control === mappingKey(state.selectedControl) && Number(status.targetIndex) === state.selectedTargetIndex) {
+      renderClipLaunchStatus();
+    }
+  };
+
+  async function ensureClipTargets(force = false) {
+    if (state.clipTargets && !force) return state.clipTargets;
+    const response = await command('getClipTargets');
+    if (!response || !response.ok) {
+      setStatus(response?.error || 'getClipTargets failed', 'error');
+      state.clipTargets = null;
+      return null;
+    }
+    state.clipTargets = response.result || { tracks: [], osc: {} };
+    return state.clipTargets;
+  }
+
+  async function refreshClipLaunchStatus() {
+    const response = await command('getClipLaunchStatus');
+    if (!response || !response.ok) return;
+    for (const status of response.result?.statuses || []) {
+      clipLaunchStatus.set(clipStatusKey(status.control, status.targetIndex), status);
+    }
+    renderClipLaunchStatus();
+  }
+
+  function clipTrackRef(track) {
+    return { trackIndex: track.trackIndex, trackName: track.name, ...(track.sessionId ? { trackSessionId: track.sessionId } : {}) };
+  }
+
+  function clipSlotRef(clip) {
+    return { slotIndex: clip.slotIndex, clipName: clip.name, ...(clip.sessionId ? { clipSessionId: clip.sessionId } : {}) };
+  }
+
+  function clipTrackFor(target) {
+    const tracks = state.clipTargets?.tracks || [];
+    return tracks.find((track) => target?.track?.trackSessionId && track.sessionId === target.track.trackSessionId)
+      || tracks.find((track) => track.name === target?.track?.trackName)
+      || null;
+  }
+
+  function slotLabel(ref) {
+    return ref ? `${ref.clipName} · ${T('lc.slot', 'Slot {n}', { n: ref.slotIndex + 1 })}` : '';
+  }
+
+  function clipLaunchSummary(target) {
+    const trackName = target?.track?.trackName || `Track ${(target?.trackIndex ?? 0) + 1}`;
+    if (target.launchMode === 'stop') return `${trackName} · ${T('lc.modeStop', 'Stop track')}`;
+    if (target.launchMode === 'list') return `${trackName} · ${(target.clips || []).map((clip) => clip.clipName).join(' → ')}`;
+    return `${trackName} · ${target.clip?.clipName || ''}`;
+  }
+
+  function openClipTrackPicker(purpose = 'new') {
+    state.pickerMode = 'clipTrack';
+    state.clipPickerPurpose = purpose;
+    state.clipPickerTrack = null;
+    renderDetail();
+    void ensureClipTargets(true).then(() => { if (state.pickerMode === 'clipTrack') renderDetail(); });
+  }
+
+  function openClipPicker(track, purpose) {
+    state.pickerMode = 'clip';
+    state.clipPickerPurpose = purpose;
+    state.clipPickerTrack = track;
+    renderDetail();
+  }
+
+  function pickerHead(container, title, onBack) {
+    const head = document.createElement('div');
+    head.className = 'map-picker-head';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.textContent = T('mm.back', 'Back');
+    back.addEventListener('click', onBack);
+    head.appendChild(back);
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+    head.appendChild(strong);
+    container.appendChild(head);
+  }
+
+  function renderClipTrackPicker(container) {
+    container.innerHTML = '';
+    pickerHead(container, `${T('mm.launchClip', 'Launch Clip')} · ${T('lc.pickTrack', 'Choose a track')}`, closePicker);
+    const list = document.createElement('div');
+    list.className = 'map-picker-list';
+    container.appendChild(list);
+    const data = state.clipTargets;
+    if (!data) {
+      list.textContent = T('lc.loading', 'Loading…');
+      return;
+    }
+    if (data.osc && data.osc.connected === false) {
+      const warning = document.createElement('div');
+      warning.className = 'map-clip-warning';
+      warning.textContent = T('lc.oscMissing', 'Launch Clip needs AbletonOSC connected (see INSTALL).');
+      container.insertBefore ? container.insertBefore(warning, list) : container.appendChild(warning);
+    }
+    const tracks = data.tracks || [];
+    if (!tracks.length) {
+      list.textContent = T('lc.noTracks', 'No track with Session clips. Create clips in Live, then refresh.');
+      return;
+    }
+    for (const track of tracks) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'map-picker-row';
+      row.dataset.clipTrack = String(track.trackIndex);
+      row.textContent = track.name || `Track ${track.trackIndex + 1}`;
+      row.addEventListener('click', () => {
+        if (state.clipPickerPurpose === 'stop') {
+          void createClipLaunchTarget(track, null);
+          return;
+        }
+        openClipPicker(track, state.clipPickerPurpose);
+      });
+      list.appendChild(row);
+    }
+  }
+
+  function renderClipPicker(container) {
+    container.innerHTML = '';
+    const track = state.clipPickerTrack;
+    const purpose = state.clipPickerPurpose;
+    const back = purpose === 'new' || purpose === 'change' ? () => openClipTrackPicker(purpose) : closePicker;
+    pickerHead(container, `${track?.name || ''} · ${T('lc.pickClip', 'Choose a clip')}`, back);
+    const list = document.createElement('div');
+    list.className = 'map-picker-list';
+    container.appendChild(list);
+    const target = targetsForControl(state.selectedControl)[state.selectedTargetIndex];
+    const exclude = new Set();
+    if (purpose === 'listAdd') for (const clip of target?.clips || []) exclude.add(clip.slotIndex);
+    if (purpose === 'then' && target?.clip) exclude.add(target.clip.slotIndex);
+    for (const clip of track?.clips || []) {
+      if (exclude.has(clip.slotIndex)) continue;
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'map-picker-row';
+      row.dataset.clipSlot = String(clip.slotIndex);
+      row.textContent = `${T('lc.slot', 'Slot {n}', { n: clip.slotIndex + 1 })} · ${clip.name}`;
+      row.addEventListener('click', async () => {
+        if (purpose === 'new' || purpose === 'change') {
+          await createClipLaunchTarget(track, clip);
+          return;
+        }
+        const ok = await saveClipLaunchTarget((next) => {
+          if (purpose === 'listAdd') next.clips = [...(next.clips || []), clipSlotRef(clip)];
+          if (purpose === 'then') next.then = { ...(next.then || {}), action: 'clip', passes: next.then?.passes || 1, clip: clipSlotRef(clip) };
+        });
+        if (ok) closePicker();
+      });
+      list.appendChild(row);
+    }
+  }
+
+  async function createClipLaunchTarget(track, clip) {
+    if (!state.selectedControl || !track) return false;
+    const target = clip
+      ? { type: 'clip_launch', trackIndex: track.trackIndex, track: clipTrackRef(track), launchMode: 'clip', clip: clipSlotRef(clip) }
+      : { type: 'clip_launch', trackIndex: track.trackIndex, track: clipTrackRef(track), launchMode: 'stop' };
+    const targets = targetsForControl(state.selectedControl).slice();
+    if (state.clipPickerPurpose === 'change' && targets[state.selectedTargetIndex]?.type === 'clip_launch') {
+      targets[state.selectedTargetIndex] = target;
+    } else {
+      targets.push(target);
+      state.selectedTargetIndex = targets.length - 1;
+    }
+    const response = await saveTargetsForSelected(targets);
+    if (response && response.ok !== false) {
+      closePicker();
+      void refreshClipLaunchStatus();
+      return true;
+    }
+    return false;
+  }
+
+  async function saveClipLaunchTarget(mutate) {
+    if (!state.selectedControl) return false;
+    const targets = targetsForControl(state.selectedControl).slice();
+    const current = targets[state.selectedTargetIndex];
+    if (!current || current.type !== 'clip_launch') return false;
+    const next = JSON.parse(JSON.stringify(current));
+    delete next.relinkStatus;
+    delete next.relinkConfidence;
+    mutate(next);
+    targets[state.selectedTargetIndex] = next;
+    const response = await saveTargetsForSelected(targets);
+    void refreshClipLaunchStatus();
+    return !!response && response.ok !== false;
+  }
+
+  function setClipLaunchMode(mode, track) {
+    return saveClipLaunchTarget((next) => {
+      const first = next.clip || (next.clips || [])[0] || null;
+      if (mode === 'clip') {
+        next.launchMode = 'clip';
+        next.clip = first || (track?.clips?.[0] ? clipSlotRef(track.clips[0]) : undefined);
+        delete next.clips;
+      } else if (mode === 'list') {
+        const seed = first ? [first] : [];
+        for (const clip of track?.clips || []) {
+          if (seed.length >= 2) break;
+          if (!seed.some((ref) => ref.slotIndex === clip.slotIndex)) seed.push(clipSlotRef(clip));
+        }
+        next.launchMode = 'list';
+        next.clips = seed;
+        delete next.clip;
+        delete next.then;
+      } else {
+        next.launchMode = 'stop';
+        delete next.clip;
+        delete next.clips;
+        delete next.then;
+      }
+    });
+  }
+
+  // The section heading already names the choice; the group keeps it as its
+  // accessible name only.
+  function segmented(container, label, items, selected, dataKey, onPick, disabled = new Set()) {
+    const row = document.createElement('div');
+    row.className = 'map-bind-choice-row';
+    const group = document.createElement('div');
+    group.className = 'map-segmented-control';
+    group.setAttribute('aria-label', label);
+    for (const [value, text] of items) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `map-segmented-btn${selected === value ? ' active' : ''}`;
+      button.dataset[dataKey] = value;
+      button.setAttribute('aria-pressed', String(selected === value));
+      button.textContent = text;
+      if (disabled.has(value)) {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      }
+      button.addEventListener('click', () => { if (!disabled.has(value) && selected !== value) void onPick(value); });
+      group.appendChild(button);
+    }
+    row.appendChild(group);
+    container.appendChild(row);
+    return group;
+  }
+
+  function note(container, text, className = 'map-clip-note') {
+    const el = document.createElement('p');
+    el.className = className;
+    el.textContent = text;
+    container.appendChild(el);
+    return el;
+  }
+
+  function lcStateText(status) {
+    const key = status && has(LC_STATE_TEXT, status.state) ? status.state : 'idle';
+    return T(`lc.state.${key}`, LC_STATE_TEXT[key]);
+  }
+
+  function lcReasonText(reason) {
+    return has(LC_REASON_TEXT, reason) ? T(`lc.reason.${reason}`, LC_REASON_TEXT[reason]) : String(reason || '');
+  }
+
+  function lcRuleText(rule, target) {
+    if (!rule) return '';
+    const stateKey = rule.state === 'cancelled' || has(LC_RULE_TEXT, rule.state) ? rule.state : 'ready';
+    if (stateKey === 'refused') {
+      const refusal = rule.refusal || rule.reason || '';
+      return has(LC_REFUSAL_TEXT, refusal)
+        ? T(`lc.refuse.${refusal}`, LC_REFUSAL_TEXT[refusal])
+        : T('lc.refuse.other', 'This rule cannot be counted: {reason}.', { reason: refusal });
+    }
+    const parts = [stateKey === 'cancelled'
+      ? T('lc.rule.cancelled', 'Rule cancelled ({reason})', { reason: lcReasonText(rule.reason) })
+      : T(`lc.rule.${stateKey}`, LC_RULE_TEXT[stateKey])];
+    const prediction = rule.prediction;
+    if (prediction && (stateKey === 'ready' || stateKey === 'waiting' || stateKey === 'armed')) {
+      const follow = target.then?.action === 'stop' ? T('lc.afterStop', 'Stop track') : (target.then?.clip?.clipName || '');
+      const beats = Math.round(prediction.extraBeats * 100) / 100;
+      if (prediction.kind === 'exact') parts.push(T('lc.predictExact', 'Expected: {target} at the end of pass {n}. Not yet validated in Live.', { target: follow, n: target.then?.passes || 1 }));
+      else if (prediction.kind === 'silence') parts.push(T('lc.predictSilence', 'Expected: {beats} beats of silence before {target}.', { beats, target: follow }));
+      else parts.push(T('lc.predictRepeat', 'Expected: the clip plays {beats} beats more before {target}.', { beats, target: follow }));
+    }
+    return parts.join(' · ');
+  }
+
+  function renderClipLaunchStatus() {
+    const refs = clipEditorRefs;
+    const line = refs?.status;
+    if (!line) return;
+    const target = targetsForControl(state.selectedControl)[state.selectedTargetIndex];
+    if (!target || target.type !== 'clip_launch') return;
+    const status = clipLaunchStatus.get(clipStatusKey(mappingKey(state.selectedControl), state.selectedTargetIndex));
+    line.textContent = lcStateText(status) + (status?.reason && has(LC_REASON_TEXT, status.reason) ? ` (${lcReasonText(status.reason)})` : '');
+    line.dataset.state = status?.state || 'idle';
+    const quant = refs.quantization;
+    if (quant) {
+      const q = status?.quantization;
+      quant.textContent = !q || !q.label
+        ? T('lc.quantUnknown', 'Waiting for Live')
+        : q.source === 'clip'
+          ? T('lc.quantClip', 'Clip setting: {label}', { label: q.label })
+          : T('lc.quantGlobal', 'Live global: {label}', { label: q.label });
+    }
+    const rule = refs.rule;
+    if (rule) rule.textContent = lcRuleText(status?.rule, target);
+    const warnings = refs.warnings;
+    if (warnings) {
+      warnings.textContent = (status?.warnings || []).filter((w) => has(LC_WARNING_TEXT, w))
+        .map((w) => T(`lc.warn.${w}`, LC_WARNING_TEXT[w])).join(' ');
+    }
+  }
+
+  function renderClipLaunchEditor(container, target) {
+    const wrap = document.createElement('div');
+    wrap.className = 'map-trigger-editor map-clip-editor';
+    clipEditorRefs = { status: null, quantization: null, rule: null, warnings: null };
+    const section = (key, title) => {
+      const block = document.createElement('section');
+      block.className = 'map-note-section';
+      block.dataset.section = key;
+      const heading = document.createElement('h3');
+      heading.className = 'map-note-section-title';
+      heading.textContent = title;
+      block.appendChild(heading);
+      wrap.appendChild(block);
+      return block;
+    };
+    const track = clipTrackFor(target);
+
+    // 1. Destination
+    const destination = section('destination', T('mm.destination', 'Destination'));
+    const header = document.createElement('div');
+    header.className = 'map-trigger-header';
+    const label = document.createElement('div');
+    label.className = 'map-trigger-track-label';
+    label.textContent = target.launchMode === 'clip'
+      ? `${target.track?.trackName || ''} · ${slotLabel(target.clip)}`
+      : target.track?.trackName || '';
+    header.appendChild(label);
+    const change = document.createElement('button');
+    change.type = 'button';
+    change.className = 'map-btn-change-target';
+    change.textContent = T('mm.changeTarget', 'Change');
+    change.addEventListener('click', () => openClipTrackPicker('change'));
+    header.appendChild(change);
+    destination.appendChild(header);
+    const statusRow = document.createElement('div');
+    statusRow.className = 'map-clip-status-row';
+    const statusLine = document.createElement('div');
+    statusLine.id = 'map-clip-status';
+    statusLine.className = 'map-clip-status';
+    statusLine.setAttribute('role', 'status');
+    statusRow.appendChild(statusLine);
+    clipEditorRefs.status = statusLine;
+    const testBtn = document.createElement('button');
+    testBtn.type = 'button';
+    testBtn.className = 'map-mini-btn map-clip-test';
+    testBtn.textContent = T('lc.test', 'Test');
+    testBtn.addEventListener('click', async () => {
+      const response = await command('testClipLaunch', { control: mappingKey(state.selectedControl), targetIndex: state.selectedTargetIndex });
+      if (!response || !response.ok) setStatus(response?.error || 'testClipLaunch failed', 'error');
+      else if (response.result) window.handleClipLaunchState({ type: 'clip_launch_state', ...response.result });
+    });
+    statusRow.appendChild(testBtn);
+    destination.appendChild(statusRow);
+    const warnings = document.createElement('div');
+    warnings.id = 'map-clip-warnings';
+    warnings.className = 'map-clip-warning';
+    destination.appendChild(warnings);
+    clipEditorRefs.warnings = warnings;
+
+    // 2. Choice
+    const choice = section('choice', T('lc.choice', 'Choice'));
+    const twoClips = (track?.clips || []).length >= 2;
+    segmented(choice, T('lc.choice', 'Choice'), [
+      ['clip', T('lc.modeClip', 'Launch clip')],
+      ['list', T('lc.modeList', 'Advance list')],
+      ['stop', T('lc.modeStop', 'Stop track')],
+    ], target.launchMode, 'clipMode', (mode) => setClipLaunchMode(mode, track), twoClips ? new Set() : new Set(['list']));
+    note(choice, target.launchMode === 'list'
+      ? T('lc.modeListHelp', 'Each new activation asks for the clip after the one playing. One step per entry; wraps at the end.')
+      : target.launchMode === 'stop'
+        ? T('lc.modeStopHelp', 'Stops this track at the quantization set in Live.')
+        : T('lc.modeClipHelp', 'Each activation asks for this clip. Holding does not repeat; releasing lets it play.'));
+    if (target.launchMode === 'list') {
+      const items = document.createElement('ol');
+      items.className = 'map-clip-list';
+      (target.clips || []).forEach((ref, index) => {
+        const item = document.createElement('li');
+        item.className = 'map-clip-list-item';
+        const name = document.createElement('span');
+        name.textContent = slotLabel(ref);
+        item.appendChild(name);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'map-mini-btn';
+        remove.textContent = T('lc.remove', 'Remove');
+        const tooFew = (target.clips || []).length <= 2;
+        remove.disabled = tooFew;
+        if (tooFew) remove.setAttribute('aria-disabled', 'true');
+        remove.addEventListener('click', () => {
+          if (tooFew) return;
+          void saveClipLaunchTarget((next) => { next.clips = next.clips.filter((_, i) => i !== index); });
+        });
+        item.appendChild(remove);
+        items.appendChild(item);
+      });
+      choice.appendChild(items);
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'map-mini-btn map-clip-add';
+      add.textContent = T('lc.addClip', 'Add clip');
+      const full = (target.clips || []).length >= 8 || (track?.clips || []).length <= (target.clips || []).length;
+      add.disabled = full || !track;
+      add.addEventListener('click', () => { if (!add.disabled) openClipPicker(track, 'listAdd'); });
+      choice.appendChild(add);
+    }
+
+    // 3. Quantization — always Live's.
+    const quantization = section('quantization', T('lc.quantization', 'Quantization'));
+    const quantLine = document.createElement('div');
+    quantLine.id = 'map-clip-quantization';
+    quantLine.className = 'map-clip-quantization';
+    quantization.appendChild(quantLine);
+    clipEditorRefs.quantization = quantLine;
+    note(quantization, T('lc.quantNote', 'Set in Live; RC Surface does not change it.'));
+
+    // 4. After it starts — only for a single clip.
+    if (target.launchMode === 'clip') {
+      const after = section('after', T('lc.after', 'After it starts'));
+      const action = target.then?.action || 'none';
+      segmented(after, T('lc.after', 'After it starts'), [
+        ['none', T('lc.afterLive', 'Let Live decide')],
+        ['clip', T('lc.afterClip', 'Go to clip')],
+        ['stop', T('lc.afterStop', 'Stop track')],
+      ], action, 'clipThen', async (value) => {
+        if (value === 'clip') {
+          if (track) openClipPicker(track, 'then');
+          return;
+        }
+        await saveClipLaunchTarget((next) => {
+          if (value === 'none') delete next.then;
+          else next.then = { action: 'stop', passes: next.then?.passes || 1 };
+        });
+      });
+      if (action === 'none') {
+        note(after, T('lc.afterLiveHelp', 'The clip loops, or its native Follow Action in Live takes over.'));
+      } else {
+        if (action === 'clip') {
+          const follow = document.createElement('div');
+          follow.className = 'map-trigger-header';
+          const followLabel = document.createElement('div');
+          followLabel.className = 'map-trigger-track-label';
+          followLabel.textContent = slotLabel(target.then?.clip);
+          follow.appendChild(followLabel);
+          const changeFollow = document.createElement('button');
+          changeFollow.type = 'button';
+          changeFollow.className = 'map-btn-change-target';
+          changeFollow.textContent = T('mm.changeTarget', 'Change');
+          changeFollow.addEventListener('click', () => { if (track) openClipPicker(track, 'then'); });
+          follow.appendChild(changeFollow);
+          after.appendChild(follow);
+        }
+        const passesWrap = document.createElement('label');
+        passesWrap.className = 'map-editor-field';
+        const passesTitle = document.createElement('span');
+        passesTitle.textContent = T('lc.passes', 'After passes');
+        passesWrap.appendChild(passesTitle);
+        const passes = document.createElement('select');
+        passes.className = 'map-clip-passes';
+        for (let n = 1; n <= 8; n += 1) {
+          const option = document.createElement('option');
+          option.value = String(n);
+          option.textContent = String(n);
+          option.selected = n === (target.then?.passes || 1);
+          passes.appendChild(option);
+        }
+        passes.value = String(target.then?.passes || 1);
+        passes.addEventListener('change', () => {
+          const n = Math.max(1, Math.min(8, Math.round(Number(passes.value) || 1)));
+          void saveClipLaunchTarget((next) => { next.then = { ...next.then, passes: n }; });
+        });
+        passesWrap.appendChild(passes);
+        after.appendChild(passesWrap);
+        note(after, T('lc.ruleLabel', 'RC Surface rule. It does not read or change the Follow Actions in Live.'), 'map-clip-rule-label');
+        note(after, T('lc.ruleWarning', 'If this clip has a Follow Action in Live, both will act. Use one or the other.'), 'map-clip-warning');
+        const ruleState = document.createElement('div');
+        ruleState.id = 'map-clip-rule-state';
+        ruleState.className = 'map-clip-rule-state';
+        after.appendChild(ruleState);
+        clipEditorRefs.rule = ruleState;
+      }
+    }
+
+    container.appendChild(wrap);
+    renderClipLaunchStatus();
+    if (!state.clipTargets) {
+      // Names and clip lists are needed for list editing and the follow-up
+      // picker; draw once more when they first arrive, never in a loop.
+      void ensureClipTargets().then((data) => { if (data && state.selectedControl) renderDetail(); });
+    }
+    void refreshClipLaunchStatus();
+  }
+
+  window.openClipTrackPicker = openClipTrackPicker;
+  window.mobileClipLaunchStatus = clipLaunchStatus;
+
   function renderTargetEditor(container, target) {
     if (!target) return;
 
     const editor = document.createElement('div');
     editor.className = 'map-target-editor-rich';
+
+    if (target.type === 'clip_launch') {
+      renderClipLaunchEditor(editor, target);
+      container.appendChild(editor);
+      return;
+    }
 
     if (target.relinkStatus && target.relinkStatus !== 'loaded') {
       const relink = document.createElement('div');

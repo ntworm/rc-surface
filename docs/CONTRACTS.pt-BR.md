@@ -265,3 +265,121 @@ Quadros sem mão ou com landmarks incompletos seguram a última saída real e a 
 - `testTriggerNote({ control, targetIndex })`: Comando de escrita ao vivo executado exclusivamente em mapeamentos já salvos.
 - Avaliado dentro de um `CommandExecutionContext` confiável (`clientId`, `isCurrent()`) montado pelo servidor a partir do socket da conexão (nunca de argumentos enviados pelo cliente).
 - Autorizado apenas para papéis `controller` ou `admin`; sessões não autorizadas ou desatualizadas são rejeitadas.
+
+## Launch Clip (`clip_launch`)
+
+Um controle pede ao Live um clip da Session pelo link AbletonOSC já existente.
+O SDK de Extensions lista tracks, slots e clips (nomes, marcadores, handles da
+sessão), mas não tem API de lançar, parar, quantização de lançamento nem
+Follow Actions.
+
+### Endereços OSC (`CLIP` / `CLIP_RESPONSE`, congelados)
+
+Só disparar, parar, escutar e ler. Não existe endereço `set`: o RC Surface
+nunca altera uma propriedade de clip, track ou música. O lançamento não leva
+argumento extra, então o Live aplica a própria quantização de lançamento.
+
+```
+/live/clip_slot/fire                               track slot
+/live/track/stop_all_clips                         track (padrão do Live: quantizado)
+/live/track/start_listen|stop_listen/fired_slot_index     track
+/live/track/start_listen|stop_listen/playing_slot_index   track
+/live/clip/start_listen|stop_listen/playing_position      track slot
+/live/clip/get/launch_quantization                 track slot
+/live/clip/get/launch_mode                         track slot
+/live/clip/get/legato                              track slot
+/live/song/start_listen/clip_trigger_quantization
+/live/song/get/clip_trigger_quantization
+/live/song/get/track_names
+```
+
+Os listeners do Launch Clip só são registrados enquanto existe ao menos um
+mapeamento de Launch Clip, e são registrados de novo junto com os listeners da
+música. Respostas aos getters contam como respostas, não como push de listener.
+
+### Esquema do destino
+
+| Campo | Tipo | Regras |
+| ----- | ---- | ------ |
+| `type` | `'clip_launch'` | Obrigatório. |
+| `launchMode` | string | `'clip'`, `'list'` ou `'stop'`. |
+| `track` | objeto | `{ trackIndex, trackName, trackSessionId? }`; só tracks comuns (`trackKind` ausente ou `'track'`). |
+| `clip` | objeto | Só no modo `clip`: `{ slotIndex, clipName, clipSessionId? }`. |
+| `clips` | array | Só no modo `list`: de 2 a 8 referências, sem slot repetido. |
+| `then` | objeto | Só no modo `clip`: `{ action: 'none' \| 'clip' \| 'stop', passes: 1..8, clip? }`; `clip` é obrigatório na ação `clip` e diferente do clip lançado. |
+| `threshold` | número | Opcional, `0.05..0.95`, padrão `0.5`. |
+
+Nomes têm no máximo 128 caracteres; ids de sessão são strings numéricas.
+Campos desconhecidos são rejeitados; campos genéricos do editor (curva, faixas,
+safe loss) são descartados. Destinos guardados (perfil, arquivo de
+mapeamentos, preset, importação) passam pela mesma validação e são
+reassociados ao Set aberto pelo nome da track e do clip: único → `loaded` ou
+`relinked`, vários → `ambiguous`, nenhum → `missing`. Destinos ambíguos ou
+ausentes nunca são disparados.
+
+### Despacho
+
+- Ativação: o valor real sobe pelo limiar; controles contínuos rearmam 0,1
+  abaixo dele. Valores `lost` e desconexões não mudam nada. O estado de borda
+  fica guardado por id estável de cliente.
+- Antes de cada pedido o destino é resolvido pelo handle da sessão **e** pelo
+  nome, ou então por um nome único; o slot precisa conter o clip esperado;
+  tracks de grupo são recusadas; depois de qualquer mudança na lista de
+  tracks, os nomes do SDK precisam ser iguais ao `track_names` do AbletonOSC,
+  senão o pedido é bloqueado (`index_mismatch`).
+- Idempotência pelo `fired_slot_index` / `playing_slot_index` do Live: um clip
+  já aguardando, ou tocando sem outro aguardando, ou tocando com o próprio
+  retorno do RC aguardando, não envia nada. Um pedido que o Live ainda não
+  reconheceu bloqueia a duplicata por até 1,5 s e depois informa
+  `no_confirmation`.
+- Avançar lista: o item seguinte ao clip que toca; volta ao início; nenhum
+  avanço novo enquanto o item pedido aguarda ou não foi reconhecido.
+- Parar: `/live/track/stop_all_clips`, nada quando a track está parada ou um
+  stop (`-2`) já aguarda.
+
+### Mensagem de estado (`clip_launch_state`)
+
+Enviada a todas as superfícies: `{ type, control, targetIndex, state,
+reason?, listIndex?, quantization?: { source: 'clip'|'global'|'unknown',
+label }, warnings?, rule?: { state, reason?, refusal?, prediction? } }`.
+`state` é um de `idle`, `requested`, `queued`, `playing`, `stopping`,
+`stopped`, `no_confirmation`, `unavailable`, `missing`, `ambiguous`,
+`index_mismatch`. `queued` e `playing` só vêm dos listeners do Live.
+
+### Continuação ("Depois que entra")
+
+Regras do RC Surface, não Follow Actions nativas. Com start marker S, início
+do loop A, fim do loop E e end marker F: `P1 = E − S`, `L = E − A`,
+`T(N) = P1 + (N − 1)L`; clip sem loop permite N = 1 com `T = F − S`. Q é o
+quantum efetivo do pedido seguinte (quantização de lançamento do clip de
+destino, Global → música; o ajuste da música para um stop) em tempos, com a
+fórmula de compasso atual.
+
+- A regra só arma depois que o Live confirma o clip lançado tocando.
+- `T ≤ Q`: o pedido seguinte sai na confirmação. Senão, sai no primeiro push
+  de `playing_position` com `T − Q + 0,25 ≤ e < T`.
+- Cada par de pushes precisa provar no máximo uma volta a partir do tempo de
+  música informado pelo Live (relógio × BPM do Live quando o tempo de música
+  não está atualizado); senão a regra é cancelada (`insufficient_pushes`,
+  `inconsistent_position`, `transport_jump`).
+- Recusada: Q None, janela `Q − 0,25` menor que 250 ms no BPM atual, legato
+  ligado, modo de lançamento diferente de Trigger, áudio sem warp, marcadores
+  inválidos, loop menor que um tempo, clip sem loop com N > 1.
+- Janela perdida com a regra válida: um pedido atrasado, `rule.state:
+  'late'`.
+- Cancelada e nunca reenviada: outra escolha na track (RC ou Live), stop da
+  track ou do transporte, stop do usuário, mapeamento removido ou alterado,
+  AbletonOSC perdido. Um clip sem loop que termina sozinho mantém a regra. Uma
+  desconexão do celular não a cancela.
+- Previsão: `entrada = ceil(T/Q)·Q` depois do início; `exact`, `repeat`
+  (o clip em loop toca a diferença) ou `silence` (sem loop).
+- A precisão é uma hipótese a validar no Live 12, não um contrato.
+
+### Autorização de comandos
+
+- `getClipTargets`: `read`. Tracks com clips, nomes reais, slots, ids de
+  sessão, marcadores.
+- `getClipLaunchStatus`: `read`. Estado atual de cada destino de Launch Clip e
+  os 20 últimos diagnósticos de regra.
+- `testClipLaunch({ control, targetIndex })`: `live-write`. Uma ativação de um
+  destino de Launch Clip salvo, com as mesmas regras do gesto.

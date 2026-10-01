@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import { existsSync as fsExistsSync } from "node:fs";
 import * as path from "node:path";
 import { getExtensionContext, requireCtx, requireTrack } from "../context.js";
-import { trackedClients, broadcastTriggerNoteState } from "../server/ws.js";
+import { trackedClients, broadcastTriggerNoteState, broadcastClipLaunchState } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
 import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
 import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
@@ -23,6 +23,18 @@ import { stopAllHostModulators } from "./host-modulators.js";
 import { SafeInputRegistry, SafeSignalFilter, type SafeInputResult, type TakeoverMode } from "./safe-input.js";
 import { TriggerNoteClock, resolveTriggerNoteOptions, resolveGridDurationMs, type NoteTiming, type NoteGate } from "./trigger-note-clock.js";
 import { TriggerNoteScheduler } from "./trigger-note-scheduler.js";
+import {
+  clipLaunchEngine,
+  isClipLaunchTarget,
+  listClipTargets,
+  relinkClipLaunchTarget,
+  validateClipLaunchTarget,
+  type ClipLaunchTarget,
+  type ClipSlotRef,
+  type ClipThen,
+  type ClipTrackRef,
+  type LaunchMode,
+} from "./clip-launch.js";
 import type { CommandExecutionContext } from "./catalog/types.js";
 import { buildServerAccessUrls } from "../server/access-urls.js";
 import {
@@ -42,7 +54,7 @@ import {
 
 export interface MappingTarget {
   type: 'device_param' | 'mixer_volume' | 'mixer_pan' | 'mixer_send'
-      | 'tempo' | 'track_mute' | 'track_solo' | 'track_arm';
+      | 'tempo' | 'track_mute' | 'track_solo' | 'track_arm' | 'clip_launch';
   trackIndex?: number;
   trackKind?: 'track' | 'return' | 'main';
   deviceIndex?: number;
@@ -91,6 +103,12 @@ export interface MappingTarget {
   relinkStatus?: 'loaded' | 'relinked' | 'review' | 'ambiguous' | 'missing';
   relinkConfidence?: number;
   relinkCandidates?: Array<{ target: MappingTarget; confidence: number }>;
+  /** Launch Clip (type 'clip_launch'); validated by validateClipLaunchTarget. */
+  launchMode?: LaunchMode;
+  track?: ClipTrackRef;
+  clip?: ClipSlotRef;
+  clips?: ClipSlotRef[];
+  then?: ClipThen;
 }
 
 export const controlMappings = new Map<string, MappingTarget[]>();
@@ -108,8 +126,38 @@ export function migrateVisionSafeLossTarget<T extends Pick<MappingTarget, 'neutr
   };
 }
 
+/**
+ * Stored Launch Clip targets (profile, mappings file, preset) pass the same
+ * validation as new ones and are re-pointed at the open set by name. A
+ * malformed one is dropped and reported, never dispatched.
+ */
+function prepareClipLaunchTargets(control: string, targets: MappingTarget[]): MappingTarget[] {
+  const song = getExtensionContext()?.application?.song;
+  const prepared: MappingTarget[] = [];
+  for (const target of targets) {
+    if ((target as any)?.type !== 'clip_launch') {
+      prepared.push(target);
+      continue;
+    }
+    try {
+      const valid = validateClipLaunchTarget(target);
+      const relinked = song ? relinkClipLaunchTarget(song, valid) : valid;
+      // A profile import has just relinked it: keep saying it moved.
+      if (valid.relinkStatus === 'relinked' && relinked.relinkStatus === 'loaded') relinked.relinkStatus = 'relinked';
+      prepared.push(relinked as unknown as MappingTarget);
+    } catch (error) {
+      currentProjectReport.compatibility.push(
+        `Removed an invalid Launch Clip mapping from "${control}": ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return prepared;
+}
+
 function migrateVisionTargets(control: string, targets: MappingTarget[]): MappingTarget[] {
-  return targets.map((target) => migrateVisionSafeLossTarget(control, target));
+  return prepareClipLaunchTargets(control, targets).map((target) => target.type === 'clip_launch'
+    ? target
+    : migrateVisionSafeLossTarget(control, target));
 }
 const sensorSignalFilters = new Map<string, SafeSignalFilter>();
 const lastClientControlValues = new Map<string, number>();
@@ -182,7 +230,10 @@ let mappingMutationTail: Promise<void> = Promise.resolve();
 export function runMappingMutation<T>(mutation: () => Promise<T> | T): Promise<T> {
   const run = async () => {
     try { return await mutation(); }
-    finally { await releaseRetiredMappingWork(); }
+    finally {
+      await releaseRetiredMappingWork();
+      clipLaunchEngine.refresh();
+    }
   };
   const result = mappingMutationTail.then(run, run);
   mappingMutationTail = result.then(() => undefined, () => undefined);
@@ -256,6 +307,11 @@ export function getTargetKey(target: MappingTarget): string {
   switch (target.type) {
     case 'tempo':
       return 'tempo';
+    case 'clip_launch': {
+      const slots = target.clip ? String(target.clip.slotIndex)
+        : (target.clips ?? []).map((clip) => clip.slotIndex).join(',');
+      return `clip_launch::${target.trackIndex ?? 0}::${target.launchMode ?? 'clip'}::${slots}`;
+    }
     case 'mixer_send':
       return `mixer_send${kindPart}::${target.trackIndex ?? 0}::${target.sendIndex ?? 0}`;
     case 'device_param':
@@ -397,6 +453,7 @@ async function loadBestProjectProfile(song: any, isCurrent: () => boolean): Prom
   projectConfigLoaded = true;
   console.log(`[ableton-rc-surface] loaded ${controlMappings.size} mappings from project profile ${best.file}`);
   await releaseRetiredMappingWork();
+  clipLaunchEngine.refresh();
   return true;
 }
 
@@ -466,6 +523,7 @@ export async function loadMappings(isCurrent: () => boolean = () => true): Promi
     }
     console.log(`[ableton-rc-surface] loaded ${controlMappings.size} mappings from ${mappingsFilePath}`);
     await releaseRetiredMappingWork();
+    clipLaunchEngine.refresh();
   } catch {
     console.log("[ableton-rc-surface] no mappings file found, starting fresh");
   }
@@ -613,6 +671,12 @@ const heldTriggerNotes = new Map<string, { voice: HeldMidiNote; isCurrent: () =>
 export const triggerNoteClock = new TriggerNoteClock();
 export const triggerNoteScheduler = new TriggerNoteScheduler(triggerNoteClock);
 
+clipLaunchEngine.configure({
+  mappings: () => controlMappings,
+  broadcast: (status) => broadcastClipLaunchState(status),
+  log: (message) => console.log(`[ableton-rc-surface] ${message}`),
+});
+
 // Duration is independent of onset quantization. A stopped but freshly
 // observed OSC clock still supplies real BPM/meter; it never permits Beat/Bar.
 function immediatePulseDuration(durationMs: number, durationBars?: number): number | null {
@@ -688,6 +752,7 @@ export async function cancelPendingMappingWrites(): Promise<void> {
   }
   clientReleaseTimers.clear();
   await triggerNoteScheduler.cancelWhere(() => true, "cancelled");
+  clipLaunchEngine.cancelAll("cancelled");
   return releaseRetiredMappingWork();
 }
 
@@ -765,6 +830,9 @@ function getTargetTrack(song: any, target: MappingTarget): any | undefined {
 async function readTargetNormalizedValue(song: any, target: MappingTarget): Promise<number | null> {
   try {
     switch (target.type) {
+      case 'clip_launch':
+        // A launch has no value to read back from Live.
+        return null;
       case 'tempo':
         return Math.max(0, Math.min(1, (song.tempo - 20) / 280));
       case 'track_mute':
@@ -842,6 +910,7 @@ const DISCRETE_CONTROL_RE = /^(?:pad|toggle|button)-|^sensor\.vision\.gesture\.|
 
 export function shouldUseTakeover(controlName: string, target: MappingTarget): boolean {
   if (target.mode === 'toggle' || target.mode === 'trigger_note') return false;
+  if (target.type === 'clip_launch') return false;
   if (target.type === 'track_mute' || target.type === 'track_solo' || target.type === 'track_arm') return false;
   return !DISCRETE_CONTROL_RE.test(controlName);
 }
@@ -915,6 +984,32 @@ export async function applyMapping(clientId: string, controlName: string, value:
   let targets = controlMappings.get(controlName);
   if (!targets || targets.length === 0) return;
   const binding = targets;
+  // Launch Clip asks Live for a clip; none of the curve, takeover or safe-loss
+  // machinery below applies to it. Detection loss reaches it as a no-op.
+  if (targets.some((target) => target.type === 'clip_launch')) {
+    const launches: Promise<void>[] = [];
+    binding.forEach((target, targetIndex) => {
+      if (!isClipLaunchTarget(target)) return;
+      launches.push(clipLaunchEngine.handleInput({
+        clientId,
+        control: controlName,
+        targetIndex,
+        target,
+        value,
+        isDeactivated: Boolean(isDeactivated),
+      }));
+    });
+    const launching = Promise.all(launches).then(() => undefined, (error) => {
+      console.error("[ableton-rc-surface] Launch Clip dispatch failed:", error);
+    });
+    targets = targets.filter((target) => target.type !== 'clip_launch');
+    if (targets.length === 0) {
+      await launching;
+      return;
+    }
+    // Other targets on the same control do not wait for a launch.
+    void launching;
+  }
   const generation = mappingDispatchGeneration;
   let clientSession = mappingClientSessions.get(clientId);
   if (!clientSession) {
@@ -1433,6 +1528,7 @@ export async function getControlValues(_clientId: string): Promise<Record<string
     if (!targets || targets.length === 0) return;
     const target = targets.find((candidate) => isRelinkDispatchable(candidate)
       && candidate.mode !== 'trigger_note'
+      && candidate.type !== 'clip_launch'
       && isSupportedMappingMode(candidate));
     if (!target) return;
     try {
@@ -2264,6 +2360,9 @@ export const commands: Record<string, CommandSpec> = {
       } else {
         throw new Error("either target or targets must be specified");
       }
+      finalTargets = finalTargets.map((candidate) => (candidate as any)?.type === 'clip_launch'
+        ? validateClipLaunchTarget(candidate) as unknown as MappingTarget
+        : candidate);
       for (const candidate of finalTargets) {
         if (!isSupportedMappingMode(candidate)) {
           throw new Error('Unsupported or retired mapping mode');
@@ -2420,6 +2519,35 @@ export const commands: Record<string, CommandSpec> = {
         effectiveDuration,
         velocity,
       };
+    },
+  },
+
+  getClipTargets: {
+    description: "List regular tracks that hold Session clips, with real track and clip names, for Launch Clip.",
+    handler: async () => {
+      const { song } = requireCtx();
+      return {
+        tracks: listClipTargets(song),
+        osc: { available: oscTransport.state.available, connected: oscTransport.state.connected },
+      };
+    },
+  },
+
+  getClipLaunchStatus: {
+    description: "Current Launch Clip state of every mapped target, as Live reports it, plus recent rule diagnostics.",
+    handler: async () => clipLaunchEngine.snapshot(),
+  },
+
+  testClipLaunch: {
+    description: "Run one activation of a saved Launch Clip target, with the same rules as a gesture. Args: {control: string, targetIndex?: number}",
+    handler: async (args) => {
+      const control = args["control"];
+      if (typeof control !== "string" || !control || control.length > 256) throw new Error("control must be a non-empty string");
+      const targetIndex = args["targetIndex"] ?? 0;
+      if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex > 63) throw new Error("targetIndex must be an integer from 0 to 63");
+      const target = controlMappings.get(control)?.[targetIndex];
+      if (!isClipLaunchTarget(target)) throw new Error(`Target at index ${targetIndex} is not a Launch Clip mapping`);
+      return clipLaunchEngine.test({ control, targetIndex }, target as ClipLaunchTarget);
     },
   },
 
@@ -2638,7 +2766,7 @@ export const commands: Record<string, CommandSpec> = {
       const obj = JSON.parse(raw) as Record<string, MappingTarget | MappingTarget[]>;
       const nextMappings = new Map<string, MappingTarget[]>();
       for (const [k, v] of Object.entries(migrateLegacyClientMappings(obj).mappings)) {
-        nextMappings.set(k, Array.isArray(v) ? v : [v]);
+        nextMappings.set(k, prepareClipLaunchTargets(k, Array.isArray(v) ? v : [v]));
       }
       await saveMappings(nextMappings);
       controlMappings.clear();

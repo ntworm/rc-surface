@@ -55,7 +55,42 @@ export const CMD = {
   cuePointJump:        "/live/song/cue_point/jump",
 } as const;
 
+// ── Launch Clip ────────────────────────────────────────────────────────────
+//
+// AbletonOSC addresses clips and tracks by index. Launch Clip only fires,
+// stops and observes: there is deliberately no `set` here, so Surface never
+// changes a clip, track or song property of the user's set. Launches carry
+// no extra argument, which leaves quantization to Live.
+
+export const CLIP = {
+  fireSlot:                 "/live/clip_slot/fire",
+  stopTrack:                "/live/track/stop_all_clips",
+  listenFiredSlot:          "/live/track/start_listen/fired_slot_index",
+  unlistenFiredSlot:        "/live/track/stop_listen/fired_slot_index",
+  listenPlayingSlot:        "/live/track/start_listen/playing_slot_index",
+  unlistenPlayingSlot:      "/live/track/stop_listen/playing_slot_index",
+  listenPlayingPosition:    "/live/clip/start_listen/playing_position",
+  unlistenPlayingPosition:  "/live/clip/stop_listen/playing_position",
+  getLaunchQuantization:    "/live/clip/get/launch_quantization",
+  getLaunchMode:            "/live/clip/get/launch_mode",
+  getLegato:                "/live/clip/get/legato",
+  listenGlobalQuantization: "/live/song/start_listen/clip_trigger_quantization",
+  getGlobalQuantization:    "/live/song/get/clip_trigger_quantization",
+  getTrackNames:            "/live/song/get/track_names",
+} as const;
+
 // ── incoming response addresses ────────────────────────────────────────────
+
+export const CLIP_RESPONSE = {
+  firedSlot:           "/live/track/get/fired_slot_index",
+  playingSlot:         "/live/track/get/playing_slot_index",
+  playingPosition:     "/live/clip/get/playing_position",
+  launchQuantization:  "/live/clip/get/launch_quantization",
+  launchMode:          "/live/clip/get/launch_mode",
+  legato:              "/live/clip/get/legato",
+  globalQuantization:  "/live/song/get/clip_trigger_quantization",
+  trackNames:          "/live/song/get/track_names",
+} as const;
 
 export const RESPONSE = {
   tempo:               "/live/song/get/tempo",
@@ -76,4 +111,6 @@ export type OscAddress =
   | typeof LISTEN[keyof typeof LISTEN]
   | typeof GET[keyof typeof GET]
   | typeof CMD[keyof typeof CMD]
+  | typeof CLIP[keyof typeof CLIP]
+  | typeof CLIP_RESPONSE[keyof typeof CLIP_RESPONSE]
   | typeof RESPONSE[keyof typeof RESPONSE];

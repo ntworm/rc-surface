@@ -255,3 +255,68 @@ test("requestSelection asks once and resolves on the reply or on its timeout", a
   await transport.requestSelection(50);
   assert.ok(Date.now() - started >= 45, "an unanswered request gives up after its timeout");
 });
+
+test("Launch Clip listeners join the re-registration only while Launch Clip is active", () => {
+  const { transport, sent } = recordingTransport();
+  transport.registerListeners();
+  assert.ok(!sent.some((address) => address.includes("clip_trigger_quantization") || address.includes("slot_index")),
+    "a set without Launch Clip pays no extra traffic");
+  sent.length = 0;
+  transport.setClipLaunchActive(true);
+  transport.listenTrackSlots(3);
+  transport.listenClipPosition(3, 2);
+  sent.length = 0;
+  transport.registerListeners();
+  assert.ok(sent.includes("/live/song/start_listen/clip_trigger_quantization"));
+  assert.ok(sent.includes("/live/track/start_listen/fired_slot_index"));
+  assert.ok(sent.includes("/live/track/start_listen/playing_slot_index"));
+  assert.ok(sent.includes("/live/clip/start_listen/playing_position"));
+  sent.length = 0;
+  transport.setClipLaunchActive(false);
+  assert.ok(sent.includes("/live/track/stop_listen/fired_slot_index"));
+  assert.ok(sent.includes("/live/clip/stop_listen/playing_position"));
+  sent.length = 0;
+  transport.registerListeners();
+  assert.ok(!sent.some((address) => address.includes("slot_index") || address.includes("playing_position")));
+});
+
+test("a stopped transport forgets Launch Clip listeners so a new session never inherits them", () => {
+  const { transport, sent } = recordingTransport();
+  transport.setClipLaunchActive(true);
+  transport.listenTrackSlots(1);
+  transport.dispose();
+  sent.length = 0;
+  transport.registerListeners();
+  assert.ok(!sent.some((address) => address.includes("slot_index") || address.includes("clip_trigger")));
+});
+
+test("Launch Clip replies are parsed into events and do not pass for listener pushes", () => {
+  const { transport } = recordingTransport();
+  const events = [];
+  for (const name of ["clip-track-slot", "clip-position", "clip-property", "clip-track-names", "clip-global-quantization"]) {
+    transport.on(name, (event) => events.push([name, event]));
+  }
+  const message = (address, ...values) => transport.handleIncoming({ oscType: "message", address, args: values.map((value) => ({ value })) });
+  message("/live/track/get/fired_slot_index", 2, 1);
+  message("/live/track/get/playing_slot_index", 2, -1);
+  message("/live/clip/get/playing_position", 2, 1, 3.5);
+  message("/live/song/get/clip_trigger_quantization", 4);
+  message("/live/song/get/track_names", "Keys", "Drums");
+  transport.requestClipProperties(2, 1);
+  const pushAt = transport.lastPushAt;
+  message("/live/clip/get/launch_quantization", 2, 1, 0);
+  message("/live/clip/get/launch_mode", 2, 1, 0);
+  message("/live/clip/get/legato", 2, 1, false);
+  assert.equal(transport.lastPushAt, pushAt, "replies to our own getters are not pushes");
+  assert.equal(transport.globalQuantization, 4);
+  assert.deepEqual(events.map(([name, event]) => [name, name === "clip-track-slot" || name === "clip-position" ? { ...event, at: 0 } : event]), [
+    ["clip-track-slot", { trackIndex: 2, kind: "fired", value: 1, at: 0 }],
+    ["clip-track-slot", { trackIndex: 2, kind: "playing", value: -1, at: 0 }],
+    ["clip-position", { trackIndex: 2, slotIndex: 1, position: 3.5, at: 0 }],
+    ["clip-global-quantization", 4],
+    ["clip-track-names", ["Keys", "Drums"]],
+    ["clip-property", { trackIndex: 2, slotIndex: 1, property: "launch_quantization", value: 0 }],
+    ["clip-property", { trackIndex: 2, slotIndex: 1, property: "launch_mode", value: 0 }],
+    ["clip-property", { trackIndex: 2, slotIndex: 1, property: "legato", value: 0 }],
+  ]);
+});
