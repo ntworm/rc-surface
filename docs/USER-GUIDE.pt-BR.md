@@ -463,6 +463,12 @@ não lança clips.
    dispara uma linha inteira.
 3. Escolha o clip (número do slot e nome real do clip).
 
+Após criar, renomear ou apagar tracks/clips no Live, toque em **Atualizar**
+no cabeçalho do picker. Bind, Trigger Note e os dois pickers de Launch Clip
+têm esse botão; filtro e track escolhida são mantidos quando disponíveis.
+Se salvar falhar, o picker de Launch Clip continua aberto e mostra o erro
+para você tentar novamente.
+
 **Escolha** — uma por mapeamento:
 
 - **Lançar clip** (padrão): cada ativação pede aquele clip. Manter a pose não

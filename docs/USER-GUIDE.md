@@ -463,6 +463,12 @@ lists tracks and clips but cannot launch them.
    fires a whole row.
 3. Pick a clip (slot number and real clip name).
 
+After creating, renaming or deleting tracks/clips in Live, tap **Refresh**
+in the picker header. Bind, Trigger Note and both Launch Clip pickers have
+this button; the current filter and chosen track stay selected when available.
+If saving fails, the Launch Clip picker stays open and shows the error so
+you can retry.
+
 **Choice** — one per mapping:
 
 - **Launch clip** (default): each activation asks for that clip. Holding the

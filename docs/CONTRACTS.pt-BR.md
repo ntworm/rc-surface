@@ -309,7 +309,8 @@ música. Respostas aos getters contam como respostas, não como push de listener
 | `then` | objeto | Só no modo `clip`: `{ action: 'none' \| 'clip' \| 'stop', passes: 1..8, clip? }`; `clip` é obrigatório na ação `clip` e diferente do clip lançado. |
 | `threshold` | número | Opcional, `0.05..0.95`, padrão `0.5`. |
 
-Nomes têm no máximo 128 caracteres; ids de sessão são strings numéricas.
+Nomes têm no máximo 128 caracteres; ids de sessão são strings decimais de
+1–64 dígitos, mantidas como strings sem conversão para Number.
 Campos desconhecidos são rejeitados; campos genéricos do editor (curva, faixas,
 safe loss) são descartados. Destinos guardados (perfil, arquivo de
 mapeamentos, preset, importação) passam pela mesma validação e são

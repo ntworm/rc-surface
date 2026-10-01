@@ -88,7 +88,7 @@ const CLIP_TARGETS = {
   osc: { available: true, connected: true },
 };
 
-function load({ mappings = {}, statuses = [] } = {}) {
+function load({ mappings = {}, statuses = [], clipTargets = CLIP_TARGETS, saveError = null } = {}) {
   const ids = ['btn-map-mode', 'btn-map-back', 'btn-map-refresh', 'mapping-mode', 'map-armed-strip',
     'map-mobile-status', 'map-mobile-presets', 'map-mobile-search', 'map-mobile-controls', 'map-mobile-detail'];
   const elements = new Map(ids.map((id) => { const el = new FakeElement('div'); el.id = id; return [id, el]; }));
@@ -99,13 +99,14 @@ function load({ mappings = {}, statuses = [] } = {}) {
     getElementById: (id) => elements.get(id) || null,
     createElement: (tag) => new FakeElement(tag),
     addEventListener() {},
-    querySelector: () => null,
+    querySelector: (selector) => selector === '.map-detail-status' ? byClass(elements.get('map-mobile-detail'), 'map-detail-status')[0] || null : null,
     querySelectorAll: () => [],
   };
   const calls = [];
   let mockMappings = JSON.parse(JSON.stringify(mappings));
   const sendPhoneCommand = (cmd, args, cb) => {
     calls.push({ cmd, args: JSON.parse(JSON.stringify(args || {})) });
+    if (cmd === 'setMapping' && saveError) { cb({ ok: false, error: saveError }); return true; }
     if (cmd === 'setMapping') { mockMappings[args.control] = args.targets; cb({ ok: true }); return true; }
     if (cmd === 'removeMapping') { delete mockMappings[args.control]; cb({ ok: true }); return true; }
     const fixtures = {
@@ -114,7 +115,7 @@ function load({ mappings = {}, statuses = [] } = {}) {
       getClients: { ok: true, result: { clients: [] } },
       listPresets: { ok: true, result: { presets: ['Default'], current: 'Default' } },
       getProjectConfigStatus: { ok: true, result: { report: { loaded: 0, relinked: 0, review: 0, ambiguous: 0, missing: 0 } } },
-      getClipTargets: { ok: true, result: CLIP_TARGETS },
+      getClipTargets: { ok: true, result: clipTargets },
       getClipLaunchStatus: { ok: true, result: { statuses, diagnostics: [] } },
       testClipLaunch: { ok: true, result: { control: args?.control, targetIndex: args?.targetIndex ?? 0, state: 'requested' } },
     };
@@ -300,3 +301,35 @@ test('the same clip on two controls is not a conflict; the bound list names Laun
   await tick();
   assert.ok(byClass(detail, 'map-bound-type').length === 0 || byClass(detail, 'map-bound-type').every((n) => n._textContent === 'Launch Clip'));
 });
+
+
+test('the picker keeps realistic 46 digit Live ids as strings when saving', async () => {
+  const data = JSON.parse(JSON.stringify(CLIP_TARGETS));
+  data.tracks[1].sessionId = '1071830035832904214785262397353859593604694139';
+  data.tracks[1].clips[0].sessionId = '1071830035832904214785262397353859593604694140';
+  const { context, calls, detail } = load({ clipTargets: data });
+  await select(context, 'pad-1');
+  await click(byClass(detail, 'map-entry-choice').find((n) => n.dataset.kind === 'clip'));
+  await click(byClass(detail, 'map-picker-row')[1]);
+  await click(byClass(detail, 'map-picker-row')[0]);
+  const saved = calls.filter((c) => c.cmd === 'setMapping').at(-1).args.targets[0];
+  assert.equal(saved.track.trackSessionId, '1071830035832904214785262397353859593604694139');
+  assert.equal(saved.clip.clipSessionId, '1071830035832904214785262397353859593604694140');
+});
+
+for (const picker of ['clip', 'clipTrack']) {
+  test(`a failed save stays visible in the ${picker} Launch Clip picker`, async () => {
+    const { context, detail, mappings } = load({ saveError: 'Live rejected destination' });
+    await select(context, 'pad-1');
+    await click(byClass(detail, 'map-entry-choice').find((n) => n.dataset.kind === 'clip'));
+    if (picker === 'clip') await click(byClass(detail, 'map-picker-row')[1]);
+    else context.window.mobileMappingState.clipPickerPurpose = 'stop';
+    await click(byClass(detail, 'map-picker-row')[0]);
+    assert.equal(context.window.mobileMappingState.pickerMode, picker);
+    const status = byClass(detail, 'map-detail-status')[0];
+    assert.ok(status, 'error status in the open picker');
+    assert.equal(status.dataset.kind, 'error');
+    assert.equal(status.textContent, 'Could not save Launch Clip: Live rejected destination');
+    assert.deepEqual(mappings(), {});
+  });
+}

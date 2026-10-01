@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 const CLIP_TARGETS = {
   tracks: [
     { trackIndex: 0, name: 'Keys', sessionId: '11', clips: [{ slotIndex: 0, name: 'Chords', sessionId: '12' }] },
-    { trackIndex: 1, name: 'Drums', sessionId: '21', clips: [
+    { trackIndex: 1, name: 'Drums', sessionId: '1071830035832904214785262397353859593604694139', clips: [
       { slotIndex: 0, name: 'Base', sessionId: '22' },
-      { slotIndex: 1, name: 'Variação', sessionId: '23' },
+      { slotIndex: 1, name: 'Variação', sessionId: '1071830035832904214785262397353859593604694140' },
       { slotIndex: 2, name: 'Virada', sessionId: '24' },
     ] },
   ],
@@ -19,12 +19,16 @@ async function setup(page, lang) {
   await page.evaluate((clipTargets) => {
     const mappings = {};
     window.__launchCalls = [];
+    window.__mapTargets = [];
+    window.__clipTargets = clipTargets;
     window.sendPhoneCommand = (cmd, args, cb) => {
       window.__launchCalls.push({ cmd, args });
-      if (cmd === 'getTargets') { cb?.({ ok: true, result: { targets: [] } }); return true; }
+      if (cmd === 'getTargets' && window.__refreshError) { cb?.({ ok: false, error: window.__refreshError }); return true; }
+      if (cmd === 'getTargets') { cb?.({ ok: true, result: { targets: window.__mapTargets } }); return true; }
       if (cmd === 'getMappings') { cb?.({ ok: true, result: { mappings } }); return true; }
+      if (cmd === 'setMapping' && window.__launchSaveError) { cb?.({ ok: false, error: window.__launchSaveError }); return true; }
       if (cmd === 'setMapping') { mappings[args.control] = args.targets; cb?.({ ok: true }); return true; }
-      if (cmd === 'getClipTargets') { cb?.({ ok: true, result: clipTargets }); return true; }
+      if (cmd === 'getClipTargets') { cb?.({ ok: true, result: window.__clipTargets }); return true; }
       if (cmd === 'getClipLaunchStatus') {
         cb?.({ ok: true, result: { statuses: [{ control: 'sensor.vision.gesture.2', targetIndex: 0, state: 'idle', quantization: { source: 'global', label: '1 Bar' } }], diagnostics: [] } });
         return true;
@@ -66,8 +70,8 @@ test.describe('Launch Clip in MAP', () => {
     const saved = await page.evaluate(() => window.__launchCalls.filter((c) => c.cmd === 'setMapping').at(-1).args.targets[0]);
     expect(saved).toEqual({
       type: 'clip_launch', trackIndex: 1,
-      track: { trackIndex: 1, trackName: 'Drums', trackSessionId: '21' },
-      launchMode: 'clip', clip: { slotIndex: 1, clipName: 'Variação', clipSessionId: '23' },
+      track: { trackIndex: 1, trackName: 'Drums', trackSessionId: '1071830035832904214785262397353859593604694139' },
+      launchMode: 'clip', clip: { slotIndex: 1, clipName: 'Variação', clipSessionId: '1071830035832904214785262397353859593604694140' },
     });
 
     await editor.locator('.map-segmented-btn[data-clip-then="stop"]').click();
@@ -95,4 +99,106 @@ test.describe('Launch Clip in MAP', () => {
       await detail.screenshot({ path: 'test-results/launch-clip-editor-mobile.png' });
     }
   });
+});
+
+
+for (const lang of ['en', 'pt-BR']) {
+  test(`${lang}: a save error is visible in both Launch Clip pickers and retry succeeds`, async ({ page }) => {
+    await setup(page, lang);
+    const detail = page.locator('#map-mobile-detail');
+    await detail.locator('.map-entry-choice[data-kind="clip"]').click();
+    await page.evaluate(() => { window.__launchSaveError = 'Live rejected destination'; window.mobileMappingState.clipPickerPurpose = 'stop'; });
+    await detail.locator('.map-picker-row', { hasText: 'Drums' }).click();
+    const prefix = lang === 'en' ? 'Could not save Launch Clip: ' : 'Não foi possível salvar Lançar clip: ';
+    await expect(detail.locator('.map-detail-status')).toHaveText(prefix + 'Live rejected destination');
+    await expect(detail.locator('.map-detail-status')).toHaveAttribute('data-kind', 'error');
+    await page.evaluate(() => { window.mobileMappingState.clipPickerPurpose = 'new'; });
+    await detail.locator('.map-picker-row', { hasText: 'Drums' }).click();
+    await detail.locator('.map-picker-row', { hasText: 'Base' }).click();
+    await expect(detail.locator('.map-detail-status')).toHaveText(prefix + 'Live rejected destination');
+    await expect(detail.locator('.map-clip-editor')).toHaveCount(0);
+    await page.evaluate(() => { window.__launchSaveError = null; });
+    await detail.locator('.map-picker-row', { hasText: 'Base' }).click();
+    await expect(detail.locator('.map-clip-editor')).toBeVisible();
+  });
+}
+
+
+for (const kind of ['bind', 'note']) {
+  test(`${kind}: Refresh updates Live tracks and keeps the filter and selected control`, async ({ page }) => {
+    await setup(page, 'pt-BR');
+    await page.evaluate(async () => {
+      const track = (index, name) => ({ trackIndex: index, name, trackKind: 'track', isMidi: true,
+        mixer: [{ label: 'Volume', target: { type: 'volume', trackIndex: index } }], devices: [] });
+      window.__mapTargets = [track(0, 'Keys old'), track(1, 'Deleted')];
+      await window.loadMobileMappingData();
+    });
+    const detail = page.locator('#map-mobile-detail');
+    await detail.locator(`.map-entry-choice[data-kind="${kind}"]`).click();
+    const search = detail.locator('.map-picker-search');
+    await search.fill('Keys');
+    const refresh = detail.locator('.map-picker-head').getByRole('button', { name: 'Atualizar', exact: true });
+    await expect(refresh).toBeVisible();
+    expect((await refresh.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await page.evaluate(() => {
+      window.__mapTargets = [{ trackIndex: 2, name: 'Keys renamed', trackKind: 'track', isMidi: true,
+        mixer: [{ label: 'Volume', target: { type: 'volume', trackIndex: 2 } }], devices: [] },
+      { trackIndex: 3, name: 'New MIDI', trackKind: 'track', isMidi: true, mixer: [], devices: [] }];
+    });
+    await refresh.click();
+    await expect(search).toHaveValue('Keys');
+    await expect(detail).toContainText('Keys renamed');
+    await expect(detail).not.toContainText('Keys old');
+    await expect(detail).not.toContainText('Deleted');
+    expect(await page.evaluate(() => window.mobileMappingState.selectedControl)).toBe('sensor.vision.gesture.2');
+    expect(await page.evaluate(() => window.mobileMappingState.selectedTargetIndex)).toBe(0);
+    await search.fill('');
+    if (kind === 'note') await expect(detail).toContainText('New MIDI');
+    await page.evaluate(() => { window.__refreshError = 'Live unavailable'; });
+    await refresh.click();
+    await expect(detail.locator('.map-detail-status')).toHaveAttribute('data-kind', 'error');
+    await expect(detail.locator('.map-detail-status')).toContainText('Live unavailable');
+    await expect(detail).toContainText('Keys renamed');
+    await expect(refresh).toBeEnabled();
+  });
+}
+
+test('Launch Clip: Refresh discovers clips from an empty Set and keeps the chosen track by identity', async ({ page }) => {
+  await setup(page, 'en');
+  await page.evaluate(() => { window.__clipTargets.tracks = []; });
+  const detail = page.locator('#map-mobile-detail');
+  await detail.locator('.map-entry-choice[data-kind="clip"]').click();
+  await expect(detail).toContainText('No track with Session clips');
+  const refresh = detail.locator('.map-picker-head').getByRole('button', { name: 'Refresh', exact: true });
+  await expect(refresh).toBeVisible();
+  expect((await refresh.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await page.evaluate(() => { window.__clipTargets.tracks = [{ trackIndex: 0, name: 'Drums', sessionId: '101',
+    clips: [{ slotIndex: 0, name: 'Base', sessionId: '102' }] }]; });
+  await refresh.click();
+  await detail.locator('.map-picker-row', { hasText: 'Drums' }).click();
+  await expect(refresh).toBeVisible();
+  expect((await refresh.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await page.evaluate(() => { window.__clipTargets.tracks = [{ trackIndex: 0, name: 'Other', sessionId: '201', clips: [] },
+    { trackIndex: 2, name: 'Renamed Drums', sessionId: '101', clips: [{ slotIndex: 3, name: 'New Base', sessionId: '103' }] }]; });
+  await refresh.click();
+  await expect(detail.locator('.map-picker-row')).toHaveText(['Slot 4 · New Base']);
+  await expect(detail.locator('.map-picker-head')).toContainText('Renamed Drums');
+  await detail.locator('.map-picker-row').click();
+  const saved = await page.evaluate(() => window.__launchCalls.filter((c) => c.cmd === 'setMapping').at(-1).args.targets[0]);
+  expect(saved.track).toEqual({ trackIndex: 2, trackName: 'Renamed Drums', trackSessionId: '101' });
+  expect(saved.clip).toEqual({ slotIndex: 3, clipName: 'New Base', clipSessionId: '103' });
+});
+
+test('Launch Clip: refreshing a deleted track never substitutes the track at its old index', async ({ page }) => {
+  await setup(page, 'en');
+  const detail = page.locator('#map-mobile-detail');
+  await detail.locator('.map-entry-choice[data-kind="clip"]').click();
+  await detail.locator('.map-picker-row', { hasText: 'Drums' }).click();
+  await page.evaluate(() => { window.__clipTargets.tracks = [{ trackIndex: 1, name: 'Replacement', sessionId: '999',
+    clips: [{ slotIndex: 0, name: 'Unrelated clip', sessionId: '1000' }] }]; });
+  await detail.locator('.map-picker-head').getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(detail.locator('.map-picker-row')).toHaveCount(0);
+  await expect(detail.locator('.map-detail-status')).toHaveAttribute('data-kind', 'error');
+  await expect(detail).not.toContainText('Unrelated clip');
+  expect(await page.evaluate(() => window.__launchCalls.filter((c) => c.cmd === 'setMapping').length)).toBe(0);
 });

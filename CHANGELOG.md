@@ -24,6 +24,15 @@ intermediate release records are intentionally not published.
   guessing, with one late request when the window is missed. Return precision
   is still to be validated in Live 12.
 
+### Fixed
+
+- Launch Clip accepts real Live session handles of 45–46 digits and keeps
+  their full string identity when saving and relinking. Save errors stay
+  visible in both pickers, which remain open for retry.
+- Visible **Refresh** buttons in Bind, Trigger Note and Launch Clip pickers
+  reload Live tracks/clips while preserving the filter and available track
+  selection.
+
 ## [1.0.2] — 2026-09-30
 
 ### Added

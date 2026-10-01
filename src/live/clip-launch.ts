@@ -98,7 +98,7 @@ const IGNORED_KEYS = new Set([
 const TRACK_KEYS = new Set(["trackIndex", "trackName", "trackSessionId"]);
 const SLOT_KEYS = new Set(["slotIndex", "clipName", "clipSessionId"]);
 const THEN_KEYS = new Set(["action", "passes", "clip"]);
-const SESSION_ID = /^\d{1,24}$/;
+const SESSION_ID = /^\d{1,64}$/;
 
 function isRecord(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);

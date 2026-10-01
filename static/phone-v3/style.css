@@ -2387,6 +2387,12 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
   flex-direction: column;
   gap: 3px;
 }
+.map-picker-head .map-picker-refresh {
+  min-height: 44px;
+  min-width: 44px;
+  margin-left: auto;
+  padding: 0 10px;
+}
 .map-conflict {
   margin-bottom: 6px;
   padding: 6px;

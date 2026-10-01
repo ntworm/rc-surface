@@ -88,6 +88,22 @@ test("a profile round trip keeps Launch Clip targets and relinks them by name", 
   assert.equal(report.loaded, 1);
 });
 
+test("a profile with 46 digit Live handles validates and relinks without truncating ids", () => {
+  const song = makeSong();
+  song.tracks[1].handle.id = BigInt("1071830035832904214785262397353859593604694139");
+  song.tracks[1].clipSlots[2].clip.handle.id = BigInt("1071830035832904214785262397353859593604694140");
+  const config = buildProjectConfig(song, new Map([["pad-1", [launchTarget(song)]]]));
+  const validated = validateProjectConfig(JSON.parse(JSON.stringify(config)));
+  const moved = reopen(song);
+  moved.tracks[1].handle.id = BigInt("1071830035832904214785262397353859593604694141");
+  moved.tracks[1].clipSlots[2].clip.handle.id = BigInt("1071830035832904214785262397353859593604694142");
+  const { mappings } = relinkProjectConfig(validated, moved);
+  const [target] = mappings.get("pad-1");
+  assert.equal(target.track.trackSessionId, "1071830035832904214785262397353859593604694141");
+  assert.equal(target.clip.clipSessionId, "1071830035832904214785262397353859593604694142");
+  assert.equal(target.then.clip.clipName, "Base");
+});
+
 test("reordered tracks and scenes relink to the new positions", () => {
   const song = makeSong();
   const config = buildProjectConfig(song, new Map([["pad-1", [launchTarget(song)]]]));

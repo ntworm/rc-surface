@@ -26,6 +26,7 @@
     busy: false,
     error: '',
     pickerMode: null,
+    pickerRefreshing: false,
     midiTargetMode: 'trigger_note',
     pickerFilter: '',
     pendingConflict: null,
@@ -274,7 +275,13 @@
       } else {
         state.currentMappings[key] = prevTargets;
       }
-      setStatus(response?.error || 'Failed to save mapping target.', 'error');
+      if (state.pickerMode === 'clip' || state.pickerMode === 'clipTrack') {
+        setStatus(T('lc.saveFailed', 'Could not save Launch Clip: {reason}', {
+          reason: response?.error || 'Failed to save mapping target.',
+        }), 'error');
+      } else {
+        setStatus(response?.error || 'Failed to save mapping target.', 'error');
+      }
     }
     return response;
   }
@@ -1262,6 +1269,7 @@
     const title = document.createElement('strong');
     title.textContent = T('mm.triggerNote', 'Trigger Note');
     head.appendChild(title);
+    appendPickerRefresh(head);
     container.appendChild(head);
 
     const search = document.createElement('input');
@@ -2225,6 +2233,51 @@
     renderDetail();
   }
 
+  function appendPickerRefresh(head) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'map-picker-refresh';
+    button.textContent = T('mm.refresh', 'Refresh');
+    button.disabled = state.pickerRefreshing || state.busy;
+    button.addEventListener('click', async () => {
+      if (state.pickerRefreshing) return;
+      const mode = state.pickerMode;
+      const control = state.selectedControl;
+      const chosenTrack = state.clipPickerTrack;
+      const needsClips = mode === 'clipTrack' || mode === 'clip';
+      state.pickerRefreshing = true;
+      button.disabled = true;
+      setStatus(T('mm.refreshing', 'Refreshing…'), 'loading');
+      const [targets, clips] = await Promise.all([
+        command('getTargets'),
+        needsClips ? command('getClipTargets') : Promise.resolve(null),
+      ]);
+      state.pickerRefreshing = false;
+      button.disabled = false;
+      if (!state.open || state.pickerMode !== mode || state.selectedControl !== control
+          || (mode === 'clip' && state.clipPickerTrack !== chosenTrack)) return;
+      const failed = !targets?.ok ? targets : needsClips && !clips?.ok ? clips : null;
+      if (!targets?.ok || (needsClips && !clips?.ok)) {
+        setStatus(T('mm.refreshFailed', 'Could not refresh: {reason}', { reason: failed?.error || 'no response' }), 'error');
+        return;
+      }
+      state.allTargets = targets.result?.targets || [];
+      if (needsClips) {
+        state.clipTargets = clips.result || { tracks: [], osc: {} };
+        if (mode === 'clip') {
+          state.clipPickerTrack = (state.clipTargets.tracks || []).find((track) => chosenTrack?.sessionId
+            ? track.sessionId === chosenTrack.sessionId
+            : track.name === chosenTrack?.name) || null;
+        }
+      }
+      setStatus(mode === 'clip' && !state.clipPickerTrack
+        ? T('lc.trackUnavailable', 'Track no longer available — choose another track.')
+        : T('mm.refreshed', 'Updated from Live.'), mode === 'clip' && !state.clipPickerTrack ? 'error' : 'ok');
+      renderDetail();
+    });
+    head.appendChild(button);
+  }
+
   function pickerHead(container, title, onBack) {
     const head = document.createElement('div');
     head.className = 'map-picker-head';
@@ -2236,12 +2289,25 @@
     const strong = document.createElement('strong');
     strong.textContent = title;
     head.appendChild(strong);
+    appendPickerRefresh(head);
     container.appendChild(head);
+  }
+
+  function appendClipPickerStatus(container) {
+    const status = document.createElement('div');
+    status.className = 'map-detail-status';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    const current = $('map-mobile-status');
+    status.textContent = current?.textContent || '';
+    status.dataset.kind = current?.dataset.kind || '';
+    container.appendChild(status);
   }
 
   function renderClipTrackPicker(container) {
     container.innerHTML = '';
     pickerHead(container, `${T('mm.launchClip', 'Launch Clip')} · ${T('lc.pickTrack', 'Choose a track')}`, closePicker);
+    appendClipPickerStatus(container);
     const list = document.createElement('div');
     list.className = 'map-picker-list';
     container.appendChild(list);
@@ -2284,6 +2350,7 @@
     const purpose = state.clipPickerPurpose;
     const back = purpose === 'new' || purpose === 'change' ? () => openClipTrackPicker(purpose) : closePicker;
     pickerHead(container, `${track?.name || ''} · ${T('lc.pickClip', 'Choose a clip')}`, back);
+    appendClipPickerStatus(container);
     const list = document.createElement('div');
     list.className = 'map-picker-list';
     container.appendChild(list);
@@ -2951,6 +3018,7 @@
     const title = document.createElement('strong');
     title.textContent = T('mm.pickTarget', 'Pick Target');
     head.appendChild(title);
+    appendPickerRefresh(head);
     container.appendChild(head);
 
     const statusRow = document.createElement('div');

@@ -142,6 +142,21 @@ test("getClipTargets lists real names of tracks with clips and skips empty and g
   assert.match(drums.clips[0].sessionId, /^\d+$/);
 });
 
+test("realistic 45-46 digit Live session ids save and fire the exact slot without losing precision", async () => {
+  setup();
+  const trackId = "1071830035832904214785262397353859593604694139";
+  const clipId = "107183003583290421478526239735385959360469413";
+  song.tracks[1].handle.id = BigInt(trackId);
+  song.tracks[1].clipSlots[2].clip.handle.id = BigInt(clipId);
+  const base = await drumsTarget();
+  await map(G3, { ...base, launchMode: "clip", clip: base.ref("Virada") });
+  const stored = controlMappings.get(G3)[0];
+  assert.equal(stored.track.trackSessionId, trackId);
+  assert.equal(stored.clip.clipSessionId, clipId);
+  await gesture(G3, 1);
+  assert.deepEqual(fires(), [[1, 2]]);
+});
+
 test("setMapping validates Launch Clip targets and drops generic editor fields", async () => {
   setup();
   const base = await drumsTarget();
@@ -157,6 +172,8 @@ test("setMapping validates Launch Clip targets and drops generic editor fields",
     ["return track", { ...valid, trackKind: "return" }],
     ["long name", { ...valid, clip: { ...base.ref("Base"), clipName: "x".repeat(129) } }],
     ["bad session id", { ...valid, clip: { ...base.ref("Base"), clipSessionId: "abc" } }],
+    ["oversized session id", { ...valid, clip: { ...base.ref("Base"), clipSessionId: "1".repeat(65) } }],
+    ["numeric session id", { ...valid, track: { ...valid.track, trackSessionId: 123 } }],
   ]) {
     const clean = JSON.parse(JSON.stringify(bad));
     await assert.rejects(commands.setMapping.handler({ control: "pad-1", targets: [clean] }), Error, label);
