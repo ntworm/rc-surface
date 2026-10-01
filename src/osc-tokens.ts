@@ -58,9 +58,9 @@ export const CMD = {
 // ── Launch Clip ────────────────────────────────────────────────────────────
 //
 // AbletonOSC addresses clips and tracks by index. Launch Clip only fires,
-// stops and observes: there is deliberately no `set` here, so Surface never
-// changes a clip, track or song property of the user's set. Launches carry
-// no extra argument, which leaves quantization to Live.
+// stops and observes. D11 permits only an explicit Song global quantization
+// write; no clip/track setters or per-launch override. Launches carry no
+// extra argument, which leaves their effective quantization to Live.
 
 export const CLIP = {
   fireSlot:                 "/live/clip_slot/fire",
@@ -76,6 +76,8 @@ export const CLIP = {
   getLegato:                "/live/clip/get/legato",
   listenGlobalQuantization: "/live/song/start_listen/clip_trigger_quantization",
   getGlobalQuantization:    "/live/song/get/clip_trigger_quantization",
+  // D11: the only Launch Clip property setter, explicit GLOBAL Set action.
+  setGlobalQuantization:    "/live/song/set/clip_trigger_quantization",
   getTrackNames:            "/live/song/get/track_names",
 } as const;
 

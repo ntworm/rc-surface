@@ -1082,8 +1082,16 @@ you can retry.
   launch that is still waiting on that track.
 
 **Quantization** is always Live's: the clip's own launch quantization, or the
-song setting when the clip says Global. The editor shows the effective value
-read-only. RC Surface never changes a clip, track or song setting.
+song setting when the clip says Global. The effective value is displayed
+separately from **Set global quantization**. Choose a global value and tap
+**Apply** to change the entire Set, including other clips using Global.
+A clip with its own quantization keeps that setting. None is allowed for the
+Set, but continuation rules still require a usable quantum.
+
+The editor waits for Live to confirm the requested value (up to two seconds),
+keeps the observed value visible while waiting, and reports disconnection or
+failure. It never retries or reapplies the value after reconnecting, opening
+an editor or loading a mapping/preset. Save the Set in Live to persist it.
 
 **State** comes only from what Live reports back: Ready, Sent — waiting for
 Live, Waiting in Live (next boundary), Playing, Stop waiting in Live, Track
@@ -1135,6 +1143,14 @@ AbletonOSC link drops, or the position updates cannot prove how many passes
 were played (it does not guess). A phone disconnect does not cancel an armed
 rule. If the window is missed while the rule is still valid, the next request
 is sent once and marked **Late return**.
+
+Changing the global quantization, either here or in Live, cancels every
+unsent RC continuation once the change is observed. During a pending RC
+write, returns and new rules are suspended; failure or timeout cancels the
+suspended rules. For a new rule, stop or choose another clip, then activate
+again to obtain a new launch. A return already sent
+to Live remains under Live's control; RC Surface cannot undo that queued
+request. Receiving the same global value again does not cancel a rule.
 
 The precision of the return is a hypothesis still being validated in
 Live 12, not a guarantee. When the exact timing matters more than the
@@ -1684,6 +1700,13 @@ is momentary (`0` or `1`), persists across page reloads, and rearms only after
 the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
 Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
 To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
+Recognition checks strong finger-shape contradictions against all three
+learned takes before accepting or holding a pose. Opening a fifth finger
+that was consistently curled in a four-finger pose releases it after the
+release interval; if the open hand is trained in another slot, it can switch
+directly. Small curls and uncertain readings still use the learned tolerance.
+Missing-hand frames keep HOLD. Existing 42/47-coordinate saved poses load
+without recapture. TEST uses the same compatibility check as live recognition.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 
 ---
@@ -2982,9 +3005,10 @@ handles) but has no launch, stop, launch-quantization or Follow Action API.
 
 ### OSC addresses (`CLIP` / `CLIP_RESPONSE`, frozen)
 
-Fire, stop, listen and read only. There is no `set` address: RC Surface never
-changes a clip, track or song property. A launch carries no extra argument,
-so Live applies its own launch quantization.
+Fire, stop, listen and read, plus one explicit global Set write:
+`Song.clip_trigger_quantization`. No clip/track setters or other song property
+setters are permitted in Launch Clip. A launch carries only track and slot,
+so Live applies its own effective launch quantization.
 
 ```
 /live/clip_slot/fire                               track slot
@@ -2997,12 +3021,14 @@ so Live applies its own launch quantization.
 /live/clip/get/legato                              track slot
 /live/song/start_listen/clip_trigger_quantization
 /live/song/get/clip_trigger_quantization
+/live/song/set/clip_trigger_quantization           integer 0..13 (explicit action only)
 /live/song/get/track_names
 ```
 
 The Launch Clip listeners are registered only while at least one Launch Clip
 mapping exists, and are re-registered with the song listeners. Replies to the
-getters are counted as replies, not as listener pushes.
+getters are counted as replies, not as listener pushes. Opening a picker can
+also observe/read global quantization before a mapping exists; it never writes.
 
 ### Target schema
 
@@ -3047,6 +3073,7 @@ and missing targets are never dispatched.
 
 Broadcast to every surface: `{ type, control, targetIndex, state, reason?,
 listIndex?, quantization?: { source: 'clip'|'global'|'unknown', label },
+globalQuantization?: { value: number|null, label, pending, available, connected },
 warnings?, rule?: { state, reason?, refusal?, prediction? } }`. `state` is one
 of `idle`, `requested`, `queued`, `playing`, `stopping`, `stopped`,
 `no_confirmation`, `unavailable`, `missing`, `ambiguous`, `index_mismatch`.
@@ -3080,6 +3107,14 @@ current time signature.
   (looped clip plays the difference) or `silence` (non-loop).
 - Precision is a hypothesis to validate in Live 12, not a contract.
 
+Confirmed global changes cancel all unsent waiting/armed rules, including
+clip-overridden rules, with `global_quantization_changed`; identical reports
+do not. Pending local writes block arming (`quantization_pending`) and sends,
+while position proof continues. Failure/offline/timeout cancels suspended
+rules with `quantization_unconfirmed`. Unknown global values block arming.
+Cancelled rules never revive on late callbacks or reconnection. Rules already
+sent retain their ledger; no compensating fire/stop can undo Live's queue.
+
 ### Command Authorization
 
 - `getClipTargets`: `read`. Tracks with clips, real names, slots, session ids,
@@ -3088,3 +3123,18 @@ current time signature.
   and the last 20 rule diagnostics.
 - `testClipLaunch({ control, targetIndex })`: `live-write`. One activation of
   a saved Launch Clip target with the same rules as a gesture.
+- `setGlobalClipQuantization({ quantization })`: `live-write`; viewer refused.
+  Exact object, integer 0..13; strings, fractions, arrays and extra fields
+  refused before sending. One setter per explicit request, no concurrent
+  write or offline queue. Success needs a valid post-send Live report matching
+  the request within 2000 ms; divergent reports update observation without
+  claiming success. Same confirmed value is a no-op. No retry/replay or mapping,
+  preset or `.rcsurface` persistence. Late reports update observation only.
+  OSC has no request IDs: observation cannot prove exclusive authorship/order.
+- `getClipTargets` and `getClipLaunchStatus` add the same `globalQuantization`
+  object without changing their existing track/status arrays.
+
+Song enum: `0=None, 1=8 Bars, 2=4 Bars, 3=2 Bars, 4=1 Bar, 5=1/2,
+6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T, 11=1/16, 12=1/16T, 13=1/32`.
+Clip quantization has a separate enum (`0=Global`, `1=None`, `2..14`);
+it is observed only and never written by this command.

@@ -275,9 +275,10 @@ Follow Actions.
 
 ### Endereços OSC (`CLIP` / `CLIP_RESPONSE`, congelados)
 
-Só disparar, parar, escutar e ler. Não existe endereço `set`: o RC Surface
-nunca altera uma propriedade de clip, track ou música. O lançamento não leva
-argumento extra, então o Live aplica a própria quantização de lançamento.
+Disparar, parar, escutar e ler, mais uma escrita global explícita do Set:
+`Song.clip_trigger_quantization`. Launch Clip não permite setters de clip,
+track ou outras propriedades da música. O lançamento leva só track e slot,
+então o Live aplica a própria quantização efetiva de lançamento.
 
 ```
 /live/clip_slot/fire                               track slot
@@ -290,12 +291,15 @@ argumento extra, então o Live aplica a própria quantização de lançamento.
 /live/clip/get/legato                              track slot
 /live/song/start_listen/clip_trigger_quantization
 /live/song/get/clip_trigger_quantization
+/live/song/set/clip_trigger_quantization           inteiro 0..13 (só ação explícita)
 /live/song/get/track_names
 ```
 
 Os listeners do Launch Clip só são registrados enquanto existe ao menos um
 mapeamento de Launch Clip, e são registrados de novo junto com os listeners da
 música. Respostas aos getters contam como respostas, não como push de listener.
+Abrir um picker também pode observar/ler a quantização global antes de existir
+um mapping; nunca escreve.
 
 ### Esquema do destino
 
@@ -342,7 +346,8 @@ ausentes nunca são disparados.
 
 Enviada a todas as superfícies: `{ type, control, targetIndex, state,
 reason?, listIndex?, quantization?: { source: 'clip'|'global'|'unknown',
-label }, warnings?, rule?: { state, reason?, refusal?, prediction? } }`.
+label }, globalQuantization?: { value: number|null, label, pending, available,
+connected }, warnings?, rule?: { state, reason?, refusal?, prediction? } }`.
 `state` é um de `idle`, `requested`, `queued`, `playing`, `stopping`,
 `stopped`, `no_confirmation`, `unavailable`, `missing`, `ambiguous`,
 `index_mismatch`. `queued` e `playing` só vêm dos listeners do Live.
@@ -376,6 +381,15 @@ fórmula de compasso atual.
   (o clip em loop toca a diferença) ou `silence` (sem loop).
 - A precisão é uma hipótese a validar no Live 12, não um contrato.
 
+Mudanças globais confirmadas cancelam todas as regras waiting/armed ainda
+não enviadas, inclusive com override de clip, com `global_quantization_changed`;
+repetir o mesmo valor não cancela. Escrita local pendente bloqueia arming
+(`quantization_pending`) e envios, mas a prova de posição continua. Falha,
+offline ou timeout cancela regras suspensas com `quantization_unconfirmed`.
+Global desconhecido bloqueia arming. Regras canceladas não voltam por callback
+tardio ou reconexão. Regras já enviadas conservam ledger; fire/stop compensatório
+não desfaz a fila do Live.
+
 ### Autorização de comandos
 
 - `getClipTargets`: `read`. Tracks com clips, nomes reais, slots, ids de
@@ -384,3 +398,18 @@ fórmula de compasso atual.
   os 20 últimos diagnósticos de regra.
 - `testClipLaunch({ control, targetIndex })`: `live-write`. Uma ativação de um
   destino de Launch Clip salvo, com as mesmas regras do gesto.
+- `setGlobalClipQuantization({ quantization })`: `live-write`; viewer recusado.
+  Objeto exato, inteiro 0..13; strings, frações, arrays e campos extras recusados
+  antes do envio. Um setter por pedido explícito, sem escrita concorrente ou
+  fila offline. Sucesso exige resposta válida do Live depois do envio, igual
+  ao pedido em até 2000 ms; resposta divergente atualiza observação sem anunciar
+  sucesso. Mesmo valor confirmado é no-op. Sem retry/replay nem persistência
+  em mapping, preset ou `.rcsurface`. Resposta tardia só atualiza observação.
+  OSC não tem request IDs: observação não prova autoria exclusiva/ordem.
+- `getClipTargets` e `getClipLaunchStatus` acrescentam o mesmo objeto
+  `globalQuantization`, preservando arrays existentes de tracks/status.
+
+Enum Song: `0=None, 1=8 Bars, 2=4 Bars, 3=2 Bars, 4=1 Bar, 5=1/2,
+6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T, 11=1/16, 12=1/16T, 13=1/32`.
+Quantização de clip tem enum separado (`0=Global`, `1=None`, `2..14`);
+é só observada e nunca escrita por este comando.

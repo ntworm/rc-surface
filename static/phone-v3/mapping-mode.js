@@ -2126,6 +2126,16 @@
   // Elements of the editor on screen, so a state message can update them
   // without redrawing (and without stealing focus from an open select).
   let clipEditorRefs = null;
+  let clipGlobalQuantization = null;
+  let clipQuantizationBusy = false;
+  let clipQuantizationError = '';
+  const LC_GLOBAL_QUANT_LABELS = ['None', '8 Bars', '4 Bars', '2 Bars', '1 Bar', '1/2', '1/2T', '1/4', '1/4T', '1/8', '1/8T', '1/16', '1/16T', '1/32'];
+  function globalQuantizationLabel(value) {
+    if (value === 0) return T('lc.quantNone', 'None');
+    if (value === 4) return T('lc.quantOneBar', '1 Bar');
+    if (value >= 1 && value <= 3) return T('lc.quantBars', '{n} Bars', { n: [0, 8, 4, 2][value] });
+    return LC_GLOBAL_QUANT_LABELS[value] || T('lc.quantUnknown', 'Waiting for Live');
+  }
   // English text for keys built at run time; the catalog supplies pt-BR.
   const LC_STATE_TEXT = {
     idle: 'Ready', requested: 'Sent — waiting for Live', queued: 'Waiting in Live (next boundary)',
@@ -2139,6 +2149,8 @@
     sent: 'Next request sent to Live', late: 'Late return', done: 'Rule done', refused: 'Rule unavailable',
   };
   const LC_REFUSAL_TEXT = {
+    quantization_pending: 'Wait for the global quantization request to finish, then activate again.',
+    quantization_unknown: 'Waiting for the Set global quantization from Live.',
     quantization_none: 'Needs a Live quantization other than None.',
     window_too_short: 'Quantization too short at this tempo for a safe hand-off. Use a native Follow Action.',
     legato: 'This clip has Legato on in Live; its start cannot be counted.',
@@ -2147,6 +2159,8 @@
     unwarped_audio: 'Unwarped audio cannot be counted in beats.',
   };
   const LC_REASON_TEXT = {
+    global_quantization_changed: 'global quantization changed; start a new launch to arm a new rule',
+    quantization_unconfirmed: 'global quantization was not confirmed; start a new launch to arm a new rule',
     new_choice: 'new choice', new_choice_live: 'clip launched in Live', track_stop: 'track stopped',
     transport_stopped: 'transport stopped', stopped: 'clip stopped', osc_lost: 'AbletonOSC lost',
     mapping_changed: 'mapping changed', insufficient_pushes: 'too few position updates to count',
@@ -2166,10 +2180,12 @@
   window.handleClipLaunchState = function (msg) {
     if (!msg || msg.type !== 'clip_launch_state' || typeof msg.control !== 'string') return;
     const { type: _type, ...status } = msg;
+    if (status.globalQuantization) clipGlobalQuantization = status.globalQuantization;
     clipLaunchStatus.set(clipStatusKey(status.control, Number(status.targetIndex) || 0), status);
     if (status.control === mappingKey(state.selectedControl) && Number(status.targetIndex) === state.selectedTargetIndex) {
       renderClipLaunchStatus();
     }
+    renderGlobalQuantization();
   };
 
   async function ensureClipTargets(force = false) {
@@ -2181,12 +2197,14 @@
       return null;
     }
     state.clipTargets = response.result || { tracks: [], osc: {} };
+    if (state.clipTargets.globalQuantization) clipGlobalQuantization = state.clipTargets.globalQuantization;
     return state.clipTargets;
   }
 
   async function refreshClipLaunchStatus() {
     const response = await command('getClipLaunchStatus');
     if (!response || !response.ok) return;
+    if (response.result?.globalQuantization) clipGlobalQuantization = response.result.globalQuantization;
     for (const status of response.result?.statuses || []) {
       clipLaunchStatus.set(clipStatusKey(status.control, status.targetIndex), status);
     }
@@ -2535,6 +2553,30 @@
       warnings.textContent = (status?.warnings || []).filter((w) => has(LC_WARNING_TEXT, w))
         .map((w) => T(`lc.warn.${w}`, LC_WARNING_TEXT[w])).join(' ');
     }
+    renderGlobalQuantization();
+  }
+
+  function renderGlobalQuantization() {
+    const refs = clipEditorRefs;
+    if (!refs?.globalSelect) return;
+    const global = clipGlobalQuantization;
+    const pending = clipQuantizationBusy || global?.pending;
+    const connected = Boolean(global?.available && global?.connected);
+    const confirmed = Number.isInteger(global?.value) && global.value >= 0 && global.value <= 13;
+    if (!refs.globalDirty) refs.globalSelect.value = confirmed ? String(global.value) : '';
+    refs.globalSelect.disabled = !connected || pending;
+    refs.globalApply.disabled = !connected || pending || refs.globalSelect.value === '';
+    const label = confirmed ? globalQuantizationLabel(global.value) : T('lc.quantUnknown', 'Waiting for Live');
+    refs.globalFeedback.dataset.state = !connected || clipQuantizationError ? 'error' : pending ? 'pending' : confirmed ? 'confirmed' : 'waiting';
+    refs.globalFeedback.textContent = !connected
+      ? T('lc.quantOffline', 'Connect AbletonOSC to change the Set global quantization.')
+      : clipQuantizationError
+        ? T('lc.quantError', 'Could not change global quantization: {error}', { error: clipQuantizationError })
+        : pending
+          ? T('lc.quantPending', 'Waiting for Live… Current: {label}', { label })
+          : confirmed
+            ? T('lc.quantConfirmed', 'Confirmed in Live: {label}', { label })
+            : label;
   }
 
   function renderClipLaunchEditor(container, target) {
@@ -2650,7 +2692,64 @@
     quantLine.className = 'map-clip-quantization';
     quantization.appendChild(quantLine);
     clipEditorRefs.quantization = quantLine;
-    note(quantization, T('lc.quantNote', 'Set in Live; RC Surface does not change it.'));
+    const globalTitle = document.createElement('label');
+    globalTitle.htmlFor = 'map-clip-global-quantization';
+    globalTitle.className = 'map-trigger-field-title';
+    globalTitle.textContent = T('lc.quantSetGlobal', 'Set global quantization');
+    quantization.appendChild(globalTitle);
+    const globalRow = document.createElement('div');
+    globalRow.className = 'map-clip-global-row';
+    const globalSelect = document.createElement('select');
+    globalSelect.id = 'map-clip-global-quantization';
+    globalSelect.className = 'map-note-mode-select';
+    const unknownOption = document.createElement('option');
+    unknownOption.value = '';
+    unknownOption.textContent = T('lc.quantUnknown', 'Waiting for Live');
+    unknownOption.disabled = true;
+    globalSelect.appendChild(unknownOption);
+    LC_GLOBAL_QUANT_LABELS.forEach((_, value) => {
+      const option = document.createElement('option');
+      option.value = String(value);
+      option.textContent = globalQuantizationLabel(value);
+      globalSelect.appendChild(option);
+    });
+    globalSelect.addEventListener('change', () => {
+      clipEditorRefs.globalDirty = true;
+      clipQuantizationError = '';
+      renderGlobalQuantization();
+    });
+    const globalApply = document.createElement('button');
+    globalApply.type = 'button';
+    globalApply.id = 'map-clip-global-apply';
+    globalApply.className = 'map-mini-btn';
+    globalApply.textContent = T('lc.quantApply', 'Apply');
+    globalApply.addEventListener('click', async () => {
+      if (clipQuantizationBusy || globalApply.disabled) return;
+      clipQuantizationBusy = true;
+      clipQuantizationError = '';
+      renderGlobalQuantization();
+      try {
+        const response = await command('setGlobalClipQuantization', { quantization: Number(globalSelect.value) });
+        if (!response?.ok) clipQuantizationError = response?.error || 'No Live confirmation';
+        await refreshClipLaunchStatus();
+      } catch (error) { clipQuantizationError = error.message || String(error); }
+      finally {
+        clipQuantizationBusy = false;
+        if (clipEditorRefs) clipEditorRefs.globalDirty = false;
+        renderGlobalQuantization();
+      }
+    });
+    globalRow.appendChild(globalSelect);
+    globalRow.appendChild(globalApply);
+    quantization.appendChild(globalRow);
+    const globalFeedback = document.createElement('div');
+    globalFeedback.id = 'map-clip-global-feedback';
+    globalFeedback.className = 'map-clip-global-feedback';
+    globalFeedback.setAttribute('role', 'status');
+    globalFeedback.setAttribute('aria-live', 'polite');
+    quantization.appendChild(globalFeedback);
+    Object.assign(clipEditorRefs, { globalSelect, globalApply, globalFeedback, globalDirty: false });
+    note(quantization, T('lc.quantNote', 'Changes the global setting for the whole Set. A clip with its own quantization keeps that setting.'));
 
     // 4. After it starts — only for a single clip.
     if (target.launchMode === 'clip') {

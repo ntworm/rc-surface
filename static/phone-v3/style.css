@@ -4794,6 +4794,13 @@ body.mapping-mode [data-name].selected-control {
 .map-clip-status[data-state="unavailable"],
 .map-clip-status[data-state="no_confirmation"] { color: var(--mode-d); border-color: var(--mode-d); }
 .map-clip-test { min-height: 44px; min-width: 64px; }
+.map-clip-global-row { display: flex; gap: 8px; margin-top: 6px; }
+.map-clip-global-row select { flex: 1; width: 0; min-width: 0; min-height: 44px; }
+.map-clip-global-row button { min-height: 44px; }
+.map-clip-global-feedback { margin-top: 6px; font-size: 10px; overflow-wrap: anywhere; }
+.map-clip-global-feedback[data-state="pending"] { color: var(--accent); }
+.map-clip-global-feedback[data-state="confirmed"] { color: var(--mode-c); }
+.map-clip-global-feedback[data-state="error"] { color: var(--mode-d); }
 .map-clip-note,
 .map-clip-rule-label {
   margin: 0;

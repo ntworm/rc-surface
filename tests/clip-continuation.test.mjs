@@ -24,6 +24,16 @@ const oneShot = (startMarker, endMarker) => ({
   startMarker, endMarker, loopStart: startMarker, loopEnd: endMarker, looping: false, beatUnits: true,
 });
 
+test('D13: suspended sends still prove wraps and resume one late return with the unchanged quantum', () => {
+  const { tracker } = ContinuationTracker.create({ geometry: loopClip(0, 0, 4), passes: 3, quantum: 4, bpm: 120 });
+  assert.equal(tracker.confirm(false).kind, 'none');
+  for (let e = .5; e <= 12; e += .5) assert.equal(tracker.position(e % 4, .5, false).kind, 'none');
+  assert.equal(tracker.outcome, 'armed', 'suspension must not claim a request was sent');
+  assert.deepEqual(tracker.position(.5, .5), { kind: 'send', late: true });
+  assert.equal(tracker.position(1, .5).kind, 'none');
+  assert.equal(tracker.diagnostics.wrapsAtSend, 3);
+});
+
 /** Where Live's playing_position is after `elapsed` beats of play. */
 function positionAt(geometry, elapsed) {
   const first = geometry.loopEnd - geometry.startMarker;

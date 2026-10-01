@@ -59,6 +59,19 @@ const GET_ADDRESSES: ReadonlySet<string> = new Set([
 const PENDING_REPLY_CAP = 8;
 
 const oscInt = (value: number) => ({ type: 'integer', value: Math.trunc(value) });
+export const GLOBAL_QUANTIZATION_CONFIRM_MS = 2000;
+
+export function validateGlobalClipQuantization(args: unknown): number {
+  if (!args || typeof args !== 'object' || Array.isArray(args)
+    || Object.keys(args).length !== 1 || !Object.hasOwn(args, 'quantization')) {
+    throw new Error('Expected exactly {quantization: integer 0..13}');
+  }
+  const value = (args as Record<string, unknown>)["quantization"];
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 13) {
+    throw new Error('quantization must be an integer from 0 to 13');
+  }
+  return value;
+}
 
 /** What Live reports about one clip property Launch Clip reads. */
 export type ClipPropertyName = 'launch_quantization' | 'launch_mode' | 'legato';
@@ -132,6 +145,8 @@ export class OSCTransport extends EventEmitter {
   public clipLaunchActive = false;
   /** Song.clip_trigger_quantization as Live last reported it. */
   public globalQuantization: number | null = null;
+  private pendingGlobalQuantization: ((error: Error) => void) | null = null;
+  public get globalQuantizationPending(): boolean { return this.pendingGlobalQuantization !== null; }
   private readonly trackSlotListeners = new Set<number>();
   private readonly clipPositionListeners = new Map<string, [number, number]>();
 
@@ -252,6 +267,7 @@ export class OSCTransport extends EventEmitter {
   }
 
   public dispose(): void {
+    this.pendingGlobalQuantization?.(new Error('AbletonOSC disconnected before quantization confirmation'));
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
@@ -314,6 +330,9 @@ export class OSCTransport extends EventEmitter {
       socket.send(buffer, this.targetPort, this.targetHost, (err) => {
         if (err) {
           this.state.error = err.message;
+          if (address === CLIP.setGlobalQuantization || address === CLIP.getGlobalQuantization) {
+            this.pendingGlobalQuantization?.(err);
+          }
         }
       });
     } catch (err) {
@@ -326,6 +345,9 @@ export class OSCTransport extends EventEmitter {
         console.log(`[OSC-RC] send() failed: ${detail}`);
       }
       this.state.error = err instanceof Error ? err.message : String(err);
+      if (address === CLIP.setGlobalQuantization || address === CLIP.getGlobalQuantization) {
+        this.pendingGlobalQuantization?.(new Error(this.state.error));
+      }
     }
   }
 
@@ -444,7 +466,7 @@ export class OSCTransport extends EventEmitter {
       this.emit('selection', this.state);
     } else if (address === CLIP_RESPONSE.globalQuantization) {
       const val = args[0]?.value;
-      if (typeof val === 'number' && Number.isInteger(val)) {
+      if (args.length === 1 && typeof val === 'number' && Number.isInteger(val) && val >= 0 && val <= 13) {
         this.globalQuantization = val;
         this.emit('clip-global-quantization', val);
       }
@@ -591,6 +613,46 @@ export class OSCTransport extends EventEmitter {
     this.send(CLIP.getTrackNames);
   }
 
+  public requestGlobalClipQuantization(): void {
+    if (!this.state.available || !this.state.connected) return;
+    this.send(CLIP.listenGlobalQuantization);
+    this.send(CLIP.getGlobalQuantization);
+  }
+
+  /** Explicit, transient Set write. A UDP send is never an acknowledgement. */
+  public async setGlobalClipQuantization(args: unknown): Promise<{ quantization: number }> {
+    const value = validateGlobalClipQuantization(args);
+    if (!this.state.available || !this.state.connected) throw new Error('AbletonOSC is not connected');
+    if (this.globalQuantizationPending) throw new Error('A global quantization request is pending');
+    if (this.globalQuantization === value) return { quantization: value };
+    return new Promise((resolve, reject) => {
+      const finish = (error?: Error) => {
+        if (this.pendingGlobalQuantization !== fail) return;
+        this.pendingGlobalQuantization = null;
+        clearTimeout(timer);
+        this.off('clip-global-quantization', confirmed);
+        this.off('update', checkLink);
+        this.emit('clip-quantization-write', { pending: false, error: error?.message ?? null });
+        if (error) reject(error);
+        else resolve({ quantization: value });
+      };
+      const fail = (error: Error) => finish(error);
+      const confirmed = (observed: number) => { if (observed === value) finish(); };
+      const checkLink = (state: TransportLiteState) => {
+        if (!state.available || !state.connected) fail(new Error('AbletonOSC disconnected before quantization confirmation'));
+      };
+      const timer = setTimeout(() => fail(new Error('Live did not confirm global quantization within 2000 ms')), GLOBAL_QUANTIZATION_CONFIRM_MS);
+      this.pendingGlobalQuantization = fail;
+      this.on('clip-global-quantization', confirmed);
+      this.on('update', checkLink);
+      this.emit('clip-quantization-write', { pending: true, error: null });
+      try {
+        this.send(CLIP.setGlobalQuantization, [oscInt(value)]);
+        if (this.globalQuantizationPending) this.send(CLIP.getGlobalQuantization);
+      } catch (error) { fail(error instanceof Error ? error : new Error(String(error))); }
+    });
+  }
+
   /**
    * True when the push stream has gone quiet long enough that we can no longer
    * assume the registered listeners are feeding us.
@@ -662,6 +724,8 @@ export class OSCTransport extends EventEmitter {
     ) {
       this.state.connected = false;
       this.requeryOnNextConnection = true;
+      this.pendingGlobalQuantization?.(new Error('AbletonOSC disconnected before quantization confirmation'));
+      this.globalQuantization = null;
     }
     // Liveness probe. Anything arriving on the socket already refreshes
     // lastSeenAt, so while the push stream is flowing the link is proven and

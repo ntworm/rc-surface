@@ -346,6 +346,37 @@
       && descriptor.every(Number.isFinite);
   }
 
+  // A strong contradiction in one finger must not disappear in the average
+  // of the whole hand. Project MCP -> tip onto that finger's palm direction,
+  // divided by its own joint-chain length. Rotation/scale cancel, and both
+  // saved descriptor sizes already contain all these coordinates.
+  // This is a veto, not another weighted extension distance: intermediate
+  // bends stay uncertain, so the learned positional tolerance still decides.
+  function fingerProjection(descriptor, base) {
+    const x = (i) => descriptor[i * 2];
+    const y = (i) => descriptor[i * 2 + 1];
+    const distance = (a, b) => Math.hypot(x(a) - x(b), y(a) - y(b));
+    const palm = distance(0, base);
+    const chain = distance(base, base + 1) + distance(base + 1, base + 2)
+      + distance(base + 2, base + 3);
+    if (palm < 1e-6 || chain < 1e-6) return null;
+    return ((x(base + 3) - x(base)) * (x(base) - x(0))
+      + (y(base + 3) - y(base)) * (y(base) - y(0))) / (palm * chain);
+  }
+
+  function contradictsLearnedFingers(descriptor, samples) {
+    for (const base of MCP_LANDMARKS) {
+      const current = fingerProjection(descriptor, base);
+      const learned = samples.map((sample) => fingerProjection(sample, base));
+      if (current === null || learned.some((value) => value === null)) continue;
+      // Require consensus across all takes and a clear opposing live shape.
+      // The gap protects curled variation, jitter and foreshortened fingers.
+      if ((learned.every((value) => value <= 0.35) && current >= 0.70)
+        || (learned.every((value) => value >= 0.70) && current <= 0.35)) return true;
+    }
+    return false;
+  }
+
   class GestureLibrary {
     constructor(options = {}) {
       this.threshold = Math.max(0.01, options.threshold ?? 0.18);
@@ -526,16 +557,18 @@
         // normalised by dividing through that gesture's own radius. Without
         // this a gesture with a wide radius would always look closest.
         const raw = median(samples.map((sample) => weightedPoseDistance(descriptor, sample, weights)));
-        scores.push({ name, score: raw, relative: raw / Math.max(0.0001, this.thresholdFor(name)) });
+        scores.push({ name, score: raw, relative: raw / Math.max(0.0001, this.thresholdFor(name)),
+          contradiction: contradictsLearnedFingers(descriptor, samples) });
       }
-      scores.sort((a, b) => a.relative - b.relative);
+      scores.sort((a, b) => Number(a.contradiction) - Number(b.contradiction) || a.relative - b.relative);
       const best = scores[0];
       if (!best) return null;
       const ambiguous = Boolean(scores[1]
+        && !scores[1].contradiction
         && scores[1].relative <= best.relative * this.ambiguityRatio);
       const limit = this.thresholdFor(best.name);
       const confidence = clamp(1 - best.score / Math.max(0.0001, limit * 1.5));
-      const accepted = best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
+      const accepted = !best.contradiction && best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
       const candidates = scores.map(({ name, score }) => ({
         name,
         score,
@@ -546,6 +579,7 @@
         score: best.score,
         confidence,
         accepted,
+        contradiction: best.contradiction,
         ambiguous,
         candidates,
         target: targetName ? candidates.find((candidate) => candidate.name === targetName) || null : null,
@@ -591,6 +625,7 @@
 
       const evaluation = this.evaluate(descriptor, targetName);
       const holding = Boolean(this.activeName && evaluation && evaluation.name === this.activeName
+        && !evaluation.contradiction
         && evaluation.score <= this.thresholdFor(this.activeName) * this.releaseRatio);
       if (!evaluation?.accepted && !holding) {
         this.candidateName = null;

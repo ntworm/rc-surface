@@ -84,6 +84,62 @@ function frames(descriptor, count = 8, jitter = 0.002) {
     value + Math.sin(frame * 1.7 + index * 0.31) * jitter));
 }
 
+const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
+  holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
+
+for (const curl of [.2, .55]) {
+  test(`a fifth open finger vetoes four-finger acceptance and HOLD (learned curl ${curl})`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const pose = (pinky) => normalizeHandPose(handPose({ thumb: 1, pinky }));
+    const library = new GestureLibrary(performanceOptions);
+    for (const offset of [-.02, 0, .02]) library.learn('Four', frames(pose(curl + offset)));
+    library.recognize(pose(curl), 0); library.recognize(pose(curl), 120);
+    assert.equal(library.activeName, 'Four');
+    assert.equal(library.evaluate(pose(1)).accepted, false, 'one contradictory finger cannot be diluted in the mean');
+    library.recognize(pose(1), 240);
+    assert.equal(library.activeName, 'Four', 'one frame does not release');
+    library.recognize(pose(1), 400);
+    assert.equal(library.activeName, null, 'persistent fifth finger releases G2');
+    for (const dims of [42, 47]) {
+      const saved = JSON.parse(JSON.stringify(library.toJSON()));
+      for (const template of saved.templates) template.samples = template.samples.map((sample) => sample.slice(0, dims));
+      const restored = GestureLibrary.fromJSON(saved, performanceOptions);
+      assert.equal(restored.sampleCount('Four'), 3);
+      assert.equal(restored.evaluate(pose(curl)).accepted, true);
+      assert.equal(restored.evaluate(pose(1)).accepted, false, `saved ${dims}-dimensional takes retain finger identity`);
+    }
+  });
+}
+
+test('same four-finger pose tolerates curl and jitter without retrigger or false fifth-finger acceptance', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const pose = (pinky) => normalizeHandPose(handPose({ thumb: 1, pinky }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const curl of [.18, .2, .22]) library.learn('Four', frames(pose(curl)));
+  library.recognize(pose(.2), 0); library.recognize(pose(.2), 120);
+  for (const time of [240, 400, 1000]) {
+    assert.equal(library.recognize(pose(.25), time), null);
+    assert.equal(library.activeName, 'Four');
+  }
+});
+
+test('learned three, four and five fingers switch directly after hold, with matching TEST evaluation', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const poses = [handPose({ thumb: 1, ring: .2, pinky: .2 }),
+    handPose({ thumb: 1, pinky: .2 }), handPose({ thumb: 1 })].map(normalizeHandPose);
+  const library = new GestureLibrary(performanceOptions);
+  poses.forEach((pose, index) => { for (let take = 0; take < 3; take++) library.learn(`G${index + 1}`, frames(pose)); });
+  const entries = [];
+  for (const [time, index] of [[0, 0], [120, 0], [240, 1], [360, 1], [480, 2], [600, 2], [720, 0], [840, 0]]) {
+    const evaluation = library.evaluate(poses[index]);
+    assert.equal(evaluation.accepted, true);
+    assert.equal(evaluation.name, `G${index + 1}`);
+    const match = library.recognize(poses[index], time);
+    if (match) entries.push(match.name);
+  }
+  assert.deepEqual(entries, ['G1', 'G2', 'G3', 'G1']);
+});
+
 test('normalizes all 21 MediaPipe landmarks independently of screen position and hand scale', () => {
   const { normalizeHandPose, poseDistance } = load();
   assert.equal(typeof normalizeHandPose, 'function');

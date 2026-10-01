@@ -31,6 +31,41 @@ import vm from 'node:vm';
 const root = import.meta.dirname;
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
+test('actual vision pipeline switches three/four/five fingers OFF before ON and preserves hand-loss HOLD', () => {
+  const context = { window: null, globalThis: null, performance: { now: () => 0 } };
+  context.window = context; context.globalThis = context;
+  for (const file of ['safe-input-layer.js', 'vision-processor.js']) {
+    vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), context);
+  }
+  const fixture = fs.readFileSync(path.join(root, 'static-pose-gesture.test.mjs'), 'utf8');
+  vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('), fixture.indexOf('function transform(')), context);
+  const processor = new context.VisionProcessor();
+  Object.assign(processor.gestures, { threshold: .176, minimumConfidence: .52, holdMs: 120,
+    releaseMs: 140, releaseRatio: 1.10, ambiguityRatio: 1.25 });
+  const poses = [context.handPose({ thumb: 1, ring: .2, pinky: .2 }),
+    context.handPose({ thumb: 1, pinky: .2 }), context.handPose({ thumb: 1 })];
+  poses.forEach((pose, index) => {
+    const descriptor = context.SafeInputLayer.normalizeHandPose(pose);
+    for (let take = 0; take < 3; take++) processor.gestures.learn(`G${index + 1}`, Array.from({ length: 8 }, () => descriptor.slice()));
+  });
+  const edges = [];
+  processor.onGesture = (match) => edges.push(`${match.name}:ON`);
+  processor.onGestureRelease = (name) => edges.push(`${name}:OFF`);
+  const raw = { x: .5, y: .5, z: .5, active: true };
+  for (const [time, index] of [[0, 0], [120, 0], [240, 1], [360, 1], [480, 2], [600, 2]]) {
+    processor.processHandData(raw, time, poses[index]);
+  }
+  processor.processMissing(800); processor.processMissing(2000);
+  assert.equal(processor.gestures.activeName, 'G3');
+  processor.processHandData(raw, 2200, poses[2]);
+  assert.deepEqual(edges, ['G1:ON', 'G1:OFF', 'G2:ON', 'G2:OFF', 'G3:ON']);
+  processor.gestures.delete('G3');
+  processor.processHandData(raw, 2400, poses[1]); processor.processHandData(raw, 2520, poses[1]);
+  processor.processHandData(raw, 2640, poses[2]); processor.processHandData(raw, 2800, poses[2]);
+  assert.equal(processor.gestures.activeName, null, 'an untrained open fifth finger releases G2 through the real pipeline');
+  assert.equal(edges.at(-1), 'G2:OFF');
+});
+
 // Extract the VisionControlState module to get controlForSlot/slotForGesture.
 function loadVisionControlState() {
   const src = fs.readFileSync(path.join(root, 'vision-control-state.js'), 'utf8');

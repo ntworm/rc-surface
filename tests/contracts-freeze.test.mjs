@@ -80,9 +80,11 @@ test("OSC addresses are frozen", async () => {
     getLegato: "/live/clip/get/legato",
     listenGlobalQuantization: "/live/song/start_listen/clip_trigger_quantization",
     getGlobalQuantization: "/live/song/get/clip_trigger_quantization",
+    setGlobalQuantization: "/live/song/set/clip_trigger_quantization",
     getTrackNames: "/live/song/get/track_names",
   });
   for (const address of [...Object.values(osc.CLIP), ...Object.values(osc.CLIP_RESPONSE)]) {
+    if (address === "/live/song/set/clip_trigger_quantization") continue; // D11 / C15 named exception only.
     assert.ok(!address.includes("/set/"), `${address} must not write Live state`);
   }
 });

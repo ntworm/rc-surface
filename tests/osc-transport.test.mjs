@@ -39,6 +39,36 @@ function createTestTransport() {
   return transport;
 }
 
+test('D11: only explicit valid Song quantization requests send one OSC integer; reading/reconnecting never writes', async () => {
+  const transport = createTestTransport();
+  Object.assign(transport.state, { available: true, connected: true });
+  const sent = [];
+  const push = (value) => transport.handleIncoming({ oscType: 'message',
+    address: '/live/song/get/clip_trigger_quantization', args: [{ value }] });
+  transport.send = (address, args = []) => {
+    sent.push([address, args]);
+    if (address === '/live/song/set/clip_trigger_quantization') queueMicrotask(() => push(args[0].value));
+  };
+  for (const invalid of [null, [], {}, { quantization: '1' }, { quantization: 1.1 },
+    { quantization: Infinity }, { quantization: -1 }, { quantization: 14 }, { quantization: 2, replay: true }]) {
+    await assert.rejects(transport.setGlobalClipQuantization(invalid));
+  }
+  assert.equal(sent.length, 0);
+  transport.requestGlobalClipQuantization(); transport.registerListeners();
+  assert.equal(sent.filter(([address]) => address.includes('/set/')).length, 0);
+  for (let quantization = 0; quantization <= 13; quantization++) {
+    await transport.setGlobalClipQuantization({ quantization });
+    assert.equal(transport.globalQuantization, quantization);
+    const packet = sent.filter(([address]) => address.includes('/set/')).at(-1);
+    assert.deepEqual(packet, ['/live/song/set/clip_trigger_quantization', [{ type: 'integer', value: quantization }]]);
+    const decoded = osc.fromBuffer(osc.toBuffer({ oscType: 'message', address: packet[0], args: packet[1] }));
+    assert.equal(decoded.args[0].type, 'integer');
+  }
+  const count = sent.filter(([address]) => address.includes('/set/')).length;
+  transport.registerListeners(); transport.queryInitialState();
+  assert.equal(sent.filter(([address]) => address.includes('/set/')).length, count);
+});
+
 test("OSCTransport state is updated correctly by incoming OSC messages", () => {
   const transport = createTestTransport();
 

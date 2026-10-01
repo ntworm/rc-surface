@@ -13,7 +13,7 @@ import { trackedClients, broadcastTriggerNoteState, broadcastClipLaunchState } f
 import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
 import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
 import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
-import { oscTransport } from "./osc-transport.js";
+import { oscTransport, validateGlobalClipQuantization } from "./osc-transport.js";
 import { globalWriteScheduler } from "../server/write-scheduler.js";
 import { registerCatalogCommands } from "./catalog/index.js";
 import { applyCurve, applyCurveInverse } from "./curves.js";
@@ -2526,9 +2526,11 @@ export const commands: Record<string, CommandSpec> = {
     description: "List regular tracks that hold Session clips, with real track and clip names, for Launch Clip.",
     handler: async () => {
       const { song } = requireCtx();
+      oscTransport.requestGlobalClipQuantization();
       return {
         tracks: listClipTargets(song),
         osc: { available: oscTransport.state.available, connected: oscTransport.state.connected },
+        globalQuantization: clipLaunchEngine.globalQuantizationStatus(),
       };
     },
   },
@@ -2536,6 +2538,14 @@ export const commands: Record<string, CommandSpec> = {
   getClipLaunchStatus: {
     description: "Current Launch Clip state of every mapped target, as Live reports it, plus recent rule diagnostics.",
     handler: async () => clipLaunchEngine.snapshot(),
+  },
+
+  setGlobalClipQuantization: {
+    description: "Explicitly change the Set global clip launch quantization. Args: exactly {quantization: integer 0..13}. Success requires Live confirmation; no automatic replay.",
+    handler: async (args) => {
+      validateGlobalClipQuantization(args);
+      return oscTransport.setGlobalClipQuantization(args);
+    },
   },
 
   testClipLaunch: {

@@ -484,8 +484,15 @@ para você tentar novamente.
 
 A **quantização** é sempre a do Live: a quantização de lançamento do próprio
 clip, ou a da música quando o clip está em Global. O editor mostra o valor
-efetivo só para leitura. O RC Surface nunca altera um ajuste de clip, track
-ou música.
+efetivo separado de **Quantização global do Set**. Escolha um valor global
+e toque **Aplicar** para alterar o Set inteiro, incluindo outros clips em
+Global. Um clip com quantização própria mantém esse ajuste. Nenhuma é
+permitida para o Set, mas regras de continuação ainda exigem quantum utilizável.
+
+O editor espera o Live confirmar o valor solicitado (até dois segundos),
+mantém o valor observado visível durante a espera e mostra desconexão ou
+falha. Nunca tenta de novo nem reaplica o valor ao reconectar, abrir um editor
+ou carregar mapping/preset. Salve o Set no Live para persistir o ajuste.
 
 O **estado** vem só do que o Live informa: Pronto, Enviado — aguardando o
 Live, Aguardando no Live (próximo limite), Tocando, Parada aguardando no
@@ -537,6 +544,14 @@ link do AbletonOSC cai, ou as atualizações de posição não provam quantas
 passagens tocaram (ela não chuta). Uma desconexão do celular não cancela uma
 regra armada. Se a janela passar com a regra ainda válida, o próximo pedido é
 enviado uma vez e marcado como **Retorno atrasado**.
+
+Alterar a quantização global, aqui ou no Live, cancela toda continuação RC
+ainda não enviada assim que a mudança é observada. Durante uma escrita RC
+pendente, retornos e novas regras ficam suspensos; falha ou timeout cancela
+as regras suspensas. Para uma nova regra, pare ou escolha outro clip, depois
+ative novamente para obter um novo lançamento. Um retorno
+já enviado continua sob controle do Live; o RC Surface não pode desfazer
+esse pedido enfileirado. Receber o mesmo valor global não cancela uma regra.
 
 A precisão do retorno é uma hipótese ainda em validação no Live 12, não uma
 garantia. Quando o tempo exato importa mais que o gesto, configure a Follow
@@ -1103,6 +1118,13 @@ sem falsos disparos com mão aberta ou punho fechado. Um slot aprendido é momen
 (com estados de FSM `ready` → `candidate` → `held` → `releasing`).
 Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
 Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
+O reconhecimento compara contradições fortes da forma dos dedos com os três
+exemplos aprendidos antes de aceitar ou manter uma pose. Abrir o quinto dedo
+que estava consistentemente dobrado na pose de quatro solta a pose após o
+intervalo de liberação; se a mão aberta estiver treinada em outro slot, pode
+trocar diretamente. Pequenas dobras e leituras incertas continuam usando a
+tolerância aprendida. Frames sem mão mantêm HOLD. Poses salvas com 42/47
+coordenadas carregam sem recaptura. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---

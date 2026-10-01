@@ -21,6 +21,9 @@ async function setup(page, lang) {
     window.__launchCalls = [];
     window.__mapTargets = [];
     window.__clipTargets = clipTargets;
+    window.__globalQuantization = 4;
+    const globalState = () => ({ value: window.__globalQuantization, pending: Boolean(window.__quantReply),
+      available: true, connected: !window.__quantOffline });
     window.sendPhoneCommand = (cmd, args, cb) => {
       window.__launchCalls.push({ cmd, args });
       if (cmd === 'getTargets' && window.__refreshError) { cb?.({ ok: false, error: window.__refreshError }); return true; }
@@ -28,9 +31,17 @@ async function setup(page, lang) {
       if (cmd === 'getMappings') { cb?.({ ok: true, result: { mappings } }); return true; }
       if (cmd === 'setMapping' && window.__launchSaveError) { cb?.({ ok: false, error: window.__launchSaveError }); return true; }
       if (cmd === 'setMapping') { mappings[args.control] = args.targets; cb?.({ ok: true }); return true; }
-      if (cmd === 'getClipTargets') { cb?.({ ok: true, result: window.__clipTargets }); return true; }
+      if (cmd === 'getClipTargets') { cb?.({ ok: true, result: { ...window.__clipTargets, globalQuantization: globalState() } }); return true; }
       if (cmd === 'getClipLaunchStatus') {
-        cb?.({ ok: true, result: { statuses: [{ control: 'sensor.vision.gesture.2', targetIndex: 0, state: 'idle', quantization: { source: 'global', label: '1 Bar' } }], diagnostics: [] } });
+        cb?.({ ok: true, result: { globalQuantization: globalState(), statuses: [{ control: 'sensor.vision.gesture.2', targetIndex: 0, state: 'idle', quantization: window.__clipQuantization || { source: 'global', label: '1 Bar' }, globalQuantization: globalState() }], diagnostics: [] } });
+        return true;
+      }
+      if (cmd === 'setGlobalClipQuantization') {
+        window.__quantReply = (error) => {
+          window.__quantReply = null;
+          if (!error) window.__globalQuantization = args.quantization;
+          cb?.(error ? { ok: false, error } : { ok: true, result: { quantization: args.quantization } });
+        };
         return true;
       }
       cb?.({ ok: true, result: { mappings: {}, clients: [], presets: ['Default'], current: 'Default' } });
@@ -60,6 +71,52 @@ async function expectCompactMaintenance(detail) {
 }
 
 for (const lang of ['en', 'pt-BR']) {
+  test(`${lang}: explicit global quantization waits for Live, distinguishes clip override, and reports failure`, async ({ page }, testInfo) => {
+    await setup(page, lang);
+    const detail = page.locator('#map-mobile-detail');
+    await detail.locator('.map-entry-choice[data-kind="clip"]').click();
+    await detail.locator('.map-picker-row').filter({ hasText: 'Drums' }).click();
+    await detail.locator('.map-picker-row').filter({ hasText: 'Virada' }).click();
+    const select = detail.locator('#map-clip-global-quantization');
+    const apply = detail.locator('#map-clip-global-apply');
+    const feedback = detail.locator('#map-clip-global-feedback');
+    await expect(select).toHaveValue('4');
+    await expect(select.locator('option[value]')).toHaveCount(15); // unknown plus all 14 Song values
+    expect(await page.evaluate(() => window.__launchCalls.filter((call) => call.cmd === 'setGlobalClipQuantization'))).toHaveLength(0);
+    await page.evaluate(() => { window.__clipQuantization = { source: 'clip', label: '1/4' }; window.renderDetail(); });
+    await expect(detail.locator('.map-clip-quantization')).toContainText('1/4');
+    expect((await select.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect((await apply.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect(await detail.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    if (lang === 'en' && testInfo.project.name === 'Desktop Chrome') {
+      await detail.screenshot({ path: 'test-results/launch-global-quantization.png' });
+    }
+    await select.selectOption('9');
+    expect(await page.evaluate(() => window.__globalQuantization)).toBe(4);
+    await apply.click();
+    await expect(apply).toBeDisabled();
+    await expect(feedback).toContainText(lang === 'en' ? 'Waiting' : 'Aguardando');
+    expect(await page.evaluate(() => window.__globalQuantization)).toBe(4);
+    await page.evaluate(() => window.__quantReply());
+    await expect(select).toHaveValue('9');
+    await expect(feedback).toContainText(lang === 'en' ? 'Confirmed' : 'Confirmado');
+    await expect(detail.locator('.map-clip-quantization')).toContainText('1/4');
+    await select.selectOption('0');
+    await apply.click();
+    await page.evaluate(() => window.__quantReply('Live did not confirm global quantization within 2000 ms'));
+    await expect(feedback).toContainText(lang === 'en' ? 'Could not' : 'Não foi possível');
+    await expect(feedback).toContainText('2000 ms');
+    await expect(select).toHaveValue('9');
+    await page.evaluate(() => { window.__quantOffline = true; window.renderDetail(); });
+    await expect(apply).toBeDisabled();
+    await expect(feedback).toContainText('AbletonOSC');
+    expect(await page.evaluate(() => window.__launchCalls.filter((call) => call.cmd === 'setGlobalClipQuantization').map((call) => call.args)))
+      .toEqual([{ quantization: 9 }, { quantization: 0 }]);
+    await page.evaluate(() => window.handleClipLaunchState({ type: 'clip_launch_state', control: 'other-control', targetIndex: 0,
+      state: 'idle', globalQuantization: { value: 7, available: true, connected: true, pending: false } }));
+    await expect(select).toHaveValue('7');
+    expect(await page.evaluate(() => window.__launchCalls.filter((call) => call.cmd === 'setGlobalClipQuantization'))).toHaveLength(2);
+  });
   test(`${lang}: an unmapped control offers only entry cards and one compact maintenance row`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 360, height: 740 });
     await setup(page, lang);

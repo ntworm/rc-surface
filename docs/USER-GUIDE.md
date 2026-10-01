@@ -483,8 +483,16 @@ you can retry.
   launch that is still waiting on that track.
 
 **Quantization** is always Live's: the clip's own launch quantization, or the
-song setting when the clip says Global. The editor shows the effective value
-read-only. RC Surface never changes a clip, track or song setting.
+song setting when the clip says Global. The effective value is displayed
+separately from **Set global quantization**. Choose a global value and tap
+**Apply** to change the entire Set, including other clips using Global.
+A clip with its own quantization keeps that setting. None is allowed for the
+Set, but continuation rules still require a usable quantum.
+
+The editor waits for Live to confirm the requested value (up to two seconds),
+keeps the observed value visible while waiting, and reports disconnection or
+failure. It never retries or reapplies the value after reconnecting, opening
+an editor or loading a mapping/preset. Save the Set in Live to persist it.
 
 **State** comes only from what Live reports back: Ready, Sent — waiting for
 Live, Waiting in Live (next boundary), Playing, Stop waiting in Live, Track
@@ -536,6 +544,14 @@ AbletonOSC link drops, or the position updates cannot prove how many passes
 were played (it does not guess). A phone disconnect does not cancel an armed
 rule. If the window is missed while the rule is still valid, the next request
 is sent once and marked **Late return**.
+
+Changing the global quantization, either here or in Live, cancels every
+unsent RC continuation once the change is observed. During a pending RC
+write, returns and new rules are suspended; failure or timeout cancels the
+suspended rules. For a new rule, stop or choose another clip, then activate
+again to obtain a new launch. A return already sent
+to Live remains under Live's control; RC Surface cannot undo that queued
+request. Receiving the same global value again does not cancel a rule.
 
 The precision of the return is a hypothesis still being validated in
 Live 12, not a guarantee. When the exact timing matters more than the
@@ -1085,6 +1101,13 @@ is momentary (`0` or `1`), persists across page reloads, and rearms only after
 the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
 Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
 To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
+Recognition checks strong finger-shape contradictions against all three
+learned takes before accepting or holding a pose. Opening a fifth finger
+that was consistently curled in a four-finger pose releases it after the
+release interval; if the open hand is trained in another slot, it can switch
+directly. Small curls and uncertain readings still use the learned tolerance.
+Missing-hand frames keep HOLD. Existing 42/47-coordinate saved poses load
+without recapture. TEST uses the same compatibility check as live recognition.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 
 ---

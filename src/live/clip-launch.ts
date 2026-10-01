@@ -431,6 +431,7 @@ export interface ClipLaunchStatus {
   /** Index into the list for list mode: the item Live plays now, -1 when none. */
   listIndex?: number | undefined;
   quantization?: { source: "clip" | "global" | "unknown"; label: string | null } | undefined;
+  globalQuantization?: ReturnType<ClipLaunchEngine["globalQuantizationStatus"]> | undefined;
   warnings?: string[] | undefined;
   rule?: {
     state: string;
@@ -459,6 +460,7 @@ interface Ledger {
 }
 
 interface Continuation {
+  globalQuantization: number;
   owner: ClipLaunchOwner;
   target: ClipLaunchTarget;
   sourceSlot: number;
@@ -503,6 +505,7 @@ export class ClipLaunchEngine {
   private readonly oscIndexToKey = new Map<number, string>();
   private readonly clipProps = new Map<string, ClipProps>();
   private readonly lastStatus = new Map<string, string>();
+  private readonly quantizationCancellations = new Map<string, { target: ClipLaunchTarget; reason: string }>();
   private readonly diagnostics: Array<ContinuationDiagnostics & { owner: ClipLaunchOwner; at: number }> = [];
   private verifiedNames: string[] | null = null;
   private pendingNames: Array<(names: string[] | null) => void> = [];
@@ -518,7 +521,21 @@ export class ClipLaunchEngine {
     oscTransport.on("clip-position", (event: any) => this.onPosition(event));
     oscTransport.on("clip-property", (event: any) => this.onClipProperty(event));
     oscTransport.on("clip-track-names", (names: string[]) => this.onTrackNames(names));
-    oscTransport.on("clip-global-quantization", () => this.broadcastAll());
+    oscTransport.on("clip-global-quantization", (value: number) => {
+      for (const state of this.tracks.values()) {
+        const cont = state.continuation;
+        if (cont && !cont.sent && cont.globalQuantization !== value) this.endContinuation(state, "global_quantization_changed");
+      }
+      this.broadcastAll();
+    });
+    oscTransport.on("clip-quantization-write", (event: { pending: boolean; error: string | null }) => {
+      if (event.error) {
+        for (const state of this.tracks.values()) {
+          if (state.continuation && !state.continuation.sent) this.endContinuation(state, "quantization_unconfirmed");
+        }
+      }
+      this.broadcastAll();
+    });
     oscTransport.on("update", (state: any) => this.onTransport(state));
   }
 
@@ -576,6 +593,7 @@ export class ClipLaunchEngine {
       if (!live.has(ownerKey)) this.edges.delete(key);
     }
     for (const key of [...this.lastStatus.keys()]) if (!live.has(key)) this.lastStatus.delete(key);
+    for (const key of [...this.quantizationCancellations.keys()]) if (!live.has(key)) this.quantizationCancellations.delete(key);
     if (!owners.length) {
       for (const state of this.tracks.values()) this.clearLedger(state);
       this.tracks.clear();
@@ -933,7 +951,7 @@ export class ClipLaunchEngine {
       if (state.continuation !== cont) return;
       const songMoving = this.now() - oscTransport.lastSongTimeUpdateAt <= SONG_TIME_FRESH_MS;
       if (oscTransport.state.isPlaying && songMoving && oscTransport.state.connected) {
-        this.applyDecision(state, cont.tracker.naturalEnd());
+        this.applyDecision(state, cont.tracker.naturalEnd(!oscTransport.globalQuantizationPending));
       } else {
         this.endContinuation(state, "transport_stopped");
       }
@@ -964,6 +982,8 @@ export class ClipLaunchEngine {
     | { ok: false; reason: string } {
     const then = target.then;
     if (!then || then.action === "none") return { ok: false, reason: "none" };
+    if (oscTransport.globalQuantizationPending) return { ok: false, reason: "quantization_pending" };
+    if (oscTransport.globalQuantization === null) return { ok: false, reason: "quantization_unknown" };
     const clip = track?.clipSlots?.[sourceSlot]?.clip;
     const geometry = clipGeometry(clip);
     if (!geometry) return { ok: false, reason: "invalid_markers" };
@@ -994,6 +1014,7 @@ export class ClipLaunchEngine {
     target: ClipLaunchTarget,
     track: any,
   ): void {
+    this.quantizationCancellations.delete(`${owner.control}::${owner.targetIndex}`);
     const check = this.ruleCheck(trackIndex, sourceSlot, target, track);
     if (!check.ok) {
       this.emitRule(owner, "refused", check.reason);
@@ -1005,6 +1026,7 @@ export class ClipLaunchEngine {
       return;
     }
     state.continuation = {
+      globalQuantization: oscTransport.globalQuantization as number,
       owner,
       target,
       sourceSlot,
@@ -1044,7 +1066,7 @@ export class ClipLaunchEngine {
       oscTransport.listenClipPosition(state.oscIndex, cont.sourceSlot);
     }
     this.emitRule(cont.owner, "armed");
-    this.applyDecision(state, cont.tracker.confirm());
+    this.applyDecision(state, cont.tracker.confirm(!oscTransport.globalQuantizationPending));
   }
 
   private onPosition(event: { trackIndex: number; slotIndex: number; position: number }): void {
@@ -1057,7 +1079,7 @@ export class ClipLaunchEngine {
     const wallMs = this.now();
     const delta = this.beatsSince(cont.last, songBeat, wallMs);
     cont.last = { songBeat, wallMs };
-    this.applyDecision(state, cont.tracker.position(event.position, delta));
+    this.applyDecision(state, cont.tracker.position(event.position, delta, !oscTransport.globalQuantizationPending));
   }
 
   private applyDecision(state: TrackState, decision: ContinuationDecision): void {
@@ -1065,6 +1087,7 @@ export class ClipLaunchEngine {
     if (!cont) return;
     if (decision.kind === "cancel") return this.endContinuation(state, decision.reason);
     if (decision.kind !== "send") return;
+    if (oscTransport.globalQuantizationPending) return;
     // The rule must still be valid at the moment it would act.
     if (!this.isCurrent(cont.owner, cont.target)) return this.endContinuation(state, "mapping_changed");
     // Not gated on is_playing: the confirmation that the clip started already
@@ -1127,7 +1150,12 @@ export class ClipLaunchEngine {
     this.stopPositionListen(cont);
     this.record(cont);
     state.continuation = null;
-    if (!cont.sent) this.emitRule(cont.owner, "cancelled", reason);
+    if (!cont.sent) {
+      if (reason === "global_quantization_changed" || reason === "quantization_unconfirmed") {
+        this.quantizationCancellations.set(`${cont.owner.control}::${cont.owner.targetIndex}`, { target: cont.target, reason });
+      }
+      this.emitRule(cont.owner, "cancelled", reason);
+    }
   }
 
   invalidateAll(reason: string): void {
@@ -1194,7 +1222,8 @@ export class ClipLaunchEngine {
   }
 
   statusFor(owner: ClipLaunchOwner, target: ClipLaunchTarget): ClipLaunchStatus {
-    const status: ClipLaunchStatus = { control: owner.control, targetIndex: owner.targetIndex, state: "idle" };
+    const status: ClipLaunchStatus = { control: owner.control, targetIndex: owner.targetIndex, state: "idle",
+      globalQuantization: this.globalQuantizationStatus() };
     if (!oscTransport.state.available || !oscTransport.state.connected) {
       status.state = "unavailable";
       status.reason = "osc_disconnected";
@@ -1282,13 +1311,23 @@ export class ClipLaunchEngine {
           };
         }
       }
+      const cancelled = this.quantizationCancellations.get(`${owner.control}::${owner.targetIndex}`);
+      if (cancelled?.target === target) status.rule = { state: "cancelled", reason: cancelled.reason };
     }
     return status;
   }
 
   /** Every Launch Clip target with its current state, plus recent rule diagnostics. */
-  snapshot(): { statuses: ClipLaunchStatus[]; diagnostics: Array<ContinuationDiagnostics & { owner: ClipLaunchOwner; at: number }> } {
+  globalQuantizationStatus() {
+    return { value: oscTransport.globalQuantization,
+      label: oscTransport.globalQuantization === null ? null : SONG_QUANTIZATION_LABELS[oscTransport.globalQuantization] ?? null,
+      pending: oscTransport.globalQuantizationPending,
+      available: oscTransport.state.available, connected: oscTransport.state.connected };
+  }
+
+  snapshot(): { statuses: ClipLaunchStatus[]; diagnostics: Array<ContinuationDiagnostics & { owner: ClipLaunchOwner; at: number }>; globalQuantization: ReturnType<ClipLaunchEngine["globalQuantizationStatus"]> } {
     return {
+      globalQuantization: this.globalQuantizationStatus(),
       statuses: this.ownersOf().map(({ owner, target }) => this.statusFor(owner, target)),
       diagnostics: this.diagnostics.slice(),
     };
@@ -1302,6 +1341,7 @@ export class ClipLaunchEngine {
     this.oscIndexToKey.clear();
     this.clipProps.clear();
     this.lastStatus.clear();
+    this.quantizationCancellations.clear();
     this.diagnostics.length = 0;
     this.verifiedNames = null;
     for (const waiter of this.pendingNames) waiter(null);

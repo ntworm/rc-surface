@@ -78,6 +78,165 @@ function songTime(beat) {
 
 const fires = () => sent.filter(([address]) => address === "/live/clip_slot/fire").map(([, t, s]) => [t, s]);
 const stops = () => sent.filter(([address]) => address === "/live/track/stop_all_clips").map(([, t]) => t);
+const quantWrites = () => sent.filter(([address]) => address.includes('/set/'));
+
+test('D11: global quantization is live-write, strictly validated, and waits for Live instead of the cache', async () => {
+  setup();
+  assert.equal(COMMAND_SIDE_EFFECTS.setGlobalClipQuantization, 'live-write');
+  const request = (role, args) => dispatchCommand(role, { cmd: 'setGlobalClipQuantization', args });
+  assert.equal((await request('viewer', { quantization: 9 })).ok, false);
+  for (const args of [{}, { quantization: '9' }, { quantization: 2.5 }, { quantization: -1 },
+    { quantization: 14 }, { quantization: NaN }, { quantization: null },
+    { quantization: 9, extra: true }, []]) {
+    assert.equal((await request('controller', args)).ok, false);
+  }
+  assert.deepEqual(quantWrites(), []);
+  let completed = false;
+  const pending = request('controller', { quantization: 9 }).then((result) => { completed = true; return result; });
+  await settle();
+  assert.equal(completed, false);
+  assert.equal(oscTransport.globalQuantization, 4);
+  assert.deepEqual(quantWrites(), [['/live/song/set/clip_trigger_quantization', 9]]);
+  assert.equal((await request('admin', { quantization: 7 })).ok, false, 'overlapping requests never queue');
+  push('/live/song/get/clip_trigger_quantization', 9);
+  assert.equal((await pending).ok, true);
+  assert.equal(oscTransport.globalQuantization, 9);
+  assert.equal((await request('admin', { quantization: 9 })).ok, true, 'same confirmed value is a no-op');
+  assert.equal(quantWrites().length, 1);
+});
+
+test('D11: invalid or divergent reports never confirm a request; timeout is not replayed', async () => {
+  setup();
+  const pending = dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 13 } });
+  await settle();
+  for (const bad of [-1, 14, 2.5, '13']) push('/live/song/get/clip_trigger_quantization', bad);
+  push('/live/song/get/clip_trigger_quantization', 13, 14);
+  assert.equal(oscTransport.globalQuantization, 4);
+  push('/live/song/get/clip_trigger_quantization', 7);
+  assert.equal(oscTransport.globalQuantization, 7, 'show the observed value even when it differs');
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.match(result.error, /confirm|timeout/i);
+  push('/live/song/get/clip_trigger_quantization', 13);
+  oscTransport.emit('update', { ...oscTransport.state, connected: false });
+  oscTransport.emit('update', { ...oscTransport.state, connected: true });
+  assert.equal(oscTransport.globalQuantization, 13, 'late reports update observation only');
+  assert.deepEqual(quantWrites(), [['/live/song/set/clip_trigger_quantization', 13]]);
+});
+
+test('D11: offline and local send failure are visible without replay', async () => {
+  setup();
+  oscTransport.state.connected = false;
+  let result = await dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 0 } });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /OSC|connect/i);
+  assert.deepEqual(quantWrites(), []);
+  oscTransport.state.connected = true;
+  oscTransport.send = () => { throw new Error('local send failed'); };
+  result = await dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 0 } });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /local send failed/);
+  assert.equal(oscTransport.globalQuantizationPending, false);
+});
+
+async function armThreePasses() {
+  await mapViradaReturn(3);
+  playing(1, 0); fired(1, -1);
+  await gesture(G3, 1);
+  fired(1, 2); fired(1, -1); songTime(16); playing(1, 2);
+}
+function runReturnWindow() {
+  for (let e = .5; e < 14; e += .5) { songTime(16 + e); position(1, 2, e % 4); }
+}
+test('D13: confirmed global changes cancel waiting and armed returns; duplicate reports do not', async () => {
+  for (const armed of [false, true]) {
+    setup();
+    await mapViradaReturn(3);
+    playing(1, 0); fired(1, -1); await gesture(G3, 1);
+    if (armed) { fired(1, 2); fired(1, -1); songTime(16); playing(1, 2); }
+    push('/live/song/get/clip_trigger_quantization', 7);
+    fired(1, -1); playing(1, 2); runReturnWindow();
+    assert.deepEqual(fires(), [[1, 2]]);
+    assert.equal(clipLaunchEngine.snapshot().diagnostics.at(-1).reason, 'global_quantization_changed');
+    await cancelPendingMappingWrites(); controlMappings.clear(); clipLaunchEngine.reset();
+  }
+  setup(); await armThreePasses();
+  push('/live/song/get/clip_trigger_quantization', 4);
+  runReturnWindow();
+  assert.deepEqual(fires(), [[1, 2], [1, 0]], 'unchanged quantum permits the original return once');
+});
+
+test('D13: a pending write suspends returns, and connection loss cancels instead of reviving them', async () => {
+  setup(); await armThreePasses();
+  const pending = dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 9 } });
+  await settle();
+  runReturnWindow();
+  assert.deepEqual(fires(), [[1, 2]], 'no return during unconfirmed write');
+  // Live reports the old value while the request is still outstanding. The
+  // requested value is needed for success; losing the link ends this request.
+  push('/live/song/get/clip_trigger_quantization', 4);
+  oscTransport.state.connected = false; oscTransport.emit('update', oscTransport.state);
+  assert.equal((await pending).ok, false);
+  oscTransport.state.connected = true; push('/live/song/get/clip_trigger_quantization', 9);
+  runReturnWindow();
+  assert.deepEqual(fires(), [[1, 2]], 'unconfirmed rules never revive');
+});
+
+test('D13: an unconfirmed deadline cancels a suspended rule and a late response cannot revive it', async () => {
+  setup(); await armThreePasses();
+  const pending = dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 9 } });
+  await settle(); runReturnWindow();
+  assert.equal((await pending).ok, false);
+  assert.equal(clipLaunchEngine.snapshot().statuses[0].rule.reason, 'quantization_unconfirmed');
+  push('/live/song/get/clip_trigger_quantization', 9);
+  runReturnWindow();
+  assert.deepEqual(fires(), [[1, 2]]);
+  assert.equal(quantWrites().length, 1);
+});
+
+test('D13: new rules refuse arming while a global write is pending, but the clip request is preserved', async () => {
+  setup(); await mapViradaReturn(3);
+  const pending = dispatchCommand('controller', { cmd: 'setGlobalClipQuantization', args: { quantization: 9 } });
+  await settle(); await gesture(G3, 1);
+  assert.deepEqual(fires(), [[1, 2]]);
+  assert.equal(clipLaunchEngine.snapshot().statuses[0].rule.refusal, 'quantization_pending');
+  push('/live/song/get/clip_trigger_quantization', 9); await pending;
+  fired(1, 2); fired(1, -1); songTime(16); playing(1, 2); runReturnWindow();
+  assert.deepEqual(fires(), [[1, 2]], 'confirmation does not arm a previously refused rule');
+});
+
+test('D13: global changes cancel even clip-overridden stop rules and delayed natural-end callbacks', async () => {
+  setup({ virada: { looping: false, endMarker: 6, loopEnd: 6 } });
+  oscTransport.globalQuantization = 7; oscTransport.state.tempo = 60;
+  await mapViradaReturn(1);
+  playing(1, 0); fired(1, -1); await gesture(G3, 1);
+  fired(1, 2); fired(1, -1); songTime(16); playing(1, 2);
+  for (let beat = 1; beat <= 5; beat++) { songTime(16 + beat); position(1, 2, beat); }
+  songTime(22); playing(1, -1);
+  push('/live/song/get/clip_trigger_quantization', 9);
+  await wait(NATURAL_END_SETTLE_MS + 50);
+  assert.deepEqual(fires(), [[1, 2]], 'late natural-end callback observes cancellation identity');
+  await cancelPendingMappingWrites(); controlMappings.clear(); clipLaunchEngine.reset();
+  setup();
+  await mapClip(G3, 'Virada', () => ({ then: { action: 'stop', passes: 3 } }));
+  push('/live/clip/get/launch_quantization', 1, 2, 8); // own quarter-note quantization
+  playing(1, 0); fired(1, -1); await gesture(G3, 1);
+  fired(1, 2); fired(1, -1); songTime(16); playing(1, 2);
+  push('/live/song/get/clip_trigger_quantization', 7);
+  runReturnWindow();
+  assert.deepEqual(stops(), []);
+  assert.equal(clipLaunchEngine.snapshot().statuses[0].rule.reason, 'global_quantization_changed');
+});
+
+test('D13: a return already sent keeps its ledger when global quantization changes', async () => {
+  setup(); await mapViradaReturn(1);
+  playing(1, 0); fired(1, -1); await gesture(G3, 1);
+  fired(1, 2); fired(1, -1); playing(1, 2);
+  assert.deepEqual(fires(), [[1, 2], [1, 0]]);
+  push('/live/song/get/clip_trigger_quantization', 9);
+  await gesture(G3, 0); await gesture(G3, 1);
+  assert.deepEqual(fires(), [[1, 2], [1, 0]], 'no compensation or duplicate over the sent return');
+});
 
 async function clipTargets() {
   return commands.getClipTargets.handler({});

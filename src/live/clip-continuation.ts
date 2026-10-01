@@ -218,13 +218,13 @@ export class ContinuationTracker {
   }
 
   /** Live reported the clip playing after the request that launched it. */
-  confirm(): ContinuationDecision {
+  confirm(allowSend = true): ContinuationDecision {
     if (this.state !== "waiting") return NONE;
     this.state = "armed";
     this.diagnostics.outcome = "armed";
     this.lastPos = this.geometry.startMarker;
     this.elapsed = 0;
-    if (this.plan.total <= this.quantum + POSITION_EPSILON) return this.send(false);
+    if (allowSend && this.plan.total <= this.quantum + POSITION_EPSILON) return this.send(false);
     return NONE;
   }
 
@@ -235,7 +235,7 @@ export class ContinuationTracker {
    * from positions only, and every step must prove that at most one wrap
    * happened; otherwise the rule is cancelled instead of guessing.
    */
-  position(pos: number, beatsSincePrevious: number | null): ContinuationDecision {
+  position(pos: number, beatsSincePrevious: number | null, allowSend = true): ContinuationDecision {
     if (this.state === "waiting" || this.state === "cancelled") return NONE;
     this.diagnostics.pushes += 1;
     if (!Number.isFinite(pos)) return this.fail("inconsistent_position");
@@ -266,7 +266,7 @@ export class ContinuationTracker {
     this.elapsed = this.wraps === 0 ? pos - s : this.plan.first + (this.wraps - 1) * (loop ?? 0) + (pos - a);
     this.diagnostics.lastElapsed = this.elapsed;
 
-    if (this.state !== "armed") return NONE;
+    if (this.state !== "armed" || !allowSend) return NONE;
     if (this.elapsed >= this.plan.total - POSITION_EPSILON) return this.send(true);
     if (this.elapsed >= this.plan.total - this.quantum + SEND_MARGIN_BEATS) return this.send(false);
     return NONE;
@@ -277,11 +277,11 @@ export class ContinuationTracker {
    * playing). The rule is still valid; if the window was missed, the
    * follow-up goes out now as a late return.
    */
-  naturalEnd(): ContinuationDecision {
+  naturalEnd(allowSend = true): ContinuationDecision {
     if (this.state !== "armed") return NONE;
     if (this.geometry.looping) return this.fail("stopped");
     this.elapsed = this.plan.total;
-    return this.send(true);
+    return allowSend ? this.send(true) : NONE;
   }
 
   /** A new choice, a stop or a cancellation: no old return may follow. */

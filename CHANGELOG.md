@@ -8,6 +8,11 @@ intermediate release records are intentionally not published.
 
 ### Added
 
+- Editable **Set global quantization** in Launch Clip, with an explicit Apply
+  action, Live confirmation, visible failure and no automatic replay. The
+  clip's effective quantization remains separate. Confirmed global changes
+  cancel unsent RC returns; pending writes suspend them and unconfirmed writes
+  cancel them. Requests already queued in Live remain under Live's control.
 - **Launch Clip** in MAP, beside Bind and Trigger Note: a control — a learned
   pose G1–G3, a pad, a detector — asks Live for a Session clip chosen by its
   real track and clip names, through the existing AbletonOSC link and with
@@ -26,6 +31,10 @@ intermediate release records are intentionally not published.
 
 ### Fixed
 
+- Learned poses reject strong per-finger contradictions before acceptance and
+  HOLD, so an open fifth finger cannot remain the learned four-finger pose.
+  Small curls, Rock tolerance, direct switches, hand-loss HOLD and existing
+  saved pose descriptors remain supported.
 - Launch Clip accepts real Live session handles of 45–46 digits and keeps
   their full string identity when saving and relinking. Save errors stay
   visible in both pickers, which remain open for retry.
