@@ -31,10 +31,14 @@ intermediate release records are intentionally not published.
 
 ### Fixed
 
+- Confirmed hand absence or inference error releases learned poses and vision
+  notes once, cancels queued Beat/Bar notes and requires fresh stable recovery.
+  Launched clips and RC returns keep playing. TEST stays silent, with no
+  phantom OFF; continuous Bind Safe loss and existing latch modes remain.
 - Learned poses reject strong per-finger contradictions before acceptance and
   HOLD, so an open fifth finger cannot remain the learned four-finger pose.
-  Small curls, Rock tolerance, direct switches, hand-loss HOLD and existing
-  saved pose descriptors remain supported.
+  Small curls, Rock tolerance, direct switches and existing saved pose
+  descriptors remain supported. Hand absence now releases momentary output.
 - Launch Clip accepts real Live session handles of 45–46 digits and keeps
   their full string identity when saving and relinking. Save errors stay
   visible in both pickers, which remain open for retry.

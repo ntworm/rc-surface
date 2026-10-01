@@ -445,7 +445,7 @@ test('VisionProcessor: ambient color detection processes canvas frames and calcu
   vp.stop();
 });
 
-function loadVisionAndApp() {
+function loadVisionAndApp({ gestureSlots = false } = {}) {
   const vpFile = path.join(import.meta.dirname, 'vision-processor.js');
   const vpSource = fs.readFileSync(vpFile, 'utf8');
 
@@ -514,6 +514,20 @@ function loadVisionAndApp() {
         toggle: () => {},
         contains: () => false,
       };
+      if (gestureSlots) {
+        const classes = new Set();
+        el.classList = {
+          add: (...names) => { names.forEach(name => classes.add(name)); el.className = [...classes].join(' '); },
+          remove: (...names) => { names.forEach(name => classes.delete(name)); el.className = [...classes].join(' '); },
+          toggle: (name, enabled) => enabled ? el.classList.add(name) : el.classList.remove(name),
+          contains: name => classes.has(name),
+        };
+        el.dataset = {};
+        el.setAttribute = (name, value) => { el[name] = value; };
+        el.querySelector = selector => getMockElement(`${id} ${selector}`);
+        const slot = id.match(/^\[data-gesture-slot="(\d)"\]$/);
+        if (slot) el.dataset.gestureSlot = slot[1];
+      }
       mockElements[id] = el;
     }
     return mockElements[id];
@@ -523,10 +537,11 @@ function loadVisionAndApp() {
     window: null,
     globalThis: {},
     document: {
-      body: { dataset: {} },
+      body: { dataset: {}, classList: { contains: () => false } },
       getElementById: getMockElement,
       querySelector: getMockElement,
-      querySelectorAll: () => [getMockElement('pad-1')],
+      querySelectorAll: selector => gestureSlots && selector === '[data-gesture-slot]'
+        ? [1, 2, 3].map(id => getMockElement(`[data-gesture-slot="${id}"]`)) : [getMockElement('pad-1')],
       addEventListener: () => {},
       removeEventListener: () => {},
       createElement: (tag) => {
@@ -550,6 +565,7 @@ function loadVisionAndApp() {
       vibrate: () => {},
     },
     currentTime: Date.now(),
+    scheduledTimeouts: [],
     Date: {
       now: () => windowContext.currentTime
     },
@@ -577,7 +593,12 @@ function loadVisionAndApp() {
         windowContext.lastIntervalCallback = cb;
       }
     },
-    setTimeout: (cb, delay) => { cb(); },
+    setTimeout: (cb, delay) => {
+      if (!gestureSlots) { cb(); return; }
+      windowContext.scheduledTimeouts.push({ cb, delay, active: true });
+      return windowContext.scheduledTimeouts.length;
+    },
+    clearTimeout: id => { if (windowContext.scheduledTimeouts[id - 1]) windowContext.scheduledTimeouts[id - 1].active = false; },
     dispatchEvent: () => {},
     Hands: null,
     Camera: null,
@@ -601,6 +622,7 @@ function loadVisionAndApp() {
 
   const visionStateFile = path.join(import.meta.dirname, 'vision-control-state.js');
   vm.runInNewContext(fs.readFileSync(visionStateFile, 'utf8'), windowContext, { filename: visionStateFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8'), windowContext);
   vm.runInNewContext(vpSource, windowContext, { filename: vpFile });
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
@@ -2072,6 +2094,99 @@ test('VisionProcessor integration: camera stop emits the complete pre-armed loss
       `${name} must be flagged lost so Safe loss decides; got value ${emitted.value} with no flag`,
     );
   }
+});
+
+async function learnedApp() {
+  const harness = loadVisionAndApp({ gestureSlots: true });
+  const { windowContext: context, mockElements, HandsMock } = harness;
+  mockElements['chk-vision-enable'].checked = true;
+  await mockElements['chk-vision-enable'].onchange();
+  const processor = context.currentVisionProcessor;
+  processor.setGestureOptions({ holdMs: 120 });
+  const landmarks = makeOpenHand();
+  const descriptor = context.SafeInputLayer.normalizeHandPose(landmarks);
+  for (let take = 0; take < 3; take++) processor.gestures.learn('Gesture 1', Array.from({ length: 8 }, () => descriptor.slice()));
+  const baseTime = context.currentTime;
+  const frame = time => {
+    context.currentTime = baseTime + time;
+    HandsMock.instance.resultsCallback({ multiHandLandmarks: [landmarks] });
+  };
+  const missing = () => HandsMock.instance.resultsCallback({ multiHandLandmarks: [] });
+  const emissions = [];
+  const real = context.onControl;
+  context.onControl = event => { emissions.push({ ...event }); real(event); };
+  const edges = () => emissions.filter(event => event.name === 'sensor.vision.gesture.1' && !event.lost).map(event => event.value);
+  return { ...harness, processor, frame, missing, edges, card: mockElements['[data-gesture-slot="1"]'] };
+}
+
+test('C19/C21 actual app: loss clears green pose and badge, emits normal OFF once, then fresh ON', async () => {
+  const { processor, frame, missing, edges, card, mockElements, windowContext } = await learnedApp();
+  frame(0); frame(120);
+  assert.deepEqual(edges(), [1]);
+  assert.equal(card.classList.contains('recognized'), true);
+  assert.match(mockElements['vision-performance-badge'].textContent, /G1.*HELD/);
+  missing(); missing();
+  assert.deepEqual(edges(), [1, 0], 'OFF must lack lost flag so Launch Clip rearms');
+  assert.equal(card.classList.contains('recognized'), false);
+  assert.doesNotMatch(mockElements['vision-performance-badge'].textContent, /G1|HELD|LAST KNOWN/);
+  frame(1000); frame(1119);
+  assert.deepEqual(edges(), [1, 0]);
+  frame(1120);
+  assert.deepEqual(edges(), [1, 0, 1]);
+  const old = processor;
+  mockElements['chk-vision-enable'].checked = false;
+  await mockElements['chk-vision-enable'].onchange();
+  mockElements['chk-vision-enable'].checked = true;
+  await mockElements['chk-vision-enable'].onchange();
+  const before = edges().slice();
+  old.onGesture({ name: 'Gesture 1', confidence: .9 });
+  old.onGestureRelease('Gesture 1');
+  assert.notEqual(windowContext.currentVisionProcessor, old);
+  assert.deepEqual(edges(), before, 'callbacks from replaced processor cannot act on new session');
+  const currentTitle = mockElements['vision-camera-state-title'].textContent;
+  old.setVisionStatus({ stage: 'error', lastError: 'stale session rejection' });
+  assert.equal(mockElements['vision-camera-state-title'].textContent, currentTitle, 'old error cannot overwrite current tracking state');
+});
+
+test('C19: successful TEST followed by absence emits neither LIVE ON nor phantom OFF', async () => {
+  const { frame, missing, edges, card } = await learnedApp();
+  card.querySelector('.vision-slot-test').onclick();
+  frame(0); frame(120);
+  assert.match(card.querySelector('.vision-slot-status').textContent, /TEST PASSED/);
+  missing();
+  assert.equal(card.classList.contains('recognized'), false);
+  assert.deepEqual(edges(), []);
+});
+
+test('C19/C20: TEST does not protect a preexisting LIVE voice from loss', async () => {
+  const { frame, missing, edges, card } = await learnedApp();
+  frame(0); frame(120);
+  card.querySelector('.vision-slot-test').onclick();
+  missing();
+  assert.deepEqual(edges(), [1, 0]);
+  assert.equal(card.classList.contains('recognized'), false);
+});
+
+test('C19: old TEST feedback timer cannot clear a subsequently recovered LIVE pose', async () => {
+  const { frame, missing, edges, card, windowContext } = await learnedApp();
+  card.querySelector('.vision-slot-test').onclick();
+  frame(0); frame(120); missing();
+  frame(1000); frame(1120);
+  assert.deepEqual(edges(), [1]);
+  const feedback = windowContext.scheduledTimeouts.find(timer => timer.delay === 1600);
+  assert.ok(feedback);
+  feedback.cb();
+  assert.equal(card.classList.contains('recognized'), true);
+});
+
+test('C19: actual inference send failure clears pose and displays the real error', async () => {
+  const { frame, edges, card, mockElements, HandsMock, CameraMock } = await learnedApp();
+  frame(0); frame(120);
+  HandsMock.instance.send = async () => { throw new Error('synthetic inference rejection'); };
+  await CameraMock.instance.config.onFrame();
+  assert.deepEqual(edges(), [1, 0]);
+  assert.equal(card.classList.contains('recognized'), false);
+  assert.match(mockElements['vision-camera-state-detail'].textContent, /synthetic inference rejection/);
 });
 
 test('VisionProcessor integration: hand loss emits the complete pre-armed loss catalog', async () => {

@@ -31,7 +31,7 @@ import vm from 'node:vm';
 const root = import.meta.dirname;
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
-test('actual vision pipeline switches three/four/five fingers OFF before ON and preserves hand-loss HOLD', () => {
+test('actual vision pipeline switches three/four/five fingers OFF before ON and releases hand loss (C19)', () => {
   const context = { window: null, globalThis: null, performance: { now: () => 0 } };
   context.window = context; context.globalThis = context;
   for (const file of ['safe-input-layer.js', 'vision-processor.js']) {
@@ -56,9 +56,11 @@ test('actual vision pipeline switches three/four/five fingers OFF before ON and 
     processor.processHandData(raw, time, poses[index]);
   }
   processor.processMissing(800); processor.processMissing(2000);
-  assert.equal(processor.gestures.activeName, 'G3');
+  assert.equal(processor.gestures.activeName, null);
   processor.processHandData(raw, 2200, poses[2]);
-  assert.deepEqual(edges, ['G1:ON', 'G1:OFF', 'G2:ON', 'G2:OFF', 'G3:ON']);
+  assert.deepEqual(edges, ['G1:ON', 'G1:OFF', 'G2:ON', 'G2:OFF', 'G3:ON', 'G3:OFF']);
+  processor.processHandData(raw, 2320, poses[2]);
+  assert.equal(edges.at(-1), 'G3:ON');
   processor.gestures.delete('G3');
   processor.processHandData(raw, 2400, poses[1]); processor.processHandData(raw, 2520, poses[1]);
   processor.processHandData(raw, 2640, poses[2]); processor.processHandData(raw, 2800, poses[2]);

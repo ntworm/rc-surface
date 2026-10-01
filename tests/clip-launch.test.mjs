@@ -7,6 +7,9 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import assert from "node:assert/strict";
 import test from "node:test";
+import fs from 'node:fs';
+import { join } from 'node:path';
+import vm from 'node:vm';
 
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
 import {
@@ -434,6 +437,68 @@ test("changing your mind before the boundary relaunches the playing clip (the AP
   fired(1, 1);
   await gesture(G1, 1);
   assert.deepEqual(fires(), [[1, 1], [1, 0]]);
+});
+
+function visionEntry(control) {
+  const phone = join(import.meta.dirname, '../static/phone-v3');
+  const context = { Date, performance: { now: () => 0 } };
+  context.window = context; context.globalThis = context;
+  vm.runInNewContext(fs.readFileSync(join(phone, 'safe-input-layer.js'), 'utf8'), context);
+  vm.runInNewContext(fs.readFileSync(join(phone, 'vision-processor.js'), 'utf8'), context);
+  const fixture = fs.readFileSync(join(phone, 'static-pose-gesture.test.mjs'), 'utf8');
+  vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('), fixture.indexOf('function transform(')), context);
+  const processor = new context.VisionProcessor();
+  processor.setGestureOptions({ holdMs: 120 });
+  const pose = context.handPose({ thumb: 1, ring: .2, pinky: .2 });
+  const descriptor = context.SafeInputLayer.normalizeHandPose(pose);
+  for (let take = 0; take < 3; take++) processor.gestures.learn('G1', Array.from({ length: 8 }, () => descriptor.slice()));
+  let queue = Promise.resolve();
+  processor.onGesture = () => { queue = queue.then(() => gesture(control, 1)); };
+  processor.onGestureRelease = () => { queue = queue.then(() => gesture(control, 0)); };
+  return {
+    async frame(time) { processor.processHandData({ x: .5, y: .5, z: .5, active: true }, time, pose); await queue; },
+    async missing(time) { processor.processMissing(time); await queue; await applyMapping(CLIENT, 'sensor.vision.active', 0, true); },
+  };
+}
+
+test('C21: real vision absence/recovery advances list once after confirmation, never pending', async () => {
+  setup();
+  const base = await drumsTarget();
+  await map(G1, { ...base, launchMode: 'list', clips: ['Base', 'Variação', 'Virada'].map(base.ref) });
+  const vision = visionEntry(G1);
+  await vision.frame(0); await vision.frame(120);
+  assert.deepEqual(fires(), [[1, 0]]);
+  await vision.missing(130); await vision.frame(200); await vision.frame(320);
+  assert.deepEqual(fires(), [[1, 0]], 'unacknowledged item never advances');
+  fired(1, 0);
+  await vision.missing(330); await vision.frame(400); await vision.frame(520);
+  assert.deepEqual(fires(), [[1, 0]], 'Live pending item never advances');
+  fired(1, -1); playing(1, 0);
+  await vision.missing(530); await vision.frame(600); await vision.frame(719);
+  assert.deepEqual(fires(), [[1, 0]], 'recovery must wait the full hold');
+  await vision.frame(720); await vision.frame(1000);
+  assert.deepEqual(fires(), [[1, 0], [1, 1]], 'one new stable entry advances exactly once');
+  assert.deepEqual(stops(), []);
+  assert.deepEqual(quantWrites(), []);
+});
+
+test('C21: real vision OFF keeps playing clip and its armed continuation alive', async () => {
+  setup();
+  await mapViradaReturn(2);
+  const vision = visionEntry(G3);
+  await vision.frame(0); await vision.frame(120);
+  fired(1, 2); fired(1, -1); songTime(16); playing(1, 2);
+  await vision.missing(130);
+  assert.deepEqual(fires(), [[1, 2]]);
+  await vision.frame(200); await vision.frame(320);
+  assert.deepEqual(fires(), [[1, 2]], 'same playing clip does not restart on stable recovery');
+  await vision.missing(330);
+  for (let elapsed = .5; elapsed <= 5; elapsed += .5) {
+    songTime(16 + elapsed); position(1, 2, elapsed % 4);
+  }
+  assert.deepEqual(fires(), [[1, 2], [1, 0]], 'return still fires with hand absent');
+  assert.deepEqual(stops(), []);
+  assert.deepEqual(quantWrites(), []);
 });
 
 test("Advance list moves one item per quantized entry, from the playing clip, and wraps", async () => {

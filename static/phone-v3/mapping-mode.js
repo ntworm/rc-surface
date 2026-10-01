@@ -2103,9 +2103,7 @@
     // Safe loss notice
     const safeLossNotice = document.createElement('div');
     safeLossNotice.className = 'map-safe-loss-note';
-    safeLossNotice.textContent = state.selectedControl?.startsWith('sensor.vision.') && (target.neutralPolicy || 'hold') === 'hold'
-      ? T('mm.safeLossVisionHold', 'Hand lost: keep the last state. Camera OFF and Panic stop the note.')
-      : T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
+    safeLossNotice.textContent = T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
     advBody.appendChild(safeLossNotice);
 
     advanced.appendChild(advBody);

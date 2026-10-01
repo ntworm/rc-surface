@@ -826,6 +826,11 @@
       const previousStage = this.visionStatus.stage;
       const previousError = this.visionStatus.lastError;
       Object.assign(this.visionStatus, patch);
+      if (patch.stage === 'error') {
+        this.wasHandPresent = false;
+        this.processMissing();
+        try { this.onHandUpdate?.(null); } catch { /* UI must never break the pipeline */ }
+      }
       if (typeof this.onVisionStatus === 'function') {
         const publishAt = nowMs();
         const changed = previousStage !== this.visionStatus.stage
@@ -1034,8 +1039,13 @@
     }
 
     processMissing(_timestamp = Date.now()) {
-      // A missing camera frame is not a release. Preserve the last pose until
-      // a valid hand reading replaces it or the performer stops the camera.
+      // Confirmed absence retires this entry; reacquisition must complete a
+      // fresh hold. Present-hand shape tolerance is still handled by the FSM.
+      const activeName = this.gestures?.activeName ?? null;
+      this.clearGestureHistory();
+      if (activeName !== null) {
+        try { this.onGestureRelease?.(activeName); } catch { /* UI must not break pipeline */ }
+      }
       if (this.gestureLearnName && !this.gestureLearnReady) {
         this.gestureLearnPreparationFrames = [];
       }

@@ -501,9 +501,9 @@ missing, More than one match, and a blocked state when Live and AbletonOSC
 list the tracks differently. Sending a message is never shown as playback.
 **Test** runs one activation with the same rules as the gesture.
 
-A hand that leaves the frame is not a release, and neither is a phone that
-disconnects: the pose state is kept, so it cannot launch twice. Reconnecting
-never resends anything. Small oscillations are filtered by the pose
+Confirmed hand absence releases the learned pose and rearms its edge, while
+the clip and RC continuation keep playing. Reacquisition needs a new stable
+entry. Phone disconnection/reconnection never resends anything. Small oscillations are filtered by the pose
 recognizer and, on top of that, a request Live has already received is not
 repeated.
 
@@ -1066,16 +1066,24 @@ Pinch Clutch **X/Y/Z**, the four opt-in detectors, Victory rotation, and the
 three learned pose slots. **PALM** and **FACE** remain local camera
 diagnostics in the preview. Finger-count, individual-landmark, and whole-frame
 colour readings are internal diagnostics and are not mapping channels.
-When the hand temporarily leaves the frame, vision mappings **hold the last
-real value and pose**, including a sustained note. The camera badge marks this
-as **LAST KNOWN**. A real pose release sends Note-Off; turning the camera off,
-Panic, unbinding, or disconnecting also retires held and scheduled notes.
-New vision mappings default to Safe loss **hold**. On first load, older vision
-mappings with the former `release` default migrate to `hold`; explicit `zero`,
-`center`, and `custom` settings, plus non-vision mappings, remain unchanged.
-You can choose `release` again in the mapping editor. Incomplete MediaPipe
-frames are treated as temporary missing-hand frames and recover on the next
-valid frame.
+The first tracking result without a usable hand releases G1–G3 and any active
+vision notes, and cancels notes waiting for Beat/Bar. G1–G3 turn off instead
+of remaining green or LAST KNOWN. Incomplete or invalid landmarks count as
+absence. An explicit inference error releases them too and remains visible.
+Returning requires a fresh stable pose for the selected preset's full hold
+interval; saved examples stay intact. Small shape jitter with a detected hand
+still uses the existing recognition tolerance. TEST stays musically silent.
+A launched clip keeps playing, including its armed RC continuation. A new
+stable entry does not restart an already playing/pending clip; Advance list
+can advance once after the previous request is confirmed.
+Continuous Bind parameters retain their Safe loss policy and axis readouts
+may show their last measurement. New vision mappings still default to hold;
+the existing one-time migration preserves explicit policies. This setting
+cannot suppress momentary pose/note release. Camera OFF, Panic, unbinding
+and disconnection also retire held and scheduled notes.
+Tracking is separate from the video preview: a silent stall with no inference
+result or explicit error cannot prove hand absence and is not detected by a
+new watchdog.
 
 ### Learned static poses
 
@@ -1106,7 +1114,7 @@ learned takes before accepting or holding a pose. Opening a fifth finger
 that was consistently curled in a four-finger pose releases it after the
 release interval; if the open hand is trained in another slot, it can switch
 directly. Small curls and uncertain readings still use the learned tolerance.
-Missing-hand frames keep HOLD. Existing 42/47-coordinate saved poses load
+Missing-hand frames release immediately; recovery needs a new full hold. Existing 42/47-coordinate saved poses load
 without recapture. TEST uses the same compatibility check as live recognition.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 

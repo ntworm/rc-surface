@@ -1742,6 +1742,7 @@
     let badgePose = null;
     let badgeTrackingLost = false;
     let badgeNoteState = null;
+    const liveGestureSlots = new Set();
     const renderPerformanceBadge = () => {
       if (!performanceBadge) return;
       const parts = [];
@@ -2383,17 +2384,22 @@
           return !wasActive;
         }
 
-        // Missing hand is temporary: retain the last measured positions,
-        // detector edges and pose until a real frame or explicit camera OFF.
+        // Keep axis readouts as history, but release momentary learned poses.
         function markHandLost() {
           const h = state.vision.hand;
           if (!h.active) return;
           h.active = false;
+          badgePose = null;
           badgeTrackingLost = true;
+          gestureSlotCards.forEach(card => card.classList.remove('recognized'));
+          // TEST/capture can reset the FSM while a prior LIVE entry still owns
+          // output. Absence must release that entry too, without a phantom OFF
+          // for a pose that only passed TEST.
+          for (const id of liveGestureSlots) {
+            window.onControl?.({ name: visionControls.controlForSlot(id), value: 0 });
+          }
+          liveGestureSlots.clear();
           renderPerformanceBadge();
-          // Keep the entire last hand reading on screen as last-known state.
-          // The processor may safely unlatch its internal clutch gate for
-          // reacquisition; no mapped output changes until a real frame.
           h.handLostTime = Date.now();
           if (state.sensors.vision_reading) {
             state.sensors.vision_reading.active = false;
@@ -2439,6 +2445,7 @@
         };
         visionProcessor.onGestureLearnReady = beginGestureCaptureWindow;
         visionProcessor.onGestureProgress = (evaluation) => {
+          if (visionProcessor !== ownedVisionProcessor) return;
           if (visionGestureTestSlot === null) return;
           const slot = visionControls.slots[visionGestureTestSlot - 1];
           if (!slot?.name) return;
@@ -2463,6 +2470,7 @@
           }
         };
         visionProcessor.onGesture = (match) => {
+          if (visionProcessor !== ownedVisionProcessor) return;
           const slot = visionControls.slotForGesture(match.name);
           if (!slot) return;
           if (visionGestureTestSlot !== null && visionGestureTestSlot !== slot.id) return;
@@ -2481,7 +2489,9 @@
             testButton?.classList.remove('active');
             if (status) status.textContent = T('vid.testPassed',
               '✓ TEST PASSED · {percent}% confidence · release and show the pose again to retrigger', { percent });
-            setTimeout(() => card?.classList.remove('recognized'), 1600);
+            setTimeout(() => {
+              if (visionProcessor === ownedVisionProcessor && !liveGestureSlots.has(slot.id)) card?.classList.remove('recognized');
+            }, 1600);
             return;
           }
           if (status) status.textContent = T('vid.poseRecognized', '✓ {name} recognized · {percent}%', { name: match.name, percent });
@@ -2491,19 +2501,18 @@
           if (!window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);
           // Emit ON edge. OFF is emitted by onGestureRelease (FSM transition)
-          // and by an explicit camera stop. Missing frames retain the pose.
+          // and by confirmed hand absence. Clips already launched keep playing.
           window.onControl({ name: control, value: 1 });
+          liveGestureSlots.add(slot.id);
         };
         visionProcessor.onGestureRelease = (name) => {
-          // This callback fires on a real pose drop or switch. TEST mode is never
-          // active here because onGesture already cleared it before returning.
-          if (visionGestureTestSlot !== null) return;
+          if (visionProcessor !== ownedVisionProcessor) return;
           const slot = visionControls.slotForGesture(name);
           if (!slot) return;
           document.querySelector(`[data-gesture-slot="${slot.id}"]`)?.classList.remove('recognized');
           if (badgePose === `G${slot.id}`) badgePose = null;
           renderPerformanceBadge();
-          if (!window.onControl) return;
+          if (!liveGestureSlots.delete(slot.id) || !window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);
           window.onControl({ name: control, value: 0 });
         };
@@ -2519,7 +2528,7 @@
       // is inferring" are independent — the preview can look perfect while
       // inference is dead — so never assert the latter from the former.
       const renderVisionStage = (status) => {
-        if (!status) return;
+        if (!status || processor !== visionProcessor) return;
         if (status.stage === 'error') {
           setCameraStageState('error', 'VISION ERROR', status.lastError || 'MediaPipe inference failed.');
         } else if (status.stage === 'hand-detected') {
@@ -2577,6 +2586,7 @@
     };
 
     const stopVision = () => {
+      liveGestureSlots.clear();
       badgePose = null;
       badgeNoteState = null;
       badgeTrackingLost = false;

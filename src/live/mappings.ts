@@ -666,7 +666,10 @@ const pendingMappedApplies = new Map<string, {
 
 let mappingDispatchGeneration = 0;
 const mappingClientSessions = new Map<string, object>();
-const heldTriggerNotes = new Map<string, { voice: HeldMidiNote; isCurrent: () => boolean }>();
+const heldTriggerNotes = new Map<string, {
+  voice: HeldMidiNote; isCurrent: () => boolean;
+  clientId: string; controlName: string; targetIndex: number;
+}>();
 
 export const triggerNoteClock = new TriggerNoteClock();
 export const triggerNoteScheduler = new TriggerNoteScheduler(triggerNoteClock);
@@ -715,14 +718,16 @@ async function releaseRetiredTriggerNotes(): Promise<void> {
   })));
 }
 
-async function releaseVisionPerformance(clientId: string): Promise<void> {
-  const prefix = `${clientId}::sensor.vision.`;
-  await triggerNoteScheduler.cancelWhere((request) => request.key.startsWith(prefix), 'camera_stopped');
+async function releaseVisionPerformance(clientId: string, reason = 'camera_stopped', controlName?: string): Promise<void> {
+  const prefix = `${clientId}::${controlName ? `${controlName}::` : 'sensor.vision.'}`;
+  await triggerNoteScheduler.cancelWhere((request) => request.key.startsWith(prefix), reason);
   const releases: Promise<void>[] = [];
   for (const [key, held] of heldTriggerNotes) {
     if (!key.startsWith(prefix)) continue;
     heldTriggerNotes.delete(key);
-    releases.push(held.voice.release());
+    releases.push(held.voice.release().then(() => {
+      broadcastTriggerNoteState(held.clientId, held.controlName, held.targetIndex, 'released');
+    }));
   }
   for (const [key, mode] of eventModesState) {
     if (key.startsWith(prefix)) mode.lastInput = 0;
@@ -973,10 +978,13 @@ export function stopHostReconcileTimer(): void {
 }
 
 export async function applyMapping(clientId: string, controlName: string, value: number, isDeactivated?: boolean): Promise<void> {
-  // The camera's deliberate OFF edge is distinct from temporary hand loss.
-  // It must retire held and queued vision notes even when active has no mapping.
-  if (controlName === 'sensor.vision.active' && value === 0 && !isDeactivated) {
-    await releaseVisionPerformance(clientId);
+  // Both confirmed hand absence and camera OFF retire this client's vision
+  // voices/queued notes, even without a mapping on the active channel. Clips
+  // and their armed continuations have a separate lifetime.
+  if (controlName === 'sensor.vision.active' && value === 0) {
+    await releaseVisionPerformance(clientId, isDeactivated ? 'hand_lost' : 'camera_stopped');
+  } else if (isDeactivated && controlName.startsWith('sensor.vision.')) {
+    await releaseVisionPerformance(clientId, 'hand_lost', controlName);
   }
   // Mappings are addressed by control name alone. A phone-scoped lookup used
   // to come first, which is what let the same control mean different things
@@ -1052,11 +1060,14 @@ export async function applyMapping(clientId: string, controlName: string, value:
       // immediate. Set below so the smoothing stage picks it up.
       let releaseGlide = false;
       if (isDeactivated) {
-        if (controlName.startsWith('sensor.vision.') && target.neutralPolicy === 'hold') return;
+        const releasesVisionMomentary = target.mode === 'trigger_note'
+          || (controlName.startsWith('sensor.vision.gesture.') && target.mode !== 'toggle');
+        if (controlName.startsWith('sensor.vision.') && target.neutralPolicy === 'hold' && !releasesVisionMomentary) return;
         // Momentary controls (pads, buttons, gesture pulses, trigger notes)
         // always release straight to their off state — a pad that lingers or
         // eases out is a stuck note, not a safe loss.
         const isMomentary = MOMENTARY_CONTROL_RE.test(controlName) || target.mode === "trigger_note";
+        if (releasesVisionMomentary) safeInputValue = 0;
         // An explicit idleValue is a deliberate per-target override and wins
         // over the policy; it is applied further down as finalScaledValue.
         const hasIdleValue = target.idleValue !== undefined && target.idleValue !== null;
@@ -1152,9 +1163,9 @@ export async function applyMapping(clientId: string, controlName: string, value:
 
       if (target.mode === 'trigger_note') {
         const threshold = target.threshold ?? 0.5;
-        const isPressed = value >= threshold;
+        const isPressed = !isDeactivated && value >= threshold;
         const wasPressed = modeState.lastInput >= threshold;
-        modeState.lastInput = value;
+        modeState.lastInput = isDeactivated ? 0 : value;
 
         const midiNum = noteNameToMidiNumber(target.midiNote ?? "C3");
         const velocity = target.midiVelocity ?? 100;
@@ -1166,12 +1177,12 @@ export async function applyMapping(clientId: string, controlName: string, value:
           if (gate === 'hold') {
             if (isPressed && !wasPressed) {
               const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
-              const held = { voice, isCurrent };
+              const held = { voice, isCurrent, clientId, controlName, targetIndex: targetIdx };
               heldTriggerNotes.set(key, held);
               try {
                 const didSend = await voice.started;
                 if (!didSend && heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
-                if (didSend) broadcastTriggerNoteState(clientId, controlName, targetIdx, 'held');
+                if (didSend && heldTriggerNotes.get(key) === held) broadcastTriggerNoteState(clientId, controlName, targetIdx, 'held');
               } catch (error) {
                 if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
                 modeState.lastInput = 0;
@@ -1192,13 +1203,14 @@ export async function applyMapping(clientId: string, controlName: string, value:
                 return;
               }
               const voice = pressReceiverNote(song.tracks[target.trackIndex ?? 0], midiNum, velocity, isCurrent);
-              const held = { voice, isCurrent };
+              const held = { voice, isCurrent, clientId, controlName, targetIndex: targetIdx };
               heldTriggerNotes.set(key, held);
               voice.started.then((didSend) => {
                 if (!didSend) {
                   if (heldTriggerNotes.get(key) === held) heldTriggerNotes.delete(key);
                   return;
                 }
+                if (heldTriggerNotes.get(key) !== held) return;
                 broadcastTriggerNoteState(clientId, controlName, targetIdx, 'sent');
                 setTimeout(async () => {
                   if (heldTriggerNotes.get(key) === held) {

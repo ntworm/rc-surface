@@ -258,7 +258,7 @@ Destinos com `mode: 'trigger_note'` obedecem às seguintes restrições de esque
 
 ### Safe loss de visão
 
-Quadros sem mão ou com landmarks incompletos seguram a última saída real e a pose aprendida, inclusive notas immediate/hold. Uma mudança ou soltura real reconcilia a borda uma vez. Camera OFF, pagehide, Panic, remoção de bind e desconexão encerram notas e agendamentos. Novos mapeamentos de visão usam `neutralPolicy: 'hold'`; o antigo padrão `release` migra uma vez para hold com `visionSafeLossVersion: 2`, preservando `zero`/`center`/`custom`, um `release` escolhido depois e controles sem visão.
+O primeiro resultado de inferência sem landmarks utilizáveis reseta o reconhecimento e emite um único OFF normal antes do aviso de perda. Candidatura e tempos de liberação são limpos sem alterar exemplos; recuperar exige um novo holdMs completo. Erros explícitos de inferência fazem a mesma liberação e continuam visíveis; não há watchdog novo para ausência de callback. TESTE não emite ON LIVE nem OFF falso, mas não protege vozes LIVE anteriores da perda. sensor.vision.active=0 (inclusive lost=true) encerra vozes Receiver e pedidos Tempo/Compasso daquele cliente antes de buscar mapping. A liberação momentânea/de nota prevalece sobre neutralPolicy=hold legado; Safe loss contínuo do Bind e latches não mudam. OFF de Launch Clip só rearma a borda: não dispara, para nem cancela retorno/ledger. Recuperar respeita idempotência; Avançar lista avança uma vez após confirmação, nunca enquanto pendente. Câmera OFF, pagehide, Panic, remoção de bind e desconexão preservam a liberação existente. Padrão hold de visão e migração única permanecem intactos.
 
 ### Autorização de comandos (`testTriggerNote`)
 

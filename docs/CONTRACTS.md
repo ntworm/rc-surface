@@ -256,7 +256,7 @@ Targets with `mode: 'trigger_note'` adhere to the following schema constraints:
 
 ### Vision Safe Loss
 
-Temporary missing-hand or malformed-landmark frames hold the last real vision output and learned pose, including immediate/hold notes. A real pose change or release reconciles the edge once. Camera OFF, pagehide, Panic, unbind and socket disconnect retire vision notes and pending triggers. New vision mappings default to `neutralPolicy: 'hold'`; legacy vision `release` defaults migrate once to hold with `visionSafeLossVersion: 2`, while explicit `zero`/`center`/`custom`, newer deliberate `release`, and non-vision settings remain intact.
+The first inference result without usable hand landmarks resets learned-pose recognition and emits one normal OFF before hand-loss notification. Candidate/release timers reset without changing templates; recovery requires a fresh full holdMs. Explicit inference errors perform the same cleanup and remain visible; no callback watchdog is added. TEST emits no LIVE ON or phantom OFF, but cannot protect earlier LIVE voices from loss. sensor.vision.active=0 (including lost=true) retires that client's vision Receiver voices and Beat/Bar requests before mapping lookup. Momentary/note release overrides legacy neutralPolicy=hold; continuous Bind Safe loss and latch state remain unchanged. Launch Clip OFF only rearms the edge: no fire/stop/continuation or ledger cancellation. Recovery obeys idempotence; Advance list advances once after confirmation, never while pending. Camera OFF, pagehide, Panic, unbind and socket disconnect keep their existing cleanup. Existing vision hold defaults and one-time migration remain intact.
 
 ### Command Authorization (`testTriggerNote`)
 

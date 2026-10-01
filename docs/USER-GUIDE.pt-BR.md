@@ -502,9 +502,9 @@ AbletonOSC listam as tracks de forma diferente. Enviar uma mensagem nunca
 aparece como reprodução. **Testar** executa uma ativação com as mesmas regras
 do gesto.
 
-A mão sair do quadro não é soltar a pose, e o celular desconectar também não:
-o estado da pose fica guardado, então não há disparo duplo. Reconectar nunca
-reenvia nada. Pequenas oscilações são filtradas pelo reconhecedor de poses e,
+Ausência confirmada da mão solta a pose aprendida e rearma sua borda; o clip
+e o retorno RC continuam tocando. Recuperar exige uma nova entrada estável.
+Desconectar/reconectar o celular nunca reenvia nada. Pequenas oscilações são filtradas pelo reconhecedor de poses e,
 além disso, um pedido que o Live já recebeu não é repetido.
 
 Mudar de ideia antes do limite (por exemplo G2 e logo depois G1 com a Base
@@ -1084,15 +1084,24 @@ três slots de pose aprendida. **PALM** e **FACE** seguem como diagnóstico loca
 da câmera, na prévia. Contagem de dedos, landmarks individuais e leituras de
 cor do quadro inteiro são diagnóstico interno e não são canais de mapeamento.
 
-Quando a mão sai temporariamente do vídeo, os mapeamentos de visão **seguram o
-último valor e a última pose reais**, inclusive uma nota sustentada. O badge
-da câmera indica **ÚLTIMO ESTADO**. Soltar realmente a pose manda Note-Off;
-desligar a câmera, Panic, remover bind ou desconectar também encerra notas e
-agendamentos. Novos mapeamentos de visão usam Safe loss **hold**. Na primeira
-carga, os mapeamentos antigos de visão com padrão `release` migram para `hold`;
-`zero`, `center`, `custom` e controles que não são de visão não mudam. É possível
-selecionar `release` novamente no editor. Quadros MediaPipe incompletos seguem
-o caminho de perda temporária e o próximo quadro válido recupera a leitura.
+O primeiro resultado do rastreio sem uma mão utilizável libera G1–G3 e notas
+ativas da visão, e cancela notas esperando Tempo/Compasso. G1–G3 apagam;
+não ficam verdes como ÚLTIMO ESTADO. Landmarks incompletos ou inválidos
+contam como ausência. Um erro explícito de inferência também libera a saída
+e continua visível. Voltar exige uma nova pose estável pelo intervalo completo
+do preset; os exemplos salvos continuam intactos. Pequenas variações de forma
+com a mão detectada conservam a tolerância existente. TESTE permanece silencioso.
+Um clip já disparado continua tocando, inclusive seu retorno RC armado.
+Uma nova entrada estável não reinicia um clip já tocando/aguardando; Avançar
+lista pode avançar uma vez depois da confirmação do pedido anterior.
+Parâmetros contínuos de Bind conservam sua política Safe loss; os eixos podem
+mostrar a última medição. Novos mappings de visão ainda usam hold por padrão;
+a migração existente preserva políticas explícitas. Essa opção não impede a
+liberação de poses/notas momentâneas. Câmera OFF, Panic, remoção de bind e
+desconexão também encerram notas e agendamentos.
+Rastreio e vídeo são estados diferentes: um travamento silencioso sem novo
+resultado ou erro explícito não comprova ausência da mão; esta correção não
+adiciona um watchdog para detectar esse caso.
 
 ### Poses estáticas aprendidas
 
@@ -1123,7 +1132,7 @@ exemplos aprendidos antes de aceitar ou manter uma pose. Abrir o quinto dedo
 que estava consistentemente dobrado na pose de quatro solta a pose após o
 intervalo de liberação; se a mão aberta estiver treinada em outro slot, pode
 trocar diretamente. Pequenas dobras e leituras incertas continuam usando a
-tolerância aprendida. Frames sem mão mantêm HOLD. Poses salvas com 42/47
+tolerância aprendida. Frames sem mão liberam imediatamente; voltar exige um novo hold completo. Poses salvas com 42/47
 coordenadas carregam sem recaptura. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 

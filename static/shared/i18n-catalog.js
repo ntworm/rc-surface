@@ -684,7 +684,7 @@
     'mm.modeContinuous': { en: 'Continuous', 'pt-BR': 'Contínuo' },
     'mm.modeToggle': { en: 'Toggle', 'pt-BR': 'Alternar' },
     'mm.triggerThreshold': { en: 'Trigger threshold', 'pt-BR': 'Limiar de disparo' },
-    'mm.safeLossVisionHold': { en: 'Hand lost: keep the last state. Camera OFF and Panic stop the note.', 'pt-BR': 'Mão fora da câmera: mantém o último estado. Câmera OFF e Panic param a nota.' },
+    'mm.safeLossVisionHold': { en: 'Hand lost: release active notes and cancel pending triggers. Launched clips keep playing.', 'pt-BR': 'Mão fora da câmera: libera notas ativas e cancela notas agendadas. Clips disparados continuam tocando.' },
     'mm.durationGrid': { en: 'Bars', 'pt-BR': 'Compassos' },
     'mm.durationFree': { en: 'Milliseconds', 'pt-BR': 'Milissegundos' },
     'mm.barUnit': { en: 'bar', 'pt-BR': 'compasso' },
