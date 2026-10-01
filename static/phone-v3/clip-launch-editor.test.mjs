@@ -157,13 +157,13 @@ const VIRADA_TARGET = {
   launchMode: 'clip', clip: { slotIndex: 2, clipName: 'Virada', clipSessionId: '24' },
 };
 
-test('MAP offers Launch Clip beside Bind and Trigger Note', async () => {
+test('unmapped MAP offers Launch Clip beside Bind and Trigger Note only through the entry cards', async () => {
   const { context, detail } = load();
   await select(context, 'sensor.vision.gesture.1');
   const entries = byClass(detail, 'map-entry-choice').map((n) => n.dataset.kind);
   assert.deepEqual(entries, ['bind', 'note', 'clip']);
   const actions = byClass(detail, 'map-detail-actions')[0];
-  assert.deepEqual(actions.children.slice(0, 3).map((n) => n._textContent), ['Bind', 'Trigger Note', 'Launch Clip']);
+  assert.deepEqual(actions.children.map((n) => n._textContent), ['Unbind Target', 'Clear Control', 'Clear All Mappings']);
 });
 
 test('control → Launch Clip → track → clip saves a target with real names and session identities', async () => {

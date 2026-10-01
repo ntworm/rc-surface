@@ -46,6 +46,75 @@ async function setup(page, lang) {
   });
 }
 
+async function expectCompactMaintenance(detail) {
+  const buttons = detail.locator('.map-detail-actions .map-action-danger');
+  await expect(buttons).toHaveCount(3);
+  const boxes = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
+  for (const box of boxes) {
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(box.y - boxes[0].y)).toBeLessThanOrEqual(1);
+  }
+  expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
+  expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
+  expect(await detail.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+}
+
+for (const lang of ['en', 'pt-BR']) {
+  test(`${lang}: an unmapped control offers only entry cards and one compact maintenance row`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await setup(page, lang);
+    await page.evaluate(() => { window.__mapTargets = window.mobileMappingState.allTargets = [{ trackIndex: 0, name: 'Keys', isMidi: true }]; });
+    const detail = page.locator('#map-mobile-detail');
+    await expect(detail.locator('.map-detail-actions button')).toHaveText(lang === 'en'
+      ? ['Unbind Target', 'Clear Control', 'Clear All Mappings']
+      : ['Desfazer o bind', 'Limpar o controle', 'Limpar todos os mapeamentos']);
+    await expect(detail.locator('.map-entry-choice')).toHaveCount(3);
+    await expectCompactMaintenance(detail);
+    if (lang === 'en' && testInfo.project.name === 'Desktop Chrome') {
+      await detail.screenshot({ path: 'test-results/map-empty-compact.png' });
+    }
+    // Each creation flow remains available through its original card.
+    for (const [kind, picker] of [['bind', '.map-picker-tree'], ['note', '.map-picker-list'], ['clip', '.map-picker-list']]) {
+      await detail.locator(`.map-entry-choice[data-kind="${kind}"]`).click();
+      await expect(detail.locator(picker)).toBeVisible();
+      await detail.locator('.map-picker-head button').first().click();
+      await expect(detail.locator('.map-entry-choice')).toHaveCount(3);
+    }
+  });
+
+  test(`${lang}: a mapped control keeps shortcuts that add another mapping without replacing the clip`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await setup(page, lang);
+    await page.evaluate(() => { window.__mapTargets = window.mobileMappingState.allTargets = [{ trackIndex: 0, name: 'Keys', isMidi: true }]; });
+    const detail = page.locator('#map-mobile-detail');
+    await detail.locator('.map-entry-choice[data-kind="clip"]').click();
+    await detail.locator('.map-picker-row', { hasText: 'Drums' }).click();
+    await detail.locator('.map-picker-row', { hasText: 'Base' }).click();
+    const original = await page.evaluate(() => structuredClone(window.mobileMappingState.currentMappings['sensor.vision.gesture.2'][0]));
+    const actions = detail.locator('.map-detail-actions');
+    await expect(actions.locator('button')).toHaveCount(6);
+    await expect(detail.locator('.map-entry-choice')).toHaveCount(0);
+    await expectCompactMaintenance(detail);
+    if (lang === 'en' && testInfo.project.name === 'Desktop Chrome') {
+      await detail.screenshot({ path: 'test-results/map-bound-compact.png' });
+    }
+    for (const [name, picker] of [['Trigger Note', '.map-picker-list'], ['Launch Clip', '.map-picker-list']]) {
+      await actions.getByRole('button', { name, exact: true }).click();
+      await expect(detail.locator(picker)).toBeVisible();
+      await detail.locator('.map-picker-head button').first().click();
+    }
+    await actions.getByRole('button', { name: 'Bind', exact: true }).click();
+    await detail.locator('.map-picker-tree').getByRole('button', { name: 'Tempo', exact: true }).click();
+    const targets = await page.evaluate(() => window.__launchCalls.filter((call) => call.cmd === 'setMapping').at(-1).args.targets);
+    expect(targets).toHaveLength(2);
+    expect(targets[0]).toEqual(original);
+    expect(targets[1].type).toBe('tempo');
+    await expect(detail.locator('.map-bound-target')).toHaveCount(2);
+    await expect(actions.locator('button')).toHaveCount(6);
+    await expectCompactMaintenance(detail);
+  });
+}
+
 test.describe('Launch Clip in MAP', () => {
   test('pt-BR: pose → Launch Clip → track → clip, then the editor reports only what Live says', async ({ page }) => {
     await setup(page, 'pt-BR');

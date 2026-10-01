@@ -1167,23 +1167,29 @@
       renderTargetEditor(el, targets[state.selectedTargetIndex]);
     }
 
-    const bind = document.createElement('button');
-    bind.type = 'button';
-    bind.textContent = T('mm.bind', 'Bind');
-    bind.addEventListener('click', openTargetPicker);
-    actions.appendChild(bind);
+    if (targets.length) {
+      const bind = document.createElement('button');
+      bind.type = 'button';
+      bind.textContent = T('mm.bind', 'Bind');
+      bind.addEventListener('click', openTargetPicker);
+      actions.appendChild(bind);
 
-    const trigger = document.createElement('button');
-    trigger.type = 'button';
-    trigger.textContent = T('mm.triggerNote', 'Trigger Note');
-    trigger.addEventListener('click', () => openMidiTrackPicker('trigger_note'));
-    actions.appendChild(trigger);
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.textContent = T('mm.triggerNote', 'Trigger Note');
+      trigger.addEventListener('click', () => openMidiTrackPicker('trigger_note'));
+      actions.appendChild(trigger);
 
-    const launch = document.createElement('button');
-    launch.type = 'button';
-    launch.textContent = T('mm.launchClip', 'Launch Clip');
-    launch.addEventListener('click', () => openClipTrackPicker('new'));
-    actions.appendChild(launch);
+      const launch = document.createElement('button');
+      launch.type = 'button';
+      launch.textContent = T('mm.launchClip', 'Launch Clip');
+      launch.addEventListener('click', () => openClipTrackPicker('new'));
+      actions.appendChild(launch);
+      const isClipEditor = targets[state.selectedTargetIndex]?.type === 'clip_launch';
+      bind.classList.toggle('active', !isNoteEditor && !isClipEditor);
+      trigger.classList.toggle('active', isNoteEditor);
+      launch.classList.toggle('active', isClipEditor);
+    }
 
     const unbind = document.createElement('button');
     unbind.type = 'button';
@@ -1217,11 +1223,6 @@
     clearAll.textContent = T('mm.clearAllMappings', 'Clear All Mappings');
     clearAll.addEventListener('click', () => { void clearAllMobileMappings(); });
     actions.appendChild(clearAll);
-    const isClipEditor = targets[state.selectedTargetIndex]?.type === 'clip_launch';
-    bind.classList.toggle('active', targets.length > 0 && !isNoteEditor && !isClipEditor);
-    trigger.classList.toggle('active', isNoteEditor);
-    launch.classList.toggle('active', isClipEditor);
-
     if (!targets.length) {
       const entry = document.createElement('div');
       entry.className = 'map-entry';

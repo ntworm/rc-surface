@@ -302,9 +302,10 @@ test('mobile audio note picker does not offer Follow Detected Note setup', async
   const follow = actions?.children.find((child) => child.textContent === 'Follow Detected Note');
   assert.equal(follow, undefined,
     'Follow Detected Note is withheld from every v1.0 creation surface');
-  // The two actions that apply to any control are still here.
-  assert.ok(actions?.children.some((child) => child.textContent === 'Bind'));
-  assert.ok(actions?.children.some((child) => child.textContent === 'Trigger Note'));
+  // An empty control starts these flows through the entry cards.
+  const entry = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-entry');
+  assert.ok(entry?.children.some((child) => child.dataset.kind === 'bind'));
+  assert.ok(entry?.children.some((child) => child.dataset.kind === 'note'));
 });
 
 test('mobile non-audio target does not expose Follow Detected Note mode', async () => {
@@ -576,10 +577,10 @@ test('MIDI target save failure keeps the picker open', async () => {
     .find((child) => child.dataset.control === 'pad-1');
   assert.ok(noteRow, 'pad row should exist');
   noteRow.listeners.get('click')();
-  const actions = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-detail-actions');
   // Driven through Trigger Note: the behaviour under test is that a failed
   // write leaves the picker open, and Follow is no longer reachable from here.
-  const trigger = actions?.children.find((child) => child.textContent === 'Trigger Note');
+  const entry = elements.get('map-mobile-detail').children.find((child) => child.className === 'map-entry');
+  const trigger = entry?.children.find((child) => child.dataset.kind === 'note');
   assert.ok(trigger, 'trigger action should be present');
   trigger.listeners.get('click')();
 
@@ -732,12 +733,12 @@ test('picker Bind to renders Track > Device > Parameter hierarchy instead of fla
   assert.ok(padRow, 'pad-1 row must exist');
   padRow.listeners.get('click')();
 
-  // Find and click the Bind button
+  // Find and click the Bind entry card for an empty control.
   const detailEl = elements.get('map-mobile-detail');
-  const actions = detailEl.children.find(c => c.className === 'map-detail-actions');
-  assert.ok(actions, 'actions wrapper should exist');
-  const bindBtn = actions.children.find(c => c.textContent === 'Bind');
-  assert.ok(bindBtn, 'Bind button should exist');
+  const entry = detailEl.children.find(c => c.className === 'map-entry');
+  assert.ok(entry, 'entry cards should exist');
+  const bindBtn = entry.children.find(c => c.dataset.kind === 'bind');
+  assert.ok(bindBtn, 'Bind card should exist');
   bindBtn.listeners.get('click')();
 
   const tree = detailEl.children.find(c => c.className === 'map-picker-tree');
@@ -775,7 +776,7 @@ test('Main uses collapsed track/device hierarchy, keeps Tempo direct, filters an
   const controls = elements.get('map-mobile-controls');
   controls.children.flatMap(g => g.children || []).find(c => c.dataset.control === 'pad-1').listeners.get('click')();
   const detail = elements.get('map-mobile-detail');
-  detail.children.find(c => c.className === 'map-detail-actions').children.find(c => c.textContent === 'Bind').listeners.get('click')();
+  detail.children.find(c => c.className === 'map-entry').children.find(c => c.dataset.kind === 'bind').listeners.get('click')();
   const tree = detail.children.find(c => c.className === 'map-picker-tree');
   const group = tree.children[0];
   assert.ok(group.children.some(c => c.textContent === 'Tempo'));

@@ -32,6 +32,9 @@ intermediate release records are intentionally not published.
 - Visible **Refresh** buttons in Bind, Trigger Note and Launch Clip pickers
   reload Live tracks/clips while preserving the filter and available track
   selection.
+- Empty MAP controls use the three entry cards without duplicate top
+  shortcuts. Mapped controls keep shortcuts for additional mappings; Unbind,
+  Clear Control and Clear All Mappings share one compact row in both states.
 
 ## [1.0.2] — 2026-09-30
 

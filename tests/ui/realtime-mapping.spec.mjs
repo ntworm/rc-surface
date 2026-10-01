@@ -21,7 +21,7 @@ async function setup(page) {
 
 test('Main picker has the same collapsed hierarchy as tracks on desktop/mobile', async ({ page }, testInfo) => {
   await setup(page);
-  await page.locator('#map-mobile-detail').getByRole('button', { name: 'Bind', exact: true }).click();
+  await page.locator('#map-mobile-detail .map-entry-choice[data-kind="bind"]').click();
   const tree = page.locator('.map-picker-tree');
   await expect(tree.getByRole('button', { name: 'Tempo', exact: true })).toBeVisible();
   await expect(tree.getByRole('button', { name: 'Ceiling', exact: true })).toBeHidden();

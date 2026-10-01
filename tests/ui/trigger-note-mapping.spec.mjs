@@ -168,8 +168,8 @@ test.describe('Trigger Note Mapping Editor UI', () => {
     if (testInfo.project.name === 'Desktop Chrome') await detail.screenshot({ path: 'test-results/top-mappings-note.png' });
     await page.evaluate(() => { window.mobileMappingState.currentMappings['sensor.vision.gesture.1'] = []; window.renderDetail(); });
     await expect(detail.locator('.map-detail-title + .map-detail-actions')).toHaveCount(1);
-    // Bind, Trigger Note, Launch Clip, Unbind, Clear Control, Clear All.
-    await expect(detail.locator('.map-detail-actions button')).toHaveCount(6);
+    // An empty control uses the entry cards; only maintenance stays in the top row.
+    await expect(detail.locator('.map-detail-actions button')).toHaveCount(3);
     await expect(detail.locator('.map-entry-choice')).toHaveCount(3);
   });
   for (const vp of [

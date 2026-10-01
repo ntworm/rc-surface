@@ -2973,7 +2973,7 @@ body.mapping-mode [data-name].selected-control {
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 0 0 8px;
   margin: 0 0 10px;
@@ -2981,13 +2981,11 @@ body.mapping-mode [data-name].selected-control {
   background: var(--bg2);
 }
 .map-detail-actions button {
-  grid-column: span 2;
   min-width: 0;
   min-height: 44px;
   padding: 4px;
   font-size: 9px;
 }
-.map-detail-actions button:nth-child(n+4) { grid-column: span 3; }
 .map-detail-actions button.active { background: var(--accent); color: var(--bg2); border-color: var(--accent); }
 .map-detail-actions button:disabled { opacity: 0.4; }
 .map-control-mappings {
