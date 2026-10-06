@@ -393,8 +393,24 @@ p + p{margin-top:11px}
 .pf-foot b{display:block;font-weight:normal;color:var(--ink2);font-size:10px;line-height:14px}
 .pf-foot span{color:var(--clay);font-size:9px;line-height:13px}
 .pf-note{color:var(--clay);font-size:9px;line-height:13px;margin-top:10px;max-width:none}
-@media (max-width:1000px){.pf{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (max-width:640px){.pf{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Five cards never fill three or two columns. Below five across, the last row's
+   cards widen to close the row, and their drawings keep the width of the row
+   above so no envelope is drawn bigger than its neighbours. */
+@media (max-width:1000px){
+  .pf{grid-template-columns:repeat(6,minmax(0,1fr));container-type:inline-size}
+  .pf-card{grid-column:span 2}
+  .pf-card:nth-child(n+4){grid-column:span 3}
+  .pf-card:nth-child(n+4) :is(.pf-spans,.pf-plot,.pf-marks){
+    max-width:calc((100cqw - 20px) / 3 - 24px);margin-left:auto;margin-right:auto}
+}
+@media (max-width:640px){
+  .pf{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pf-card,.pf-card:nth-child(n+4){grid-column:auto}
+  .pf-card:last-child:nth-child(odd){grid-column:1 / -1}
+  .pf-card:nth-child(n+4) :is(.pf-spans,.pf-plot,.pf-marks){max-width:none}
+  .pf-card:last-child:nth-child(odd) :is(.pf-spans,.pf-plot,.pf-marks){
+    max-width:calc((100cqw - 10px) / 2 - 24px)}
+}
 
 /* ================= snapshots ================= */
 .snp-wrap{min-width:0}
@@ -696,6 +712,9 @@ table.spec tr:first-child th,table.spec tr:first-child td{border-top:1px solid v
 .cards{display:grid;gap:1px;background:var(--rule2);border:1px solid var(--rule2)}
 .cards.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cards.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* An odd card out takes the whole row instead of leaving an empty grey cell. */
+.cards.c2 > .card:last-child:nth-child(odd),
+.stories > .story:last-child:nth-child(odd){grid-column:1 / -1}
 .card{background:#181818;padding:14px 16px 16px;min-width:0;display:flex;gap:12px}
 .card.highlights{flex-direction:column}
 .card .ic{flex:0 0 auto;width:26px;height:26px;margin-top:1px}
@@ -793,8 +812,12 @@ table.data tbody tr.on td:first-child{position:relative}
 .control-tabs .control-tab-number{color:var(--clay);letter-spacing:.12em}
 .control-tabs label[for]:where(:hover) .control-tab-number{color:var(--ink3)}
 .control-viewer:has(.control-tab-input:focus-visible) .control-layout{outline:1px solid var(--amber);outline-offset:2px}
-.control-deck{display:grid;min-width:0}
-.control-sheet{grid-area:1 / 1;min-width:0;visibility:hidden;opacity:0;pointer-events:none}
+/* Only the selected family is in flow, so the deck is as tall as what it shows.
+   Stacked in one grid cell, every family was as tall as SENSORS and left a band
+   of up to 1100px under the short ones on a phone. The others stay laid out at
+   the top of the deck, hidden, so #control-family-* links still have a target. */
+.control-deck{position:relative;min-width:0}
+.control-sheet{position:absolute;top:0;left:0;right:0;min-width:0;visibility:hidden;opacity:0;pointer-events:none}
 .control-sheet .feature{margin-top:0}
 #control-select-performance:checked ~ .control-layout label[for="control-select-performance"],
 #control-select-continuous:checked ~ .control-layout label[for="control-select-continuous"],
@@ -811,7 +834,7 @@ table.data tbody tr.on td:first-child{position:relative}
 #control-select-sensors:checked ~ .control-layout [data-control-family="sensors"],
 #control-select-vision:checked ~ .control-layout [data-control-family="vision"],
 #control-select-mapping:checked ~ .control-layout [data-control-family="mapping"]{
-  visibility:visible;opacity:1;pointer-events:auto
+  position:relative;visibility:visible;opacity:1;pointer-events:auto
 }
 .stories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--rule2);border:1px solid var(--rule2)}
 .story{background:#181818;padding:14px 16px 16px;min-width:0}
@@ -819,9 +842,13 @@ table.data tbody tr.on td:first-child{position:relative}
 .story h3{font-size:15px;line-height:20px;font-weight:normal;color:var(--ink);margin:5px 0 8px}
 .story p{font-size:13px;line-height:19px;color:var(--ink2);max-width:none}
 .story p + p{margin-top:7px}
-.story .mapline{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:10px 0 8px;color:var(--ink)}
+.story .mapline{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;margin:10px 0 8px;color:var(--ink)}
 .story .mapline code{font-size:11px;line-height:17px;padding:2px 4px;border:1px solid var(--rule);background:#0e0e0e}
 .story .mapline span{color:var(--amber);font-size:14px}
+/* A line may break between a control and its arrow, never between the arrow
+   and the parameter it points at. */
+.story .mapline .pair{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
+.story .mapline .to{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .story .result{color:var(--ink);border-top:1px solid var(--rule2);padding-top:8px}
 
 /* comparison: mark our column */
@@ -982,7 +1009,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   .surface-sheet + .surface-sheet{margin-top:30px;break-before:page}
   .control-tabs{display:none!important}
   .control-layout,.control-deck{display:block!important}
-  .control-sheet{visibility:visible!important;opacity:1!important;pointer-events:auto!important;break-inside:avoid-page}
+  .control-sheet{position:static!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;break-inside:avoid-page}
   .control-sheet + .control-sheet{margin-top:20px}
 }
 </style>
@@ -2316,7 +2343,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         <style>
           .control-tabs{display:none}
           .control-layout,.control-deck{display:block}
-          .control-sheet{visibility:visible;opacity:1;pointer-events:auto}
+          .control-sheet{position:static;visibility:visible;opacity:1;pointer-events:auto}
           .control-sheet + .control-sheet{margin-top:20px}
         </style>
       </noscript>
@@ -2334,35 +2361,35 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sid" data-i18n="lp.scenarios.030">Scenario A · two performers</div>
           <h3 data-i18n="lp.scenarios.003">A second pair of hands over one Live set</h3>
           <p data-i18n="lp.scenarios.004">A colleague opens the phone and shapes the return effects while the soloist keeps playing.</p>
-          <div class="mapline"><code>xy-1.x</code><span>&rarr;</span><span>distortion Dry/Wet</span><code>xy-1.y</code><span>&rarr;</span><span>reverb send</span></div>
+          <div class="mapline"><span class="pair"><code>xy-1.x</code><span class="to"><span>&rarr;</span><span>distortion Dry/Wet</span></span></span><span class="pair"><code>xy-1.y</code><span class="to"><span>&rarr;</span><span>reverb send</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.031">Scenario B · arrangement change</div>
           <h3 data-i18n="lp.scenarios.012">Four corners for four sections</h3>
           <p data-i18n="lp.scenarios.013">Intro, verse, chorus and outro in SNP slots 1–4, dragged between corners in Vector XY.</p>
-          <div class="mapline"><code>knob-1</code><span>&rarr;</span><span>Auto Filter cutoff</span><code>fader-1</code><span>&rarr;</span><span>reverb return</span></div>
+          <div class="mapline"><span class="pair"><code>knob-1</code><span class="to"><span>&rarr;</span><span>Auto Filter cutoff</span></span></span><span class="pair"><code>fader-1</code><span class="to"><span>&rarr;</span><span>reverb return</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.032">Scenario C · pinch clutch</div>
           <h3 data-i18n="lp.scenarios.017">Push a filter in the air</h3>
           <p data-i18n="lp.scenarios.018">Standing, no table. Pinch with the palm to the camera, move the hand, open the fingers.</p>
-          <div class="mapline"><code>sensor.vision.pinch_z</code><span>&rarr;</span><span>Auto Filter cutoff</span></div>
+          <div class="mapline"><span class="pair"><code>sensor.vision.pinch_z</code><span class="to"><span>&rarr;</span><span>Auto Filter cutoff</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.033">Scenario D · instrument motion</div>
           <h3 data-i18n="lp.scenarios.021">The body supplies the modulation</h3>
           <p data-i18n="lp.scenarios.022">A phone strapped to a guitar: the turn during a swell becomes a rotation-rate gesture.</p>
-          <div class="mapline"><code>sensor.motion.gx</code><span>&rarr;</span><span data-i18n="lp.scenarios.023">Echo feedback</span></div>
+          <div class="mapline"><span class="pair"><code>sensor.motion.gx</code><span class="to"><span>&rarr;</span><span data-i18n="lp.scenarios.023">Echo feedback</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.034">Scenario E · acoustic input</div>
           <h3 data-i18n="lp.scenarios.025">Volume opens the effect</h3>
           <p data-i18n="lp.scenarios.026">A phone near the microphone: louder phrases open the filter, silence closes it.</p>
-          <div class="mapline"><code>sensor.audio.envelope</code><span>&rarr;</span><span>Saturator Drive</span></div>
+          <div class="mapline"><span class="pair"><code>sensor.audio.envelope</code><span class="to"><span>&rarr;</span><span>Saturator Drive</span></span></span></div>
         </article>
 
       </div>
