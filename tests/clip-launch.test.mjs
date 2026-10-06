@@ -775,6 +775,40 @@ test("a phone disconnect leaves the armed rule running; the OSC link loss cancel
   assert.deepEqual(fires(), [[1, 2]], "nothing resent after the link came back");
 });
 
+test("an OSC outage the heartbeat detects cancels the armed rule even when the link returns at once", async () => {
+  // Live's UI freezes for ~6 s while audio keeps playing: AbletonOSC goes
+  // silent, the heartbeat marks the link lost and its own probe is answered
+  // right away. The loss must cancel the rule at that moment, not when a
+  // later sample happens to see the link down.
+  setup({ virada: { endMarker: 16, loopEnd: 16 } });
+  await mapViradaReturn(1);
+  playing(1, 0); fired(1, -1);
+  await gesture(G3, 1);
+  fired(1, 2); fired(1, -1);
+  songTime(16);
+  playing(1, 2);
+  for (let beat = 0.5; beat <= 2; beat += 0.5) {
+    songTime(16 + beat);
+    position(1, 2, beat);
+  }
+  oscTransport.state.lastSeenAt = Date.now() - 6000;
+  oscTransport.heartbeatTick(Date.now());
+  assert.equal(oscTransport.state.connected, false);
+  songTime(30); // the probe reply: the link is back before any timer runs
+  assert.equal(oscTransport.state.connected, true);
+  for (let beat = 14; beat <= 16; beat += 0.5) {
+    songTime(16 + beat);
+    position(1, 2, beat);
+  }
+  assert.deepEqual(fires(), [[1, 2]], "no return, late or not, after the outage");
+  const { diagnostics } = clipLaunchEngine.snapshot();
+  assert.equal(diagnostics.at(-1)?.reason, "osc_lost");
+  // Live's view of the track is unknown until the listeners report again.
+  await gesture(G3, 0);
+  await gesture(G3, 1);
+  assert.deepEqual(fires(), [[1, 2], [1, 2]], "a new real activation is not blocked by stale state");
+});
+
 test("a non-loop Virada that ends before the window gets one late return; a transport stop gets none", async () => {
   for (const stopTransport of [false, true]) {
     setup({ virada: { looping: false, endMarker: 6, loopEnd: 6 } });

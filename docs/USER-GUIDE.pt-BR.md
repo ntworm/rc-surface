@@ -1129,9 +1129,11 @@ Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câ
 Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
 O reconhecimento compara contradições fortes da forma dos dedos com os três
 exemplos aprendidos antes de aceitar ou manter uma pose. Abrir o quinto dedo
-que estava consistentemente dobrado na pose de quatro solta a pose após o
-intervalo de liberação; se a mão aberta estiver treinada em outro slot, pode
-trocar diretamente. Pequenas dobras e leituras incertas continuam usando a
+(indicador, médio, anelar ou mindinho) que estava consistentemente dobrado na
+pose de quatro solta a pose após o intervalo de liberação; se a mão aberta
+estiver treinada em outro slot, pode trocar diretamente. O polegar fica fora
+dessa checagem: poses que só diferem pelo polegar dependem apenas da
+tolerância aprendida. Pequenas dobras e leituras incertas continuam usando a
 tolerância aprendida. Frames sem mão liberam imediatamente; voltar exige um novo hold completo. Poses salvas com 42/47
 coordenadas carregam sem recaptura. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.

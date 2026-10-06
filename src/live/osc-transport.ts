@@ -228,7 +228,7 @@ export class OSCTransport extends EventEmitter {
           serverSocket.on('error', (err) => {
             this.state.error = err.message;
             this.state.available = false;
-            this.state.connected = false;
+            this.markLinkLost();
           });
 
           g.abletonOSCSocket = serverSocket;
@@ -713,6 +713,17 @@ export class OSCTransport extends EventEmitter {
     }
   }
 
+  /**
+   * The link stopped answering. Emitted on the edge, not sampled: the
+   * heartbeat's own probe can be answered (and reconnect) before any timer
+   * would see the link down.
+   */
+  private markLinkLost(): void {
+    const wasConnected = this.state.connected;
+    this.state.connected = false;
+    if (wasConnected) this.emit('link-lost');
+  }
+
   /** One heartbeat turn. Public so the cadence can be tested without timers. */
   public heartbeatTick(now: number = Date.now()): void {
     // Mark disconnected only when BOTH the socket is silent AND we have
@@ -722,10 +733,10 @@ export class OSCTransport extends EventEmitter {
       this.state.lastSeenAt !== null &&
       now - this.state.lastSeenAt > 5000
     ) {
-      this.state.connected = false;
       this.requeryOnNextConnection = true;
       this.pendingGlobalQuantization?.(new Error('AbletonOSC disconnected before quantization confirmation'));
       this.globalQuantization = null;
+      this.markLinkLost();
     }
     // Liveness probe. Anything arriving on the socket already refreshes
     // lastSeenAt, so while the push stream is flowing the link is proven and

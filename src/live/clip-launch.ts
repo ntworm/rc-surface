@@ -537,6 +537,10 @@ export class ClipLaunchEngine {
       this.broadcastAll();
     });
     oscTransport.on("update", (state: any) => this.onTransport(state));
+    oscTransport.on("link-lost", () => {
+      this.forgetLiveState();
+      this.broadcastAll();
+    });
   }
 
   private wasPlaying = false;
@@ -1173,18 +1177,24 @@ export class ClipLaunchEngine {
   private startWatchdog(): void {
     if (this.watchdog) return;
     this.watchdog = setInterval(() => {
-      if (oscTransport.state.connected) return;
-      // The link is gone: Live's view of every track is unknown, and no rule
-      // may act on stale state when it comes back.
-      for (const state of this.tracks.values()) {
-        this.endContinuation(state, "osc_lost");
-        this.clearLedger(state);
-        state.fired = null;
-        state.playing = null;
-      }
-      this.verifiedNames = null;
+      if (!oscTransport.state.connected) this.forgetLiveState();
     }, 1000);
     (this.watchdog as any)?.unref?.();
+  }
+
+  /**
+   * The link is gone: Live's view of every track is unknown, and no rule may
+   * act on stale state when it comes back. Runs on the transport's link-lost
+   * edge; the watchdog repeats it while the link stays down.
+   */
+  private forgetLiveState(): void {
+    for (const state of this.tracks.values()) {
+      this.endContinuation(state, "osc_lost");
+      this.clearLedger(state);
+      state.fired = null;
+      state.playing = null;
+    }
+    this.verifiedNames = null;
   }
 
   private stopWatchdog(): void {

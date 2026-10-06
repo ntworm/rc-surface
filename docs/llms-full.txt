@@ -1710,9 +1710,11 @@ Tap **TEST** to verify pose recognition silently on camera without firing MIDI n
 To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
 Recognition checks strong finger-shape contradictions against all three
 learned takes before accepting or holding a pose. Opening a fifth finger
-that was consistently curled in a four-finger pose releases it after the
-release interval; if the open hand is trained in another slot, it can switch
-directly. Small curls and uncertain readings still use the learned tolerance.
+(index, middle, ring or pinky) that was consistently curled in a four-finger
+pose releases it after the release interval; if the open hand is trained in
+another slot, it can switch directly. The thumb is not part of this check:
+poses that differ only by the thumb rely on the learned tolerance alone.
+Small curls and uncertain readings still use the learned tolerance.
 Missing-hand frames release immediately; recovery needs a new full hold. Existing 42/47-coordinate saved poses load
 without recapture. TEST uses the same compatibility check as live recognition.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.

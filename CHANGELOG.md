@@ -36,7 +36,8 @@ intermediate release records are intentionally not published.
   Launched clips and RC returns keep playing. TEST stays silent, with no
   phantom OFF; continuous Bind Safe loss and existing latch modes remain.
 - Learned poses reject strong per-finger contradictions before acceptance and
-  HOLD, so an open fifth finger cannot remain the learned four-finger pose.
+  HOLD, so an open fifth finger (index, middle, ring or pinky; the thumb is
+  not checked) cannot remain the learned four-finger pose.
   Small curls, Rock tolerance, direct switches and existing saved pose
   descriptors remain supported. Hand absence now releases momentary output.
 - Launch Clip accepts real Live session handles of 45–46 digits and keeps
