@@ -1133,6 +1133,7 @@ another slot, it can switch directly. The thumb is not part of this check:
 poses that differ only by the thumb rely on the learned tolerance alone.
 Small curls and uncertain readings still use the learned tolerance.
 Missing-hand frames preserve an active pose; unconfirmed candidates expire after grace. Camera-corrected version 9 saves with 42/47 coordinates load without recapture; version 8 requires recapture. TEST uses the same compatibility check as live recognition.
+The recapture warning survives local saves, camera restarts and project restores until a successful new capture or an explicit CLR for that pose.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 
 ---

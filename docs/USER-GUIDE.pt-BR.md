@@ -1153,6 +1153,7 @@ estiver treinada em outro slot, pode trocar diretamente. O polegar fica fora
 dessa checagem: poses que só diferem pelo polegar dependem apenas da
 tolerância aprendida. Pequenas dobras e leituras incertas continuam usando a
 tolerância aprendida. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
+O aviso de recaptura permanece após salvar, reiniciar a câmera e restaurar o projeto, até uma nova captura bem-sucedida ou um CLR explícito dessa pose.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---

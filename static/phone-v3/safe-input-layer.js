@@ -498,6 +498,7 @@
       if (samples.length >= this.maxTakes) return samples.length;
       samples.push(descriptor);
       this.templates.set(name, samples.slice(0, this.maxTakes));
+      this.incompatibleNames = this.incompatibleNames.filter(entry => entry !== name);
 
       // Each take contributes one prototype and one within-take MAD. The
       // aggregate combines camera jitter inside a take with natural variation
@@ -569,10 +570,12 @@
     delete(name) {
       this.resetRecognition();
       const removed = this.templates.delete(name);
+      const obsolete = this.incompatibleNames.includes(name);
+      this.incompatibleNames = this.incompatibleNames.filter(entry => entry !== name);
       this.takeSpreads.delete(name);
       this.spreads.delete(name);
       this.thresholdFactors.delete(name);
-      return removed;
+      return removed || obsolete;
     }
 
     getIncompatibleNames() {
@@ -714,6 +717,7 @@
       return {
         version: 9,
         maxTakes: this.maxTakes,
+        ...(this.incompatibleNames.length ? { incompatibleNames: this.incompatibleNames.slice() } : {}),
         // spread stays optional: a save written before it existed still loads
         // and simply falls back to the fixed landmark weights, so nothing has
         // to be relearned.
@@ -751,6 +755,9 @@
         library.rebuildSpread(template.name, template.spread);
         library.recalibrate(template.name);
       }
+      library.incompatibleNames = [...new Set(Array.isArray(data?.incompatibleNames)
+        ? data.incompatibleNames.filter(name => typeof name === 'string' && name.length > 0 && !library.templates.has(name))
+        : [])];
       return library;
     }
   }

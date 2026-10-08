@@ -369,6 +369,7 @@ test.describe('RC Surface UI & E2E Suite', () => {
 
   test('VID camera controls remain usable at 568px landscape width', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 320 });
+    await page.evaluate(() => window.RcSurfaceI18n.setLocale('pt-BR'));
     await page.locator('.tabs .tab[data-page="video"]').evaluate((el) => el.click());
     await page.waitForTimeout(100);
 
@@ -381,9 +382,12 @@ test.describe('RC Surface UI & E2E Suite', () => {
         document.querySelector('.vision-camera-toggle'),
         document.getElementById('vision-confidence'),
         document.getElementById('vision-recognition-preset'),
+        document.getElementById('vision-pose-takes'),
       ].map((element) => {
         const rect = element.getBoundingClientRect();
-        return { width: rect.width, left: rect.left, right: rect.right };
+        const label = element.closest('label');
+        return { width: rect.width, height: rect.height, left: rect.left, right: rect.right,
+          labelWidth: label.getBoundingClientRect().width, minWidth: getComputedStyle(label).minWidth };
       });
       return {
         left: { left: left.left, right: left.right, width: left.width },
@@ -392,11 +396,57 @@ test.describe('RC Surface UI & E2E Suite', () => {
       };
     });
 
-    expect(geometry.barOverflow).toBeLessThanOrEqual(1);
+    expect(geometry.barOverflow, JSON.stringify(geometry)).toBeLessThanOrEqual(1);
     for (const control of geometry.controls) {
       expect(control.width).toBeGreaterThanOrEqual(44);
       expect(control.left).toBeGreaterThanOrEqual(geometry.left.left - 1);
       expect(control.right).toBeLessThanOrEqual(geometry.left.right + 1);
+    }
+    expect(geometry.controls.at(-1).height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('VID pose diagnostics and retake actions remain reachable on short screens', async ({ page }) => {
+    await page.locator('.tabs .tab[data-page="video"]').evaluate((el) => el.click());
+    for (const locale of ['en', 'pt-BR']) {
+      await page.evaluate((language) => {
+        window.RcSurfaceI18n.setLocale(language);
+        // Show the same optional rows as TEST and an inconsistent capture.
+        for (const card of document.querySelectorAll('.vision-gesture-slot')) {
+          const neighbor = card.querySelector('.vision-slot-neighbor');
+          neighbor.textContent = language === 'en'
+            ? 'Nearest: take 6 · 98% of radius' : 'Mais próxima: tomada 6 · 98% do raio';
+          neighbor.classList.remove('hidden');
+          const warning = card.querySelector('.vision-slot-consistency');
+          warning.querySelector('.vision-consistency-message').textContent = language === 'en'
+            ? 'Take 6 differs from the others.' : 'A tomada 6 difere das demais.';
+          warning.classList.remove('hidden');
+        }
+      }, locale);
+      for (const viewport of [{ width: 568, height: 320 }, { width: 851, height: 393 }, { width: 1000, height: 650 }, { width: 1280, height: 800 }]) {
+        await page.setViewportSize(viewport);
+        const cards = await page.locator('.vision-gesture-slot').evaluateAll((slots) => slots.map((card) => {
+          const bounds = card.getBoundingClientRect();
+          return { overflow: card.scrollHeight - card.clientHeight,
+            rows: [...card.querySelectorAll('.vision-slot-neighbor, .vision-slot-consistency')].map((row) => {
+              const rect = row.getBoundingClientRect();
+              return { bottom: rect.bottom, cardBottom: bounds.bottom, right: rect.right, cardRight: bounds.right };
+            }) };
+        }));
+        for (const card of cards) {
+          expect(card.overflow, `${locale} ${viewport.width}: pose rows fit their card`).toBeLessThanOrEqual(1);
+          for (const row of card.rows) {
+            expect(row.bottom).toBeLessThanOrEqual(row.cardBottom + 1);
+            expect(row.right).toBeLessThanOrEqual(row.cardRight + 1);
+          }
+        }
+        for (const selector of ['.vision-consistency-retake', '.vision-consistency-keep']) {
+          const button = page.locator(selector).last();
+          await button.scrollIntoViewIfNeeded();
+          await expect(button).toBeInViewport();
+          await button.click({ trial: true });
+          expect((await button.boundingBox()).height).toBeGreaterThanOrEqual(44);
+        }
+      }
     }
   });
 
@@ -448,6 +498,7 @@ test.describe('RC Surface UI & E2E Suite', () => {
       '.vision-camera-toggle',
       '#vision-confidence',
       '#vision-recognition-preset',
+      '#vision-pose-takes',
       '.vision-gesture-slot',
       '.vision-signal-strip',
     ];

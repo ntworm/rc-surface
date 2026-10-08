@@ -217,6 +217,19 @@ test('version8 descriptors require recapture; version9 retains calibration on ro
   assert.equal(restored.thresholdFor('Open'), library.thresholdFor('Open'));
 });
 
+test('recapture markers survive v9 serialization until successful learn or explicit delete', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const old = { version: 8, templates: [{ name: 'Open', samples: [] }, { name: 'Curl', samples: [] }] };
+  const library = GestureLibrary.fromJSON(GestureLibrary.fromJSON(old).toJSON());
+  assert.deepEqual(Array.from(library.getIncompatibleNames()), ['Open', 'Curl']);
+  assert.throws(() => library.learn('Open', []));
+  assert.deepEqual(Array.from(library.getIncompatibleNames()), ['Open', 'Curl']);
+  library.learn('Open', frames(normalizeHandPose(handPose())));
+  assert.deepEqual(Array.from(library.getIncompatibleNames()), ['Curl']);
+  assert.equal(library.delete('Curl'), true);
+  assert.deepEqual(Array.from(GestureLibrary.fromJSON(library.toJSON()).getIncompatibleNames()), []);
+});
+
 test('aspect correction leaves direct computeHandData controls unchanged', () => {
   const context = { performance: { now: () => 0 } };
   context.window = context; context.globalThis = context;

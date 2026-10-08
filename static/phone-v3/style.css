@@ -3612,7 +3612,7 @@ body.mapping-mode [data-name].selected-control {
   min-height: 32px;
   flex: 0 0 auto;
 }
-.vision-command-bar > label { flex: 1; }
+.vision-command-bar > label { flex: 1; min-width: 0; }
 .vision-camera-toggle {
   min-width: 0;
   height: 32px;
@@ -4848,5 +4848,35 @@ body.mapping-mode [data-name].selected-control {
 
 #vision-pose-takes { min-width: 56px; }
 
+/* Four commands share the phone column: stack field captions above selects
+   so every select retains a touchable width without adding a second row. */
+@media (max-width: 999px), (max-height: 649px) {
+  .vision-command-bar > .vision-camera-toggle { flex: 0 0 82px; height: 58px; }
+  .vision-command-bar > .vision-confidence-field {
+    height: 58px;
+    padding-left: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 12px minmax(0, 1fr);
+    gap: 0;
+    text-align: center;
+  }
+  .vision-command-bar .vision-confidence-field select {
+    height: 44px;
+    border-left: 0;
+    border-top: 1px solid #2b2b30;
+  }
+}
+
 .vision-slot-neighbor { grid-column: 1 / -1; white-space: normal; font-size: 11px; line-height: 1.35; }
 .vision-slot-neighbor.hidden { display: none; }
+
+/* Optional diagnostic rows need their full height. Scroll the pose bank on
+   short screens instead of clipping the warning's RETAKE / KEEP actions. */
+.vision-pose-grid:has(.vision-slot-neighbor:not(.hidden), .vision-slot-consistency:not(.hidden)) {
+  grid-template-rows: repeat(3, max-content);
+  align-content: start;
+  overflow-y: auto;
+}
+.vision-pose-grid:has(.vision-slot-neighbor:not(.hidden), .vision-slot-consistency:not(.hidden)) .vision-gesture-slot {
+  grid-template-rows: auto auto;
+}

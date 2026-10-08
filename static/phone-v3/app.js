@@ -1968,7 +1968,7 @@
         if (learnButton) learnButton.disabled = samples >= max;
         if (testButton) testButton.disabled = samples < 3;
         if (retakeButton) retakeButton.disabled = samples === 0;
-        if (deleteButton) deleteButton.disabled = samples === 0;
+        if (deleteButton) deleteButton.disabled = samples === 0 && !incompatibleGestureNames.has(slot?.name);
         if (status && !card.classList.contains('recording') && !card.classList.contains('testing')) {
           status.textContent = samples === 0 && incompatibleGestureNames.has(slot?.name)
             ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again')
@@ -1984,6 +1984,7 @@
       if (visionProcessor?.exportSafetyConfig) {
         const gesturePreset = visionSafetyConfig?.gesturePreset || gesturePresetSelect?.value || 'balanced';
         visionSafetyConfig = { ...visionProcessor.exportSafetyConfig(), gesturePreset };
+        incompatibleGestureNames = new Set(visionProcessor.gestures?.getIncompatibleNames?.() || []);
       }
       if (visionSafetyConfig) {
         visionSafetyConfig.visionControls = visionControls.toJSON();
@@ -2133,10 +2134,12 @@
 
     const deleteStoredGesture = (name) => {
       if (!name) return false;
+      incompatibleGestureNames.delete(name);
       if (visionProcessor) return visionProcessor.deleteGesture(name);
       const templates = visionSafetyConfig.gestures?.templates || [];
       const next = templates.filter((entry) => entry.name !== name);
-      visionSafetyConfig.gestures = { ...(visionSafetyConfig.gestures || {}), templates: next };
+      const incompatibleNames = (visionSafetyConfig.gestures?.incompatibleNames || []).filter(entry => entry !== name);
+      visionSafetyConfig.gestures = { ...(visionSafetyConfig.gestures || {}), templates: next, incompatibleNames };
       return next.length !== templates.length;
     };
 

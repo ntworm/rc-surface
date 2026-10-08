@@ -450,7 +450,7 @@ test('VisionProcessor: ambient color detection processes canvas frames and calcu
   vp.stop();
 });
 
-function loadVisionAndApp({ gestureSlots = false } = {}) {
+function loadVisionAndApp({ gestureSlots = false, savedVision = null } = {}) {
   const vpFile = path.join(import.meta.dirname, 'vision-processor.js');
   const vpSource = fs.readFileSync(vpFile, 'utf8');
 
@@ -583,8 +583,8 @@ function loadVisionAndApp({ gestureSlots = false } = {}) {
     requestAnimationFrame: () => 1,
     cancelAnimationFrame: () => {},
     localStorage: {
-      getItem: () => null,
-      setItem: () => {},
+      getItem: key => key === 'ableton-rc:vision_safety' && savedVision ? JSON.stringify(savedVision) : null,
+      setItem: (key, value) => { if (key === 'ableton-rc:vision_safety') windowContext.savedVision = JSON.parse(value); },
       removeItem: () => {},
     },
     WebSocket: class {
@@ -2238,6 +2238,38 @@ test('actual app persists six-take selection, enables TEST at three, and retains
   assert.equal(saved.gestures.templates[0].samples.length, 6);
   context.applyProjectClientState({ gestures: saved.gestures, preferences: { visionGestureOptions: { maxTakes: 6 } } });
   assert.equal(card.querySelector('header strong').textContent, '6 / 6', 'host restore retains all examples');
+});
+
+test('actual app keeps recapture markers across local saves, restart and host restore', async () => {
+  const old = { version: 2, gestures: { version: 8,
+    templates: [{ name: 'Gesture 1', samples: [] }] }, gestureOptions: {}, visionControls: {} };
+  const { windowContext: context, mockElements } = loadVisionAndApp({ gestureSlots: true, savedVision: old });
+  const status = mockElements['[data-gesture-slot="1"]'].querySelector('.vision-slot-status');
+  assert.match(status.textContent, /RECAPTURE REQUIRED/);
+  mockElements['vision-pose-takes'].value = '6'; mockElements['vision-pose-takes'].onchange();
+  const reopened = loadVisionAndApp({ gestureSlots: true, savedVision: context.savedVision });
+  const card = reopened.mockElements['[data-gesture-slot="1"]'];
+  assert.match(card.querySelector('.vision-slot-status').textContent, /RECAPTURE REQUIRED/);
+  assert.equal(card.querySelector('.vision-slot-delete').disabled, false, 'CLR can dismiss an obsolete pose');
+  reopened.mockElements['chk-vision-enable'].checked = true;
+  await reopened.mockElements['chk-vision-enable'].onchange();
+  const restored = reopened.windowContext;
+  restored.applyProjectClientState({ gestures: context.savedVision.gestures });
+  reopened.mockElements['vision-confidence'].value = 'high'; reopened.mockElements['vision-confidence'].onchange();
+  assert.deepEqual(Array.from(restored.savedVision.gestures.incompatibleNames), ['Gesture 1']);
+  reopened.mockElements['vision-recognition-preset'].value = 'precision'; reopened.mockElements['vision-recognition-preset'].onchange();
+  reopened.mockElements['chk-vision-enable'].checked = false;
+  await reopened.mockElements['chk-vision-enable'].onchange();
+  reopened.mockElements['chk-vision-enable'].checked = true;
+  await reopened.mockElements['chk-vision-enable'].onchange();
+  assert.match(card.querySelector('.vision-slot-status').textContent, /RECAPTURE REQUIRED/);
+  card.querySelector('.vision-slot-delete').onclick();
+  assert.doesNotMatch(card.querySelector('.vision-slot-status').textContent, /RECAPTURE REQUIRED/);
+  assert.deepEqual(Array.from(restored.savedVision.gestures.incompatibleNames || []), []);
+  // The same explicit CLR works without a running processor.
+  const offline = loadVisionAndApp({ gestureSlots: true, savedVision: context.savedVision });
+  offline.mockElements['[data-gesture-slot="1"]'].querySelector('.vision-slot-delete').onclick();
+  assert.deepEqual(Array.from(offline.windowContext.savedVision.gestures.incompatibleNames || []), []);
 });
 
 test('actual capture UI warns inline, KEEP retains takes and RETAKE removes the indexed outlier', async () => {
