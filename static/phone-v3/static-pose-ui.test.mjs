@@ -5,6 +5,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
+test('capture cap selector defaults to three and offers up to six', () => {
+  const html = fs.readFileSync(path.join(import.meta.dirname, 'index.html'), 'utf8');
+  const select = html.match(/<select id="vision-pose-takes">([\s\S]*?)<\/select>/)?.[1];
+  assert.ok(select);
+  assert.match(select, /value="3" selected/);
+  assert.match(select, /value="6"/);
+});
+
 test('learned gesture UI captures only static poses with a short automatic take', () => {
   const html = fs.readFileSync(path.join(import.meta.dirname, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
@@ -16,7 +24,7 @@ test('learned gesture UI captures only static poses with a short automatic take'
   assert.match(html, /<strong[^>]*>LEARNED POSES<\/strong>/);
   assert.match(app, /POSE_CAPTURE_MS/);
   assert.match(app, /HOLD POSE/);
-  assert.match(app, /POSE · 3\/3 complete/);
+  assert.match(app, /POSE · \{max\}\/\{max\} complete/);
   assert.doesNotMatch(app, /perform one MOTION/);
   assert.doesNotMatch(app, /STOP & SAVE TAKE/);
   assert.doesNotMatch(app, /repeat the full movement/);
@@ -41,7 +49,7 @@ test('the capture flow asks for meaningful curl and palm-angle variation on each
     'uniform scale is normalized and should not be the main capture instruction');
   assert.match(app, /poseTakeHint\(samplesForGesture\(name\)\)/,
     'the hint shown while capturing must depend on which take this is');
-  assert.match(app, /next take \{hint\}', \{ n: samples, hint: poseTakeHint\(samples\) \}/,
+  assert.match(app, /next take \{hint\}', \{ n: samples, hint: poseTakeHint\(samples\), max: captureCap\(\) \}/,
     'the message between takes must say what to vary next');
 });
 

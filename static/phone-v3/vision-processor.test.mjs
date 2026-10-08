@@ -2209,6 +2209,29 @@ test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores O
   assert.equal(mockElements['vision-camera-state-title'].textContent, currentTitle, 'old error cannot overwrite current tracking state');
 });
 
+test('actual app persists six-take selection, enables TEST at three, and retains six when reduced to three', async () => {
+  const { processor, card, windowContext: context, mockElements } = await learnedApp();
+  const select = mockElements['vision-pose-takes'];
+  assert.equal(select.value, '3');
+  const writes = [];
+  context.localStorage.setItem = (key, value) => writes.push({ key, value });
+  select.value = '6'; select.onchange();
+  assert.equal(processor.gestures.maxTakes, 6);
+  assert.equal(card.querySelector('header strong').textContent, '3 / 6');
+  assert.equal(card.querySelector('.vision-slot-test').disabled, false);
+  const prototype = processor.gestures.templates.get('Gesture 1')[0];
+  for (let i = 0; i < 3; i++) processor.gestures.learn('Gesture 1', Array.from({ length: 8 }, () => prototype.slice()));
+  select.value = '3'; select.onchange();
+  assert.equal(processor.gestures.sampleCount('Gesture 1'), 6);
+  assert.equal(card.querySelector('header strong').textContent, '6 / 3');
+  assert.match(card.querySelector('.vision-slot-status').textContent, /6.*kept/);
+  const saved = JSON.parse(writes.findLast(write => write.key === 'ableton-rc:vision_safety').value);
+  assert.equal(saved.gestureOptions.maxTakes, 3);
+  assert.equal(saved.gestures.templates[0].samples.length, 6);
+  context.applyProjectClientState({ gestures: saved.gestures, preferences: { visionGestureOptions: { maxTakes: 6 } } });
+  assert.equal(card.querySelector('header strong').textContent, '6 / 6', 'host restore retains all examples');
+});
+
 test('actual capture UI warns inline, KEEP retains takes and RETAKE removes the indexed outlier', async () => {
   const { processor, card, windowContext: context, HandsMock } = await learnedApp();
   processor.gestures.delete('Gesture 1');

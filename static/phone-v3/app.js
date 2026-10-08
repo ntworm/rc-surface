@@ -1765,6 +1765,7 @@
     };
     const confidenceSelect = document.getElementById('vision-confidence');
     const gesturePresetSelect = document.getElementById('vision-recognition-preset');
+    const poseTakesSelect = document.getElementById('vision-pose-takes');
     const cameraStage = document.querySelector('.vision-camera-stage');
     const cameraStateTitle = document.getElementById('vision-camera-state-title');
     const cameraStateDetail = document.getElementById('vision-camera-state-detail');
@@ -1864,6 +1865,9 @@
       ['vid.take.natural', 'make the gesture naturally'],
       ['vid.take.curl', 'repeat it with a looser or tighter curl'],
       ['vid.take.palm', 'turn the palm slightly toward or away from the camera'],
+      ['vid.take.angle', 'repeat from another comfortable palm angle'],
+      ['vid.take.distance', 'vary distance a little while keeping the same finger shape'],
+      ['vid.take.combine', 'combine a comfortable curl with another palm angle'],
     ];
     const poseTakeHint = (taken) => T(...POSE_TAKE_GUIDANCE[
       Math.min(Math.max(0, taken), POSE_TAKE_GUIDANCE.length - 1)]);
@@ -1922,8 +1926,9 @@
       return templates.find((template) => template.name === name) || null;
     };
     const samplesForGesture = (name) => {
-      return Math.min(3, gestureTemplateFor(name)?.samples?.length || 0);
+      return Math.min(6, gestureTemplateFor(name)?.samples?.length || 0);
     };
+    const captureCap = () => visionProcessor?.gestures?.maxTakes || visionSafetyConfig?.gestureOptions?.maxTakes || 3;
     const gestureKindFor = (name) => {
       const kind = visionProcessor?.gestureKind?.(name) || gestureTemplateFor(name)?.kind || '';
       return kind ? 'POSE' : '';
@@ -1947,6 +1952,7 @@
         const retakeButton = card.querySelector('.vision-slot-retake');
         const deleteButton = card.querySelector('.vision-slot-delete');
         const samples = samplesForGesture(slot?.name || '');
+        const max = captureCap();
         const kind = gestureKindFor(slot?.name || '');
         const kindPrefix = kind ? `${kind} · ` : '';
         const library = visionProcessor?.gestures || window.SafeInputLayer?.GestureLibrary?.fromJSON?.(
@@ -1958,17 +1964,18 @@
         const warningMessage = warningBox?.querySelector('.vision-consistency-message');
         if (warningMessage && warning) warningMessage.textContent = T('vid.takeOutlier',
           'Take {n} differs from the others', { n: warning.index + 1 });
-        if (countLabel) countLabel.textContent = `${samples} / 3`;
-        if (learnButton) learnButton.disabled = samples >= 3;
-        if (testButton) testButton.disabled = samples !== 3;
+        if (countLabel) countLabel.textContent = `${samples} / ${max}`;
+        if (learnButton) learnButton.disabled = samples >= max;
+        if (testButton) testButton.disabled = samples < 3;
         if (retakeButton) retakeButton.disabled = samples === 0;
         if (deleteButton) deleteButton.disabled = samples === 0;
         if (status && !card.classList.contains('recording') && !card.classList.contains('testing')) {
           status.textContent = samples === 0 && incompatibleGestureNames.has(slot?.name)
             ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again')
-            : samples === 0 ? T('vid.emptyCapture', 'Empty · capture 3 examples')
-            : samples === 3 ? kindPrefix + T('vid.slotReady', 'Ready · press TEST to validate')
-              : kindPrefix + T('vid.slotPartial', '{n}/3 saved · capture {left} more', { n: samples, left: 3 - samples });
+            : samples > max ? T('vid.bankKept', '{n} takes kept · capture limit {max}; delete extras only if you choose', { n: samples, max })
+            : samples === 0 ? T('vid.emptyCapture', 'Empty · capture {max} examples', { max })
+            : samples >= 3 ? kindPrefix + T('vid.slotReady', 'Ready · press TEST to validate')
+              : kindPrefix + T('vid.slotPartial', '{n}/{max} saved · capture {left} more', { n: samples, max, left: 3 - samples });
         }
       });
     };
@@ -2021,6 +2028,7 @@
         confidenceSelect.value = conf || 'medium';
       }
       if (gesturePresetSelect) gesturePresetSelect.value = visionSafetyConfig.gesturePreset;
+      if (poseTakesSelect) poseTakesSelect.value = String(visionSafetyConfig.gestureOptions.maxTakes || 3);
       visionProcessor?.importSafetyConfig(visionSafetyConfig);
       visionProcessor?.setGestureOptions(GESTURE_PRESETS[visionSafetyConfig.gesturePreset] || GESTURE_PRESETS.balanced);
       renderVisionControlState();
@@ -2032,14 +2040,29 @@
     };
     const updateGestureOptions = () => {
       const preset = gesturePresetSelect?.value || 'balanced';
-      const options = GESTURE_PRESETS[preset] || GESTURE_PRESETS.balanced;
+      const options = { ...(GESTURE_PRESETS[preset] || GESTURE_PRESETS.balanced), maxTakes: captureCap() };
       visionProcessor?.setGestureOptions(options);
       visionSafetyConfig = { ...(visionSafetyConfig || {}), gestureOptions: options, gesturePreset: preset };
       persistVisionSafety();
+      renderVisionControlState();
     };
     if (gesturePresetSelect) {
       gesturePresetSelect.value = visionSafetyConfig.gesturePreset || 'balanced';
       gesturePresetSelect.addEventListener('change', updateGestureOptions);
+    }
+    if (poseTakesSelect) {
+      poseTakesSelect.value = String(captureCap());
+      poseTakesSelect.addEventListener('change', () => {
+        if (visionGestureLearnSlot !== null) {
+          poseTakesSelect.value = String(captureCap());
+          return showToast(T('vid.finishCaptureFirst', 'Finish Gesture {n} capture first', { n: visionGestureLearnSlot }), 'warning');
+        }
+        const maxTakes = poseTakesSelect.value === '6' ? 6 : 3;
+        visionProcessor?.setGestureOptions({ maxTakes });
+        visionSafetyConfig.gestureOptions = { ...visionSafetyConfig.gestureOptions, maxTakes };
+        persistVisionSafety();
+        renderVisionControlState();
+      });
     }
 
     if (confidenceSelect) {
@@ -2150,9 +2173,9 @@
       if (status) {
         if (failure) status.textContent = failure;
         else if (timedOut) status.textContent = T('vid.noStablePose', 'NO STABLE POSE FOUND · keep the whole hand visible and try again');
-        else if (samples > 0) status.textContent = samples === 3
-          ? T('vid.poseComplete', 'POSE · 3/3 complete · press TEST')
-          : T('vid.poseNextTake', 'POSE · {n}/3 saved · next take {hint}', { n: samples, hint: poseTakeHint(samples) });
+        else if (samples > 0) status.textContent = samples >= captureCap()
+          ? T('vid.poseComplete', 'POSE · {max}/{max} complete · press TEST', { max: captureCap() })
+          : T('vid.poseNextTake', 'POSE · {n}/{max} saved · next take {hint}', { n: samples, hint: poseTakeHint(samples), max: captureCap() });
       }
     };
 
@@ -2166,8 +2189,8 @@
       const learnButton = card?.querySelector('.vision-slot-learn');
       const status = card?.querySelector('.vision-slot-status');
       if (learnButton) learnButton.textContent = T('js.capturing', 'CAPTURING…');
-      if (status) status.textContent = T('vid.holdPose', 'HOLD POSE · {hint} · {take}/3 · LIVE BLOCKED',
-        { hint: poseTakeHint(samplesForGesture(name)), take: samplesForGesture(name) + 1 });
+      if (status) status.textContent = T('vid.holdPose', 'HOLD POSE · {hint} · {take}/{max} · LIVE BLOCKED',
+        { hint: poseTakeHint(samplesForGesture(name)), take: samplesForGesture(name) + 1, max: captureCap() });
       poseCaptureTimer = setTimeout(() => finishGestureCapture(false), POSE_CAPTURE_MS);
     };
 
@@ -2185,7 +2208,7 @@
           return showToast(T('vid.finishCaptureFirst', 'Finish Gesture {n} capture first', { n: visionGestureLearnSlot }), 'warning');
         }
         const name = visionControls.slots[slotId - 1]?.name || `Gesture ${slotId}`;
-        if (samplesForGesture(name) >= 3) return showToast(T('vid.poseFull', 'This pose already has 3 examples · use DELETE LAST first'), 'warning');
+        if (samplesForGesture(name) >= captureCap()) return showToast(T('vid.poseFull', 'This pose already has {max} examples · use DELETE LAST first', { max: captureCap() }), 'warning');
         stopGestureTest();
         visionGestureLearnSlot = slotId;
         visionProcessor.beginGestureLearn(name);
@@ -2202,7 +2225,7 @@
 
       testButton?.addEventListener('click', () => {
         const slot = visionControls.slots[slotId - 1];
-        if (!slot?.name || samplesForGesture(slot.name) !== 3) return showToast(T('vid.captureThreeFirst', 'Capture exactly three pose examples before testing'), 'warning');
+        if (!slot?.name || samplesForGesture(slot.name) < 3) return showToast(T('vid.captureThreeFirst', 'Capture at least three pose examples before testing'), 'warning');
         const shouldStart = visionGestureTestSlot !== slotId;
         stopGestureTest();
         if (!shouldStart) return;
@@ -2224,7 +2247,7 @@
         if (!slot?.name) return;
         stopGestureTest();
         const samples = removeStoredTake(slot.name);
-        if (status) status.textContent = T('vid.recordReplacement', '{n}/3 saved · record one replacement', { n: samples });
+        if (status) status.textContent = T('vid.recordReplacement', '{n}/{max} saved · record one replacement', { n: samples, max: captureCap() });
         persistVisionSafety();
         renderVisionControlState();
       });

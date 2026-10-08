@@ -262,7 +262,7 @@ test('the pose-slot status lines read in Portuguese', () => {
   api.registerCatalog(scope.RcSurfaceI18nCatalog);
   // USER-GUIDE.pt-BR.md tells the reader to look for this exact wording.
   assert.match(api.t('vid.recaptureRequired'), /^RECAPTURA NECESSÁRIA/);
-  assert.equal(api.t('vid.slotPartial', { n: 2, left: 1 }), '2/3 salvos · capture mais 1');
+  assert.equal(api.t('vid.slotPartial', { n: 2, left: 1, max: 3 }), '2/3 salvos · capture mais 1');
   assert.equal(api.t('vid.poseRecognized', { name: 'G1', percent: 77 }), '✓ G1 reconhecido · 77%');
   // The buttons read TESTE and APAGAR ÚLTIMA, so the prose names them that way.
   assert.match(api.t('vid.slotReady'), /TESTE/);

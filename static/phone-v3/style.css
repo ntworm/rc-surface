@@ -4844,4 +4844,6 @@ body.mapping-mode [data-name].selected-control {
 
 .vision-slot-consistency { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
 .vision-slot-consistency.hidden { display: none; }
-.vision-slot-consistency button { min-height: 32px; padding: 4px 8px; }
+.vision-slot-consistency button { min-height: 44px; padding: 4px 8px; }
+
+#vision-pose-takes { min-width: 56px; }

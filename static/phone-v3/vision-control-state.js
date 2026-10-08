@@ -16,7 +16,7 @@
     if (!Array.isArray(templates)) return [];
     return templates.slice(0, SLOT_COUNT).map((template) => ({
       ...template,
-      samples: Array.isArray(template?.samples) ? template.samples.slice(0, 3) : [],
+      samples: Array.isArray(template?.samples) ? template.samples.slice(0, 6) : [],
     }));
   }
 

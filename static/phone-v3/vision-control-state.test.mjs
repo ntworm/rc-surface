@@ -11,10 +11,10 @@ function load() {
   return window;
 }
 
-test('restored gesture templates are capped to three takes before the UI renders', () => {
+test('restored gesture templates retain up to six takes before the UI renders', () => {
   const { normalizeVisionGestureTemplates } = load();
-  const templates = normalizeVisionGestureTemplates([{ name: 'Gesture 1', samples: [1, 2, 3, 4] }]);
-  assert.deepEqual(Array.from(templates[0].samples), [1, 2, 3]);
+  const templates = normalizeVisionGestureTemplates([{ name: 'Gesture 1', samples: [1, 2, 3, 4, 5, 6, 7] }]);
+  assert.deepEqual(Array.from(templates[0].samples), [1, 2, 3, 4, 5, 6]);
 });
 
 test('vision detectors are opt-in and persist only explicit choices', () => {
