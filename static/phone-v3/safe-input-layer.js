@@ -750,5 +750,10 @@
     GestureLibrary,
     normalizeHandPose,
     poseDistance,
+    weightedPoseDistance,
+    weightsFromSpread,
+    medianDescriptor,
+    descriptorSpread,
+    contradictsLearnedFingers,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

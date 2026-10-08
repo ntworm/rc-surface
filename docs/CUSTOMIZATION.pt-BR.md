@@ -428,3 +428,17 @@ contradições no formato dos dedos ainda podem rejeitar uma pose dentro do raio
 | Balanced | 0.1152 | 0.2240 |
 | Performance | 0.1267 | 0.1936 |
 | Flexible | 0.1680 | 0.3200 |
+
+### Benchmark offline de sessões de pose
+
+Grave pelo menos três sessões em dias diferentes com `?probe=drift` e
+`RCDriftProbe.setLabel(nome)`. Rotule desconhecidos e transições com null;
+inclua poses do repertório e mudanças de luz, distância e ângulo do celular.
+Baixe JSONL localmente e mantenha sessões reais fora do repositório público.
+Não há pixels de vídeo nem upload pela rede. Rode a comparação local:
+
+```sh
+npm run bench:pose -- --sessions day1.jsonl day2.jsonl day3.jsonl --preset balanced --takes 1,2,3,5,6 --out report.json --md report.md
+```
+
+O runner deixa uma sessão inteira para teste, corta 200 ms das pontas de cada tomada e exclui tomadas curtas ou instáveis. Compara A0 nativo de três tomadas, A1 segundo vizinho, A2 leave-one-take-out, A3 KNN ponderado e A4 de todos os quadros sem pesos ou rejeição. Com orçamento de uma tomada usa o único vizinho. Classes insuficientes aparecem como não avaliáveis. O JSON inclui resultados por tomada, falso ON/min, latência, confusão e bootstrap pareado de acerto com semente fixa (2000 reamostras, intervalo de 95%). Só os caminhos explícitos recebem arquivos; --trim-ms, --entry-ms, --exit-window-ms e --ignore-unknown-ms ajustam as janelas. Adote mais tomadas somente após melhorar acertos em sessões reais sem piorar falso ON/min ou latência p95. Testes sintéticos não comprovam esse ganho.

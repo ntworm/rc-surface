@@ -436,3 +436,17 @@ contradictions can still reject a pose inside the entry radius.
 | Balanced | 0.1152 | 0.2240 |
 | Performance | 0.1267 | 0.1936 |
 | Flexible | 0.1680 | 0.3200 |
+
+### Offline pose session benchmark
+
+Record at least three sessions on different days using `?probe=drift` and
+`RCDriftProbe.setLabel(name)`. Label unknown hands and transitions with null;
+include repertoire poses and changes in light, distance and phone angle.
+Download JSONL locally and keep real sessions outside the public repository.
+No video pixels or network upload are involved. Run the comparison locally:
+
+```sh
+npm run bench:pose -- --sessions day1.jsonl day2.jsonl day3.jsonl --preset balanced --takes 1,2,3,5,6 --out report.json --md report.md
+```
+
+The runner leaves one whole session out, trims 200 ms from each take’s ends and excludes unstable or short takes. It compares native three-take A0, second-neighbor A1, leave-one-take-out A2, weighted KNN A3, and an all-frame unweighted A4 reference without rejection. A one-take budget uses its sole neighbor. Insufficient classes are reported as not evaluable. JSON includes per-take outcomes, false ON/min, latency, confusion and a fixed-seed paired accuracy bootstrap (2000 resamples, 95% interval). Only explicit output paths are written; use --trim-ms, --entry-ms, --exit-window-ms and --ignore-unknown-ms to adjust metric windows. Adopt more takes only after real-session accuracy improves without worsening false ON/min or entry p95. Synthetic tests cannot establish that gain.
