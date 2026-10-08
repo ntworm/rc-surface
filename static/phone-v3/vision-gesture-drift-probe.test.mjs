@@ -10,6 +10,46 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { attachDriftProbe, runDeterministicReplay } from './vision-gesture-drift-probe.mjs';
 
+test('probe: labels observed and missing frames with camera geometry and recognition state', () => {
+  const { VisionProcessor, SafeInputLayer } = loadEnvironment();
+  const vp = new VisionProcessor();
+  const pose = setupLearnedGesture(vp);
+  vp.video = { videoWidth: 320, videoHeight: 240 };
+  vp.processResults = function (results) {
+    return this.processHandData({ confidence: 0.9 }, 0, results.multiHandLandmarks[0]);
+  };
+  const probe = attachDriftProbe(vp, { safeInputLayer: SafeInputLayer });
+  probe.setLabel?.('Gesture 1');
+  vp.processResults({ multiHandLandmarks: [pose], multiHandedness: [{ label: 'Right', score: 0.97 }] });
+  const observed = probe.records[0];
+  assert.equal(observed.timestamp, 0, 'zero is a valid replay timestamp');
+  assert.equal(observed.frameWidth, 320);
+  assert.equal(observed.frameHeight, 240);
+  assert.deepEqual(observed.handedness, { label: 'Right', score: 0.97 });
+  assert.equal(observed.groundTruth, 'Gesture 1');
+  assert.equal(observed.recognitionState, vp.gestures.getRecognitionState());
+  assert.equal(observed.entryRadius, (1 - vp.gestures.minimumConfidence) * 1.5 * vp.gestures.thresholdFor('Gesture 1'));
+  assert.equal(observed.holdRadius, vp.gestures.releaseRatio * vp.gestures.thresholdFor('Gesture 1'));
+  probe.setLabel?.(null);
+  vp.processMissing(33);
+  const missing = probe.records[1];
+  assert.equal(missing.frameWidth, 320);
+  assert.equal(missing.frameHeight, 240);
+  assert.equal(missing.groundTruth, null);
+  assert.equal(missing.handedness, null, 'absence must not reuse handedness evidence');
+  assert.equal(typeof missing.recognitionState, 'string');
+  assert.ok(probe.exportCSV().includes('groundTruth'));
+  assert.equal(JSON.parse(probe.exportJSONL().split('\n')[0]).frameWidth, 320);
+  probe.uninstall();
+});
+
+test('probe: runtime attachment is opt-in and exposed through a local download API', () => {
+  const app = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
+  assert.ok(/searchParams\.get\(['"]probe['"]\)\s*===\s*['"]drift['"]/.test(app));
+  assert.ok(/import\(['"]\.\/vision-gesture-drift-probe\.mjs['"]\)/.test(app));
+  assert.ok(/window\.RCDriftProbe/.test(app));
+});
+
 function loadEnvironment() {
   const safeSource = fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8');
   const cameraSource = fs.readFileSync(path.join(import.meta.dirname, 'camera-lifecycle.js'), 'utf8');
@@ -239,7 +279,7 @@ test('probe: enforces maxFrames buffer cap and exports JSONL and CSV', () => {
   assert.equal(parsedFirst.type, 'observed');
 
   const csv = probe.exportCSV();
-  assert.ok(csv.startsWith('frameIndex,timestamp,elapsedMs,type,sawHand,preset,score,confidence,accepted,activeName,event\n'));
+  assert.ok(csv.startsWith('frameIndex,timestamp,elapsedMs,type,sawHand,preset,score,confidence,accepted,activeName,event,frameWidth,frameHeight,handedness,groundTruth,recognitionState,entryRadius,holdRadius\n'));
 
   probe.uninstall();
 });

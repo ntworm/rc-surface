@@ -116,6 +116,31 @@ export function attachDriftProbe(processor, options = {}) {
     || (typeof globalThis !== 'undefined' ? globalThis.SafeInputLayer : null);
 
   let lastRecognizeMatch = null;
+  let groundTruth = null;
+  let handedness = null;
+  let lastBestName = null;
+
+  function metadata() {
+    const width = Number(processor.video?.videoWidth);
+    const height = Number(processor.video?.videoHeight);
+    const threshold = lastBestName ? processor.gestures?.thresholdFor(lastBestName) : null;
+    return {
+      frameWidth: Number.isFinite(width) && width > 0 ? width : null,
+      frameHeight: Number.isFinite(height) && height > 0 ? height : null,
+      handedness,
+      groundTruth,
+      recognitionState: processor.gestures?.getRecognitionState?.() || 'unknown',
+      entryRadius: threshold === null ? null : (1 - processor.gestures.minimumConfidence) * 1.5 * threshold,
+      holdRadius: threshold === null ? null : processor.gestures.releaseRatio * threshold,
+    };
+  }
+
+  processor.processResults = function (results) {
+    const side = results?.multiHandedness?.[0];
+    handedness = side && typeof side.label === 'string'
+      ? { label: side.label, score: Number.isFinite(side.score) ? side.score : null } : null;
+    return origProcessResults.apply(this, arguments);
+  };
 
   function pushRecord(record) {
     if (records.length >= maxFrames) {
@@ -134,7 +159,7 @@ export function attachDriftProbe(processor, options = {}) {
   // Wrap processHandData
   processor.processHandData = function (rawData, timestamp = Date.now(), landmarks = null) {
     lastRecognizeMatch = null;
-    const effectiveTimestamp = Number(timestamp) || Date.now();
+    const effectiveTimestamp = Number.isFinite(Number(timestamp)) ? Number(timestamp) : Date.now();
     if (startTimestamp === null) startTimestamp = effectiveTimestamp;
     const elapsedMs = effectiveTimestamp - startTimestamp;
     const frameDeltaMs = lastTimestamp !== null ? effectiveTimestamp - lastTimestamp : 0;
@@ -148,6 +173,7 @@ export function attachDriftProbe(processor, options = {}) {
     const evaluation = (descriptor.length && processor.gestures)
       ? processor.gestures.evaluate(descriptor, effectiveTarget)
       : null;
+    lastBestName = evaluation?.name || null;
 
     let targetScore = null;
     let targetConfidence = null;
@@ -207,6 +233,7 @@ export function attachDriftProbe(processor, options = {}) {
       holdMs: processor.gestures?.holdMs ?? 200,
       releaseMs: processor.gestures?.releaseMs ?? 300,
       sessionConfig: { ...sessionConfig },
+      ...metadata(),
     };
 
     pushRecord(rec);
@@ -216,7 +243,8 @@ export function attachDriftProbe(processor, options = {}) {
   // Wrap processMissing
   processor.processMissing = function (timestamp = Date.now()) {
     lastRecognizeMatch = null;
-    const effectiveTimestamp = Number(timestamp) || Date.now();
+    const effectiveTimestamp = Number.isFinite(Number(timestamp)) ? Number(timestamp) : Date.now();
+    handedness = null;
     if (startTimestamp === null) startTimestamp = effectiveTimestamp;
     const elapsedMs = effectiveTimestamp - startTimestamp;
     const frameDeltaMs = lastTimestamp !== null ? effectiveTimestamp - lastTimestamp : 0;
@@ -253,6 +281,7 @@ export function attachDriftProbe(processor, options = {}) {
       holdMs: processor.gestures?.holdMs ?? 200,
       releaseMs: processor.gestures?.releaseMs ?? 300,
       sessionConfig: { ...sessionConfig },
+      ...metadata(),
     };
 
     pushRecord(rec);
@@ -276,6 +305,7 @@ export function attachDriftProbe(processor, options = {}) {
       'accepted',
       'activeName',
       'event',
+      'frameWidth', 'frameHeight', 'handedness', 'groundTruth', 'recognitionState', 'entryRadius', 'holdRadius',
     ];
     const lines = [headers.join(',')];
     for (const r of records) {
@@ -291,8 +321,13 @@ export function attachDriftProbe(processor, options = {}) {
         Boolean(r.targetAccepted),
         r.activeName || '',
         r.match ? r.match.name : '',
+        r.frameWidth, r.frameHeight, r.handedness ? JSON.stringify(r.handedness) : '',
+        r.groundTruth, r.recognitionState, r.entryRadius, r.holdRadius,
       ];
-      lines.push(row.join(','));
+      lines.push(row.map((value) => {
+        const text = value === null || value === undefined ? '' : String(value);
+        return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+      }).join(','));
     }
     return lines.join('\n') + '\n';
   }
@@ -310,6 +345,10 @@ export function attachDriftProbe(processor, options = {}) {
     summary: () => computeSummaryStats(records, targetGesture),
     exportJSONL,
     exportCSV,
+    setLabel: (name) => {
+      if (name !== null && typeof name !== 'string') throw new TypeError('Label must be a string or null');
+      groundTruth = typeof name === 'string' ? name.trim() || null : null;
+    },
     uninstall,
     reset: () => {
       records.length = 0;

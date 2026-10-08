@@ -415,3 +415,7 @@ Update docs when public behavior changes:
 - Install/certs/network: `docs/INSTALL.md`, `docs/SECURITY.md`.
 - Data flow/privacy: `docs/PRIVACY.md`.
 - New controls/sensors: `docs/CUSTOMIZATION.md`, `README.md`.
+
+## Local pose diagnostics
+
+Open the phone URL with `?probe=drift`, then enable the camera. Diagnostics stay off on normal URLs. `window.RCDriftProbe.setLabel("Gesture 1")` labels the current pose; use `setLabel(null)` for unknown hands and transitions. `download()` saves a local JSONL file; `exportJSONL()` and `exportCSV()` return text. Records include observed/missing frames, timestamps, landmarks, camera dimensions, handedness confidence, ground truth, recognition state and effective entry/hold radii. No images, video or network uploads are recorded. The bounded buffer retains the latest 20,000 frames. Store real-hand recordings outside the public repository.

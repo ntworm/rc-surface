@@ -2518,6 +2518,25 @@
         };
       }
       const processor = visionProcessor;
+      if (typeof URL === 'function' && window.location?.href
+        && new URL(window.location.href).searchParams.get('probe') === 'drift') {
+        import('./vision-gesture-drift-probe.mjs').then(({ attachDriftProbe }) => {
+          if (visionProcessor !== processor) return;
+          window.RCDriftProbe?.uninstall?.();
+          const probe = attachDriftProbe(processor, { safeInputLayer: window.SafeInputLayer });
+          window.RCDriftProbe = {
+            ...probe,
+            download: () => {
+              const url = URL.createObjectURL(new Blob([probe.exportJSONL()], { type: 'application/x-ndjson' }));
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'rc-pose-session.jsonl';
+              link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 0);
+            },
+          };
+        }).catch((error) => console.warn('Pose diagnostic unavailable:', error));
+      }
       const setCameraStageState = (stateName, title, detail) => {
         cameraStage?.classList?.remove('camera-active', 'camera-starting', 'camera-error');
         if (stateName) cameraStage?.classList?.add(`camera-${stateName}`);

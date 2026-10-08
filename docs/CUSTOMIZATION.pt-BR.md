@@ -407,3 +407,7 @@ Atualize a documentação quando o comportamento público mudar:
 
 > Ao mexer nesses arquivos, atualize também a versão em português ao lado
 > (`docs/*.pt-BR.md`). Uma tradução desatualizada é pior do que nenhuma.
+
+## Diagnóstico local de poses
+
+Abra o URL do celular com `?probe=drift` e ligue a câmera. Em URLs normais, o diagnóstico permanece desligado. `window.RCDriftProbe.setLabel("Gesture 1")` rotula a pose atual; use `setLabel(null)` para mãos desconhecidas e transições. `download()` salva um arquivo JSONL local; `exportJSONL()` e `exportCSV()` retornam texto. Registros incluem quadros observados/ausentes, timestamps, landmarks, dimensões da câmera, confiança da lateralidade, rótulo verdadeiro, estado do reconhecimento e raios efetivos de entrada/manutenção. Nenhuma imagem, vídeo ou upload de rede é registrado. O buffer limitado guarda os últimos 20.000 quadros. Mantenha gravações com mão real fora do repositório público.
