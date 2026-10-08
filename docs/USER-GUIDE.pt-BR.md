@@ -1107,7 +1107,7 @@ adiciona um watchdog para detectar esse caso.
 Cada um dos três slots aprendidos guarda uma forma de mão estática:
 
 1. Segure a forma de mão desejada e toque **CAPTURAR POSE** três vezes,
-   mudando um pouco de posição ou de distância entre os exemplos.
+   variando um pouco a dobra dos dedos ou o ângulo da palma entre os exemplos.
 2. Mantenha a mão parada durante cada captura automática, que é rápida.
 3. Toque **TESTE** e mostre a pose de novo. O reconhecimento tolera variação
    normal de posição na tela, distância da mão, landmarks de profundidade e um
@@ -1116,6 +1116,25 @@ Cada um dos três slots aprendidos guarda uma forma de mão estática:
    casa.
 4. Use **APAGAR ÚLTIMA** para trocar só o exemplo mais novo, ou **LIMPAR** para
    treinar o slot do zero.
+
+O padrão continua **três tomadas por pose**. Escolha **TOMADAS → Até 6** se
+uma pose tiver variantes legítimas de dobra dos dedos ou ângulo da palma.
+Capture cada variante com a mão estável; os exemplos extras devem representar
+como você toca, sem misturar gestos diferentes. TESTE e reconhecimento ao vivo
+funcionam a partir da terceira tomada. Voltar o limite de captura para 3
+mantém todas as tomadas salvas e mostra um aviso; APAGAR ÚLTIMA e LIMPAR
+continuam sendo ações deliberadas.
+
+No TESTE, “mais próxima: tomada N · X% do raio” identifica o exemplo mais
+próximo. O percentual compara a distância do segundo vizinho da classe com o
+raio de entrada; não é uma probabilidade. Menor é mais próximo; acima de 100%
+falha nesse limite. Ambiguidade e dedos em formato oposto ainda podem rejeitar
+uma pose próxima. O padrão só muda após sessões reais melhorarem acertos sem
+piorar falso ON/min ou latência p95, e com aprovação do operador.
+
+As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
+
+Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada que destoa bastante das outras duas pode mostrar um aviso no card. **REFAZER** remove exatamente essa tomada, mesmo se foi capturada primeiro; grave a substituta. **MANTER** conserva todos os exemplos. O aviso é uma orientação; seus limites provisórios ainda precisam de validação com mão real.
 
 O preset de reconhecimento **Equilibrado** é o ajuste normal de performance.
 **Precisão** rejeita mais variação; **Flexível** aceita mais. O preset **Performance**
@@ -1126,15 +1145,14 @@ sem falsos disparos com mão aberta ou punho fechado. Um slot aprendido é momen
 (com estados de FSM `ready` → `candidate` → `held` → `releasing`).
 Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
 Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
-O reconhecimento compara contradições fortes da forma dos dedos com os três
-exemplos aprendidos antes de aceitar ou manter uma pose. Abrir o quinto dedo
+O reconhecimento compara contradições fortes da forma dos dedos com todos os
+exemplos salvos antes de aceitar ou manter uma pose. Abrir o quinto dedo
 (indicador, médio, anelar ou mindinho) que estava consistentemente dobrado na
 pose de quatro solta a pose após o intervalo de liberação; se a mão aberta
 estiver treinada em outro slot, pode trocar diretamente. O polegar fica fora
 dessa checagem: poses que só diferem pelo polegar dependem apenas da
 tolerância aprendida. Pequenas dobras e leituras incertas continuam usando a
-tolerância aprendida. Frames sem mão liberam imediatamente; voltar exige um novo hold completo. Poses salvas com 42/47
-coordenadas carregam sem recaptura. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
+tolerância aprendida. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---
@@ -1208,7 +1226,3 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 Para problemas mais complexos de instalação (certificados, rede, instalação), veja
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
-
-As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
-
-Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada que destoa bastante das outras duas pode mostrar um aviso no card. **REFAZER** remove exatamente essa tomada, mesmo se foi capturada primeiro; grave a substituta. **MANTER** conserva todos os exemplos. O aviso é uma orientação; seus limites provisórios ainda precisam de validação com mão real.

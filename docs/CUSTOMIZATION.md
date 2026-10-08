@@ -450,3 +450,20 @@ npm run bench:pose -- --sessions day1.jsonl day2.jsonl day3.jsonl --preset balan
 ```
 
 The runner leaves one whole session out, trims 200 ms from each take’s ends and excludes unstable or short takes. It compares native three-take A0, second-neighbor A1, leave-one-take-out A2, weighted KNN A3, and an all-frame unweighted A4 reference without rejection. A one-take budget uses its sole neighbor. Insufficient classes are reported as not evaluable. JSON includes per-take outcomes, false ON/min, latency, confusion and a fixed-seed paired accuracy bootstrap (2000 resamples, 95% interval). Only explicit output paths are written; use --trim-ms, --entry-ms, --exit-window-ms and --ignore-unknown-ms to adjust metric windows. Adopt more takes only after real-session accuracy improves without worsening false ON/min or entry p95. Synthetic tests cannot establish that gain.
+
+### Pose bank rule and persistence
+
+The product scores each class by its second smallest weighted take distance
+(k=2). With three takes this is exactly the previous median. The calibration
+radius uses leave-one-take-out: for each take, measure its second nearest other
+take, use the largest such distance, then clamp `distance * 1.6 / threshold`
+to 1–2.5. With three takes this equals the previous worst-pair factor exactly.
+With repeated variants in a six-take bank, nearby examples can support each
+variant without widening the radius around their most distant pair.
+
+`maxTakes` defaults to 3 and caps new captures at 6. Version 9 saves preserve
+all retained samples and within-take spreads when the capture cap is reduced.
+Classification still uses the retained bank. Neighbor indices in JSONL/CSV
+are zero-based; TEST shows them as take 1, 2, and so on. A2 uses the native
+classifier for budgets of at least three; N=1/2 remain offline adapter ablations.
+KNN arms exist only in the benchmark, not in the phone recognizer.

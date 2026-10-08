@@ -1088,7 +1088,7 @@ new watchdog.
 Each of the three learned slots stores one static hand shape:
 
 1. Hold the desired hand shape and tap **CAPTURE POSE** three times, changing
-   position or distance slightly between examples.
+   finger curl or palm angle slightly between examples.
 2. Keep the hand still during each short automatic capture.
 3. Tap **TEST**, then show the pose again. Recognition tolerates normal
    changes in screen position, hand distance, depth landmarks, and a small
@@ -1097,6 +1097,24 @@ Each of the three learned slots stores one static hand shape:
    match.
 4. Use **DELETE LAST** to replace only the newest example, or **CLR**
    to retrain the slot from scratch.
+
+The default remains **three takes per pose**. Select **TAKES → Up to 6** when
+one pose has legitimate finger-curl or palm-angle variants. Capture each
+variant steadily; additional examples should cover how you actually perform,
+not different gestures. TEST and live recognition work from the third take.
+Returning the capture limit to 3 keeps all saved takes and shows a warning;
+DELETE LAST and CLR remain deliberate actions.
+
+During TEST, “nearest: take N · X% of radius” identifies the closest example.
+The percentage compares the class's second-neighbor distance with its entry
+radius, not a probability: lower is closer; above 100% misses that entry gate.
+Ambiguity and opposing finger shapes can still reject an otherwise close pose.
+The default will change only after real sessions show more correct entries
+without worsening false ON/min or entry latency p95, and after operator approval.
+
+Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
+
+Very different takes widen a pose’s tolerance. After three captures, a take that differs markedly from the other two may show an inline warning. **RETAKE** removes that exact take, even when it was captured first; record its replacement. **KEEP** retains every example. The warning is advisory and its provisional thresholds still need real-hand validation.
 
 The **Balanced** recognition preset is the normal performance setting.
 **Precision** rejects more variation; **Flexible** accepts more. The **Performance**
@@ -1107,15 +1125,14 @@ is momentary (`0` or `1`), persists across page reloads, and rearms only after
 the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
 Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
 To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
-Recognition checks strong finger-shape contradictions against all three
+Recognition checks strong finger-shape contradictions against all saved
 learned takes before accepting or holding a pose. Opening a fifth finger
 (index, middle, ring or pinky) that was consistently curled in a four-finger
 pose releases it after the release interval; if the open hand is trained in
 another slot, it can switch directly. The thumb is not part of this check:
 poses that differ only by the thumb rely on the learned tolerance alone.
 Small curls and uncertain readings still use the learned tolerance.
-Missing-hand frames release immediately; recovery needs a new full hold. Existing 42/47-coordinate saved poses load
-without recapture. TEST uses the same compatibility check as live recognition.
+Missing-hand frames preserve an active pose; unconfirmed candidates expire after grace. Camera-corrected version 9 saves with 42/47 coordinates load without recapture; version 8 requires recapture. TEST uses the same compatibility check as live recognition.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
 
 ---
@@ -1189,7 +1206,3 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 For deeper setup issues (certificates, network, installation) see
 `docs/INSTALL.md` and `docs/FAQ.md`.
-
-Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
-
-Very different takes widen a pose’s tolerance. After three captures, a take that differs markedly from the other two may show an inline warning. **RETAKE** removes that exact take, even when it was captured first; record its replacement. **KEEP** retains every example. The warning is advisory and its provisional thresholds still need real-hand validation.

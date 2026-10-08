@@ -6,6 +6,14 @@ intermediate release records are intentionally not published.
 
 ## [Unreleased]
 
+### Learned poses
+
+- Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.
+- Preserve active poses during missing-hand tracking and apply pose Safe loss after its grace interval.
+- Add an optional six-take bank with second-neighbor scoring and leave-one-take-out calibration; the default remains three.
+- Add indexed inconsistent-take warnings, nearest-take TEST diagnostics and an offline labeled-session benchmark.
+
+
 ### Added
 
 - Editable **Set global quantization** in Launch Clip, with an explicit Apply
@@ -630,8 +638,3 @@ intermediate release records are intentionally not published.
   customization guide and user guide.
 - Removed an orphaned screenshot script that exposed a local filesystem path.
 - The distributable is `Ableton-RC-Surface-0.7.0.ablx`.
-
-### Unreleased — learned pose corrections
-
-- Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.
-- Preserve active poses during missing-hand tracking and apply pose Safe loss after its grace interval.

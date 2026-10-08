@@ -442,3 +442,20 @@ npm run bench:pose -- --sessions day1.jsonl day2.jsonl day3.jsonl --preset balan
 ```
 
 O runner deixa uma sessão inteira para teste, corta 200 ms das pontas de cada tomada e exclui tomadas curtas ou instáveis. Compara A0 nativo de três tomadas, A1 segundo vizinho, A2 leave-one-take-out, A3 KNN ponderado e A4 de todos os quadros sem pesos ou rejeição. Com orçamento de uma tomada usa o único vizinho. Classes insuficientes aparecem como não avaliáveis. O JSON inclui resultados por tomada, falso ON/min, latência, confusão e bootstrap pareado de acerto com semente fixa (2000 reamostras, intervalo de 95%). Só os caminhos explícitos recebem arquivos; --trim-ms, --entry-ms, --exit-window-ms e --ignore-unknown-ms ajustam as janelas. Adote mais tomadas somente após melhorar acertos em sessões reais sem piorar falso ON/min ou latência p95. Testes sintéticos não comprovam esse ganho.
+
+### Regra e persistência do banco de poses
+
+O produto pontua cada classe pela segunda menor distância ponderada às
+tomadas (k=2). Com três tomadas isso equivale exatamente à mediana anterior.
+O raio usa leave-one-take-out: para cada tomada, mede o segundo vizinho entre
+as demais, usa a maior dessas distâncias e limita `distância * 1.6 / threshold`
+a 1–2.5. Com três tomadas isso equivale exatamente ao antigo fator do pior par.
+Com variantes repetidas em seis tomadas, exemplos próximos sustentam cada
+variante sem ampliar o raio em torno do par mais distante.
+
+`maxTakes` usa 3 por padrão e limita novas capturas a 6. Saves da versão 9
+conservam amostras e spreads de cada tomada ao reduzir o limite de captura.
+A classificação continua usando o banco retido. Índices no JSONL/CSV começam
+em zero; TESTE mostra tomada 1, 2 etc. A2 usa o classificador nativo para
+orçamentos a partir de três; N=1/2 continuam como ablações offline do adaptador.
+Os braços KNN existem somente no benchmark, não no reconhecedor do celular.
