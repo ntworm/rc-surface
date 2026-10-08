@@ -720,17 +720,19 @@ async function releaseRetiredTriggerNotes(): Promise<void> {
 
 async function releaseVisionPerformance(clientId: string, reason = 'camera_stopped', controlName?: string): Promise<void> {
   const prefix = `${clientId}::${controlName ? `${controlName}::` : 'sensor.vision.'}`;
-  await triggerNoteScheduler.cancelWhere((request) => request.key.startsWith(prefix), reason);
+  const matches = (key: string): boolean => key.startsWith(prefix)
+    && !(reason === 'hand_lost' && key.startsWith(`${clientId}::sensor.vision.gesture.`));
+  await triggerNoteScheduler.cancelWhere((request) => matches(request.key), reason);
   const releases: Promise<void>[] = [];
   for (const [key, held] of heldTriggerNotes) {
-    if (!key.startsWith(prefix)) continue;
+    if (!matches(key)) continue;
     heldTriggerNotes.delete(key);
     releases.push(held.voice.release().then(() => {
       broadcastTriggerNoteState(held.clientId, held.controlName, held.targetIndex, 'released');
     }));
   }
   for (const [key, mode] of eventModesState) {
-    if (key.startsWith(prefix)) mode.lastInput = 0;
+    if (matches(key)) mode.lastInput = 0;
   }
   await Promise.all(releases);
 }
@@ -978,12 +980,12 @@ export function stopHostReconcileTimer(): void {
 }
 
 export async function applyMapping(clientId: string, controlName: string, value: number, isDeactivated?: boolean): Promise<void> {
-  // Both confirmed hand absence and camera OFF retire this client's vision
-  // voices/queued notes, even without a mapping on the active channel. Clips
-  // and their armed continuations have a separate lifetime.
+  // Camera OFF retires all vision voices. Hand absence retires detector
+  // voices; learned poses report their own loss after the recognition grace.
   if (controlName === 'sensor.vision.active' && value === 0) {
     await releaseVisionPerformance(clientId, isDeactivated ? 'hand_lost' : 'camera_stopped');
-  } else if (isDeactivated && controlName.startsWith('sensor.vision.')) {
+  } else if (isDeactivated && controlName.startsWith('sensor.vision.')
+    && !controlName.startsWith('sensor.vision.gesture.')) {
     await releaseVisionPerformance(clientId, 'hand_lost', controlName);
   }
   // Mappings are addressed by control name alone. A phone-scoped lookup used
@@ -1060,6 +1062,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
       // immediate. Set below so the smoothing stage picks it up.
       let releaseGlide = false;
       if (isDeactivated) {
+        if (controlName.startsWith('sensor.vision.gesture.') && target.neutralPolicy === 'hold') return;
         const releasesVisionMomentary = target.mode === 'trigger_note'
           || (controlName.startsWith('sensor.vision.gesture.') && target.mode !== 'toggle');
         if (controlName.startsWith('sensor.vision.') && target.neutralPolicy === 'hold' && !releasesVisionMomentary) return;

@@ -1785,9 +1785,10 @@
       { name: 'sensor.vision.gesture.2', value: 0 },
       { name: 'sensor.vision.gesture.3', value: 0 },
     ]);
-    const emitVisionSignalLoss = () => {
+    const emitVisionSignalLoss = (includePoses = true) => {
       if (!window.onControl) return;
       for (const channel of VISION_LOSS_CHANNELS) {
+        if (!includePoses && channel.name.startsWith('sensor.vision.gesture.')) continue;
         window.onControl({ ...channel, lost: true });
       }
     };
@@ -2384,21 +2385,34 @@
           return !wasActive;
         }
 
-        // Keep axis readouts as history, but release momentary learned poses.
-        function markHandLost() {
+        let poseMissingSince = null;
+        const lostPoseChannels = new Set();
+        function markHandLost(timestamp = performance.now()) {
+          if (poseMissingSince === null) poseMissingSince = timestamp;
+          if (timestamp - poseMissingSince > (visionProcessor.gestures?.unknownGraceMs ?? 140)) {
+            for (const channel of VISION_LOSS_CHANNELS) {
+              if (!channel.name.startsWith('sensor.vision.gesture.') || lostPoseChannels.has(channel.name)) continue;
+              window.onControl?.({ ...channel, lost: true });
+              lostPoseChannels.add(channel.name);
+            }
+          }
           const h = state.vision.hand;
           if (!h.active) return;
           h.active = false;
-          badgePose = null;
           badgeTrackingLost = true;
-          gestureSlotCards.forEach(card => card.classList.remove('recognized'));
-          // TEST/capture can reset the FSM while a prior LIVE entry still owns
-          // output. Absence must release that entry too, without a phantom OFF
-          // for a pose that only passed TEST.
-          for (const id of liveGestureSlots) {
-            window.onControl?.({ name: visionControls.controlForSlot(id), value: 0 });
+          gestureSlotCards.forEach(card => {
+            if (!liveGestureSlots.has(Number(card.dataset.gestureSlot))) card.classList.remove('recognized');
+          });
+          // TEST/capture deliberately reset the FSM. Retire prior LIVE output
+          // only in that case; an active learned pose survives missing hands.
+          if (!visionProcessor.gestures?.activeName) {
+            badgePose = null;
+            for (const id of liveGestureSlots) {
+              window.onControl?.({ name: visionControls.controlForSlot(id), value: 0 });
+              document.querySelector(`[data-gesture-slot="${id}"]`)?.classList.remove('recognized');
+            }
+            liveGestureSlots.clear();
           }
-          liveGestureSlots.clear();
           renderPerformanceBadge();
           h.handLostTime = Date.now();
           if (state.sensors.vision_reading) {
@@ -2411,12 +2425,12 @@
             // each target's Safe loss policy (hold / zero / center / initial /
             // custom / release / reconcile) instead of taking it literally.
             window.onControl({ name: 'sensor.vision.active', value: 0, lost: true });
-            emitVisionSignalLoss();
+            emitVisionSignalLoss(false);
             emitEnabledVisionDetectorLoss();
           }
         }
 
-        visionProcessor.onHandUpdate = (handData) => {
+        visionProcessor.onHandUpdate = (handData, timestamp = performance.now()) => {
           if (visionProcessor !== ownedVisionProcessor) return;
           // Measure the camera image, never the annotated/filtered UI canvas.
           // Only real inference callbacks contribute, including missing hands.
@@ -2438,9 +2452,16 @@
             }
           }
           if (handData && handData.active) {
+            const activeSlot = visionControls.slotForGesture(visionProcessor.gestures?.activeName);
+            if (activeSlot && liveGestureSlots.has(activeSlot.id)) {
+              const name = visionControls.controlForSlot(activeSlot.id);
+              if (lostPoseChannels.has(name)) window.onControl?.({ name, value: 1 });
+            }
+            poseMissingSince = null;
+            lostPoseChannels.clear();
             applyHandReading(handData);
           } else {
-            markHandLost();
+            markHandLost(timestamp);
           }
         };
         visionProcessor.onGestureLearnReady = beginGestureCaptureWindow;
@@ -2501,7 +2522,7 @@
           if (!window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);
           // Emit ON edge. OFF is emitted by onGestureRelease (FSM transition)
-          // and by confirmed hand absence. Clips already launched keep playing.
+          // when a different visible pose is confirmed. Missing hands keep it held.
           window.onControl({ name: control, value: 1 });
           liveGestureSlots.add(slot.id);
         };

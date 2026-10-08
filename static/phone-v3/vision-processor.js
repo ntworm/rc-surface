@@ -828,6 +828,11 @@
       Object.assign(this.visionStatus, patch);
       if (patch.stage === 'error') {
         this.wasHandPresent = false;
+        const activeName = this.gestures?.activeName ?? null;
+        this.clearGestureHistory();
+        if (activeName !== null) {
+          try { this.onGestureRelease?.(activeName); } catch { /* UI callback */ }
+        }
         this.processMissing();
         try { this.onHandUpdate?.(null); } catch { /* UI must never break the pipeline */ }
       }
@@ -1038,14 +1043,10 @@
       return output;
     }
 
-    processMissing(_timestamp = Date.now()) {
-      // Confirmed absence retires this entry; reacquisition must complete a
-      // fresh hold. Present-hand shape tolerance is still handled by the FSM.
-      const activeName = this.gestures?.activeName ?? null;
-      this.clearGestureHistory();
-      if (activeName !== null) {
-        try { this.onGestureRelease?.(activeName); } catch { /* UI must not break pipeline */ }
-      }
+    processMissing(timestamp = Date.now()) {
+      // Absence is LAST KNOWN: keep the active pose, expire only an
+      // unconfirmed candidate. Invalid descriptors retain their own FSM path.
+      this.gestures?.markMissing?.(timestamp);
       if (this.gestureLearnName && !this.gestureLearnReady) {
         this.gestureLearnPreparationFrames = [];
       }
@@ -1364,7 +1365,7 @@
       }
 
       if (this.onHandUpdate) {
-        this.onHandUpdate(handData);
+        this.onHandUpdate(handData, frameTimestamp);
       }
       if (canRender) this.ctx.restore();
     }

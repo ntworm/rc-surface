@@ -1084,21 +1084,20 @@ três slots de pose aprendida. **PALM** e **FACE** seguem como diagnóstico loca
 da câmera, na prévia. Contagem de dedos, landmarks individuais e leituras de
 cor do quadro inteiro são diagnóstico interno e não são canais de mapeamento.
 
-O primeiro resultado do rastreio sem uma mão utilizável libera G1–G3 e notas
-ativas da visão, e cancela notas esperando Tempo/Compasso. G1–G3 apagam;
-não ficam verdes como ÚLTIMO ESTADO. Landmarks incompletos ou inválidos
-contam como ausência. Um erro explícito de inferência também libera a saída
-e continua visível. Voltar exige uma nova pose estável pelo intervalo completo
-do preset; os exemplos salvos continuam intactos. Pequenas variações de forma
-com a mão detectada conservam a tolerância existente. TESTE permanece silencioso.
-Um clip já disparado continua tocando, inclusive seu retorno RC armado.
-Uma nova entrada estável não reinicia um clip já tocando/aguardando; Avançar
-lista pode avançar uma vez depois da confirmação do pedido anterior.
-Parâmetros contínuos de Bind conservam sua política Safe loss; os eixos podem
-mostrar a última medição. Novos mappings de visão ainda usam hold por padrão;
-a migração existente preserva políticas explícitas. Essa opção não impede a
-liberação de poses/notas momentâneas. Câmera OFF, Panic, remoção de bind e
-desconexão também encerram notas e agendamentos.
+A ausência da mão preserva a pose aprendida ativa como **LAST KNOWN**. Um
+candidato ainda não confirmado expira depois de `unknownGraceMs` (140 ms por
+padrão); após uma ausência longa, precisa cumprir o hold completo para seu
+primeiro ON. Eixos e detectores básicos informam perda imediatamente. G1–G3
+informam perda somente após essa tolerância; cada mapping aplica Safe loss.
+**hold** mantém a saída, inclusive uma nota sustentada; **release** desliga.
+Quando a mesma pose ativa volta, o canal reenvia ON uma vez para restaurar a
+saída liberada. O mapping em hold ignora esse ON repetido, sem tocar outra
+nota. Uma pose visível diferente libera a anterior pela tolerância normal.
+Landmarks incompletos contam como ausência. Um erro explícito de inferência
+libera a pose ativa e continua visível. Os exemplos salvos permanecem; TEST
+continua musicalmente silencioso. Um clip lançado e sua continuação armada
+seguem tocando. Camera OFF, Panic, desvincular e desconectar liberam notas
+sustentadas e agendadas.
 Rastreio e vídeo são estados diferentes: um travamento silencioso sem novo
 resultado ou erro explícito não comprova ausência da mão; esta correção não
 adiciona um watchdog para detectar esse caso.

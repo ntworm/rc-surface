@@ -1451,17 +1451,18 @@ test('computeHandData: victory tilted +45° (pinky MCP up) shifts rotateVal to t
   assert.ok(Math.abs(data.rotateVal - 0.5) > 0.05, `expected rotateVal tilted away from 0.5, got ${data.rotateVal}`);
 });
 
-test('processMissing: returns null and resets gesture recognition so the panel returns to neutral when the hand drops', () => {
+test('processMissing: returns null, expires candidates after grace and preserves an active pose', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
   vp.setGestureOptions({ threshold: 0.13, minimumConfidence: 0.55, holdMs: 0, releaseMs: 0 });
-  vp.beginGestureTest('Gesture 1');
-  vp.processHandData({ victory: true, rotateVal: 0.9 }, 0);
-  // No tracker → no inertial prediction: the wire stays silent. The
-  // gesture library still gets the null tick so it can clear its
-  // candidate / active state.
+  vp.gestures.activeName = 'Gesture 1';
+  vp.gestures.candidateName = 'Gesture 2';
+  vp.gestures.candidateSince = 0;
   assert.equal(vp.processMissing(100), null);
+  assert.equal(vp.gestures.candidateName, 'Gesture 2');
   assert.equal(vp.processMissing(300), null);
+  assert.equal(vp.gestures.candidateName, null);
+  assert.equal(vp.gestures.activeName, 'Gesture 1');
 });
 
 test('processResults: delivers a single hand reading', async () => {
@@ -2111,28 +2112,33 @@ async function learnedApp() {
     context.currentTime = baseTime + time;
     HandsMock.instance.resultsCallback({ multiHandLandmarks: [landmarks] });
   };
-  const missing = () => HandsMock.instance.resultsCallback({ multiHandLandmarks: [] });
+  const missing = time => {
+    if (time !== undefined) context.currentTime = baseTime + time;
+    HandsMock.instance.resultsCallback({ multiHandLandmarks: [] });
+  };
   const emissions = [];
   const real = context.onControl;
   context.onControl = event => { emissions.push({ ...event }); real(event); };
   const edges = () => emissions.filter(event => event.name === 'sensor.vision.gesture.1' && !event.lost).map(event => event.value);
-  return { ...harness, processor, frame, missing, edges, card: mockElements['[data-gesture-slot="1"]'] };
+  return { ...harness, processor, frame, missing, edges, emissions, card: mockElements['[data-gesture-slot="1"]'] };
 }
 
-test('C19/C21 actual app: loss clears green pose and badge, emits normal OFF once, then fresh ON', async () => {
-  const { processor, frame, missing, edges, card, mockElements, windowContext } = await learnedApp();
+test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores ON exactly once', async () => {
+  const { processor, frame, missing, edges, emissions, card, mockElements, windowContext } = await learnedApp();
   frame(0); frame(120);
   assert.deepEqual(edges(), [1]);
   assert.equal(card.classList.contains('recognized'), true);
   assert.match(mockElements['vision-performance-badge'].textContent, /G1.*HELD/);
-  missing(); missing();
-  assert.deepEqual(edges(), [1, 0], 'OFF must lack lost flag so Launch Clip rearms');
-  assert.equal(card.classList.contains('recognized'), false);
-  assert.doesNotMatch(mockElements['vision-performance-badge'].textContent, /G1|HELD|LAST KNOWN/);
-  frame(1000); frame(1119);
-  assert.deepEqual(edges(), [1, 0]);
-  frame(1120);
-  assert.deepEqual(edges(), [1, 0, 1]);
+  const poseLosses = () => emissions.filter(event => event.name === 'sensor.vision.gesture.1' && event.lost);
+  missing(130); missing(270);
+  assert.equal(poseLosses().length, 0, 'absence at grace boundary is still tolerated');
+  missing(271); missing(10000);
+  assert.equal(poseLosses().length, 1);
+  assert.deepEqual(edges(), [1]);
+  assert.equal(card.classList.contains('recognized'), true);
+  assert.match(mockElements['vision-performance-badge'].textContent, /G1.*LAST KNOWN/);
+  frame(11000); frame(11120); frame(12000);
+  assert.deepEqual(edges(), [1, 1]);
   const old = processor;
   mockElements['chk-vision-enable'].checked = false;
   await mockElements['chk-vision-enable'].onchange();
@@ -2189,7 +2195,7 @@ test('C19: actual inference send failure clears pose and displays the real error
   assert.match(mockElements['vision-camera-state-detail'].textContent, /synthetic inference rejection/);
 });
 
-test('VisionProcessor integration: hand loss emits the complete pre-armed loss catalog', async () => {
+test('VisionProcessor integration: hand loss emits axes immediately and the complete catalog after grace', async () => {
   const { windowContext, mockElements, HandsMock } = loadVisionAndApp();
   const prearmedLossNames = Array.from(windowContext.__abletonRc.state.controls)
     .filter((ctrl) => ctrl.name?.startsWith('sensor.vision.') && ctrl.lost === true)
@@ -2208,6 +2214,10 @@ test('VisionProcessor integration: hand loss emits the complete pre-armed loss c
   const real = windowContext.onControl;
   windowContext.onControl = (ctrl) => { seen.push(ctrl); if (real) real(ctrl); };
 
+  HandsMock.instance.resultsCallback({ image: {}, multiHandLandmarks: [], multiHandedness: [] });
+
+  assert.equal(seen.filter(ctrl => ctrl.name?.startsWith('sensor.vision.gesture.')).length, 0);
+  windowContext.currentTime += 141;
   HandsMock.instance.resultsCallback({ image: {}, multiHandLandmarks: [], multiHandedness: [] });
 
   const lostNames = seen

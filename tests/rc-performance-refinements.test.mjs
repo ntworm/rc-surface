@@ -55,8 +55,8 @@ test('C16: Now musical refuses unknown meter instead of silently using ms or 4/4
   assert.deepEqual(packets, []);
 });
 
-test('C20: hand loss releases a saved hold-policy note once; camera OFF adds no release', async () => {
-  const packets = fixture();
+test('pose release policy releases once; camera OFF adds no release', async () => {
+  const packets = fixture({}, { neutralPolicy: 'release' });
   await applyMapping('phone', 'sensor.vision.gesture.1', 1);
   await applyMapping('phone', 'sensor.vision.gesture.1', 0, true);
   assert.deepEqual(packets, [[60, 100], [60, 0]]);
@@ -67,7 +67,7 @@ test('C20: hand loss releases a saved hold-policy note once; camera OFF adds no 
 
 for (const noteTiming of ['beat', 'bar']) {
   for (const loseHand of [false, true]) {
-    test(`C20: ${noteTiming} pending ${loseHand ? 'cancels on hand loss' : 'actually sounds without loss'}`, async t => {
+    test(`C20: ${noteTiming} pending ${loseHand ? 'cancels on camera OFF' : 'actually sounds without loss'}`, async t => {
       t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000 });
       t.mock.method(triggerNoteClock, 'now', () => Date.now());
       t.mock.method(triggerNoteScheduler, 'now', () => Date.now());
@@ -76,7 +76,7 @@ for (const noteTiming of ['beat', 'bar']) {
       triggerNoteClock.observePosition(10.75, 120, 4, 4);
       assert.equal(triggerNoteClock.snapshot().valid, true);
       await applyMapping('phone', 'sensor.vision.gesture.1', 1);
-      if (loseHand) await applyMapping('phone', 'sensor.vision.active', 0, true);
+      if (loseHand) await applyMapping('phone', 'sensor.vision.active', 0);
       t.mock.timers.tick(noteTiming === 'beat' ? 125 : 625);
       await new Promise(setImmediate);
       assert.deepEqual(packets, loseHand ? [] : [[60, 100]]);
@@ -88,7 +88,7 @@ for (const noteTiming of ['beat', 'bar']) {
 }
 
 for (const noteGate of ['hold', 'pulse']) {
-  test(`C20: active loss releases Now ${noteGate} without an active mapping, isolated by client/control`, async t => {
+  test(`C20: camera OFF releases Now ${noteGate} without an active mapping, isolated by client/control`, async t => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const packets = fixture({}, { noteGate, noteDurationMs: 100 });
     const target = controlMappings.get('sensor.vision.gesture.1')[0];
@@ -98,10 +98,10 @@ for (const noteGate of ['hold', 'pulse']) {
     await applyMapping('other-phone', 'sensor.vision.gesture.2', 1);
     await applyMapping('phone', 'pad-1', 1);
     await new Promise(setImmediate);
-    await applyMapping('phone', 'sensor.vision.active', 0, true);
+    await applyMapping('phone', 'sensor.vision.active', 0);
     assert.deepEqual(packets, [[60, 100], [62, 100], [64, 100], [60, 0]], 'other client and non-vision control remain held');
-    await applyMapping('phone', 'sensor.vision.active', 0, true);
-    await applyMapping('other-phone', 'sensor.vision.active', 0, true);
+    await applyMapping('phone', 'sensor.vision.active', 0);
+    await applyMapping('other-phone', 'sensor.vision.active', 0);
     assert.deepEqual(packets, [[60, 100], [62, 100], [64, 100], [60, 0], [62, 0]]);
     if (noteGate === 'hold') await applyMapping('phone', 'pad-1', 0);
     t.mock.timers.tick(200);
@@ -116,7 +116,7 @@ test('C20: a lost placeholder value cannot activate a Trigger Note', async () =>
   assert.deepEqual(packets, []);
 });
 
-test('C20: loss retires a queued unsent Receiver ON without inventing an OFF', async () => {
+test('C20: camera OFF retires a queued unsent Receiver ON without inventing an OFF', async () => {
   let acknowledge;
   const blocked = new Promise(resolve => { acknowledge = resolve; });
   const packets = fixture({}, {}, ([note, velocity]) => note === 62 && velocity > 0 ? blocked : undefined);
@@ -125,7 +125,7 @@ test('C20: loss retires a queued unsent Receiver ON without inventing an OFF', a
   const padOn = applyMapping('phone', 'pad-1', 1);
   await new Promise(setImmediate);
   const visionOn = applyMapping('phone', 'sensor.vision.gesture.1', 1);
-  const loss = applyMapping('phone', 'sensor.vision.active', 0, true);
+  const loss = applyMapping('phone', 'sensor.vision.active', 0);
   await new Promise(setImmediate);
   acknowledge();
   await Promise.all([padOn, visionOn, loss]);
@@ -135,7 +135,7 @@ test('C20: loss retires a queued unsent Receiver ON without inventing an OFF', a
   assert.deepEqual(packets, [[62, 100], [60, 100], [60, 0]], 'fresh activation works after cleanup');
 });
 
-test('C20: delayed pulse ON acknowledgement after loss leaves no stale timer release', async t => {
+test('C20: delayed pulse ON acknowledgement after camera OFF leaves no stale timer release', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let acknowledge;
   const blocked = new Promise(resolve => { acknowledge = resolve; });
@@ -143,7 +143,7 @@ test('C20: delayed pulse ON acknowledgement after loss leaves no stale timer rel
   const packets = fixture({}, { noteGate: 'pulse', noteDurationMs: 100 }, () => ++writes === 1 ? blocked : undefined);
   await applyMapping('phone', 'sensor.vision.gesture.1', 1);
   await new Promise(setImmediate);
-  const loss = applyMapping('phone', 'sensor.vision.active', 0, true);
+  const loss = applyMapping('phone', 'sensor.vision.active', 0);
   await new Promise(setImmediate);
   acknowledge();
   await loss;

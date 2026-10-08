@@ -25,21 +25,21 @@ function hand() {
   return points;
 }
 
-test('C19: first missing hand releases active pose once', () => {
+test('missing hand preserves the active pose without a release edge', () => {
   const processor = loadProcessor();
   const gestures = {
     activeName: 'Rock',
-    resetRecognition() { this.activeName = null; },
+    markMissing() {},
   };
   processor.gestures = gestures;
   const releases = [];
   processor.onGestureRelease = (name) => releases.push(name);
 
   processor.processMissing(1000);
-  assert.equal(gestures.activeName, null);
-  assert.deepEqual(releases, ['Rock']);
+  assert.equal(gestures.activeName, 'Rock');
+  assert.deepEqual(releases, []);
   processor.processMissing(2000);
-  assert.deepEqual(releases, ['Rock']);
+  assert.deepEqual(releases, []);
 });
 
 function learnedPipeline(holdMs = 120) {
@@ -66,41 +66,43 @@ function learnedPipeline(holdMs = 120) {
 }
 
 for (const holdMs of [120, 160, 260]) {
-  test(`C19: recovery requires a fresh full ${holdMs} ms hold; templates survive`, () => {
+  test(`active pose survives ten seconds of absence (${holdMs} ms preset)`, () => {
     const { processor, frame, edges } = learnedPipeline(holdMs);
     frame(0); frame(holdMs);
     const saved = JSON.stringify(processor.gestures.toJSON());
     processor.processMissing(300);
-    assert.deepEqual(edges, ['G1:ON', 'G1:OFF']);
-    assert.equal(processor.gestures.activeName, null);
+    assert.deepEqual(edges, ['G1:ON']);
+    assert.equal(processor.gestures.activeName, 'G1');
     for (const time of [500, 1120, 10000]) processor.processMissing(time);
     assert.equal(JSON.stringify(processor.gestures.toJSON()), saved);
     frame(11000); frame(11000 + holdMs - 1);
-    assert.deepEqual(edges, ['G1:ON', 'G1:OFF']);
+    assert.deepEqual(edges, ['G1:ON']);
     frame(11000 + holdMs); frame(12000);
-    assert.deepEqual(edges, ['G1:ON', 'G1:OFF', 'G1:ON']);
+    assert.deepEqual(edges, ['G1:ON']);
   });
 }
 
-test('C19: loss before confirmation clears candidate without a phantom OFF', () => {
+test('unconfirmed candidate restarts its full hold after a long absence', () => {
   const { processor, frame, edges } = learnedPipeline();
   frame(0); frame(80);
   processor.processMissing(90);
+  assert.equal(processor.gestures.candidateName, 'G1');
+  processor.processMissing(2090);
   assert.equal(processor.gestures.candidateName, null);
   assert.deepEqual(edges, []);
-  frame(100); frame(219);
+  frame(2100); frame(2219);
   assert.deepEqual(edges, []);
-  frame(220);
+  frame(2220);
   assert.deepEqual(edges, ['G1:ON']);
 });
 
 for (const invalid of [[], [null], [Array(21).fill({ x: NaN, y: .5, z: 0 })]]) {
-  test(`C19: unusable landmarks release before hand-loss callback (${JSON.stringify(invalid).slice(0, 20)})`, () => {
+  test(`unusable landmarks mark absence without a release (${JSON.stringify(invalid).slice(0, 20)})`, () => {
     const { processor, frame, edges } = learnedPipeline();
     frame(0); frame(120);
     processor.onHandUpdate = data => {
       assert.equal(data, null);
-      assert.deepEqual(edges, ['G1:ON', 'G1:OFF']);
+      assert.deepEqual(edges, ['G1:ON']);
     };
     processor.processResults({ multiHandLandmarks: invalid }, 130);
     processor.processResults({ multiHandLandmarks: invalid }, 140);

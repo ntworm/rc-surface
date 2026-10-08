@@ -457,11 +457,15 @@ function visionEntry(control) {
   processor.onGestureRelease = () => { queue = queue.then(() => gesture(control, 0)); };
   return {
     async frame(time) { processor.processHandData({ x: .5, y: .5, z: .5, active: true }, time, pose); await queue; },
+    async release(time) {
+      processor.processHandData({ x: .5, y: .5, z: .5, active: true }, time, context.handPose());
+      await queue;
+    },
     async missing(time) { processor.processMissing(time); await queue; await applyMapping(CLIENT, 'sensor.vision.active', 0, true); },
   };
 }
 
-test('C21: real vision absence/recovery advances list once after confirmation, never pending', async () => {
+test('real vision absence retains list entry; visible release and full hold advance once after confirmation', async () => {
   setup();
   const base = await drumsTarget();
   await map(G1, { ...base, launchMode: 'list', clips: ['Base', 'Variação', 'Virada'].map(base.ref) });
@@ -475,8 +479,13 @@ test('C21: real vision absence/recovery advances list once after confirmation, n
   assert.deepEqual(fires(), [[1, 0]], 'Live pending item never advances');
   fired(1, -1); playing(1, 0);
   await vision.missing(530); await vision.frame(600); await vision.frame(719);
-  assert.deepEqual(fires(), [[1, 0]], 'recovery must wait the full hold');
+  assert.deepEqual(fires(), [[1, 0]], 'absence does not rearm an active pose');
   await vision.frame(720); await vision.frame(1000);
+  assert.deepEqual(fires(), [[1, 0]]);
+  await vision.release(1050); await vision.release(1300);
+  await vision.frame(1400); await vision.frame(1519);
+  assert.deepEqual(fires(), [[1, 0]], 'new visible entry must wait the full hold');
+  await vision.frame(1520); await vision.frame(1600);
   assert.deepEqual(fires(), [[1, 0], [1, 1]], 'one new stable entry advances exactly once');
   assert.deepEqual(stops(), []);
   assert.deepEqual(quantWrites(), []);

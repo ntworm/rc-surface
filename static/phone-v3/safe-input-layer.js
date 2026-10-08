@@ -463,13 +463,14 @@
       this.activeName = null;
       this.releaseSince = null;
       this.unknownSince = null;
+      this.missingSince = null;
     }
 
     getRecognitionState() {
       if (this.candidateName !== null) return 'candidate';
       if (this.releaseSince !== null) return 'releasing';
       if (this.activeName !== null) return 'held';
-      if (this.unknownSince !== null) return 'unknown';
+      if (this.unknownSince !== null || this.missingSince !== null) return 'unknown';
       return 'ready';
     }
 
@@ -586,6 +587,14 @@
       };
     }
 
+    markMissing(timestamp = Date.now()) {
+      if (this.missingSince === null) this.missingSince = timestamp;
+      if (timestamp - this.missingSince > this.unknownGraceMs) {
+        this.candidateName = null;
+        this.candidateSince = null;
+      }
+    }
+
     recognize(descriptor, timestamp = Date.now(), targetName = null) {
       if (!validDescriptor(descriptor)) {
         if (this.unknownSince === null) this.unknownSince = timestamp;
@@ -605,6 +614,10 @@
         return null;
       }
 
+      if (this.missingSince !== null) {
+        this.markMissing(timestamp);
+        this.missingSince = null;
+      }
       if (this.unknownSince !== null) {
         const unknownSince = this.unknownSince;
         this.unknownSince = null;

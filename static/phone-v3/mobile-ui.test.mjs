@@ -253,7 +253,7 @@ test('3D calibration assets are removed (spatial tracking was retired)', () => {
 test('vision hand frames render readouts once without duplicate label writes', () => {
   const app = read('app.js');
   const start = app.indexOf('function applyHandReading(data)');
-  const end = app.indexOf('function markHandLost()', start);
+  const end = app.indexOf('function markHandLost(', start);
   const applyHandReading = app.slice(start, end);
   assert.equal((applyHandReading.match(/renderVisionReadouts\(\)/g) || []).length, 1);
   assert.doesNotMatch(applyHandReading, /lbl[XYZG][^\n]*textContent/);

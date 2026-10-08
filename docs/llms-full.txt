@@ -1665,21 +1665,19 @@ Pinch Clutch **X/Y/Z**, the four opt-in detectors, Victory rotation, and the
 three learned pose slots. **PALM** and **FACE** remain local camera
 diagnostics in the preview. Finger-count, individual-landmark, and whole-frame
 colour readings are internal diagnostics and are not mapping channels.
-The first tracking result without a usable hand releases G1–G3 and any active
-vision notes, and cancels notes waiting for Beat/Bar. G1–G3 turn off instead
-of remaining green or LAST KNOWN. Incomplete or invalid landmarks count as
-absence. An explicit inference error releases them too and remains visible.
-Returning requires a fresh stable pose for the selected preset's full hold
-interval; saved examples stay intact. Small shape jitter with a detected hand
-still uses the existing recognition tolerance. TEST stays musically silent.
-A launched clip keeps playing, including its armed RC continuation. A new
-stable entry does not restart an already playing/pending clip; Advance list
-can advance once after the previous request is confirmed.
-Continuous Bind parameters retain their Safe loss policy and axis readouts
-may show their last measurement. New vision mappings still default to hold;
-the existing one-time migration preserves explicit policies. This setting
-cannot suppress momentary pose/note release. Camera OFF, Panic, unbinding
-and disconnection also retire held and scheduled notes.
+Missing hands preserve an active learned pose as **LAST KNOWN**. An unconfirmed
+candidate expires after `unknownGraceMs` (140 ms by default), so a long absence
+requires a fresh full hold before its first ON. Axes and built-in detectors
+report loss immediately. G1–G3 report loss only after that grace interval;
+their mappings then apply Safe loss. **hold** retains output, including a held
+note; **release** turns it off. When the same active pose returns, its channel
+sends ON once to restore released output. A held mapping ignores this repeated
+ON, so it does not play a second note. A different visible pose still releases
+the previous pose through the normal recognition tolerance.
+Incomplete landmarks count as absence. An explicit inference error releases
+the active pose and remains visible. Saved examples stay intact; TEST stays
+musically silent. A launched clip and its armed continuation keep playing.
+Camera OFF, Panic, unbinding and disconnection retire held and scheduled notes.
 Tracking is separate from the video preview: a silent stall with no inference
 result or explicit error cannot prove hand absence and is not detected by a
 new watchdog.
