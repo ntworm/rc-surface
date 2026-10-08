@@ -87,6 +87,42 @@ function frames(descriptor, count = 8, jitter = 0.002) {
 const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
   holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
 
+test('each shipped preset preserves its effective entry and hold radius', () => {
+  const source = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
+  const presets = vm.runInNewContext(`(${source.match(/const GESTURE_PRESETS = (\{[\s\S]*?\n    \});/)[1]})`);
+  const { GestureLibrary } = load();
+  const base = Array(42).fill(0);
+  const atDistance = distance => base.map(() => distance);
+  const expected = { precision: .0561, balanced: .1152, performance: .12672, flexible: .168 };
+  for (const [name, options] of Object.entries(presets)) {
+    const library = new GestureLibrary({ ...options, holdMs: 0, releaseMs: 0 });
+    for (let i = 0; i < 3; i++) library.learn('Pose', Array.from({ length: 8 }, () => base.slice()));
+    const radius = (1 - options.minimumConfidence) * 1.5 * options.threshold;
+    assert.ok(Math.abs(radius - expected[name]) < 1e-12);
+    assert.equal(library.evaluate(atDistance(radius - 1e-9)).accepted, true, name);
+    assert.equal(library.evaluate(atDistance(radius + 1e-9)).accepted, false, name);
+    library.recognize(base, 0);
+    const holdRadius = options.releaseRatio * options.threshold;
+    library.recognize(atDistance(holdRadius - 1e-9), 100);
+    assert.equal(library.activeName, 'Pose', name);
+    library.recognize(atDistance(holdRadius + 1e-9), 200);
+    library.recognize(atDistance(holdRadius + 1e-9), 201);
+    assert.equal(library.activeName, null, name);
+  }
+  const looseConfidence = new GestureLibrary({ threshold: .16, minimumConfidence: .2 });
+  for (let i = 0; i < 3; i++) looseConfidence.learn('Pose', Array.from({ length: 8 }, () => base.slice()));
+  assert.equal(looseConfidence.evaluate(atDistance(.16 - 1e-9)).accepted, true);
+  assert.equal(looseConfidence.evaluate(atDistance(.16 + 1e-9)).accepted, false,
+    'below minimum confidence 1/3, the absolute threshold controls entry');
+});
+
+test('customization documents the effective radii in both languages', () => {
+  for (const file of ['CUSTOMIZATION.md', 'CUSTOMIZATION.pt-BR.md']) {
+    const doc = fs.readFileSync(path.join(import.meta.dirname, '../../docs', file), 'utf8');
+    assert.ok(doc.includes('0.0561') && doc.includes('0.1152') && doc.includes('0.1267') && doc.includes('0.168'));
+  }
+});
+
 for (const aspect of [4 / 3, 3 / 4]) {
   for (const degrees of [0, 30, 45]) {
     test(`pixel geometry is invariant at aspect ${aspect} and rotation ${degrees}`, () => {

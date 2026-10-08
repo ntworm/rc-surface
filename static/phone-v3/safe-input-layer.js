@@ -597,6 +597,9 @@
         && scores[1].relative <= best.relative * this.ambiguityRatio);
       const limit = this.thresholdFor(best.name);
       const confidence = clamp(1 - best.score / Math.max(0.0001, limit * 1.5));
+      // Entry radius is min(limit, (1 - minimumConfidence) * 1.5 * limit).
+      // Confidence is the tighter gate for every shipped preset (>= 1/3);
+      // HOLD instead uses releaseRatio * limit in the recognition FSM.
       const accepted = !best.contradiction && best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
       const candidates = scores.map(({ name, score }) => ({
         name,

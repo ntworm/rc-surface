@@ -419,3 +419,20 @@ Update docs when public behavior changes:
 ## Local pose diagnostics
 
 Open the phone URL with `?probe=drift`, then enable the camera. Diagnostics stay off on normal URLs. `window.RCDriftProbe.setLabel("Gesture 1")` labels the current pose; use `setLabel(null)` for unknown hands and transitions. `download()` saves a local JSONL file; `exportJSONL()` and `exportCSV()` return text. Records include observed/missing frames, timestamps, landmarks, camera dimensions, handedness confidence, ground truth, recognition state and effective entry/hold radii. No images, video or network uploads are recorded. The bounded buffer retains the latest 20,000 frames. Store real-hand recordings outside the public repository.
+
+### Effective pose radius
+
+With calibration factor 1, these are descriptor distances, not probabilities
+or pixel distances. Entry requires both `score <= L` and confidence above the
+preset minimum: its effective radius is `min(L, (1 - minConf) * 1.5 * L)`.
+For all shipped presets the confidence gate is tighter; `score <= L` becomes
+the deciding limit only below `minConf = 1/3`. Holding uses `releaseRatio * L`.
+A learned calibration factor scales both radii; ambiguity and finger-shape
+contradictions can still reject a pose inside the entry radius.
+
+| Preset | Entry / Entrada | Hold / Manutenção |
+| --- | --- | --- |
+| Precision | 0.0561 | 0.1375 |
+| Balanced | 0.1152 | 0.2240 |
+| Performance | 0.1267 | 0.1936 |
+| Flexible | 0.1680 | 0.3200 |

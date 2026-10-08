@@ -411,3 +411,20 @@ Atualize a documentação quando o comportamento público mudar:
 ## Diagnóstico local de poses
 
 Abra o URL do celular com `?probe=drift` e ligue a câmera. Em URLs normais, o diagnóstico permanece desligado. `window.RCDriftProbe.setLabel("Gesture 1")` rotula a pose atual; use `setLabel(null)` para mãos desconhecidas e transições. `download()` salva um arquivo JSONL local; `exportJSONL()` e `exportCSV()` retornam texto. Registros incluem quadros observados/ausentes, timestamps, landmarks, dimensões da câmera, confiança da lateralidade, rótulo verdadeiro, estado do reconhecimento e raios efetivos de entrada/manutenção. Nenhuma imagem, vídeo ou upload de rede é registrado. O buffer limitado guarda os últimos 20.000 quadros. Mantenha gravações com mão real fora do repositório público.
+
+### Raio efetivo da pose
+
+Com fator de calibração 1, os números são distâncias do descritor, não
+probabilidades nem distâncias em pixels. A entrada exige `score <= L` e
+confiança acima do mínimo: o raio efetivo é `min(L, (1 - minConf) * 1.5 * L)`.
+Em todos os presets atuais, a confiança limita mais; `score <= L` só passa a
+decidir abaixo de `minConf = 1/3`. A manutenção usa `releaseRatio * L`.
+O fator aprendido de calibração multiplica ambos os raios; ambiguidade e
+contradições no formato dos dedos ainda podem rejeitar uma pose dentro do raio.
+
+| Preset | Entry / Entrada | Hold / Manutenção |
+| --- | --- | --- |
+| Precision | 0.0561 | 0.1375 |
+| Balanced | 0.1152 | 0.2240 |
+| Performance | 0.1267 | 0.1936 |
+| Flexible | 0.1680 | 0.3200 |
