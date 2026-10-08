@@ -1856,6 +1856,18 @@ test('VisionProcessor: processMissing returns null when no tracker is active (sp
   assert.equal(vp.processMissing(300), null);
 });
 
+test('VisionProcessor persists the optional capture cap without changing the default', () => {
+  const { VisionProcessor } = loadVisionProcessor();
+  const processor = new VisionProcessor();
+  assert.equal(processor.gestures.maxTakes, 3);
+  processor.setGestureOptions({ maxTakes: 6 });
+  const saved = processor.exportSafetyConfig();
+  assert.equal(saved.gestureOptions.maxTakes, 6);
+  const restored = new VisionProcessor();
+  restored.importSafetyConfig(saved);
+  assert.equal(restored.gestures.maxTakes, 6);
+});
+
 test('pose capture and recognition fail closed without valid frame dimensions; direct controls stay live', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();

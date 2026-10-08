@@ -158,17 +158,21 @@ export function adapterEvaluate(library, descriptor, targetName = null, arm = 'A
 }
 
 export function makeArm(arm, takes, preset = presets.balanced) {
-  const library = new safe.GestureLibrary(preset);
+  const library = new safe.GestureLibrary({ ...preset, maxTakes: 6 });
   const trainingFrames = [];
   for (const name of new Set(takes.map(take => take.label))) {
     const group = takes.filter(take => take.label === name);
     library.templates.set(name, group.map(take => take.prototype));
     library.takeSpreads.set(name, group.map(take => take.spread));
     library.rebuildSpread(name);
-    library.thresholdFactors.set(name, calibrationFactor(library, name, arm === 'A2'));
+    if (arm === 'A2') library.recalibrate(name);
+    else library.thresholdFactors.set(name, calibrationFactor(library, name));
     for (const take of group) for (const frame of take.frames) trainingFrames.push({ label: name, descriptor: frame.descriptor });
   }
-  if (arm !== 'A0') library.evaluate = (descriptor, targetName) => adapterEvaluate(library, descriptor, targetName, arm, trainingFrames);
+  // N=1/2 are offline ablations: the product requires at least three takes.
+  if (arm !== 'A0' && !(arm === 'A2' && takes.every(take => library.sampleCount(take.label) >= 3))) {
+    library.evaluate = (descriptor, targetName) => adapterEvaluate(library, descriptor, targetName, arm, trainingFrames);
+  }
   return library;
 }
 

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 
 function load() {
   const source = fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8');
@@ -86,6 +87,59 @@ function frames(descriptor, count = 8, jitter = 0.002) {
 
 const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
   holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
+
+test('seeded 400-case corpus retains the exact three-take scores and calibration', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  let seed = 11;
+  const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  const results = [];
+  for (let i = 0; i < 400; i++) {
+    const library = new GestureLibrary(performanceOptions);
+    const shape = () => normalizeHandPose(handPose(Object.fromEntries(
+      ['thumb', 'index', 'middle', 'ring', 'pinky'].map(key => [key, random()]))));
+    const base = shape();
+    for (let take = 0; take < 3; take++) {
+      library.learn('A', frames(base, 8, .002 + take * .001));
+      library.learn('B', frames(shape(), 8, .002));
+    }
+    const evaluation = library.evaluate(shape(), 'A');
+    results.push({ factors: ['A', 'B'].map(name => library.thresholdFor(name)),
+      score: evaluation.score, name: evaluation.name, confidence: evaluation.confidence,
+      accepted: evaluation.accepted, ambiguous: evaluation.ambiguous, contradiction: evaluation.contradiction,
+      candidates: evaluation.candidates.map(({ name, score, confidence }) => ({ name, score, confidence })) });
+  }
+  // Captured from the verified three-take library at commit 3cdf910.
+  assert.equal(createHash('sha256').update(JSON.stringify(results)).digest('hex'), 'fd7267957f8fbd4722cc3827d759c34520386ee90202b5325eb9271b7c14f2d7');
+});
+
+test('optional bank retains six takes, scores its second neighbor and calibrates LOTO', () => {
+  const { GestureLibrary, normalizeHandPose, weightedPoseDistance } = load();
+  const library = new GestureLibrary({ ...performanceOptions, maxTakes: 6 });
+  const config = thumb => handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: 1 });
+  for (const thumb of [.15, .16, .17, .98, .99, 1]) library.learn('Rock', frames(normalizeHandPose(config(thumb))));
+  assert.equal(library.sampleCount('Rock'), 6);
+  assert.equal(library.learn('Rock', frames(normalizeHandPose(config(1)))), 6);
+  const samples = library.templates.get('Rock'), weights = library.weightsFor('Rock');
+  const second = values => values.sort((a, b) => a - b)[1];
+  const distances = samples.map((sample, index) => samples.filter((_, other) => other !== index)
+    .map(other => weightedPoseDistance(sample, other, weights)));
+  const loto = Math.max(...distances.map(values => second(values.slice())));
+  const worstPair = Math.max(...distances.flat());
+  assert.equal(library.thresholdFor('Rock') / library.threshold, Math.min(2.5, Math.max(1, loto * 1.6 / library.threshold)));
+  assert.ok(loto < worstPair);
+  for (const thumb of [.15, 1]) {
+    const live = normalizeHandPose(config(thumb));
+    assert.equal(library.evaluate(live).score, second(samples.map(sample => weightedPoseDistance(live, sample, weights))));
+    assert.equal(library.evaluate(live).accepted, true);
+  }
+  assert.equal(library.takeConsistency('Rock'), null, 'repeated legitimate variants are not isolated takes');
+  const saved = JSON.parse(JSON.stringify(library.toJSON()));
+  const restored = GestureLibrary.fromJSON(saved, { ...performanceOptions, maxTakes: 6 });
+  assert.equal(JSON.stringify(restored.toJSON()), JSON.stringify(saved));
+  const reduced = GestureLibrary.fromJSON(saved, { maxTakes: 3 });
+  assert.equal(reduced.sampleCount('Rock'), 6, 'reducing the capture cap never deletes saved takes');
+  assert.equal(new GestureLibrary().maxTakes, 3);
+});
 
 test('each shipped preset preserves its effective entry and hold radius', () => {
   const source = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');

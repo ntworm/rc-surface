@@ -886,6 +886,7 @@
       if (Number.isFinite(options.captureStabilityThreshold)) {
         this.gestures.captureStabilityThreshold = Math.max(0.01, Number(options.captureStabilityThreshold));
       }
+      if (Number.isFinite(options.maxTakes)) this.gestures.maxTakes = Math.min(6, Math.max(3, Math.floor(options.maxTakes)));
     }
 
     beginGestureLearn(name) {
@@ -1068,6 +1069,7 @@
         version: 2,
         confidence: this.confidence,
         gestureOptions: this.gestures ? {
+          maxTakes: this.gestures.maxTakes,
           threshold: this.gestures.threshold,
           ambiguityRatio: this.gestures.ambiguityRatio,
           minimumConfidence: this.gestures.minimumConfidence,

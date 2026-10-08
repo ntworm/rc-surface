@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { benchmark, readSession, extractTakes, selectTraining, makeArm, replay, measure, safe, presets } from './pose-benchmark.mjs';
+import { benchmark, readSession, extractTakes, selectTraining, makeArm, replay, measure, safe, presets, adapterEvaluate } from './pose-benchmark.mjs';
 
 function landmarks(bend = 0) {
   return Array.from({ length: 21 }, (_, i) => ({ x: .4 + (i % 4) * .05,
@@ -62,6 +62,17 @@ test('take extraction trims transitions, rejects unstable takes and keeps missin
   const unstable = readSession(original.records.map((record, i) => JSON.stringify({ ...record,
     landmarks: record.type === 'observed' ? landmarks(i % 2 ? .8 : 0) : null })).join('\n'), 'bad');
   assert.equal(extractTakes(unstable).excluded[0].reason, 'unstable');
+});
+
+test('native A2 exactly matches the P01 adapter across three and six take budgets', () => {
+  for (const budget of [3, 6]) {
+    const training = selectTraining(extractTakes(session('train', 6)).takes, budget).selected;
+    const library = makeArm('A2', training);
+    for (const record of session('test').records.filter(record => record.descriptor)) {
+      assert.deepEqual(JSON.parse(JSON.stringify(library.evaluate(record.descriptor))),
+        JSON.parse(JSON.stringify(adapterEvaluate(library, record.descriptor, null, 'A2'))));
+    }
+  }
 });
 
 test('metrics count exact entry, wrong class, false release, exit and unknown duration', () => {

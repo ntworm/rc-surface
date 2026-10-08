@@ -383,6 +383,7 @@
   class GestureLibrary {
     constructor(options = {}) {
       this.threshold = Math.max(0.01, options.threshold ?? 0.18);
+      this.maxTakes = Number.isFinite(options.maxTakes) ? Math.min(6, Math.max(3, Math.floor(options.maxTakes))) : 3;
       this.minimumConfidence = clamp(options.minimumConfidence ?? 0.45);
       this.captureStabilityThreshold = Math.max(0.01, options.captureStabilityThreshold ?? 0.08);
       this.holdMs = Math.max(0, options.holdMs ?? 160);
@@ -445,12 +446,13 @@
         this.thresholdFactors.delete(name);
         return;
       }
-      let worst = 0;
-      for (let i = 0; i < samples.length; i += 1) {
-        for (let j = i + 1; j < samples.length; j += 1) {
-          worst = Math.max(worst, weightedPoseDistance(samples[i], samples[j], weights));
-        }
-      }
+      // Leave one take out and use its second nearest neighbor. With three
+      // takes this is exactly the previous worst-pair radius, bit for bit.
+      const worst = Math.max(...samples.map((sample, index) => {
+        const distances = samples.filter((_, other) => other !== index)
+          .map(other => weightedPoseDistance(sample, other, weights)).sort((a, b) => a - b);
+        return distances[Math.min(1, distances.length - 1)];
+      }));
       // The calibrated radius only ever WIDENS. Three takes captured in the
       // same spot look almost identical, which would compute a radius tighter
       // than the default and make recognition stricter than before — the
@@ -493,9 +495,9 @@
         throw new Error('Hold the pose still until capture completes');
       }
       const samples = this.templates.get(name) || [];
-      if (samples.length >= 3) return samples.length;
+      if (samples.length >= this.maxTakes) return samples.length;
       samples.push(descriptor);
-      this.templates.set(name, samples.slice(0, 3));
+      this.templates.set(name, samples.slice(0, this.maxTakes));
 
       // Each take contributes one prototype and one within-take MAD. The
       // aggregate combines camera jitter inside a take with natural variation
@@ -520,13 +522,14 @@
 
     takeConsistency(name) {
       const samples = this.templates.get(name) || [];
-      if (samples.length !== 3) return null;
+      if (samples.length < 3) return null;
       const isolated = samples.map((sample, index) => ({ index,
-        isolation: Math.min(...samples.filter((_, other) => other !== index)
-          .map(other => poseDistance(sample, other))),
+        isolation: samples.filter((_, other) => other !== index)
+          .map(other => poseDistance(sample, other)).sort((a, b) => a - b)[samples.length === 3 ? 0 : 1],
       })).sort((a, b) => b.isolation - a.isolation)[0];
       const remaining = samples.filter((_, index) => index !== isolated.index);
-      const otherDistance = poseDistance(remaining[0], remaining[1]);
+      const otherDistance = Math.max(...remaining.map((sample, index) => remaining.filter((_, other) => other !== index)
+        .map(other => poseDistance(sample, other)).sort((a, b) => a - b)[Math.min(1, remaining.length - 2)]));
       const comparison = new GestureLibrary({ threshold: this.threshold });
       comparison.templates.set(name, remaining);
       comparison.takeSpreads.set(name, (this.takeSpreads.get(name) || [])
@@ -580,12 +583,13 @@
       if (!validDescriptor(descriptor)) return null;
       const scores = [];
       for (const [name, samples] of this.templates) {
-        if (samples.length !== 3) continue;
+        if (samples.length < 3) continue;
         const weights = this.weightsFor(name);
         // Each gesture is scored in its own weighting, so the comparison is
         // normalised by dividing through that gesture's own radius. Without
         // this a gesture with a wide radius would always look closest.
-        const raw = median(samples.map((sample) => weightedPoseDistance(descriptor, sample, weights)));
+        const raw = samples.map((sample) => weightedPoseDistance(descriptor, sample, weights))
+          .sort((a, b) => a - b)[1];
         scores.push({ name, score: raw, relative: raw / Math.max(0.0001, this.thresholdFor(name)),
           contradiction: contradictsLearnedFingers(descriptor, samples) });
       }
@@ -705,6 +709,7 @@
     toJSON() {
       return {
         version: 9,
+        maxTakes: this.maxTakes,
         // spread stays optional: a save written before it existed still loads
         // and simply falls back to the fixed landmark weights, so nothing has
         // to be relearned.
@@ -722,7 +727,7 @@
     }
 
     static fromJSON(data, options = {}) {
-      const library = new GestureLibrary(options);
+      const library = new GestureLibrary({ ...options, maxTakes: options.maxTakes ?? data?.maxTakes });
       if (Number(data?.version) !== 9) {
         library.incompatibleNames = (data?.templates || [])
           .map((template) => template?.name)
@@ -731,7 +736,8 @@
       }
       for (const template of data?.templates || []) {
         if (typeof template?.name !== 'string' || !Array.isArray(template.samples)) continue;
-        const samples = template.samples.slice(0, 3).filter(validDescriptor);
+        // maxTakes limits new captures, never silently truncates saved banks.
+        const samples = template.samples.slice(0, 6).filter(validDescriptor);
         if (!samples.length) continue;
         library.templates.set(template.name, samples);
         const takeSpreads = samples.map((_, index) => (
