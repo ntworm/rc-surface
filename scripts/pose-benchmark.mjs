@@ -131,7 +131,7 @@ export function adapterEvaluate(library, descriptor, targetName = null, arm = 'A
     const distances = samples.map(sample => safe.weightedPoseDistance(descriptor, sample, library.weightsFor(name)));
     const score = kth(distances);
     const limit = library.thresholdFor(name);
-    scores.push({ name, score, relative: score / Math.max(.0001, limit),
+    scores.push({ name, score, nearestTake: distances.indexOf(Math.min(...distances)), relative: score / Math.max(.0001, limit),
       confidence: clamp(1 - score / Math.max(.0001, limit * 1.5)),
       contradiction: safe.contradictsLearnedFingers(descriptor, samples) });
     for (const distance of distances) neighbors.push({ name, relative: distance / Math.max(.0001, limit) });
@@ -149,7 +149,8 @@ export function adapterEvaluate(library, descriptor, targetName = null, arm = 'A
     best = scores.find(score => score.name === ranked[0][0]);
     ambiguous = Boolean(ranked[1] && ranked[1][1] * library.ambiguityRatio >= ranked[0][1]);
   }
-  const candidates = scores.map(({ name, score, confidence }) => ({ name, score, confidence }));
+  const candidates = scores.map(({ name, score, confidence, nearestTake }) => ({ name, score, confidence,
+    nearestTake, kthDistance: score, entryRadius: (1 - library.minimumConfidence) * 1.5 * library.thresholdFor(name) }));
   return { name: best.name, score: best.score, confidence: best.confidence,
     accepted: !best.contradiction && best.score <= library.thresholdFor(best.name)
       && best.confidence >= library.minimumConfidence && !ambiguous,

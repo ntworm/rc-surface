@@ -2103,6 +2103,7 @@
       visionGestureTestSlot = null;
       gestureSlotCards.forEach((card) => {
         card.classList.remove('testing', 'recognized');
+        card.querySelector('.vision-slot-neighbor')?.classList.add('hidden');
         const button = card.querySelector('.vision-slot-test');
         button?.setAttribute('aria-pressed', 'false');
         button?.classList.remove('active');
@@ -2540,6 +2541,12 @@
             } else {
               status.textContent = T('vid.poseMatchAdjust', 'POSE MATCH {percent}% · adjust your hand', { percent });
             }
+          }
+          const neighbor = card?.querySelector('.vision-slot-neighbor');
+          if (neighbor && Number.isInteger(target.nearestTake) && target.entryRadius > 0) {
+            neighbor.textContent = T('vid.nearestTake', 'nearest: take {n} · {percent}% of radius',
+              { n: target.nearestTake + 1, percent: Math.round(target.kthDistance / target.entryRadius * 100) });
+            neighbor.classList.remove('hidden');
           }
         };
         visionProcessor.onGesture = (match) => {

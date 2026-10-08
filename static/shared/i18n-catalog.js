@@ -461,6 +461,7 @@
     // Pose-slot status line. {hint} is one of the vid.take.* strings.
     'vid.recaptureRequired': { en: 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again', 'pt-BR': 'RECAPTURA NECESSÁRIA · proporções da câmera corrigidas; capture a pose novamente' },
     'vid.takesPerPose': { en: 'Takes per pose', 'pt-BR': 'Tomadas por pose' },
+    'vid.nearestTake': { en: 'nearest: take {n} · {percent}% of radius', 'pt-BR': 'mais próxima: tomada {n} · {percent}% do raio' },
     'vid.takes': { en: 'TAKES', 'pt-BR': 'TOMADAS' },
     'vid.upToSix': { en: 'Up to 6', 'pt-BR': 'Até 6' },
     'vid.bankKept': { en: '{n} takes kept · capture limit {max}; delete extras only if you choose', 'pt-BR': '{n} tomadas mantidas · limite de captura {max}; apague extras só se quiser' },

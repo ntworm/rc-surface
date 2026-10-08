@@ -4847,3 +4847,6 @@ body.mapping-mode [data-name].selected-control {
 .vision-slot-consistency button { min-height: 44px; padding: 4px 8px; }
 
 #vision-pose-takes { min-width: 56px; }
+
+.vision-slot-neighbor { grid-column: 1 / -1; white-space: normal; font-size: 11px; line-height: 1.35; }
+.vision-slot-neighbor.hidden { display: none; }

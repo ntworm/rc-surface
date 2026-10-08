@@ -30,6 +30,11 @@ test('probe: labels observed and missing frames with camera geometry and recogni
   assert.equal(observed.recognitionState, vp.gestures.getRecognitionState());
   assert.equal(observed.entryRadius, (1 - vp.gestures.minimumConfidence) * 1.5 * vp.gestures.thresholdFor('Gesture 1'));
   assert.equal(observed.holdRadius, vp.gestures.releaseRatio * vp.gestures.thresholdFor('Gesture 1'));
+  assert.equal(observed.evaluation.candidates[0].nearestTake, 0);
+  assert.equal(observed.evaluation.candidates[0].kthDistance, observed.evaluation.score);
+  assert.equal(observed.evaluation.candidates[0].entryRadius, observed.entryRadius);
+  assert.equal(observed.nearestTake, observed.evaluation.candidates[0].nearestTake);
+  assert.equal(observed.kthDistance, observed.evaluation.candidates[0].kthDistance);
   probe.setLabel?.(null);
   vp.processMissing(33);
   const missing = probe.records[1];
@@ -280,7 +285,7 @@ test('probe: enforces maxFrames buffer cap and exports JSONL and CSV', () => {
   assert.equal(parsedFirst.type, 'observed');
 
   const csv = probe.exportCSV();
-  assert.ok(csv.startsWith('frameIndex,timestamp,elapsedMs,type,sawHand,preset,score,confidence,accepted,activeName,event,frameWidth,frameHeight,handedness,groundTruth,recognitionState,entryRadius,holdRadius\n'));
+  assert.ok(csv.startsWith('frameIndex,timestamp,elapsedMs,type,sawHand,preset,score,confidence,accepted,activeName,event,frameWidth,frameHeight,handedness,groundTruth,recognitionState,entryRadius,holdRadius,nearestTake,kthDistance\n'));
 
   probe.uninstall();
 });

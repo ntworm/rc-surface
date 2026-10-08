@@ -120,10 +120,11 @@ export function attachDriftProbe(processor, options = {}) {
   let handedness = null;
   let lastBestName = null;
 
-  function metadata() {
+  function metadata(evaluation = null) {
     const width = Number(processor.video?.videoWidth);
     const height = Number(processor.video?.videoHeight);
     const threshold = lastBestName ? processor.gestures?.thresholdFor(lastBestName) : null;
+    const neighbor = evaluation?.target || evaluation?.candidates?.find(candidate => candidate.name === evaluation.name);
     return {
       frameWidth: Number.isFinite(width) && width > 0 ? width : null,
       frameHeight: Number.isFinite(height) && height > 0 ? height : null,
@@ -132,6 +133,8 @@ export function attachDriftProbe(processor, options = {}) {
       recognitionState: processor.gestures?.getRecognitionState?.() || 'unknown',
       entryRadius: threshold === null ? null : (1 - processor.gestures.minimumConfidence) * 1.5 * threshold,
       holdRadius: threshold === null ? null : processor.gestures.releaseRatio * threshold,
+      nearestTake: neighbor?.nearestTake ?? null,
+      kthDistance: neighbor?.kthDistance ?? null,
     };
   }
 
@@ -238,7 +241,7 @@ export function attachDriftProbe(processor, options = {}) {
       holdMs: processor.gestures?.holdMs ?? 200,
       releaseMs: processor.gestures?.releaseMs ?? 300,
       sessionConfig: { ...sessionConfig },
-      ...metadata(),
+      ...metadata(evaluation),
     };
 
     pushRecord(rec);
@@ -310,7 +313,7 @@ export function attachDriftProbe(processor, options = {}) {
       'accepted',
       'activeName',
       'event',
-      'frameWidth', 'frameHeight', 'handedness', 'groundTruth', 'recognitionState', 'entryRadius', 'holdRadius',
+      'frameWidth', 'frameHeight', 'handedness', 'groundTruth', 'recognitionState', 'entryRadius', 'holdRadius', 'nearestTake', 'kthDistance',
     ];
     const lines = [headers.join(',')];
     for (const r of records) {
@@ -327,7 +330,7 @@ export function attachDriftProbe(processor, options = {}) {
         r.activeName || '',
         r.match ? r.match.name : '',
         r.frameWidth, r.frameHeight, r.handedness ? JSON.stringify(r.handedness) : '',
-        r.groundTruth, r.recognitionState, r.entryRadius, r.holdRadius,
+        r.groundTruth, r.recognitionState, r.entryRadius, r.holdRadius, r.nearestTake, r.kthDistance,
       ];
       lines.push(row.map((value) => {
         const text = value === null || value === undefined ? '' : String(value);

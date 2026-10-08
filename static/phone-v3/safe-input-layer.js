@@ -588,9 +588,10 @@
         // Each gesture is scored in its own weighting, so the comparison is
         // normalised by dividing through that gesture's own radius. Without
         // this a gesture with a wide radius would always look closest.
-        const raw = samples.map((sample) => weightedPoseDistance(descriptor, sample, weights))
-          .sort((a, b) => a - b)[1];
-        scores.push({ name, score: raw, relative: raw / Math.max(0.0001, this.thresholdFor(name)),
+        const distances = samples.map((sample, index) => ({ index, score: weightedPoseDistance(descriptor, sample, weights) }))
+          .sort((a, b) => a.score - b.score);
+        const raw = distances[1].score;
+        scores.push({ name, score: raw, nearestTake: distances[0].index, relative: raw / Math.max(0.0001, this.thresholdFor(name)),
           contradiction: contradictsLearnedFingers(descriptor, samples) });
       }
       scores.sort((a, b) => Number(a.contradiction) - Number(b.contradiction) || a.relative - b.relative);
@@ -605,10 +606,13 @@
       // Confidence is the tighter gate for every shipped preset (>= 1/3);
       // HOLD instead uses releaseRatio * limit in the recognition FSM.
       const accepted = !best.contradiction && best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
-      const candidates = scores.map(({ name, score }) => ({
+      const candidates = scores.map(({ name, score, nearestTake }) => ({
         name,
         score,
         confidence: clamp(1 - score / Math.max(0.0001, this.thresholdFor(name) * 1.5)),
+        nearestTake,
+        kthDistance: score,
+        entryRadius: (1 - this.minimumConfidence) * 1.5 * this.thresholdFor(name),
       }));
       return {
         name: best.name,

@@ -2209,6 +2209,14 @@ test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores O
   assert.equal(mockElements['vision-camera-state-title'].textContent, currentTitle, 'old error cannot overwrite current tracking state');
 });
 
+test('actual TEST display shows nearest take and fraction of its entry radius', async () => {
+  const { card, frame } = await learnedApp();
+  card.querySelector('.vision-slot-test').onclick();
+  frame(0);
+  assert.match(card.querySelector('.vision-slot-neighbor').textContent, /nearest: take 1 · 0% of radius/);
+  assert.equal(card.querySelector('.vision-slot-neighbor').classList.contains('hidden'), false);
+});
+
 test('actual app persists six-take selection, enables TEST at three, and retains six when reduced to three', async () => {
   const { processor, card, windowContext: context, mockElements } = await learnedApp();
   const select = mockElements['vision-pose-takes'];

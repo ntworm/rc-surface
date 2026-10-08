@@ -141,6 +141,18 @@ test('optional bank retains six takes, scores its second neighbor and calibrates
   assert.equal(new GestureLibrary().maxTakes, 3);
 });
 
+test('candidate diagnostics identify the nearest take, second distance and effective entry radius', () => {
+  const { GestureLibrary, weightedPoseDistance } = load();
+  const library = new GestureLibrary({ threshold: .16, minimumConfidence: .52 });
+  for (const offset of [0, .02, .04]) library.learn('Pose', Array.from({ length: 8 }, () => Array(42).fill(offset)));
+  const query = Array(42).fill(.039);
+  const target = library.evaluate(query, 'Pose').target;
+  const distances = library.templates.get('Pose').map(sample => weightedPoseDistance(query, sample, library.weightsFor('Pose')));
+  assert.equal(target.nearestTake, 2);
+  assert.equal(target.kthDistance, distances.sort((a, b) => a - b)[1]);
+  assert.equal(target.entryRadius, (1 - .52) * 1.5 * library.thresholdFor('Pose'));
+});
+
 test('each shipped preset preserves its effective entry and hold radius', () => {
   const source = fs.readFileSync(path.join(import.meta.dirname, 'app.js'), 'utf8');
   const presets = vm.runInNewContext(`(${source.match(/const GESTURE_PRESETS = (\{[\s\S]*?\n    \});/)[1]})`);
