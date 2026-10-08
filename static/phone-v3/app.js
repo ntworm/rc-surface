@@ -1929,6 +1929,8 @@
       return kind ? 'POSE' : '';
     };
 
+    const dismissedPoseWarnings = new Set();
+    const poseWarnings = new Map();
     const renderVisionControlState = () => {
       detectorButtons.forEach((button) => {
         const enabled = visionControls.detectorEnabled(button.dataset.visionGesture);
@@ -1947,6 +1949,15 @@
         const samples = samplesForGesture(slot?.name || '');
         const kind = gestureKindFor(slot?.name || '');
         const kindPrefix = kind ? `${kind} · ` : '';
+        const library = visionProcessor?.gestures || window.SafeInputLayer?.GestureLibrary?.fromJSON?.(
+          visionSafetyConfig.gestures, visionSafetyConfig.gestureOptions);
+        const warning = dismissedPoseWarnings.has(slot?.name) ? null : library?.takeConsistency?.(slot?.name);
+        poseWarnings.set(slot?.name, warning);
+        const warningBox = card.querySelector('.vision-slot-consistency');
+        warningBox?.classList.toggle('hidden', !warning);
+        const warningMessage = warningBox?.querySelector('.vision-consistency-message');
+        if (warningMessage && warning) warningMessage.textContent = T('vid.takeOutlier',
+          'Take {n} differs from the others', { n: warning.index + 1 });
         if (countLabel) countLabel.textContent = `${samples} / 3`;
         if (learnButton) learnButton.disabled = samples >= 3;
         if (testButton) testButton.disabled = samples !== 3;
@@ -2076,13 +2087,14 @@
       renderVisionControlState();
     };
 
-    const removeStoredTake = (name) => {
+    const removeStoredTake = (name, index = samplesForGesture(name) - 1) => {
       if (!name) return 0;
-      if (visionProcessor) return visionProcessor.removeLastGestureTake(name);
+      dismissedPoseWarnings.delete(name);
+      if (visionProcessor) return visionProcessor.gestures?.removeTake(name, index) || 0;
       const template = visionSafetyConfig.gestures?.templates?.find((entry) => entry.name === name);
       if (!template?.samples?.length) return 0;
-      template.samples.pop();
-      template.takeSpreads?.pop();
+      template.samples.splice(index, 1);
+      template.takeSpreads?.splice(index, 1);
       // `spread` aggregates every retained take, so it cannot survive a
       // removal. Round-trip through the same library used by the live camera
       // to rebuild it from the remaining prototypes and per-take statistics.
@@ -2117,6 +2129,7 @@
       let failure = '';
       try {
         samples = visionProcessor?.finishGestureLearn?.() || samples;
+        dismissedPoseWarnings.delete(slot?.name);
         if (samples > 0) incompatibleGestureNames.delete(slot?.name);
       } catch (error) {
         samples = samplesForGesture(slot?.name);
@@ -2213,6 +2226,22 @@
         const samples = removeStoredTake(slot.name);
         if (status) status.textContent = T('vid.recordReplacement', '{n}/3 saved · record one replacement', { n: samples });
         persistVisionSafety();
+        renderVisionControlState();
+      });
+
+      card.querySelector('.vision-consistency-retake')?.addEventListener('click', () => {
+        const slot = visionControls.slots[slotId - 1];
+        const warning = poseWarnings.get(slot?.name);
+        if (!warning) return;
+        stopGestureTest();
+        removeStoredTake(slot.name, warning.index);
+        persistVisionSafety();
+        renderVisionControlState();
+      });
+      card.querySelector('.vision-consistency-keep')?.addEventListener('click', () => {
+        const name = visionControls.slots[slotId - 1]?.name;
+        if (!name) return;
+        dismissedPoseWarnings.add(name);
         renderVisionControlState();
       });
 

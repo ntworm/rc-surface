@@ -338,7 +338,9 @@ test('gesture destructive actions explain last-take versus all-takes behavior', 
   // that made performers clear a whole slot by accident.
   assert.equal((html.match(/>DEL LAST</g) || []).length, 3);
   assert.equal((html.match(/>CLR</g) || []).length, 3);
-  assert.doesNotMatch(html, />RETAKE<|>DELETE</);
+  assert.doesNotMatch(html, /class="vision-slot-(?:retake|delete)"[^>]*>(?:RETAKE|DELETE)</);
+  assert.equal((html.match(/class="vision-consistency-retake"/g) || []).length, 3,
+    'indexed RETAKE is contextual to the outlier warning, separate from DEL LAST');
 });
 
 test('legacy gesture outlier repair is reflected in slot counts before camera start', () => {

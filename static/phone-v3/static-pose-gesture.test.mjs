@@ -325,6 +325,37 @@ test('rejects an unstable capture instead of learning hand movement as a pose', 
   assert.throws(() => lib.learn('Gesture 1', [gun, open, gun, open, gun]), /hold the pose still/i);
 });
 
+for (const outlierIndex of [0, 2]) {
+  test(`take consistency finds a thumb outlier at index ${outlierIndex} without changing the library`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const library = new GestureLibrary({ threshold: .16 });
+    for (let i = 0; i < 3; i++) library.learn('Rock', frames(normalizeHandPose(handPose({
+      thumb: i === outlierIndex ? 1 : .15, index: 1, middle: .2, ring: .2, pinky: 1,
+    }))));
+    const before = JSON.stringify(library.toJSON());
+    const warning = library.takeConsistency('Rock');
+    assert.equal(warning?.index, outlierIndex);
+    assert.ok(warning.widen >= 1.25);
+    assert.equal(JSON.stringify(library.toJSON()), before);
+    const retained = new GestureLibrary({ threshold: .16 });
+    for (let i = 0; i < 3; i++) if (i !== outlierIndex) retained.learn('Rock', frames(normalizeHandPose(handPose({
+      thumb: .15, index: 1, middle: .2, ring: .2, pinky: 1,
+    }))));
+    assert.equal(library.removeTake('Rock', outlierIndex), 2);
+    assert.equal(JSON.stringify(library.toJSON()), JSON.stringify(retained.toJSON()));
+    assert.equal(library.thresholdFor('Rock'), retained.thresholdFor('Rock'));
+  });
+}
+
+test('natural curl variation and a looser take do not raise an outlier warning', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  for (const curls of [[[.16, .18], [.20, .20], [.26, .24]], [[.20, .20], [.26, .24], [.42, .36]]]) {
+    const library = new GestureLibrary({ threshold: .16 });
+    for (const [middle, ring] of curls) library.learn('Rock', frames(normalizeHandPose(handPose({ thumb: 1, middle, ring, pinky: 1 }))));
+    assert.equal(library.takeConsistency('Rock'), null);
+  }
+});
+
 test('takes captured with variation accept the gesture repeated loosely, without accepting a different one', () => {
   const { GestureLibrary, normalizeHandPose } = load();
   // The rock: thumb, index and pinky out; middle and ring folded in. The two

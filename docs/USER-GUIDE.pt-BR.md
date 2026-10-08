@@ -1210,3 +1210,5 @@ o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
 
 As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
+
+Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada que destoa bastante das outras duas pode mostrar um aviso no card. **REFAZER** remove exatamente essa tomada, mesmo se foi capturada primeiro; grave a substituta. **MANTER** conserva todos os exemplos. O aviso é uma orientação; seus limites provisórios ainda precisam de validação com mão real.

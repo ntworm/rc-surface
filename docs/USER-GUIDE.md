@@ -1191,3 +1191,5 @@ For deeper setup issues (certificates, network, installation) see
 `docs/INSTALL.md` and `docs/FAQ.md`.
 
 Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
+
+Very different takes widen a pose’s tolerance. After three captures, a take that differs markedly from the other two may show an inline warning. **RETAKE** removes that exact take, even when it was captured first; record its replacement. **KEEP** retains every example. The warning is advisory and its provisional thresholds still need real-hand validation.

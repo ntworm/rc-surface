@@ -460,6 +460,9 @@
     },
     // Pose-slot status line. {hint} is one of the vid.take.* strings.
     'vid.recaptureRequired': { en: 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again', 'pt-BR': 'RECAPTURA NECESSÁRIA · proporções da câmera corrigidas; capture a pose novamente' },
+    'vid.takeOutlier': { en: 'Take {n} differs from the others', 'pt-BR': 'Tomada {n} destoa das outras' },
+    'vid.retakeOutlier': { en: 'RETAKE', 'pt-BR': 'REFAZER' },
+    'vid.keepOutlier': { en: 'KEEP', 'pt-BR': 'MANTER' },
     'vid.slotReady': { en: 'Ready · press TEST to validate', 'pt-BR': 'Pronta · toque em TESTE para validar' },
     'vid.slotPartial': { en: '{n}/3 saved · capture {left} more', 'pt-BR': '{n}/3 salvos · capture mais {left}' },
     'vid.holdStillRetry': { en: 'Hold the pose still and try again', 'pt-BR': 'Mantenha a pose parada e tente de novo' },

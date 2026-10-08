@@ -518,11 +518,36 @@
       return this.sampleCount(name) ? 'pose' : null;
     }
 
+    takeConsistency(name) {
+      const samples = this.templates.get(name) || [];
+      if (samples.length !== 3) return null;
+      const isolated = samples.map((sample, index) => ({ index,
+        isolation: Math.min(...samples.filter((_, other) => other !== index)
+          .map(other => poseDistance(sample, other))),
+      })).sort((a, b) => b.isolation - a.isolation)[0];
+      const remaining = samples.filter((_, index) => index !== isolated.index);
+      const otherDistance = poseDistance(remaining[0], remaining[1]);
+      const comparison = new GestureLibrary({ threshold: this.threshold });
+      comparison.templates.set(name, remaining);
+      comparison.takeSpreads.set(name, (this.takeSpreads.get(name) || [])
+        .filter((_, index) => index !== isolated.index));
+      comparison.rebuildSpread(name);
+      comparison.recalibrate(name);
+      const widen = this.thresholdFor(name) / comparison.thresholdFor(name);
+      return widen >= 1.25 && isolated.isolation > 0 && isolated.isolation >= 3 * otherDistance
+        ? { ...isolated, widen, otherDistance } : null;
+    }
+
     removeLast(name) {
+      return this.removeTake(name, this.sampleCount(name) - 1);
+    }
+
+    removeTake(name, index) {
       const samples = (this.templates.get(name) || []).slice();
-      samples.pop();
+      if (!Number.isInteger(index) || index < 0 || index >= samples.length) return samples.length;
+      samples.splice(index, 1);
       const takeSpreads = (this.takeSpreads.get(name) || []).slice();
-      takeSpreads.pop();
+      takeSpreads.splice(index, 1);
       if (samples.length) {
         this.templates.set(name, samples);
         this.takeSpreads.set(name, takeSpreads);

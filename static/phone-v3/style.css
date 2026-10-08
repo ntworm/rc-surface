@@ -4841,3 +4841,7 @@ body.mapping-mode [data-name].selected-control {
 }
 .map-clip-list-item .map-mini-btn,
 .map-clip-add { min-height: 44px; }
+
+.vision-slot-consistency { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
+.vision-slot-consistency.hidden { display: none; }
+.vision-slot-consistency button { min-height: 32px; padding: 4px 8px; }

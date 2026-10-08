@@ -2197,6 +2197,43 @@ test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores O
   assert.equal(mockElements['vision-camera-state-title'].textContent, currentTitle, 'old error cannot overwrite current tracking state');
 });
 
+test('actual capture UI warns inline, KEEP retains takes and RETAKE removes the indexed outlier', async () => {
+  const { processor, card, windowContext: context, HandsMock } = await learnedApp();
+  processor.gestures.delete('Gesture 1');
+  const fixture = fs.readFileSync(path.join(import.meta.dirname, 'static-pose-gesture.test.mjs'), 'utf8');
+  vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('), fixture.indexOf('function transform(')), context);
+  const pose = thumb => context.handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: 1 });
+  const descriptor = context.SafeInputLayer.normalizeHandPose(pose(.15), { aspect: 4 / 3 });
+  for (let i = 0; i < 2; i++) processor.gestures.learn('Gesture 1', Array.from({ length: 8 }, () => descriptor.slice()));
+  card.querySelector('.vision-slot-learn').onclick();
+  for (let i = 0; i < 13; i++) {
+    context.currentTime += 33;
+    HandsMock.instance.resultsCallback({ multiHandLandmarks: [pose(1)] });
+  }
+  const capture = context.scheduledTimeouts.find(timer => timer.delay === 900);
+  assert.ok(capture);
+  capture.cb();
+  const warning = card.querySelector('.vision-slot-consistency');
+  assert.equal(warning.classList.contains('hidden'), false);
+  assert.match(warning.querySelector('.vision-consistency-message').textContent, /Take 3/);
+  const before = JSON.stringify(processor.gestures.toJSON());
+  card.querySelector('.vision-consistency-keep').onclick();
+  assert.equal(JSON.stringify(processor.gestures.toJSON()), before);
+  assert.equal(warning.classList.contains('hidden'), true);
+  // A new capture invalidates KEEP; removing and recapturing the last take
+  // proves the indexed action persists through the actual capture lifecycle.
+  card.querySelector('.vision-slot-retake').onclick();
+  card.querySelector('.vision-slot-learn').onclick();
+  for (let i = 0; i < 13; i++) {
+    context.currentTime += 33;
+    HandsMock.instance.resultsCallback({ multiHandLandmarks: [pose(1)] });
+  }
+  context.scheduledTimeouts.filter(timer => timer.delay === 900).at(-1).cb();
+  card.querySelector('.vision-consistency-retake').onclick();
+  assert.equal(processor.gestures.sampleCount('Gesture 1'), 2);
+  assert.equal(warning.classList.contains('hidden'), true);
+});
+
 test('C19: successful TEST followed by absence emits neither LIVE ON nor phantom OFF', async () => {
   const { frame, missing, edges, card } = await learnedApp();
   card.querySelector('.vision-slot-test').onclick();
