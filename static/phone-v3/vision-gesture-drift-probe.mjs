@@ -166,7 +166,12 @@ export function attachDriftProbe(processor, options = {}) {
     lastTimestamp = effectiveTimestamp;
 
     const activeSafe = safe || (typeof globalThis !== 'undefined' ? globalThis.SafeInputLayer : null);
-    const descriptor = activeSafe?.normalizeHandPose?.(landmarks) || [];
+    const width = processor.video?.videoWidth;
+    const height = processor.video?.videoHeight;
+    const descriptor = typeof processor.poseDescriptor === 'function'
+      ? processor.poseDescriptor(landmarks)
+      : Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+        ? activeSafe?.normalizeHandPose?.(landmarks, { aspect: width / height }) || [] : [];
 
     // Read-only evaluate for diagnostics; does not advance hold/release timers
     const effectiveTarget = targetGesture || processor.gestureTestName;

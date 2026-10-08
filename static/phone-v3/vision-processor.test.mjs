@@ -117,6 +117,7 @@ test('VisionProcessor: lifecycle load, start, process, stop', async () => {
   assert.ok(VisionProcessor);
 
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
 
   // Set up mock elements
   const mockVideo = {};
@@ -204,6 +205,7 @@ test('VisionProcessor: lifecycle load, start, process, stop', async () => {
 test('VisionProcessor: a failed camera start cleans up and a retry really reacquires it', async () => {
   const { VisionProcessor, CameraMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const cameraError = Object.assign(new Error('Could not start video source'), { name: 'NotReadableError' });
   CameraMock.startCalls = 0;
   CameraMock.failNext = cameraError;
@@ -355,6 +357,7 @@ test('VisionProcessor uses the managed camera lifecycle when getUserMedia is ava
     pause: () => {},
   };
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
 
   await vp.start(video, { getContext: () => null });
   assert.equal(video.srcObject, stream);
@@ -381,6 +384,7 @@ test('VisionProcessor requests the native camera before first-load MediaPipe dep
   windowContext.cancelAnimationFrame = () => {};
   const video = { srcObject: null, play: async () => {}, pause: () => {} };
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
 
   const starting = vp.start(video, { getContext: () => null });
   assert.equal(acquisitions, 1, 'camera acquisition must begin in the original user activation');
@@ -391,6 +395,7 @@ test('VisionProcessor requests the native camera before first-load MediaPipe dep
 test('VisionProcessor: ambient color detection processes canvas frames and calculates average RGB', async () => {
   const { VisionProcessor, HandsMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
 
   const mockVideo = {};
   let overlayReads = 0;
@@ -1054,6 +1059,7 @@ test('phone pinch works across hand sizes and handedness through the live proces
   for (const scale of [1, 0.48, 0.24]) {
     for (const mirrored of [false, true]) {
       const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
       let landmarks = makeRelaxedPhonePinch().map((point) => ({
         x: 0.5 + (point.x - 0.5) * scale,
         y: 0.8 + (point.y - 0.8) * scale,
@@ -1107,6 +1113,7 @@ test('phone pinch rejects a straight index even with known positive palm facing'
 test('phone pinch cannot engage from one valid frame followed by rejected poses', () => {
   const { VisionProcessor, windowContext } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const landmarks = makeRelaxedPhonePinch();
   const process = () => vp.processHandData(
     windowContext.computeHandData(landmarks, HAND_LABEL_FOR_REAL_LEFT),
@@ -1122,6 +1129,7 @@ test('phone pinch cannot engage from one valid frame followed by rejected poses'
 test('phone pinch releases when the nearby fingertips separate', () => {
   const { VisionProcessor, windowContext } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const landmarks = makeRelaxedPhonePinch();
   const frame = () => vp.processHandData(
     windowContext.computeHandData(landmarks, HAND_LABEL_FOR_REAL_LEFT),
@@ -1454,6 +1462,7 @@ test('computeHandData: victory tilted +45° (pinky MCP up) shifts rotateVal to t
 test('processMissing: returns null, expires candidates after grace and preserves an active pose', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   vp.setGestureOptions({ threshold: 0.13, minimumConfidence: 0.55, holdMs: 0, releaseMs: 0 });
   vp.gestures.activeName = 'Gesture 1';
   vp.gestures.candidateName = 'Gesture 2';
@@ -1468,6 +1477,7 @@ test('processMissing: returns null, expires candidates after grace and preserves
 test('processResults: delivers a single hand reading', async () => {
   const { VisionProcessor, HandsMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const mockVideo = {};
   const mockCanvas = {
     width: 320, height: 240,
@@ -1497,6 +1507,7 @@ test('processResults: delivers a single hand reading', async () => {
 test('processResults: threads handedness into the raw facing gate', async () => {
   const { VisionProcessor, HandsMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const mockCanvas = {
     width: 320, height: 240,
     getContext: () => ({
@@ -1533,6 +1544,7 @@ test('processResults: threads handedness into the raw facing gate', async () => 
 test('processResults: empty multiHandLandmarks emits null (no active hands)', async () => {
   const { VisionProcessor, HandsMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const mockVideo = {};
   const mockCanvas = {
     width: 320, height: 240,
@@ -1559,6 +1571,7 @@ test('processResults: empty multiHandLandmarks emits null (no active hands)', as
 test('processResults: hand detection is delivered even when canvas rendering is unavailable', async () => {
   const { VisionProcessor, HandsMock } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const mockVideo = {};
   const mockCanvas = {
     width: 320,
@@ -1583,6 +1596,7 @@ test('processResults: hand detection is delivered even when canvas rendering is 
 test('VisionProcessor: ambient color sampling is throttled without throttling hand frames', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   let colorUpdates = 0;
   let handUpdates = 0;
   vp.active = true;
@@ -1623,6 +1637,7 @@ test('VisionProcessor: a touch device shows the live video and draws no hand', a
   const { VisionProcessor, windowContext, HandsMock, CameraMock } = loadVisionProcessor();
   windowContext.matchMedia = (query) => ({ matches: query === '(pointer: coarse)' });
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   assert.equal(vp.drawHands, false);
   const { canvas, drawn, arcs } = drawingCanvas();
   let handData = null;
@@ -1647,6 +1662,7 @@ test('VisionProcessor: a computer draws the analysed frame and its hand together
   const { VisionProcessor, windowContext, HandsMock } = loadVisionProcessor();
   windowContext.matchMedia = () => ({ matches: false });
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   assert.equal(vp.drawHands, true);
   const { canvas, drawn, arcs } = drawingCanvas();
   await vp.start({ readyState: 4 }, canvas);
@@ -1669,6 +1685,7 @@ test('VisionProcessor: a computer draws the analysed frame and its hand together
 test('VisionProcessor: gesture persistence and confidence control are exposed', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   // setGestureOptions still works (gestures are unchanged).
   vp.setGestureOptions({ threshold: 0.12, ambiguityRatio: 1.4, releaseRatio: 1.25, unknownGraceMs: 90 });
   assert.equal(vp.exportSafetyConfig().gestureOptions.threshold, 0.12);
@@ -1769,6 +1786,7 @@ test('PinchClutch: contacting fist analog never engages the clutch', () => {
   const { windowContext, VisionProcessor } = loadVisionProcessor();
   const fist = windowContext.computeHandData(makeContactingFist());
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   let state = vp.processHandData(fist);
   for (let frame = 1; frame < 8; frame += 1) state = vp.processHandData(fist);
   assert.equal(fist.fist, true, 'fixture must remain a fist');
@@ -1803,6 +1821,7 @@ test('PinchClutch: losing the hand mid-pinch unlatches the gate, so a half-close
 test('VisionProcessor: the clutch follows analog pinch contact through its hysteresis band', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const frame = (pinchVal, x) => vp.processHandData({
     pinch: false,
     pinchVal,
@@ -1827,6 +1846,7 @@ test('VisionProcessor: the clutch follows analog pinch contact through its hyste
 test('VisionProcessor: processMissing returns null when no tracker is active (spatial tracking retired)', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   // No tracker means no inertial prediction: the hand simply vanishes.
   // Discrete gesture flags must always be cleared so a stale reading
   // can never linger in the wire payload after the hand drops.
@@ -1836,9 +1856,29 @@ test('VisionProcessor: processMissing returns null when no tracker is active (sp
   assert.equal(vp.processMissing(300), null);
 });
 
+test('pose capture and recognition fail closed without valid frame dimensions; direct controls stay live', () => {
+  const { VisionProcessor } = loadVisionProcessor();
+  const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
+  vp.video = { videoWidth: 0, videoHeight: 240 };
+  vp.beginGestureLearn('Open');
+  for (let i = 0; i < 13; i++) {
+    const output = vp.processHandData({ x: .4, y: .5, z: .6 }, i * 33, makeOpenHand());
+    assert.equal(output.x, .4);
+  }
+  assert.equal(vp.gestureLearnPreparationFrames.length, 0);
+  assert.equal(vp.gestureLearnFrames.length, 0);
+  vp.gestureLearnName = null;
+  let evaluated = 0;
+  vp.gestures.evaluate = () => { evaluated++; return null; };
+  vp.processHandData({ x: .4 }, 1000, makeOpenHand());
+  assert.equal(evaluated, 0);
+});
+
 test('VisionProcessor learns and recognizes only stable static landmark poses', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   vp.setGestureOptions({ threshold: 0.13, minimumConfidence: 0.55, holdMs: 200, releaseMs: 150 });
   const landmarks = [
     [0, 0], [-0.3, 0.1], [-0.45, 0.25], [-0.55, 0.45], [-0.65, 0.7],
@@ -1875,6 +1915,7 @@ test('VisionProcessor learns and recognizes only stable static landmark poses', 
 test('gesture capture waits for a stable preparation window and excludes transition frames', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const raw = { x: 0.5, y: 0.5, z: 0.4, confidence: 1 };
   const open = makeOpenHand();
   const curled = makeHand(['middle', 'ring']);
@@ -1972,6 +2013,7 @@ test('vision: steady frame counters update without repainting an unchanged camer
   let now = 0;
   windowContext.performance = { now: () => now };
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const seen = [];
   vp.onVisionStatus = (status) => seen.push({ ...status });
 
@@ -2103,9 +2145,10 @@ async function learnedApp() {
   mockElements['chk-vision-enable'].checked = true;
   await mockElements['chk-vision-enable'].onchange();
   const processor = context.currentVisionProcessor;
+  processor.video.videoWidth = 320; processor.video.videoHeight = 240;
   processor.setGestureOptions({ holdMs: 120 });
   const landmarks = makeOpenHand();
-  const descriptor = context.SafeInputLayer.normalizeHandPose(landmarks);
+  const descriptor = context.SafeInputLayer.normalizeHandPose(landmarks, { aspect: 4 / 3 });
   for (let take = 0; take < 3; take++) processor.gestures.learn('Gesture 1', Array.from({ length: 8 }, () => descriptor.slice()));
   const baseTime = context.currentTime;
   const frame = time => {
@@ -2337,6 +2380,7 @@ test('computeHandData: measured phone calibration clears the index gate and span
 test('VisionProcessor: um piscar do gate de pose nao solta o clutch com os dedos encostados', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const frame = (pinchSignal, x) => vp.processHandData({
     pinch: false, pinchVal: 0.9, pinchSignal, x, y: 0.5, z: 0.5,
   });
@@ -2371,6 +2415,7 @@ test('VisionProcessor: um piscar do gate de pose nao solta o clutch com os dedos
 test('VisionProcessor: pose reprovada por tempo demais solta o clutch mesmo com contato', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const frame = (pinchSignal) => vp.processHandData({
     pinch: false, pinchVal: 0.9, pinchSignal, x: 0.5, y: 0.5, z: 0.5,
   });
@@ -2390,6 +2435,7 @@ test('VisionProcessor: pose reprovada por tempo demais solta o clutch mesmo com 
 test('VisionProcessor: stop limpa o sinal guardado da tolerancia de pose', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const frame = (pinchSignal) => vp.processHandData({
     pinch: false, pinchVal: 0.9, pinchSignal, x: 0.5, y: 0.5, z: 0.5,
   });
@@ -2407,6 +2453,7 @@ test('VisionProcessor: stop limpa o sinal guardado da tolerancia de pose', () =>
 test('VisionProcessor: ausencia longa limpa o sinal guardado da tolerancia de pose', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const frame = (pinchSignal) => vp.processHandData({
     pinch: false, pinchVal: 0.9, pinchSignal, x: 0.5, y: 0.5, z: 0.5,
   });
@@ -2424,6 +2471,7 @@ test('VisionProcessor: ausencia longa limpa o sinal guardado da tolerancia de po
 test('VisionProcessor: onGestureProgress includes recognitionState and safetyConfig roundtrips Performance preset', () => {
   const { VisionProcessor, windowContext } = loadVisionProcessor();
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const { normalizeHandPose, GestureLibrary } = windowContext.SafeInputLayer;
 
   function handPose({ thumb = 0.5, index = 1, middle = 1, ring = 1, pinky = 1 } = {}) {
@@ -2541,6 +2589,7 @@ test('VisionProcessor: hand tracking runs in the worker and results reach the pa
   const { FakeWorker, bitmaps } = installFakeWorker(windowContext);
   HandsMock.instance = null;
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const video = { videoWidth: 320, videoHeight: 240 };
   let handData = null;
   vp.onHandUpdate = (data) => { handData = data; };
@@ -2578,6 +2627,7 @@ test('VisionProcessor: a worker that cannot start falls back to tracking on the 
   const { VisionProcessor, windowContext, HandsMock } = loadVisionProcessor();
   const { FakeWorker } = installFakeWorker(windowContext, { initReply: 'error' });
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   const originalWarn = console.warn;
   console.warn = () => {};
   try {
@@ -2597,6 +2647,7 @@ test('VisionProcessor: a worker that dies mid-session hands tracking back to the
   const { FakeWorker } = installFakeWorker(windowContext, { frameReply: 'error' });
   HandsMock.instance = null;
   const vp = new VisionProcessor();
+  vp.video = { videoWidth: 320, videoHeight: 240 };
   await vp.start({}, { getContext: () => null });
   assert.equal(vp.visionStatus.inference, 'worker');
 

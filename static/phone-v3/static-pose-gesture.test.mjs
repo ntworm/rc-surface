@@ -87,6 +87,47 @@ function frames(descriptor, count = 8, jitter = 0.002) {
 const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
   holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
 
+for (const aspect of [4 / 3, 3 / 4]) {
+  for (const degrees of [0, 30, 45]) {
+    test(`pixel geometry is invariant at aspect ${aspect} and rotation ${degrees}`, () => {
+      const { normalizeHandPose, poseDistance } = load();
+      const physical = handPose({ thumb: 1, ring: .2, pinky: .2 });
+      const reference = normalizeHandPose(physical);
+      const image = transform2D(physical, { radians: degrees * Math.PI / 180 })
+        .map(point => ({ ...point, x: point.x / aspect }));
+      assert.ok(poseDistance(reference, normalizeHandPose(image, { aspect })) < 1e-9);
+    });
+  }
+}
+
+test('version8 descriptors require recapture; version9 retains calibration on roundtrip', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const library = new GestureLibrary();
+  const descriptor = normalizeHandPose(handPose());
+  for (let i = 0; i < 3; i++) library.learn('Open', frames(descriptor));
+  const saved = JSON.parse(JSON.stringify(library.toJSON()));
+  const old = GestureLibrary.fromJSON({ ...saved, version: 8 });
+  assert.equal(old.sampleCount('Open'), 0);
+  assert.deepEqual(Array.from(old.getIncompatibleNames()), ['Open']);
+  assert.equal(saved.version, 9);
+  const restored = GestureLibrary.fromJSON(saved);
+  assert.equal(JSON.stringify(restored.toJSON()), JSON.stringify(saved));
+  assert.equal(restored.thresholdFor('Open'), library.thresholdFor('Open'));
+});
+
+test('aspect correction leaves direct computeHandData controls unchanged', () => {
+  const context = { performance: { now: () => 0 } };
+  context.window = context; context.globalThis = context;
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'vision-processor.js'), 'utf8'), context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.computeHandData(handPose({ thumb: 1, ring: .2, pinky: .2 })))), {
+    x: .493, y: .287, z: .893, palmSize: .2807, facing: -.64, handedness: null,
+    handReal: null, palmPoseOk: true, indexCurved: false, otherFingersExtended: false,
+    thumb: 1, index: 1, middle: 1, ring: .149, pinky: .208, fist: false,
+    pinch: false, pinchVal: 0, pinchSignal: 0, victory: true, open: false,
+    rotateVal: .5, fingers: .6,
+  });
+});
+
 for (const curl of [.2, .55]) {
   test(`a fifth open finger vetoes four-finger acceptance and HOLD (learned curl ${curl})`, () => {
     const { GestureLibrary, normalizeHandPose } = load();
@@ -264,7 +305,7 @@ test('uses the median of three pose examples and persists only the static format
   assert.equal(lib.evaluate(gun).accepted, true);
 
   const saved = lib.toJSON();
-  assert.equal(saved.version, 8);
+  assert.equal(saved.version, 9);
   assert.equal(saved.templates[0].kind, 'pose');
   const restored = GestureLibrary.fromJSON(saved, { threshold: 0.13, minimumConfidence: 0.55, holdMs: 0 });
   assert.equal(restored.evaluate(gun).accepted, true);
@@ -340,7 +381,7 @@ test('the learned spread survives a save and reload, and an older save still loa
   lib.learn('Rock', frames(rock(0.26, 0.24)));
 
   const saved = lib.toJSON();
-  assert.equal(saved.version, 8, 'the format version does not move, so nothing needs relearning');
+  assert.equal(saved.version, 9, 'current camera-corrected format retains optional spread compatibility');
   assert.equal(saved.templates[0].spread.length, 47);
 
   const restored = GestureLibrary.fromJSON(saved, { threshold: 0.13, minimumConfidence: 0.45, holdMs: 0 });
@@ -350,7 +391,7 @@ test('the learned spread survives a save and reload, and an older save still loa
 
   // A save written before spread existed carries no such field and must still load.
   const older = GestureLibrary.fromJSON(
-    { version: 8, templates: [{ name: 'Rock', kind: 'pose', samples: saved.templates[0].samples }] },
+    { version: 9, templates: [{ name: 'Rock', kind: 'pose', samples: saved.templates[0].samples }] },
     { threshold: 0.13, minimumConfidence: 0.45, holdMs: 0 });
   assert.equal(older.sampleCount('Rock'), 3, 'a spreadless save still loads its samples');
 });
@@ -577,7 +618,7 @@ test('a save written before the articulation block still loads and still matches
   const legacySamples = [rock(0.10, 0.12), rock(0.16, 0.15), rock(0.24, 0.20)]
     .map((d) => d.slice(0, 42));
   const restored = GestureLibrary.fromJSON(
-    { version: 8, templates: [{ name: 'Rock', kind: 'pose', samples: legacySamples }] },
+    { version: 9, templates: [{ name: 'Rock', kind: 'pose', samples: legacySamples }] },
     { threshold: 0.13, minimumConfidence: 0.45, holdMs: 0 });
 
   assert.equal(restored.sampleCount('Rock'), 3, 'a 42-long save still loads');

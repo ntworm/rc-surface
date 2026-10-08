@@ -630,3 +630,8 @@ intermediate release records are intentionally not published.
   customization guide and user guide.
 - Removed an orphaned screenshot script that exposed a local filesystem path.
 - The distributable is `Ableton-RC-Surface-0.7.0.ablx`.
+
+### Unreleased — learned pose corrections
+
+- Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.
+- Preserve active poses during missing-hand tracking and apply pose Safe loss after its grace interval.

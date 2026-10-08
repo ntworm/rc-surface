@@ -40,12 +40,13 @@ test('actual vision pipeline switches three/four/five fingers OFF before ON and 
   const fixture = fs.readFileSync(path.join(root, 'static-pose-gesture.test.mjs'), 'utf8');
   vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('), fixture.indexOf('function transform(')), context);
   const processor = new context.VisionProcessor();
+  processor.video = { videoWidth: 320, videoHeight: 240 };
   Object.assign(processor.gestures, { threshold: .176, minimumConfidence: .52, holdMs: 120,
     releaseMs: 140, releaseRatio: 1.10, ambiguityRatio: 1.25 });
   const poses = [context.handPose({ thumb: 1, ring: .2, pinky: .2 }),
     context.handPose({ thumb: 1, pinky: .2 }), context.handPose({ thumb: 1 })];
   poses.forEach((pose, index) => {
-    const descriptor = context.SafeInputLayer.normalizeHandPose(pose);
+    const descriptor = context.SafeInputLayer.normalizeHandPose(pose, { aspect: 4 / 3 });
     for (let take = 0; take < 3; take++) processor.gestures.learn(`G${index + 1}`, Array.from({ length: 8 }, () => descriptor.slice()));
   });
   const edges = [];

@@ -147,10 +147,13 @@
   const SPREAD_FLOOR = 0.70;
   const SPREAD_CEILING = 1.45;
 
-  function normalizeHandPose(landmarks) {
+  function normalizeHandPose(landmarks, { aspect = 1 } = {}) {
     if (!Array.isArray(landmarks) || landmarks.length !== 21
       || landmarks.some((point) => !Number.isFinite(point?.x)
-        || !Number.isFinite(point?.y))) return [];
+        || !Number.isFinite(point?.y)) || !Number.isFinite(aspect) || aspect <= 0) return [];
+    // MediaPipe x/y are fractions of different frame axes. Correct into
+    // common pixel units before scale, rotation and articulation geometry.
+    landmarks = landmarks.map(point => ({ ...point, x: point.x * aspect }));
     const wrist = landmarks[0];
     // Robust scale: mean of wrist→MCP distances across the four fingers.
     // Less sensitive to perspective than (palmWidth + palmLength) / 2.
@@ -673,7 +676,7 @@
 
     toJSON() {
       return {
-        version: 8,
+        version: 9,
         // spread stays optional: a save written before it existed still loads
         // and simply falls back to the fixed landmark weights, so nothing has
         // to be relearned.
@@ -692,7 +695,7 @@
 
     static fromJSON(data, options = {}) {
       const library = new GestureLibrary(options);
-      if (Number(data?.version) !== 8) {
+      if (Number(data?.version) !== 9) {
         library.incompatibleNames = (data?.templates || [])
           .map((template) => template?.name)
           .filter((name) => typeof name === 'string');

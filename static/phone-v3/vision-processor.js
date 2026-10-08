@@ -950,6 +950,13 @@
       return this.gestures?.recognize(descriptor, timestamp, targetName) || null;
     }
 
+    poseDescriptor(landmarks) {
+      const width = this.video?.videoWidth;
+      const height = this.video?.videoHeight;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return [];
+      return global.SafeInputLayer?.normalizeHandPose?.(landmarks, { aspect: width / height }) || [];
+    }
+
     processHandData(rawData, timestamp = Date.now(), landmarks = null) {
       if (!rawData) return null;
       // No spatial tracker / calibrator: preserve the direct normalized
@@ -1006,7 +1013,7 @@
       Object.assign(output, this.pinchClutch.update(
         pinchSignal, output.x, output.y, output.z));
 
-      const descriptor = global.SafeInputLayer?.normalizeHandPose?.(landmarks) || [];
+      const descriptor = this.poseDescriptor(landmarks);
       if (this.gestureLearnName && descriptor.length) {
         if (!this.gestureLearnReady) {
           this.gestureLearnPreparationFrames.push(descriptor);
@@ -1070,7 +1077,7 @@
           releaseRatio: this.gestures.releaseRatio,
           unknownGraceMs: this.gestures.unknownGraceMs,
         } : {},
-        gestures: this.gestures?.toJSON() || { version: 8, templates: [] },
+        gestures: this.gestures?.toJSON() || { version: 9, templates: [] },
       };
     }
 

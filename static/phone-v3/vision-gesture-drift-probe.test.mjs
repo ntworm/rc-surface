@@ -117,6 +117,7 @@ function createLandmarks({ thumb = 0.5, index = 1, middle = 1, ring = 1, pinky =
 }
 
 function setupLearnedGesture(processor, name = 'Gesture 1') {
+  processor.video = { videoWidth: 320, videoHeight: 240 };
   const pose = createLandmarks({ thumb: 0.1, index: 1, middle: 0.1, ring: 0.1, pinky: 0.1 });
   for (let take = 0; take < 3; take++) {
     processor.beginGestureLearn(name);

@@ -1892,7 +1892,7 @@
     visionSafetyConfig = visionSafetyConfig || {
       version: 2,
       confidence: 'medium',
-      gestures: { version: 8, templates: [] },
+      gestures: { version: 9, templates: [] },
       gestureOptions: {},
       gesturePreset: 'balanced',
       visionControls: {},
@@ -1901,7 +1901,7 @@
     const migrateGestureConfig = (gestures, options = {}) => {
       const library = window.SafeInputLayer?.GestureLibrary?.fromJSON?.(gestures, options);
       incompatibleGestureNames = new Set(library?.getIncompatibleNames?.() || []);
-      return library?.toJSON?.() || gestures || { version: 8, templates: [] };
+      return library?.toJSON?.() || gestures || { version: 9, templates: [] };
     };
     visionSafetyConfig.gestures = migrateGestureConfig(visionSafetyConfig.gestures, visionSafetyConfig.gestureOptions);
     const normalizeGestureTemplates = window.normalizeVisionGestureTemplates || ((templates) => templates || []);
@@ -1954,7 +1954,7 @@
         if (deleteButton) deleteButton.disabled = samples === 0;
         if (status && !card.classList.contains('recording') && !card.classList.contains('testing')) {
           status.textContent = samples === 0 && incompatibleGestureNames.has(slot?.name)
-            ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · saved pose used the retired format')
+            ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again')
             : samples === 0 ? T('vid.emptyCapture', 'Empty · capture 3 examples')
             : samples === 3 ? kindPrefix + T('vid.slotReady', 'Ready · press TEST to validate')
               : kindPrefix + T('vid.slotPartial', '{n}/3 saved · capture {left} more', { n: samples, left: 3 - samples });

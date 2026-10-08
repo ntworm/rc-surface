@@ -448,9 +448,10 @@ function visionEntry(control) {
   const fixture = fs.readFileSync(join(phone, 'static-pose-gesture.test.mjs'), 'utf8');
   vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('), fixture.indexOf('function transform(')), context);
   const processor = new context.VisionProcessor();
+  processor.video = { videoWidth: 320, videoHeight: 240 };
   processor.setGestureOptions({ holdMs: 120 });
   const pose = context.handPose({ thumb: 1, ring: .2, pinky: .2 });
-  const descriptor = context.SafeInputLayer.normalizeHandPose(pose);
+  const descriptor = context.SafeInputLayer.normalizeHandPose(pose, { aspect: 4 / 3 });
   for (let take = 0; take < 3; take++) processor.gestures.learn('G1', Array.from({ length: 8 }, () => descriptor.slice()));
   let queue = Promise.resolve();
   processor.onGesture = () => { queue = queue.then(() => gesture(control, 1)); };

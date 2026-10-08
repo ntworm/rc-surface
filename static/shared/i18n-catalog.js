@@ -459,7 +459,7 @@
       'pt-BR': 'Vazio · capture 3 exemplos',
     },
     // Pose-slot status line. {hint} is one of the vid.take.* strings.
-    'vid.recaptureRequired': { en: 'RECAPTURE REQUIRED · saved pose used the retired format', 'pt-BR': 'RECAPTURA NECESSÁRIA · a pose salva usa o formato antigo' },
+    'vid.recaptureRequired': { en: 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again', 'pt-BR': 'RECAPTURA NECESSÁRIA · proporções da câmera corrigidas; capture a pose novamente' },
     'vid.slotReady': { en: 'Ready · press TEST to validate', 'pt-BR': 'Pronta · toque em TESTE para validar' },
     'vid.slotPartial': { en: '{n}/3 saved · capture {left} more', 'pt-BR': '{n}/3 salvos · capture mais {left}' },
     'vid.holdStillRetry': { en: 'Hold the pose still and try again', 'pt-BR': 'Mantenha a pose parada e tente de novo' },

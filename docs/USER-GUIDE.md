@@ -1189,3 +1189,5 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 For deeper setup issues (certificates, network, installation) see
 `docs/INSTALL.md` and `docs/FAQ.md`.
+
+Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
