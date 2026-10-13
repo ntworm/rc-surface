@@ -5,12 +5,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-test('capture cap selector defaults to three and offers up to six', () => {
+test('learned poses expose six captures directly without a Takes selector', () => {
   const html = fs.readFileSync(path.join(import.meta.dirname, 'index.html'), 'utf8');
-  const select = html.match(/<select id="vision-pose-takes">([\s\S]*?)<\/select>/)?.[1];
-  assert.ok(select);
-  assert.match(select, /value="3" selected/);
-  assert.match(select, /value="6"/);
+  assert.doesNotMatch(html, /vision-pose-takes|vid\.takesPerPose/);
+  assert.equal((html.match(/<strong>0 \/ 6<\/strong>/g) || []).length, 3);
 });
 
 test('learned gesture UI captures only static poses with a short automatic take', () => {

@@ -383,7 +383,7 @@
   class GestureLibrary {
     constructor(options = {}) {
       this.threshold = Math.max(0.01, options.threshold ?? 0.18);
-      this.maxTakes = Number.isFinite(options.maxTakes) ? Math.min(6, Math.max(3, Math.floor(options.maxTakes))) : 3;
+      this.maxTakes = Number.isFinite(options.maxTakes) ? Math.min(6, Math.max(3, Math.floor(options.maxTakes))) : 6;
       this.minimumConfidence = clamp(options.minimumConfidence ?? 0.45);
       this.captureStabilityThreshold = Math.max(0.01, options.captureStabilityThreshold ?? 0.08);
       this.holdMs = Math.max(0, options.holdMs ?? 160);

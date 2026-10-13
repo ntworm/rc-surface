@@ -10,7 +10,8 @@ intermediate release records are intentionally not published.
 
 - Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.
 - Preserve active poses during missing-hand tracking and apply pose Safe loss after its grace interval.
-- Add an optional six-take bank with second-neighbor scoring and leave-one-take-out calibration; the default remains three.
+- Every learned pose accepts up to six takes, with recognition starting at three. Show the count directly in each slot and remove the Takes selector; preserve existing captures when restoring older preferences.
+- Use second-neighbor scoring and leave-one-take-out calibration across the saved take bank.
 - Add indexed inconsistent-take warnings, nearest-take TEST diagnostics and an offline labeled-session benchmark.
 
 

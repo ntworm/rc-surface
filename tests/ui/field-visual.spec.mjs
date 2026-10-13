@@ -98,7 +98,7 @@ test('detector needles stay radial at every size after Follow is withheld', asyn
 
 test('desktop VID puts camera commands at the top and prioritizes useful preview area', async ({ page }) => {
   await page.locator('.tab[data-page="video"]').click();
-  await expect(page.locator('.vision-studio-head')).toContainText('3 exemplos cada · momentâneo 0 → 1');
+  await expect(page.locator('.vision-studio-head')).toContainText('3 para começar · até 6 · momentâneo 0 → 1');
   expect((await page.locator('.vision-studio-head').innerText()).match(/momentâneo/g)).toHaveLength(1);
   for (const viewport of [{ width: 1000, height: 650 }, { width: 1280, height: 960 },
     { width: 1440, height: 900 }, { width: 1920, height: 1200 }]) {

@@ -1765,7 +1765,6 @@
     };
     const confidenceSelect = document.getElementById('vision-confidence');
     const gesturePresetSelect = document.getElementById('vision-recognition-preset');
-    const poseTakesSelect = document.getElementById('vision-pose-takes');
     const cameraStage = document.querySelector('.vision-camera-stage');
     const cameraStateTitle = document.getElementById('vision-camera-state-title');
     const cameraStateDetail = document.getElementById('vision-camera-state-detail');
@@ -1856,11 +1855,11 @@
     const POSE_CAPTURE_MS = 900;
     const POSE_PREPARE_TIMEOUT_MS = 6000;
 
-    // The three takes are what the recogniser learns its tolerance from.
+    // Saved takes are what the recogniser learns its tolerance from.
     // The descriptor already removes position, uniform scale and planar wrist
     // rotation. Ask for differences it really retains: finger curl and palm
     // yaw/pitch. Those are the variations a performer will reproduce across
-    // rooms and camera angles, so the three takes teach a useful range.
+    // rooms and camera angles, so the takes teach a useful range.
     const POSE_TAKE_GUIDANCE = [
       ['vid.take.natural', 'make the gesture naturally'],
       ['vid.take.curl', 'repeat it with a looser or tighter curl'],
@@ -1907,6 +1906,7 @@
       incompatibleGestureNames = new Set(library?.getIncompatibleNames?.() || []);
       return library?.toJSON?.() || gestures || { version: 9, templates: [] };
     };
+    visionSafetyConfig.gestureOptions = { ...visionSafetyConfig.gestureOptions, maxTakes: 6 };
     visionSafetyConfig.gestures = migrateGestureConfig(visionSafetyConfig.gestures, visionSafetyConfig.gestureOptions);
     const normalizeGestureTemplates = window.normalizeVisionGestureTemplates || ((templates) => templates || []);
     visionSafetyConfig.gestures = {
@@ -1928,7 +1928,7 @@
     const samplesForGesture = (name) => {
       return Math.min(6, gestureTemplateFor(name)?.samples?.length || 0);
     };
-    const captureCap = () => visionProcessor?.gestures?.maxTakes || visionSafetyConfig?.gestureOptions?.maxTakes || 3;
+    const captureCap = () => 6;
     const gestureKindFor = (name) => {
       const kind = visionProcessor?.gestureKind?.(name) || gestureTemplateFor(name)?.kind || '';
       return kind ? 'POSE' : '';
@@ -1972,8 +1972,7 @@
         if (status && !card.classList.contains('recording') && !card.classList.contains('testing')) {
           status.textContent = samples === 0 && incompatibleGestureNames.has(slot?.name)
             ? T('vid.recaptureRequired', 'RECAPTURE REQUIRED · camera proportions were corrected; capture the pose again')
-            : samples > max ? T('vid.bankKept', '{n} takes kept · capture limit {max}; delete extras only if you choose', { n: samples, max })
-            : samples === 0 ? T('vid.emptyCapture', 'Empty · capture {max} examples', { max })
+            : samples === 0 ? T('vid.emptyCapture', 'Empty · capture at least {min} examples', { min: 3 })
             : samples >= 3 ? kindPrefix + T('vid.slotReady', 'Ready · press TEST to validate')
               : kindPrefix + T('vid.slotPartial', '{n}/{max} saved · capture {left} more', { n: samples, max, left: 3 - samples });
         }
@@ -2007,7 +2006,10 @@
 
     window.applyProjectClientState = (clientState) => {
       if (!clientState) return;
-      const restoredGestureOptions = clientState.preferences?.visionGestureOptions || visionSafetyConfig?.gestureOptions || {};
+      const restoredGestureOptions = {
+        ...(clientState.preferences?.visionGestureOptions || visionSafetyConfig?.gestureOptions || {}),
+        maxTakes: 6,
+      };
       const restoredGestures = migrateGestureConfig(
         clientState.gestures || visionSafetyConfig?.gestures || { version: 1, templates: [] },
         restoredGestureOptions,
@@ -2029,7 +2031,6 @@
         confidenceSelect.value = conf || 'medium';
       }
       if (gesturePresetSelect) gesturePresetSelect.value = visionSafetyConfig.gesturePreset;
-      if (poseTakesSelect) poseTakesSelect.value = String(visionSafetyConfig.gestureOptions.maxTakes || 3);
       visionProcessor?.importSafetyConfig(visionSafetyConfig);
       visionProcessor?.setGestureOptions(GESTURE_PRESETS[visionSafetyConfig.gesturePreset] || GESTURE_PRESETS.balanced);
       renderVisionControlState();
@@ -2050,20 +2051,6 @@
     if (gesturePresetSelect) {
       gesturePresetSelect.value = visionSafetyConfig.gesturePreset || 'balanced';
       gesturePresetSelect.addEventListener('change', updateGestureOptions);
-    }
-    if (poseTakesSelect) {
-      poseTakesSelect.value = String(captureCap());
-      poseTakesSelect.addEventListener('change', () => {
-        if (visionGestureLearnSlot !== null) {
-          poseTakesSelect.value = String(captureCap());
-          return showToast(T('vid.finishCaptureFirst', 'Finish Gesture {n} capture first', { n: visionGestureLearnSlot }), 'warning');
-        }
-        const maxTakes = poseTakesSelect.value === '6' ? 6 : 3;
-        visionProcessor?.setGestureOptions({ maxTakes });
-        visionSafetyConfig.gestureOptions = { ...visionSafetyConfig.gestureOptions, maxTakes };
-        persistVisionSafety();
-        renderVisionControlState();
-      });
     }
 
     if (confidenceSelect) {
@@ -2179,6 +2166,7 @@
         else if (timedOut) status.textContent = T('vid.noStablePose', 'NO STABLE POSE FOUND · keep the whole hand visible and try again');
         else if (samples > 0) status.textContent = samples >= captureCap()
           ? T('vid.poseComplete', 'POSE · {max}/{max} complete · press TEST', { max: captureCap() })
+          : samples >= 3 ? T('vid.poseReadyMore', 'POSE · {n}/{max} ready · TEST or capture more', { n: samples, max: captureCap() })
           : T('vid.poseNextTake', 'POSE · {n}/{max} saved · next take {hint}', { n: samples, hint: poseTakeHint(samples), max: captureCap() });
       }
     };

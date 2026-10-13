@@ -367,6 +367,34 @@ test.describe('RC Surface UI & E2E Suite', () => {
     await expect(stage).toHaveText('STAGE');
   });
 
+  test('VID uses six-capture slots without a Takes selector and restores legacy banks', async ({ page }) => {
+    await page.locator('.tabs .tab[data-page="video"]').evaluate((element) => element.click());
+    await expect(page.locator('#vision-pose-takes')).toHaveCount(0);
+    const counts = page.locator('.vision-gesture-slot header strong');
+    await expect(counts).toHaveText(['0 / 6', '0 / 6', '0 / 6']);
+    for (const [locale, caption] of [['en', '3 to start · up to 6'], ['pt-BR', '3 para começar · até 6']]) {
+      await page.evaluate(language => window.RcSurfaceI18n.setLocale(language), locale);
+      await expect(page.locator('[data-i18n="vid.examplesEach"]')).toHaveText(caption);
+    }
+    for (let count = 0; count <= 6; count++) {
+      await page.evaluate(n => window.applyProjectClientState({
+        gestures: { version: 9, maxTakes: 3, templates: [1, 2, 3].map(id => ({
+          name: `Gesture ${id}`, kind: 'pose', samples: Array.from({ length: n }, () => Array(42).fill(0)),
+        })) }, preferences: { visionGestureOptions: { maxTakes: 3 } },
+      }), count);
+      await expect(counts).toHaveText(Array(3).fill(`${count} / 6`));
+      for (const card of await page.locator('.vision-gesture-slot').all()) {
+        if (count < 3) await expect(card.locator('.vision-slot-test')).toBeDisabled();
+        else await expect(card.locator('.vision-slot-test')).toBeEnabled();
+        if (count === 6) await expect(card.locator('.vision-slot-learn')).toBeDisabled();
+        else await expect(card.locator('.vision-slot-learn')).toBeEnabled();
+      }
+    }
+    await page.reload();
+    await expect(counts).toHaveText(['6 / 6', '6 / 6', '6 / 6']);
+    await expect(page.locator('#vision-pose-takes')).toHaveCount(0);
+  });
+
   test('VID camera controls remain usable at 568px landscape width', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 320 });
     await page.evaluate(() => window.RcSurfaceI18n.setLocale('pt-BR'));
@@ -382,7 +410,6 @@ test.describe('RC Surface UI & E2E Suite', () => {
         document.querySelector('.vision-camera-toggle'),
         document.getElementById('vision-confidence'),
         document.getElementById('vision-recognition-preset'),
-        document.getElementById('vision-pose-takes'),
       ].map((element) => {
         const rect = element.getBoundingClientRect();
         const label = element.closest('label');
@@ -498,7 +525,6 @@ test.describe('RC Surface UI & E2E Suite', () => {
       '.vision-camera-toggle',
       '#vision-confidence',
       '#vision-recognition-preset',
-      '#vision-pose-takes',
       '.vision-gesture-slot',
       '.vision-signal-strip',
     ];

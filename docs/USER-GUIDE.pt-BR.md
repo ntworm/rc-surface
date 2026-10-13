@@ -1117,20 +1117,21 @@ Cada um dos três slots aprendidos guarda uma forma de mão estática:
 4. Use **APAGAR ÚLTIMA** para trocar só o exemplo mais novo, ou **LIMPAR** para
    treinar o slot do zero.
 
-O padrão continua **três tomadas por pose**. Escolha **TOMADAS → Até 6** se
-uma pose tiver variantes legítimas de dobra dos dedos ou ângulo da palma.
-Capture cada variante com a mão estável; os exemplos extras devem representar
-como você toca, sem misturar gestos diferentes. TESTE e reconhecimento ao vivo
-funcionam a partir da terceira tomada. Voltar o limite de captura para 3
-mantém todas as tomadas salvas e mostra um aviso; APAGAR ÚLTIMA e LIMPAR
-continuam sendo ações deliberadas.
+Cada slot mostra **0/6 até 6/6** e aceita até **seis tomadas por pose**.
+**TESTE e reconhecimento ao vivo funcionam a partir da terceira tomada**;
+as capturas quatro a seis são opcionais. Use-as para variantes legítimas de
+dobra dos dedos ou ângulo da palma, mantendo a mão estável e sem misturar
+gestos diferentes. Todas as tomadas salvas participam do reconhecimento.
+Preferências antigas de três tomadas voltam com capacidade para seis e
+preservam os exemplos salvos. APAGAR ÚLTIMA e LIMPAR continuam sendo ações
+deliberadas.
 
 No TESTE, “mais próxima: tomada N · X% do raio” identifica o exemplo mais
 próximo. O percentual compara a distância do segundo vizinho da classe com o
 raio de entrada; não é uma probabilidade. Menor é mais próximo; acima de 100%
 falha nesse limite. Ambiguidade e dedos em formato oposto ainda podem rejeitar
-uma pose próxima. O padrão só muda após sessões reais melhorarem acertos sem
-piorar falso ON/min ou latência p95, e com aprovação do operador.
+uma pose próxima. Use o benchmark de sessões rotuladas para comparar acertos,
+falso ON/min e latência p95 antes de concluir o efeito das tomadas extras.
 
 As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
 

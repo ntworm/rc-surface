@@ -1856,11 +1856,10 @@ test('VisionProcessor: processMissing returns null when no tracker is active (sp
   assert.equal(vp.processMissing(300), null);
 });
 
-test('VisionProcessor persists the optional capture cap without changing the default', () => {
+test('VisionProcessor starts and persists a six-take bank', () => {
   const { VisionProcessor } = loadVisionProcessor();
   const processor = new VisionProcessor();
-  assert.equal(processor.gestures.maxTakes, 3);
-  processor.setGestureOptions({ maxTakes: 6 });
+  assert.equal(processor.gestures.maxTakes, 6);
   const saved = processor.exportSafetyConfig();
   assert.equal(saved.gestureOptions.maxTakes, 6);
   const restored = new VisionProcessor();
@@ -2217,27 +2216,64 @@ test('actual TEST display shows nearest take and fraction of its entry radius', 
   assert.equal(card.querySelector('.vision-slot-neighbor').classList.contains('hidden'), false);
 });
 
-test('actual app persists six-take selection, enables TEST at three, and retains six when reduced to three', async () => {
+test('actual app restores legacy three-take preferences with six capacity and the three-example readiness gate', async () => {
   const { processor, card, windowContext: context, mockElements } = await learnedApp();
-  const select = mockElements['vision-pose-takes'];
-  assert.equal(select.value, '3');
-  const writes = [];
-  context.localStorage.setItem = (key, value) => writes.push({ key, value });
-  select.value = '6'; select.onchange();
-  assert.equal(processor.gestures.maxTakes, 6);
-  assert.equal(card.querySelector('header strong').textContent, '3 / 6');
-  assert.equal(card.querySelector('.vision-slot-test').disabled, false);
+  assert.equal(mockElements['vision-pose-takes'], undefined);
   const prototype = processor.gestures.templates.get('Gesture 1')[0];
-  for (let i = 0; i < 3; i++) processor.gestures.learn('Gesture 1', Array.from({ length: 8 }, () => prototype.slice()));
-  select.value = '3'; select.onchange();
-  assert.equal(processor.gestures.sampleCount('Gesture 1'), 6);
-  assert.equal(card.querySelector('header strong').textContent, '6 / 3');
-  assert.match(card.querySelector('.vision-slot-status').textContent, /6.*kept/);
-  const saved = JSON.parse(writes.findLast(write => write.key === 'ableton-rc:vision_safety').value);
-  assert.equal(saved.gestureOptions.maxTakes, 3);
-  assert.equal(saved.gestures.templates[0].samples.length, 6);
-  context.applyProjectClientState({ gestures: saved.gestures, preferences: { visionGestureOptions: { maxTakes: 6 } } });
-  assert.equal(card.querySelector('header strong').textContent, '6 / 6', 'host restore retains all examples');
+  for (let count = 0; count <= 6; count++) {
+    const samples = Array.from({ length: count }, () => Array.from(prototype));
+    context.applyProjectClientState({ gestures: { version: 9, maxTakes: 3,
+      templates: ['Gesture 1', 'Gesture 2', 'Gesture 3'].map(name => ({ name, kind: 'pose', samples })) },
+    preferences: { visionGestureOptions: { maxTakes: 3 } } });
+    assert.equal(processor.gestures.maxTakes, 6);
+    assert.equal(card.querySelector('header strong').textContent, `${count} / 6`);
+    assert.equal(card.querySelector('.vision-slot-test').disabled, count < 3);
+    assert.equal(card.querySelector('.vision-slot-learn').disabled, count >= 6);
+    assert.equal(context.savedVision.gestureOptions.maxTakes, 6);
+    for (const template of context.savedVision.gestures.templates) {
+      assert.equal(JSON.stringify(template.samples), JSON.stringify(samples));
+    }
+    const reopened = loadVisionAndApp({ gestureSlots: true, savedVision: { ...context.savedVision,
+      gestureOptions: { maxTakes: 3 }, gestures: { ...context.savedVision.gestures, maxTakes: 3 } } });
+    for (const slot of [1, 2, 3]) {
+      const restored = reopened.mockElements[`[data-gesture-slot="${slot}"]`];
+      assert.equal(restored.querySelector('header strong').textContent, `${count} / 6`);
+      assert.equal(restored.querySelector('.vision-slot-test').disabled, count < 3);
+      assert.equal(restored.querySelector('.vision-slot-learn').disabled, count >= 6);
+    }
+    reopened.mockElements['chk-vision-enable'].checked = true;
+    await reopened.mockElements['chk-vision-enable'].onchange();
+    assert.equal(reopened.windowContext.currentVisionProcessor.gestures.maxTakes, 6);
+  }
+});
+
+test('actual capture flow stays ready from three through six and permits the extra takes', async () => {
+  const { processor, card, windowContext: context, HandsMock } = await learnedApp();
+  processor.gestures.delete('Gesture 1');
+  context.applyProjectClientState({ gestures: processor.gestures.toJSON() });
+  for (let count = 1; count <= 6; count++) {
+    assert.equal(card.querySelector('.vision-slot-learn').disabled, false);
+    card.querySelector('.vision-slot-learn').onclick();
+    for (let frame = 0; frame < 13; frame++) {
+      context.currentTime += 33;
+      HandsMock.instance.resultsCallback({ multiHandLandmarks: [makeOpenHand()] });
+    }
+    const capture = context.scheduledTimeouts.filter(timer => timer.delay === 900).at(-1);
+    assert.ok(capture);
+    capture.cb();
+    assert.equal(processor.gestures.sampleCount('Gesture 1'), count);
+    assert.equal(card.querySelector('header strong').textContent, `${count} / 6`);
+    assert.equal(card.querySelector('.vision-slot-test').disabled, count < 3);
+    assert.equal(card.querySelector('.vision-slot-learn').disabled, count === 6);
+    if (count >= 3 && count < 6) assert.match(card.querySelector('.vision-slot-status').textContent, /ready · TEST or capture more/);
+    assert.equal(context.savedVision.gestures.templates[0].samples.length, count);
+  }
+  card.querySelector('.vision-slot-retake').onclick();
+  assert.equal(card.querySelector('header strong').textContent, '5 / 6');
+  assert.equal(card.querySelector('.vision-slot-learn').disabled, false);
+  for (let removal = 0; removal < 3; removal++) card.querySelector('.vision-slot-retake').onclick();
+  assert.equal(card.querySelector('header strong').textContent, '2 / 6');
+  assert.equal(card.querySelector('.vision-slot-test').disabled, true);
 });
 
 test('actual app keeps recapture markers across local saves, restart and host restore', async () => {
@@ -2246,7 +2282,7 @@ test('actual app keeps recapture markers across local saves, restart and host re
   const { windowContext: context, mockElements } = loadVisionAndApp({ gestureSlots: true, savedVision: old });
   const status = mockElements['[data-gesture-slot="1"]'].querySelector('.vision-slot-status');
   assert.match(status.textContent, /RECAPTURE REQUIRED/);
-  mockElements['vision-pose-takes'].value = '6'; mockElements['vision-pose-takes'].onchange();
+  mockElements['vision-recognition-preset'].value = 'performance'; mockElements['vision-recognition-preset'].onchange();
   const reopened = loadVisionAndApp({ gestureSlots: true, savedVision: context.savedVision });
   const card = reopened.mockElements['[data-gesture-slot="1"]'];
   assert.match(card.querySelector('.vision-slot-status').textContent, /RECAPTURE REQUIRED/);

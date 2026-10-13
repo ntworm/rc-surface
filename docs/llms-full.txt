@@ -1697,19 +1697,20 @@ Each of the three learned slots stores one static hand shape:
 4. Use **DELETE LAST** to replace only the newest example, or **CLR**
    to retrain the slot from scratch.
 
-The default remains **three takes per pose**. Select **TAKES → Up to 6** when
-one pose has legitimate finger-curl or palm-angle variants. Capture each
-variant steadily; additional examples should cover how you actually perform,
-not different gestures. TEST and live recognition work from the third take.
-Returning the capture limit to 3 keeps all saved takes and shows a warning;
-DELETE LAST and CLR remain deliberate actions.
+Each slot shows **0/6 through 6/6** and accepts up to **six takes per pose**.
+**TEST and live recognition work from the third take**; captures four through
+six are optional. Use them for legitimate finger-curl or palm-angle variants,
+capturing each steadily without mixing different gestures. All saved takes
+contribute to recognition. Older three-take preferences restore with capacity
+for six and keep their saved examples. DELETE LAST and CLR remain deliberate
+actions.
 
 During TEST, “nearest: take N · X% of radius” identifies the closest example.
 The percentage compares the class's second-neighbor distance with its entry
 radius, not a probability: lower is closer; above 100% misses that entry gate.
 Ambiguity and opposing finger shapes can still reject an otherwise close pose.
-The default will change only after real sessions show more correct entries
-without worsening false ON/min or entry latency p95, and after operator approval.
+Use the labeled-session benchmark to compare correct entries, false ON/min
+and entry latency p95 before drawing conclusions about extra takes.
 
 Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
 

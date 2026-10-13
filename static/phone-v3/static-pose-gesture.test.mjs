@@ -112,7 +112,7 @@ test('seeded 400-case corpus retains the exact three-take scores and calibration
   assert.equal(createHash('sha256').update(JSON.stringify(results)).digest('hex'), 'fd7267957f8fbd4722cc3827d759c34520386ee90202b5325eb9271b7c14f2d7');
 });
 
-test('optional bank retains six takes, scores its second neighbor and calibrates LOTO', () => {
+test('six-take bank scores its second neighbor and calibrates LOTO', () => {
   const { GestureLibrary, normalizeHandPose, weightedPoseDistance } = load();
   const library = new GestureLibrary({ ...performanceOptions, maxTakes: 6 });
   const config = thumb => handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: 1 });
@@ -138,7 +138,20 @@ test('optional bank retains six takes, scores its second neighbor and calibrates
   assert.equal(JSON.stringify(restored.toJSON()), JSON.stringify(saved));
   const reduced = GestureLibrary.fromJSON(saved, { maxTakes: 3 });
   assert.equal(reduced.sampleCount('Rock'), 6, 'reducing the capture cap never deletes saved takes');
-  assert.equal(new GestureLibrary().maxTakes, 3);
+  assert.equal(new GestureLibrary().maxTakes, 6);
+});
+
+test('default bank accepts six takes and recognizes only from the third', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const library = new GestureLibrary();
+  const descriptor = normalizeHandPose(handPose());
+  for (let take = 1; take <= 6; take++) {
+    assert.equal(library.learn('Pose', frames(descriptor)), take);
+    assert.equal(library.evaluate(descriptor)?.accepted || false, take >= 3);
+  }
+  const saved = JSON.stringify(library.toJSON());
+  assert.equal(library.learn('Pose', frames(descriptor)), 6);
+  assert.equal(JSON.stringify(library.toJSON()), saved, 'a seventh capture must not replace saved examples');
 });
 
 test('candidate diagnostics identify the nearest take, second distance and effective entry radius', () => {
