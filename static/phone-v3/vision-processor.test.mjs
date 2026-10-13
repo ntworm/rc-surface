@@ -605,6 +605,7 @@ function loadVisionAndApp({ gestureSlots = false, savedVision = null } = {}) {
     },
     clearTimeout: id => { if (windowContext.scheduledTimeouts[id - 1]) windowContext.scheduledTimeouts[id - 1].active = false; },
     dispatchEvent: () => {},
+    Event: class Event { constructor(type) { this.type = type; } },
     Hands: null,
     Camera: null,
   };
@@ -628,6 +629,7 @@ function loadVisionAndApp({ gestureSlots = false, savedVision = null } = {}) {
   const visionStateFile = path.join(import.meta.dirname, 'vision-control-state.js');
   vm.runInNewContext(fs.readFileSync(visionStateFile, 'utf8'), windowContext, { filename: visionStateFile });
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8'), windowContext);
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'modules/settings.js'), 'utf8'), windowContext);
   vm.runInNewContext(vpSource, windowContext, { filename: vpFile });
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
@@ -2173,11 +2175,12 @@ async function learnedApp() {
   const emissions = [];
   const real = context.onControl;
   context.onControl = event => { emissions.push({ ...event }); real(event); };
-  const edges = () => emissions.filter(event => event.name === 'sensor.vision.gesture.1' && !event.lost).map(event => event.value);
+  const edges = () => emissions.filter(event => event.name === 'sensor.vision.gesture.1' && !event.lost
+    && event.tracking?.activation !== false).map(event => event.value);
   return { ...harness, processor, frame, missing, edges, emissions, card: mockElements['[data-gesture-slot="1"]'] };
 }
 
-test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores ON exactly once', async () => {
+test('actual app: pose loss waits for grace; qualified same pose renews without another ON', async () => {
   const { processor, frame, missing, edges, emissions, card, mockElements, windowContext } = await learnedApp();
   frame(0); frame(120);
   assert.deepEqual(edges(), [1]);
@@ -2192,7 +2195,8 @@ test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores O
   assert.equal(card.classList.contains('recognized'), true);
   assert.match(mockElements['vision-performance-badge'].textContent, /G1.*LAST KNOWN/);
   frame(11000); frame(11120); frame(12000);
-  assert.deepEqual(edges(), [1, 1]);
+  assert.deepEqual(edges(), [1]);
+  assert.ok(emissions.some(event => event.tracking?.qualified === true && event.tracking.activation === false));
   const old = processor;
   mockElements['chk-vision-enable'].checked = false;
   await mockElements['chk-vision-enable'].onchange();
@@ -2206,6 +2210,28 @@ test('actual app: pose loss waits for grace, preserves LAST KNOWN and restores O
   const currentTitle = mockElements['vision-camera-state-title'].textContent;
   old.setVisionStatus({ stage: 'error', lastError: 'stale session rejection' });
   assert.equal(mockElements['vision-camera-state-title'].textContent, currentTitle, 'old error cannot overwrite current tracking state');
+});
+test('actual app ignores retired-pose feedback and unknown hands cannot revive a lost output',async()=>{
+  const {processor,frame,missing,edges,emissions,mockElements,windowContext:context}=await learnedApp();
+  frame(0);frame(120);
+  const evaluate=processor.gestures.evaluate.bind(processor.gestures);
+  processor.gestures.evaluate=descriptor=>({...evaluate(descriptor),accepted:false,name:'unknown',contradiction:true});
+  missing(130);missing(300);frame(310);
+  assert.deepEqual(edges(),[1]);
+  assert.ok(emissions.some(event=>event.tracking?.qualified===false));
+  assert.match(mockElements['vision-performance-badge'].textContent,/LAST KNOWN/);
+  processor.gestures.evaluate=evaluate;
+  frame(1000);frame(1120);
+  processor.gestures.activeName='Gesture 2';
+  processor.onGesture({name:'Gesture 2',confidence:0.9});
+  context.VisionSettings.feedback({control:'sensor.vision.gesture.1',state:'released',sequence:1,remainingMs:0});
+  context.VisionSettings.feedback({control:'sensor.vision.gesture.1',state:'holding',sequence:1,remainingMs:500});
+  assert.equal(processor.gestures.activeName,'Gesture 2');
+  assert.match(mockElements['vision-performance-badge'].textContent,/G2.*HELD/);
+  const current=emissions.findLast(event=>event.name==='sensor.vision.gesture.2').tracking.seq;
+  context.VisionSettings.feedback({control:'sensor.vision.gesture.2',state:'released',sequence:current,remainingMs:0});
+  assert.equal(processor.gestures.activeName,null);
+  assert.match(mockElements['vision-performance-badge'].textContent,/RELEASED/);
 });
 
 test('actual TEST display shows nearest take and fraction of its entry radius', async () => {

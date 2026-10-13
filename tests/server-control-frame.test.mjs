@@ -10,3 +10,12 @@ test('control frames admit bounded scalar/XY batches and reject the entire malfo
     assert.equal(boundControlFrame(invalid), null);
   }
 });
+test('fresh vision metadata is admitted only on learned poses with bounded monotonic fields',()=>{
+  const sample={name:'sensor.vision.gesture.1',value:1,tracking:{seq:1,qualified:true,graceMs:140,activation:true}};
+  assert.deepEqual(boundControlFrame([sample]),[sample]);
+  for(const tracking of [{seq:0,qualified:true,graceMs:140},{seq:2,qualified:'yes',graceMs:140},
+    {seq:2,qualified:true,graceMs:2001},{seq:2,qualified:true,graceMs:140,activation:'true'}]) assert.equal(boundControlFrame([{...sample,tracking}]),null);
+  assert.equal(boundControlFrame([{...sample,name:'pad-1'}]),null);
+  assert.equal(boundControlFrame([{...sample,value:0}]),null);
+  assert.equal(boundControlFrame([{...sample,lost:true}]),null);
+});

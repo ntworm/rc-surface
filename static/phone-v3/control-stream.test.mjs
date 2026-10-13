@@ -62,6 +62,14 @@ test('pad press/release survive inside one interval; repeated identical heartbea
   f.tick(8);
   assert.deepEqual(f.sent.flatMap(m => m.controls.map(c => c.value)), [1, 0, 1, 0]);
 });
+test('fresh learned-pose evidence survives equal-valued control dedup; repeats stay bounded', () => {
+  const f=fixture();
+  const sample=seq=>({name:'sensor.vision.gesture.1',value:1,tracking:{seq,qualified:true,graceMs:140,activation:seq===1}});
+  f.stream.push(sample(1));f.stream.push(sample(1));f.stream.push(sample(2));f.tick(8);
+  assert.deepEqual(f.sent.flatMap(frame=>frame.controls.map(c=>c.tracking.seq)),[1,2]);
+  f.stream.push({...sample(3),tracking:{seq:3,qualified:'yes',graceMs:140}});f.tick(8);
+  assert.equal(f.sent.flatMap(frame=>frame.controls).length,2);
+});
 
 test('backpressure retains only fresh continuous positions; expired moves never replay', () => {
   const f = fixture(); f.socket.bufferedAmount = 1;

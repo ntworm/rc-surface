@@ -23,6 +23,7 @@ import { stopAllHostModulators } from "./host-modulators.js";
 import { SafeInputRegistry, SafeSignalFilter, type SafeInputResult, type TakeoverMode } from "./safe-input.js";
 import { TriggerNoteClock, resolveTriggerNoteOptions, resolveGridDurationMs, type NoteTiming, type NoteGate } from "./trigger-note-clock.js";
 import { TriggerNoteScheduler } from "./trigger-note-scheduler.js";
+import { VisionLossWatchdog, visionLossPolicy, learnedPose, type VisionTracking } from './vision-loss.js';
 import {
   clipLaunchEngine,
   isClipLaunchTarget,
@@ -218,7 +219,7 @@ export let presetsDirPath: string | null = null;
 export let currentPresetName: string = "Default";
 export let projectsDirPath: string | null = null;
 let currentProjectFilePath: string | null = null;
-let currentProjectPreferences: Record<string, any> = {};
+let currentProjectPreferences: Record<string, any> = {visionLoss: visionLossPolicy(undefined, true)};
 let currentProjectExtras: Pick<ProjectConfig, 'camera' | 'gestures' | 'pages'> = {};
 let currentProjectReport: RelinkReport = {
   loaded: 0, relinked: 0, review: 0, ambiguous: 0, missing: 0, total: 0, compatibility: [],
@@ -291,7 +292,8 @@ export async function configureMappingStorage(
   projectsDirPath = path.join(cleanStorageDir, "projects");
   currentProjectFilePath = null;
   projectConfigLoaded = false;
-  currentProjectPreferences = {};
+  visionLossWatchdog.reset();
+  currentProjectPreferences = {visionLoss: visionLossPolicy()};
   currentProjectExtras = {};
   currentProjectReport = emptyRelinkReport();
   try {
@@ -443,6 +445,7 @@ async function loadBestProjectProfile(song: any, isCurrent: () => boolean): Prom
     controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
   }
   currentProjectFilePath = best.file;
+  visionLossWatchdog.reset();
   currentProjectPreferences = { ...best.config.preferences };
   currentProjectExtras = {
     camera: best.config.camera,
@@ -504,6 +507,7 @@ export async function loadMappings(isCurrent: () => boolean = () => true): Promi
     const raw = await fs.readFile(mappingsFilePath, "utf-8");
     if (!isCurrent()) return;
     const obj = JSON.parse(raw) as Record<string, MappingTarget | MappingTarget[]>;
+    currentProjectPreferences = {...currentProjectPreferences, visionLoss: visionLossPolicy(undefined, true)};
     // The .rcsurface profile path already folds per-phone keys onto their
     // control; this fallback file has to do the same or a set loaded through
     // it would still carry bindings the shared surface cannot address.
@@ -671,6 +675,41 @@ const heldTriggerNotes = new Map<string, {
   clientId: string; controlName: string; targetIndex: number;
 }>();
 
+function isLearnedGate(target: MappingTarget): boolean {
+  const options = resolveTriggerNoteOptions(target);
+  return target.mode === 'trigger_note' && options.valid && options.gate === 'hold' && options.timing === 'immediate';
+}
+async function releaseLearnedGate(clientId: string, controlName: string): Promise<void> {
+  const prefix = `${clientId}::${controlName}::`;
+  const releases: Promise<void>[] = [];
+  for (const [key, held] of heldTriggerNotes) {
+    if (!key.startsWith(prefix)) continue;
+    const target = controlMappings.get(controlName)?.[held.targetIndex];
+    if (!target || !isLearnedGate(target)) continue;
+    heldTriggerNotes.delete(key);
+    const state = eventModesState.get(key); if (state) state.lastInput = 0;
+    releases.push(held.voice.release().then(() => broadcastTriggerNoteState(clientId, controlName, held.targetIndex, 'released')));
+  }
+  await Promise.all(releases);
+}
+export const visionLossWatchdog = new VisionLossWatchdog({
+  policy: () => visionLossPolicy(currentProjectPreferences.visionLoss, true),
+  release: releaseLearnedGate,
+  loss: (client, control) => applyMapping(client, control, 0, true),
+  feedback: (clientId, control, state, remainingMs, sequence) => {
+    const client = trackedClients.get(clientId);
+    if (client?.ws.readyState !== 1) return;
+    try { client.ws.send(JSON.stringify({type: 'vision_loss_state', control, state, remainingMs, sequence,
+      policy: visionLossPolicy(currentProjectPreferences.visionLoss, true)})); } catch { /* disconnected */ }
+  },
+});
+export async function retireLearnedPoseSession(clientId: string): Promise<void> {
+  // Retire identity synchronously, before the replacement socket can send ON.
+  mappingClientSessions.delete(clientId);
+  visionLossWatchdog.forget(clientId);
+  await Promise.all([1,2,3].map(slot => releaseLearnedGate(clientId, `sensor.vision.gesture.${slot}`)));
+}
+
 export const triggerNoteClock = new TriggerNoteClock();
 export const triggerNoteScheduler = new TriggerNoteScheduler(triggerNoteClock);
 
@@ -750,6 +789,7 @@ async function releaseRetiredMappingWork(): Promise<void> {
 
 /** Invalidate unsent work; SDK calls already in flight cannot be recalled. */
 export async function cancelPendingMappingWrites(): Promise<void> {
+  visionLossWatchdog.reset();
   mappingDispatchGeneration++;
   mappingClientSessions.clear();
   globalWriteScheduler.clear();
@@ -979,10 +1019,11 @@ export function stopHostReconcileTimer(): void {
   hostReconcileTimer = null;
 }
 
-export async function applyMapping(clientId: string, controlName: string, value: number, isDeactivated?: boolean): Promise<void> {
+export async function applyMapping(clientId: string, controlName: string, value: number, isDeactivated?: boolean, tracking?: VisionTracking): Promise<void> {
   // Camera OFF retires all vision voices. Hand absence retires detector
   // voices; learned poses report their own loss after the recognition grace.
   if (controlName === 'sensor.vision.active' && value === 0) {
+    if (!isDeactivated) visionLossWatchdog.forget(clientId);
     await releaseVisionPerformance(clientId, isDeactivated ? 'hand_lost' : 'camera_stopped');
   } else if (isDeactivated && controlName.startsWith('sensor.vision.')
     && !controlName.startsWith('sensor.vision.gesture.')) {
@@ -1028,6 +1069,10 @@ export async function applyMapping(clientId: string, controlName: string, value:
   }
   targets = targets.filter(isRelinkDispatchable);
   if (targets.length === 0) return;
+  const poseSession = clientSession;
+  const permitsLearnedGate = !learnedPose(controlName) || !targets.some(isLearnedGate) || visionLossWatchdog.observe(clientId, controlName, value,
+    Boolean(isDeactivated), tracking, () => generation === mappingDispatchGeneration
+      && mappingClientSessions.get(clientId) === poseSession && controlMappings.get(controlName) === binding);
   const inputKey = `${clientId}::${controlName}`;
   const inputNow = Date.now();
   lastClientControlValues.set(inputKey, value);
@@ -1050,6 +1095,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
     if (!song) return;
 
     await Promise.all(targets.map(async (target) => {
+      if (isLearnedGate(target) && !permitsLearnedGate) return;
       const isCurrent = () => generation === mappingDispatchGeneration
         && mappingClientSessions.get(clientId) === clientSession
         && getExtensionContext() === extensionContext
@@ -1174,7 +1220,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
         const velocity = target.midiVelocity ?? 100;
         const { timing, gate, durationMs, durationBars, valid } = resolveTriggerNoteOptions(target);
         if (!valid) return;
-        const targetIdx = targets.indexOf(target);
+        const targetIdx = binding.indexOf(target);
 
         if (timing === 'immediate') {
           if (gate === 'hold') {
@@ -1464,6 +1510,7 @@ function defaultNeutralForControl(controlName: string): number {
 }
 
 export async function handleClientDisconnect(clientId: string): Promise<void> {
+  visionLossWatchdog.forget(clientId);
   // Retire queued gestures before creating deliberate loss/OFF commands.
   mappingClientSessions.delete(clientId);
   const prefix = `${clientId}::`;
@@ -2584,6 +2631,11 @@ export const commands: Record<string, CommandSpec> = {
   saveProjectClientState: {
     description: "Persist set-specific camera, gesture, page and safety preferences.",
     handler: async (args) => runMappingMutation(async () => {
+      const incoming = args['preferences'];
+      if (incoming && Object.hasOwn(incoming, 'visionLoss')) {
+        if (incoming.visionLoss == null) throw new Error('Invalid vision loss policy');
+        visionLossPolicy(incoming.visionLoss);
+      }
       const previousPreferences = currentProjectPreferences;
       const previousExtras = currentProjectExtras;
       if (args["preferences"] && typeof args["preferences"] === "object" && !Array.isArray(args["preferences"])) {
@@ -2601,7 +2653,12 @@ export const commands: Record<string, CommandSpec> = {
         currentProjectExtras = previousExtras;
         throw error;
       }
-      return getProjectConfigStatus();
+      visionLossWatchdog.refresh();
+      const status = getProjectConfigStatus();
+      for (const client of trackedClients.values()) if (!client.isAdmin && client.ws.readyState === 1) {
+        try { client.ws.send(JSON.stringify({type: 'project_preferences', preferences: status.preferences})); } catch { /* disconnected */ }
+      }
+      return status;
     }),
   },
 
@@ -2638,6 +2695,7 @@ export const commands: Record<string, CommandSpec> = {
       await triggerNoteScheduler.cancelWhere(() => true, "project_relinked");
       for (const [control, targets] of relink.mappings) controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
       currentProjectPreferences = { ...config.preferences };
+      visionLossWatchdog.reset();
       currentProjectExtras = { camera: config.camera, gestures: config.gestures, pages: config.pages };
       currentProjectReport = relink.report;
       projectConfigLoaded = true;
@@ -2703,6 +2761,7 @@ export const commands: Record<string, CommandSpec> = {
       for (const [control, targets] of relink.mappings) controlMappings.set(control, migrateVisionTargets(control, targets as MappingTarget[]));
       currentProjectReport = relink.report;
       currentProjectPreferences = { ...config.preferences };
+      visionLossWatchdog.reset();
       currentProjectExtras = { camera: config.camera, gestures: config.gestures, pages: config.pages };
       return getProjectConfigStatus();
     }),

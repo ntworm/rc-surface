@@ -6,6 +6,19 @@ intermediate release records are intentionally not published.
 
 ## [Unreleased]
 
+### Context settings and MIDI safety
+
+- Route header settings by PERF/AUD/VID/SNS and preserve contextual calibration;
+  opening settings never starts a source. Hide gear on MIX/SNP.
+- Add three learned-pose gate loss policies: indefinite hold, timed hold and
+  release on loss. New projects default to 10 seconds; existing projects retain
+  inherited behavior until explicit selection. Host monotonic watchdog uses
+  fresh accepted evidence, releases once and protects retired sessions.
+- Translate Receiver errors and mapping notices in English/PT-BR.
+- Preserve upstream MIDI bytes through a direct Receiver midiin → midiout path,
+  independent of generated-note arming/Panic. Replace the existing Receiver
+  instance with the candidate device to gain MIDI Thru.
+
 ### Learned poses
 
 - Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.

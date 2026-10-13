@@ -606,7 +606,7 @@ test('C15/C18: multi-target navigation survives without a redundant note mode se
   assert.doesNotMatch(destinations[0].textContent, /C2/);
   await destinations[1].listeners.get('click')();
   assert.match(findByClass(detail, 'map-trigger-track-label').textContent, /Lead Synth/);
-  assert.match(findByClass(detail, 'map-safe-loss-note').textContent, /releases active notes and cancels pending triggers/, 'C20: vision hold cannot suppress note release');
+  assert.match(findByClass(detail, 'map-safe-loss-note').textContent, /learned-pose note gates.*Safe loss per target can release earlier/, 'VID ceiling applies to learned gates; musical pulses and target loss rules stay distinct');
   assert.equal(findByClass(detail, 'map-note-mode-select'), null);
   const threshold = findAllByClass(detail, 'map-editor-slider-input').find((input) => input.dataset.field === 'threshold');
   assert.equal(Number(threshold.value), 0.7);

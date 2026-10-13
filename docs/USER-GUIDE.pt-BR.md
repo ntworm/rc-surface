@@ -424,6 +424,13 @@ uma habilitação separada. Não automatize nem mapeie por MIDI `RC MIDI Packet 
 a API exige um parâmetro automatizável e, com SDK Notes ON, essa automação pode
 tocar notas.
 
+Este candidato também passa MIDI upstream byte a byte por **midiin → midiout**,
+separado dos gates SDK/Audio Sender e do caminho Panic/flush dessas notas.
+Canais, Note-Off, velocity e controllers do teclado conservam os bytes originais.
+Substitua a instância já aberta pelo `RC-Midi-Receiver.amxd` deste candidato;
+atualizar a extensão não troca devices dentro do Set. Teste teclado e notas
+geradas no Live antes da performance.
+
 Vários controles podem disparar notas na mesma track MIDI. Notas diferentes são
 tratadas como destinos de trigger diferentes.
 
@@ -1089,18 +1096,32 @@ candidato ainda não confirmado expira depois de `unknownGraceMs` (140 ms por
 padrão); após uma ausência longa, precisa cumprir o hold completo para seu
 primeiro ON. Eixos e detectores básicos informam perda imediatamente. G1–G3
 informam perda somente após essa tolerância; cada mapping aplica Safe loss.
-**hold** mantém a saída, inclusive uma nota sustentada; **release** desliga.
-Quando a mesma pose ativa volta, o canal reenvia ON uma vez para restaurar a
-saída liberada. O mapping em hold ignora esse ON repetido, sem tocar outra
-nota. Uma pose visível diferente libera a anterior pela tolerância normal.
+VID → ⚙ oferece três políticas para gates de notas G1–G3: **Manter sem limite**,
+**Manter com prazo** e **Soltar na perda**. Projetos novos usam **10 s**;
+o campo aceita 0,1–30 s, passo 0,1 s. Projetos antigos conservam comportamento
+herdado até escolha explícita. Safe loss por alvo pode soltar antes; hold do alvo
+não ultrapassa o prazo VID. Contínuos, detectores básicos, clips, toggles e
+pulsos com duração musical conservam comportamento existente. Somente nova pose
+aceita renova validade; mão presente ou activeName antigo não restauram saída.
+Retorno confirmado antes do prazo sustenta a nota existente sem outro Note-On;
+após expirar, nova ativação exige confirmação normal da pose.
 Landmarks incompletos contam como ausência. Um erro explícito de inferência
 libera a pose ativa e continua visível. Os exemplos salvos permanecem; TEST
 continua musicalmente silencioso. Um clip lançado e sua continuação armada
 seguem tocando. Camera OFF, Panic, desvincular e desconectar liberam notas
 sustentadas e agendadas.
-Rastreio e vídeo são estados diferentes: um travamento silencioso sem novo
-resultado ou erro explícito não comprova ausência da mão; esta correção não
-adiciona um watchdog para detectar esse caso.
+O watchdog do host avança sem novos frames. Prazo conta desde a última pose
+qualificada recebida pelo host; grace do reconhecimento consome essa janela.
+Soltar na perda espera somente grace; manter sem limite não tem teto global.
+Badge distingue tracking atual, última pose/hold com contagem e release.
+Camera OFF e desconexão sempre encerram notas próprias. Host/Live travado não
+garante deadline em tempo real; ao retomar, compara o prazo original.
+Recarregue o cliente após instalar este candidato para usar metadados novos.
+
+**⚙ acompanha a aba:** PERF abre Deep Sync; VID abre reconhecimento/perda de
+tracking; AUD reutiliza entrada/análise; SNS mostra capacidades e ações explícitas
+de habilitar/calibrar. MIX/SNP não mostram engrenagem. Abrir ajustes não inicia
+câmera, microfone ou pedido de permissões. CONF/REC e CALIBRATE permanecem.
 
 ### Poses estáticas aprendidas
 

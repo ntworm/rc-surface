@@ -687,8 +687,31 @@
     </div>
   </div>
 
+  <div id="page-settings-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="page-settings-title">
+    <div class="transport-modal sync-settings-modal">
+      <header class="transport-head"><span id="page-settings-title" class="transport-title"></span><button id="page-settings-close" type="button" class="trn-close-btn" data-i18n-aria-label="cal.close">&times;</button></header>
+      <div class="sync-settings-body">
+        <section id="page-settings-video" hidden>
+          <label class="setting-label" for="vision-loss-mode" data-i18n="settings.loss">Tracking loss</label>
+          <select id="vision-loss-mode" class="setting-select">
+            <option value="hold" data-i18n="settings.hold">Hold indefinitely</option><option value="timeout" data-i18n="settings.timeout">Hold with timeout</option><option value="release" data-i18n="settings.release">Release on loss</option>
+          </select>
+          <label id="vision-loss-timeout-row" class="setting-label"><span data-i18n="settings.duration">Timeout (seconds)</span><input id="vision-loss-timeout" type="number" min="0.1" max="30" step="0.1" value="10"></label>
+          <p id="vision-loss-legacy" class="setting-label" data-i18n="settings.legacy">Inherited behavior; choose a mode to adopt this policy.</p>
+          <p class="setting-label" data-i18n="settings.ceiling">Applies to learned-pose note gates. Safe loss per target can release earlier.</p>
+          <label class="setting-label"><span data-i18n="vid.confidence">Vision confidence</span><select id="settings-vision-confidence" class="setting-select"><option value="low" data-i18n="vid.low">Low</option><option value="medium" data-i18n="vid.medium">Medium</option><option value="high" data-i18n="vid.high">High</option></select></label>
+          <label class="setting-label"><span data-i18n="vid.recognition">Recognition</span><select id="settings-vision-preset" class="setting-select"><option value="precision" data-i18n="vid.precision">Precision</option><option value="balanced" data-i18n="vid.balanced">Balanced</option><option value="performance" data-i18n="vid.performance">Performance</option><option value="flexible" data-i18n="vid.flexible">Flexible</option></select></label>
+          <output id="vision-engine-summary" class="setting-label"></output>
+        </section>
+        <section id="page-settings-audio" hidden><label class="setting-label" data-i18n="aud.inputDevice">Audio input device</label><div id="settings-audio-input"></div><div id="settings-audio-analysis"></div></section>
+        <section id="page-settings-sensors" hidden><output id="settings-sensor-status" class="setting-label"></output><button id="settings-enable-sensors" type="button" class="grid-btn" data-i18n="app.enableSensors">Enable sensors</button><button id="settings-calibrate-sensors" type="button" class="grid-btn" data-i18n="cal.action">CALIBRATE</button></section>
+        <p id="settings-error" role="alert" class="setting-label"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Sync Settings Overlay -->
-  <div id="sync-settings-overlay" class="modal-overlay hidden" aria-label="Sync Settings">
+  <div id="sync-settings-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Sync Settings">
     <div class="transport-modal sync-settings-modal">
       <header class="transport-head">
         <span class="transport-title" data-i18n="sync.title">DEEP SYNC SETTINGS</span>
@@ -853,6 +876,7 @@
   <script src="camera-lifecycle.js"></script>
   <script src="vision-processor.js"></script>
   <script src="modules/layout.js"></script>
+  <script src="modules/settings.js"></script>
   <script src="modules/transport.js"></script>
   <script src="modules/sync.js"></script>
   <script src="modules/playhead.js"></script>

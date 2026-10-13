@@ -2382,26 +2382,18 @@
   }
 
   function setupSyncSettingsUI() {
-    const btnSettings = document.getElementById('btn-sync-settings');
     const overlay = document.getElementById('sync-settings-overlay');
-    const btnClose = document.getElementById('btn-sync-settings-close');
     const btnSyncMode = document.getElementById('btn-sync-mode');
 
     if (!overlay) return;
 
-    if (btnSettings) {
-      btnSettings.addEventListener('click', () => {
-        overlay.classList.remove('hidden');
-        renderSyncSettingsUI();
-      });
-    }
+    const settings = window.RcPageSettings?.setup({renderSync: renderSyncSettingsUI});
 
     if (btnSyncMode) {
       let pressTimer = null;
       const startPress = () => {
         pressTimer = setTimeout(() => {
-          overlay.classList.remove('hidden');
-          renderSyncSettingsUI();
+          settings?.open(true);
         }, 600);
       };
       const endPress = () => {
@@ -2414,12 +2406,6 @@
       btnSyncMode.addEventListener('touchend', endPress);
     }
 
-    if (btnClose) {
-      btnClose.addEventListener('click', () => overlay.classList.add('hidden'));
-    }
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.classList.add('hidden');
-    });
 
     const selectClockSource = document.getElementById('select-clock-source');
     if (selectClockSource) {

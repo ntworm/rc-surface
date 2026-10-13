@@ -1,4 +1,4 @@
-// Receiver v2.2: API-visible SDK packet, armed automatically after load; no network.
+// Receiver v2.2: API-visible SDK packet, automatic arming, transparent MIDI Thru; no network.
 import { readPatch, writePatch } from './amxd.js';
 
 const base = readPatch(process.argv[2]).patcher;
@@ -79,6 +79,10 @@ box('activity-label', 'comment', { text: 'Activity', numoutlets: 0,
 obj('bytes', 'iter');
 obj('flush', 'midiflush');
 obj('output', 'midiout', { numoutlets: 0 });
+// Byte-for-byte upstream path. It never enters SDK/local gates or midiflush,
+// so channel, running status, Note-Off and controllers remain untouched.
+obj('midi-input', 'midiin');
+wire('midi-input', 0, 'output');
 box('panic', 'button', { parameter_enable: 0,
   presentation: 1, presentation_rect: [160, 114, 20, 20] });
 box('panic-label', 'comment', { text: 'Panic', numoutlets: 0,

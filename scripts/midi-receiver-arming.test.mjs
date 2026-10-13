@@ -11,7 +11,7 @@ const ON = 24164; // seq1, MIDI60, velocity100
 const OFF = 40448; // seq2, MIDI60, velocity0
 function graph() {
   const boxes = new Map(patch.boxes.map(({box}) => [box.id, box]));
-  const gates = new Map(), values = new Map(), accepted = [], local = [], events = [];
+  const gates = new Map(), values = new Map(), accepted = [], local = [], events = [], upstream = [];
   for (const b of boxes.values()) if (b.text?.startsWith('gate ')) gates.set(b.id, Number(b.text.split(' ')[2]));
   function emit(id, outlet, value) {
     for (const {patchline: p} of patch.lines.filter(({patchline: p}) =>
@@ -21,6 +21,8 @@ function graph() {
   function send(id, value = 'bang', inlet = 0) {
     const b = boxes.get(id);
     assert.ok(b, `missing guard object ${id}`);
+    if (b.text === 'midiout') { upstream.push(value); return; }
+    if (b.text === 'midiin') { emit(id,0,value); return; }
     // Intercept at the unchanged decoder entry and existing local MIDI merger.
     if (id === 'valid') { if (value >= 16384 && value <= 4194303) accepted.push(value); return; }
     if (id === 'activity-trigger') { local.push(value); return; }
@@ -50,8 +52,18 @@ function graph() {
     }
     assert.fail(`unmodelled guard object ${id}: ${b.text ?? b.maxclass}`);
   }
-  return { send, emit, accepted, local, events, values, gates, boxes };
+  return { send, emit, accepted, local, events, values, gates, boxes, upstream };
 }
+test('upstream raw MIDI bytes pass independently of SDK/local arming and Panic',()=>{
+  const g=graph();
+  const bytes=[0x91,60,100,62,80,0x81,60,64,0xb8,64,127,0xe2,0,64,0xf8,0xf0,1,2,0xf7];
+  for(const state of [()=>{},()=>g.send('sdk-enable',1),()=>g.send('local-enable',1),()=>g.send('panic'),()=>g.emit('lifecycle',1,0)]) {
+    state();const before=g.upstream.length;
+    for(const byte of bytes)g.send('midi-input',byte);
+    assert.deepEqual(g.upstream.slice(before),bytes,'Thru cannot parse, filter or alter raw upstream bytes');
+  }
+  assert.deepEqual(g.accepted,[]);
+});
 
 test('a restored SDK packet is discarded on load, then the device arms itself without replaying it', () => {
   const g = graph();

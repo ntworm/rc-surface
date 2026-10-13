@@ -774,7 +774,7 @@ test('mapping-mode.js fixes: trackKind-aware targetLabel/isSameTarget, picker aw
   assert.match(js, /const prevTargets = state\.currentMappings\[key\]/);
   assert.match(js, /if \(prevTargets === undefined\)/);
   assert.match(js, /state\.currentMappings\[key\] = prevTargets/);
-  assert.match(js, /setStatus\(response\?\.error \|\| 'Failed to save mapping target\.', 'error'\)/);
+  assert.match(js, /setStatus\(response\?\.error \|\| T\('map\.saveFailed', 'Failed to save mapping target\.'\), 'error'\)/);
 });
 
 test('controls.js / index.html / app.js / mapping-mode.js new features: header transport, double-click resets, and conflict picker closure', () => {

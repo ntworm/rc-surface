@@ -1,9 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readPatch, listObjects } from './amxd.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
 
 const receiver = new URL('../static/RC-Midi-Receiver.amxd', import.meta.url);
 const sender = new URL('../static/RC-Audio-Sender.amxd', import.meta.url);
+test('shipping and regenerated Receiver wire raw MIDI directly to output without generated-note gates',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'receiver-thru-'));
+  try {
+    const generated=path.join(dir,'RC-Midi-Receiver.amxd');
+    execFileSync(process.execPath,['scripts/build-midi-receiver.js',receiver.pathname.replace(/^\/([A-Za-z]:)/,'$1'),generated]);
+    assert.deepEqual(fs.readFileSync(generated),fs.readFileSync(receiver),'generator and shipping binary must agree');
+    for(const file of [receiver,generated]) {
+      const patch=readPatch(file).patcher;
+      const input=patch.boxes.find(({box})=>box.text==='midiin')?.box;
+      const output=patch.boxes.find(({box})=>box.text==='midiout')?.box;
+      assert.ok(input,'upstream MIDI input is required');
+      const outgoing=patch.lines.filter(({patchline})=>patchline.source[0]===input.id);
+      assert.equal(outgoing.length,1);
+      assert.deepEqual(outgoing[0].patchline.destination,[output.id,0]);
+    }
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('shipping MIDI devices have no network listener or sender', () => {
   for (const file of [receiver, sender]) {
     const patch = readPatch(file);

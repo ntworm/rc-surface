@@ -156,6 +156,14 @@
     }
   }
 
+  function receiverFailure(install) {
+    const reason = install.result?.reason;
+    if (reason === 'receiver_upgrade_required') return T('map.receiverUpgrade', 'Replace the old Receiver on this track with RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP), then retry.');
+    if (reason === 'receiver_ambiguous') return T('map.receiverAmbiguous', 'More than one Receiver was found on this track. Keep only one Receiver v2 and retry.');
+    if (reason === 'receiver_missing') return T('map.receiverMissing', 'RC-Midi-Receiver.amxd is missing on this track. Add it in Live and retry.');
+    return T('map.receiverVerifyFailed', 'Could not verify RC-Midi-Receiver.amxd on this track.');
+  }
+
   const CONTROL_GROUPS = window.MappingInputContract.getControlGroups();
 
   function rawControlName(name) {
@@ -280,7 +288,7 @@
           reason: response?.error || 'Failed to save mapping target.',
         }), 'error');
       } else {
-        setStatus(response?.error || 'Failed to save mapping target.', 'error');
+        setStatus(response?.error || T('map.saveFailed', 'Failed to save mapping target.'), 'error');
       }
     }
     return response;
@@ -325,12 +333,12 @@
     if (window.confirm && !window.confirm('Clear ALL mappings? This cannot be undone.')) return;
     const response = await command('clearMappings', {});
     if (response && response.ok === false) {
-      setStatus(response.error || 'Could not clear mappings', 'error');
+      setStatus(response.error || T('map.clearFailed', 'Could not clear mappings'), 'error');
       return response;
     }
     state.currentMappings = {};
     state.selectedTargetIndex = 0;
-    setStatus('All mappings cleared.', 'ok');
+    setStatus(T('map.cleared', 'All mappings cleared.'), 'ok');
     renderAll();
     return response;
   }
@@ -363,7 +371,7 @@
       response = await command('setMapping', { control: oldControl, targets: oldTargets });
     }
     if (response && response.ok === false) {
-      setStatus(response.error || 'Failed to replace existing mapping.', 'error');
+      setStatus(response.error || T('map.replaceFailed', 'Failed to replace existing mapping.'), 'error');
       return response;
     }
     const current = targetsForControl(state.selectedControl).slice();
@@ -504,7 +512,7 @@
     }
     const targets = targetsForControl(state.selectedControl).slice();
     if (targets.some((candidate) => isSameTarget(candidate, normalized))) {
-      setStatus('Este parâmetro já está mapeado para este controle.', 'error');
+      setStatus(T('map.duplicateParameter', 'This parameter is already mapped to this control.'), 'error');
       return false;
     }
     const vision = state.selectedControl.startsWith('sensor.vision.');
@@ -530,21 +538,21 @@
     if (!clean) return;
     const response = await command('savePreset', { name: clean });
     if (response.ok) await loadMobileMappingData();
-    else setStatus(response.error || 'Could not save preset', 'error');
+    else setStatus(response.error || T('map.presetSaveFailed', 'Could not save preset'), 'error');
   }
 
   async function loadMobileMappingPreset(name) {
     if (!name) return;
     const response = await command('loadPreset', { name });
     if (response.ok) await loadMobileMappingData();
-    else setStatus(response.error || 'Could not load preset', 'error');
+    else setStatus(response.error || T('map.presetLoadFailed', 'Could not load preset'), 'error');
   }
 
   async function deleteMobileMappingPreset(name) {
     if (!name || name === 'Default') return;
     const response = await command('deletePreset', { name });
     if (response.ok) await loadMobileMappingData();
-    else setStatus(response.error || 'Could not delete preset', 'error');
+    else setStatus(response.error || T('map.presetDeleteFailed', 'Could not delete preset'), 'error');
   }
 
   async function createMobileMidiTarget(track) {
@@ -555,14 +563,7 @@
     const install = await command('addUdpReceiverToTrack', { trackIndex: track.trackIndex });
     state.busy = false;
     if (!install.ok || !install.result || !install.result.success) {
-      const reason = install.result?.reason;
-      setStatus(reason === 'receiver_upgrade_required'
-        ? T('map.receiverUpgrade', 'Replace the old Receiver on this track with RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP), then retry.')
-        : reason === 'receiver_ambiguous'
-          ? T('map.receiverAmbiguous', 'More than one Receiver was found on this track. Keep only one Receiver v2 and retry.')
-        : reason === 'receiver_missing'
-        ? 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.'
-        : (install.error || 'Não foi possível verificar RC-Midi-Receiver.amxd nessa track.'), 'error');
+      setStatus(receiverFailure(install), 'error');
       renderDetail();
       return false;
     }
@@ -622,7 +623,7 @@
   async function loadMobileMappingData() {
     state.busy = true;
     state.error = '';
-    setStatus('Loading...', 'loading');
+    setStatus(T('map.loading', 'Loading...'), 'loading');
     if (typeof window.throttlePhoneTelemetry === 'function') {
       window.throttlePhoneTelemetry(2000);
     }
@@ -665,8 +666,9 @@
     state.busy = false;
     const report = projectStatus.result?.report;
     setStatus(report
-      ? `Loaded ${report.loaded}; relinked ${report.relinked}; review ${report.review + report.ambiguous}; missing ${report.missing}`
-      : 'Loaded', (report?.missing || report?.review || report?.ambiguous) ? 'warning' : 'ok');
+      ? T('map.loadedReport', 'Loaded {loaded}; relinked {relinked}; review {review}; missing {missing}',
+        {...report, review: report.review + report.ambiguous})
+      : T('map.loaded', 'Loaded'), (report?.missing || report?.review || report?.ambiguous) ? 'warning' : 'ok');
     renderAll();
   }
 
@@ -703,7 +705,7 @@
     const overlay = $('mapping-mode');
     if (overlay) overlay.classList.remove('hidden');
     syncOverlayPresentation();
-    setStatus('Loading...', 'loading');
+    setStatus(T('map.loading', 'Loading...'), 'loading');
     if (typeof setTimeout === 'function' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
       setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
     }
@@ -1101,7 +1103,7 @@
         const conflict = state.pendingConflict;
         if (!conflict) return;
         replace.disabled = true;
-        setStatus(`Replacing ${controlLabel(conflict.owner)}...`, 'loading');
+        setStatus(T('map.replacing', 'Replacing {control}...', {control: controlLabel(conflict.owner)}), 'loading');
         const response = await replaceMobileMappingConflict(conflict.owner, conflict.target);
         if (response && response.ok === false) {
           replace.disabled = false;
@@ -1110,7 +1112,7 @@
         }
         state.pendingConflict = null;
         state.selectedTargetIndex = Math.max(0, targetsForControl(state.selectedControl).length - 1);
-        setStatus(`Replaced mapping from ${controlLabel(conflict.owner)}.`, 'ok');
+        setStatus(T('map.replaced', 'Replaced mapping from {control}.', {control: controlLabel(conflict.owner)}), 'ok');
         renderAll();
       });
       const cancel = document.createElement('button');
@@ -1324,14 +1326,7 @@
               const install = await command('addUdpReceiverToTrack', { trackIndex: track.trackIndex });
               state.busy = false;
               if (!install.ok || !install.result || !install.result.success) {
-                const reason = install.result?.reason;
-                setStatus(reason === 'receiver_upgrade_required'
-                  ? T('map.receiverUpgrade', 'Replace the old Receiver on this track with RC-Midi-Receiver v2 (SDK / LOCAL MAX — NO UDP), then retry.')
-                  : reason === 'receiver_ambiguous'
-                    ? T('map.receiverAmbiguous', 'More than one Receiver was found on this track. Keep only one Receiver v2 and retry.')
-                  : reason === 'receiver_missing'
-                  ? 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.'
-                  : (install.error || 'Não foi possível verificar RC-Midi-Receiver.amxd nessa track.'), 'error');
+                setStatus(receiverFailure(install), 'error');
                 renderDetail();
                 return;
               }
@@ -1730,7 +1725,7 @@
       paintProgress(input);
       valEl.textContent = formatSliderValue(defaultVal, step, unit);
       updateMobileTargetField(field, defaultVal);
-      setStatus(`${labelText} resetado para default (${formatSliderValue(defaultVal, step, unit)})`, 'ok');
+      setStatus(T('map.resetDefault', '{label} restored to default ({value})', {label: labelText, value: formatSliderValue(defaultVal, step, unit)}), 'ok');
     };
 
     // Double-click reset (mouse / pointer)
@@ -1908,7 +1903,7 @@
       const noteStr = `${newPitch}${newOct}`;
       const midiNum = parseMidiNoteToNumber(noteStr);
       if (midiNum === null) {
-        setStatus('Invalid MIDI note range (C-2 to G8 allowed)', 'error');
+        setStatus(T('map.noteRange', 'Invalid MIDI note range (C-2 to G8 allowed)'), 'error');
         return;
       }
       midiBadge.textContent = `MIDI ${midiNum}`;
@@ -2103,7 +2098,9 @@
     // Safe loss notice
     const safeLossNotice = document.createElement('div');
     safeLossNotice.className = 'map-safe-loss-note';
-    safeLossNotice.textContent = T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
+    safeLossNotice.textContent = state.selectedControl && /^sensor\.vision\.gesture\.[123]$/.test(state.selectedControl)
+      ? T('settings.ceiling', 'Applies to learned-pose note gates. Safe loss per target can release earlier.')
+      : T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
     advBody.appendChild(safeLossNotice);
 
     advanced.appendChild(advBody);
@@ -2190,7 +2187,7 @@
     if (state.clipTargets && !force) return state.clipTargets;
     const response = await command('getClipTargets');
     if (!response || !response.ok) {
-      setStatus(response?.error || 'getClipTargets failed', 'error');
+      setStatus(response?.error || T('map.clipTargetsFailed', 'getClipTargets failed'), 'error');
       state.clipTargets = null;
       return null;
     }
@@ -2625,7 +2622,7 @@
     testBtn.textContent = T('lc.test', 'Test');
     testBtn.addEventListener('click', async () => {
       const response = await command('testClipLaunch', { control: mappingKey(state.selectedControl), targetIndex: state.selectedTargetIndex });
-      if (!response || !response.ok) setStatus(response?.error || 'testClipLaunch failed', 'error');
+      if (!response || !response.ok) setStatus(response?.error || T('map.clipTestFailed', 'testClipLaunch failed'), 'error');
       else if (response.result) window.handleClipLaunchState({ type: 'clip_launch_state', ...response.result });
     });
     statusRow.appendChild(testBtn);
@@ -2858,7 +2855,7 @@
             targetIndex: state.selectedTargetIndex,
             candidateIndex,
           });
-          if (!result.ok) return setStatus(result.error || 'Relink failed', 'error');
+          if (!result.ok) return setStatus(result.error || T('map.relinkFailed', 'Relink failed'), 'error');
           await loadMobileMappingData();
         });
         editor.appendChild(button);
@@ -3177,13 +3174,13 @@
             state.pickerFilter = filterText;
             doRenderTree();
           } else {
-            setStatus(`Track index ${trackIdx} not found in options`, 'error');
+            setStatus(T('map.trackMissing', 'Track index {index} not found in options', {index: trackIdx}), 'error');
           }
         } else {
-          setStatus('AbletonOSC is not connected or selection info unavailable', 'error');
+          setStatus(T('map.selectionUnavailable', 'AbletonOSC is not connected or selection info unavailable'), 'error');
         }
       } else {
-        setStatus('Failed to fetch host selection state', 'error');
+        setStatus(T('map.selectionFailed', 'Failed to fetch host selection state'), 'error');
       }
     });
 
@@ -3447,7 +3444,7 @@
       // on 'phone-ws-open', so say that the retry is automatic and what to do
       // if it never succeeds (the server port moves when Ableton restarts).
       if (state.open) {
-        setStatus('Connection lost — reconnecting automatically. If this persists, rescan the QR code.', 'error');
+        setStatus(T('map.connectionLost', 'Connection lost — reconnecting automatically. If this persists, rescan the QR code.'), 'error');
       }
     });
   }

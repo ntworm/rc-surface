@@ -26,6 +26,7 @@ import {
   getBipolarControls,
   getProjectConfigStatus,
   handleClientDisconnect,
+  retireLearnedPoseSession,
   updateHostModulator,
   triggerNoteClock,
 } from "../live/mappings.js";
@@ -638,6 +639,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
 
     const existing = trackedClients.get(clientId);
     if (existing && existing.ws !== ws) {
+      if (!existing.isAdmin) void retireLearnedPoseSession(clientId);
       try {
         console.log(`[ableton-rc-surface] closing existing duplicate connection for client ${clientId}`);
         // Say *why* it is being closed. A phone's client_id lives in
@@ -705,6 +707,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
     }
 
     ws.on("message", (data) => {
+      if (trackedClients.get(clientId)?.ws !== ws) return;
       info.lastSeen = Date.now();
       // ── Rate limiting (token bucket, see ws-bounds.ts) ──
       if (!consumeToken(info.rateLimiter)) {
@@ -995,6 +998,7 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
 
 function handleControl(info: TrackedClient, ctrl: any, receivedAt: number): void {
   if (!ctrl || typeof ctrl !== "object" || !isValidControlName(ctrl.name)) return;
+  if (ctrl.tracking !== undefined && boundControlFrame([ctrl]) === null) return;
   const name: string = ctrl.name;
   // `lost: true` means the client has no real reading for this control right
   // now (hand out of frame, sensor denied). The value carried alongside it is
@@ -1018,7 +1022,7 @@ function handleControl(info: TrackedClient, ctrl: any, receivedAt: number): void
     // A `lost` reading carries a placeholder, not a measurement — publishing it
     // to the other views would show them a position nobody is holding.
     if (!lost) recordSurfaceValue(info.id, name, sv);
-    void applyMapping(info.id, name, sv, lost);
+    void applyMapping(info.id, name, sv, lost, ctrl.tracking);
   }
 }
 

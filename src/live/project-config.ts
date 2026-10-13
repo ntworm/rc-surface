@@ -7,6 +7,7 @@ import * as path from "node:path";
 import { resolveTriggerNoteOptions } from "./trigger-note-clock.js";
 
 import { relinkClipLaunchTarget, validateClipLaunchTarget } from "./clip-launch.js";
+import { visionLossPolicy } from './vision-loss.js';
 
 export const PROJECT_CONFIG_FORMAT = "ableton-rc-surface-project";
 export const PROJECT_CONFIG_VERSION = 1;
@@ -222,6 +223,7 @@ export function buildProjectConfig(
     project: { ...project, savedAt: new Date().toISOString() },
     mappings: serialized,
     preferences: {
+      visionLoss: visionLossPolicy(),
       globalTakeover: "scale",
       ...preferences,
     },
@@ -343,7 +345,8 @@ export function validateProjectConfig(value: unknown): ProjectConfig {
       }
     }
   }
-  return config as ProjectConfig;
+  if (Object.hasOwn(config.preferences, 'visionLoss') && config.preferences.visionLoss == null) throw new Error('Invalid vision loss policy');
+  return {...config, preferences: {...config.preferences, visionLoss: visionLossPolicy(config.preferences.visionLoss, true)}} as ProjectConfig;
 }
 
 type WeightedField = [keyof SemanticTargetSignature, number, "exact" | "number"];

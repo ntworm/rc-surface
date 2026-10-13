@@ -4880,3 +4880,11 @@ body.mapping-mode [data-name].selected-control {
 .vision-pose-grid:has(.vision-slot-neighbor:not(.hidden), .vision-slot-consistency:not(.hidden)) .vision-gesture-slot {
   grid-template-rows: auto auto;
 }
+/* Context settings reuse the existing flat modal and live controls. */
+#page-settings-overlay { animation: fadeIn 180ms ease; }
+#page-settings-overlay .transport-modal { background: #222222; box-shadow: none; }
+#page-settings-overlay [hidden] { display: none !important; }
+#page-settings-overlay .setting-label { display: block; margin: 12px 0; }
+#page-settings-overlay select, #page-settings-overlay input, #page-settings-overlay button { min-height: 44px; }
+#vision-loss-timeout { width: 100%; box-sizing: border-box; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); font: inherit; border-radius: 0; }
+#page-settings-overlay output { overflow-wrap: anywhere; }

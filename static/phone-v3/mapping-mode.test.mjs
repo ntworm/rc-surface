@@ -534,8 +534,22 @@ test('missing Receiver keeps the picker open and does not send setMapping', asyn
 
   assert.strictEqual(result, false, 'should return false on install failure');
   assert.ok(!calls.some((c) => c.cmd === 'setMapping'), 'setMapping must NOT be called after a failed install');
-  assert.equal(elements.get('map-mobile-status').textContent, 'RC-Midi-Receiver.amxd não está nessa track. Coloque o dispositivo nela no Live e tente novamente.');
+  assert.equal(elements.get('map-mobile-status').textContent, 'RC-Midi-Receiver.amxd is missing on this track. Add it in Live and retry.');
 });
+for(const locale of ['en','pt-BR']) for(const reason of ['receiver_missing','receiver_upgrade_required','receiver_ambiguous','unknown']) {
+  test(`Receiver notice uses selected ${locale} for ${reason}, not raw backend Portuguese`,async()=>{
+    const catalogContext={};vm.runInNewContext(fs.readFileSync(path.join(root,'../shared/i18n-catalog.js'),'utf8'),catalogContext);
+    const {context,elements,calls}=loadMappingMode({
+      RcSurfaceI18n:{t:(key,params={})=>(catalogContext.RcSurfaceI18nCatalog[key]?.[locale]||key).replace(/\{(\w+)\}/g,(_,name)=>params[name]??'')},
+      sendPhoneCommand(cmd,args,cb){calls.push({cmd,args});cb({ok:false,error:'Falha privada em português',result:{reason}});return true;}
+    });
+    context.window.mobileMappingState.selectedControl='pad-1';
+    await context.window.createMobileTriggerNoteTarget({trackIndex:0,isMidi:true});
+    const key={receiver_missing:'map.receiverMissing',receiver_upgrade_required:'map.receiverUpgrade',receiver_ambiguous:'map.receiverAmbiguous',unknown:'map.receiverVerifyFailed'}[reason];
+    assert.equal(elements.get('map-mobile-status').textContent,catalogContext.RcSurfaceI18nCatalog[key][locale]);
+    assert.ok(!calls.some(call=>call.cmd==='setMapping'));
+  });
+}
 
 for (const [reason, expected] of [['receiver_upgrade_required', /v2/], ['receiver_ambiguous', /mais de um|more than one/i]]) {
   test(`MIDI picker explains ${reason} without saving`, async () => {
@@ -813,7 +827,7 @@ test('binding a duplicate mapping target sets status to error and does not add t
 
   await context.window.bindMobileTarget({ type: 'tempo' });
 
-  assert.equal(elements.get('map-mobile-status').textContent, 'Este parâmetro já está mapeado para este controle.');
+  assert.equal(elements.get('map-mobile-status').textContent, 'This parameter is already mapped to this control.');
   assert.equal(elements.get('map-mobile-status').dataset.kind, 'error');
 });
 

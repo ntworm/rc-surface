@@ -22,6 +22,8 @@ import {
   eventModesState,
   lastMappedValues,
   stopSmoothTimer,
+  commands,
+  cancelPendingMappingWrites,
 } from "../src/live/mappings.ts";
 import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
 
@@ -89,4 +91,20 @@ test("B2 wire: a control flagged lost applies the Safe loss policy, not the sent
   );
 
   ws.close();
+});
+test('wire carries fresh learned-pose tracking and rejects malformed/duplicate evidence without repeated MIDI',async()=>{
+  const packets=[];
+  const midi={name:'RC MIDI Packet v2',min:0,max:4194303,isQuantized:false,setValue:async value=>packets.push([Math.floor(value/128)%128,value%128])};
+  setExtensionContext({application:{song:{tracks:[{name:'MIDI',devices:[{name:'RC-Midi-Receiver',parameters:[midi]}]}]}}});
+  controlMappings.set('sensor.vision.gesture.1',[{type:'device_param',mode:'trigger_note',trackIndex:0,midiNote:'C3',noteTiming:'immediate',noteGate:'hold',neutralPolicy:'hold'}]);
+  await commands.saveProjectClientState.handler({preferences:{visionLoss:{version:1,mode:'timeout',timeoutMs:100,legacy:false}}});
+  const {ws}=await connect();
+  const send=tracking=>ws.send(JSON.stringify({type:'control_frame',controls:[{name:'sensor.vision.gesture.1',value:1,tracking}]}));
+  try {
+    send({seq:1,qualified:'bad',graceMs:140});await wait(20);assert.equal(packets.length,0);
+    send({seq:1,qualified:true,graceMs:140,activation:true});
+    send({seq:1,qualified:true,graceMs:140,activation:true});
+    await wait(200);assert.deepEqual(packets,[[60,100],[60,0]],'deadline runs when no new results arrive');
+    send({seq:2,qualified:false,graceMs:140});await wait(20);assert.equal(packets.length,2);
+  } finally {ws.close();await cancelPendingMappingWrites();controlMappings.delete('sensor.vision.gesture.1');}
 });

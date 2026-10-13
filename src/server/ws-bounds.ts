@@ -19,6 +19,7 @@
 // ── WebSocket transport limits ──────────────────────────────────────────────
 
 /** Disable per-message deflate — CPU cost outweighs bandwidth on LAN. */
+import { learnedPose, validVisionTracking } from '../live/vision-loss.js';
 export const PER_MESSAGE_DEFLATE = false;
 
 /** Maximum payload size in bytes (100 KiB). Oversized frames are rejected by ws. */
@@ -218,6 +219,8 @@ export function boundControlFrame(controls: unknown): Record<string, unknown>[] 
   for (const control of controls) {
     if (!control || typeof control !== 'object' || !isValidControlName(control.name)) return null;
     if (control.lost !== undefined && typeof control.lost !== 'boolean') return null;
+    if (control.tracking !== undefined && (!learnedPose(control.name) || !validVisionTracking(control.tracking))) return null;
+    if (control.tracking?.qualified && (control.lost === true || control.value !== 1)) return null;
     if (control.x !== undefined || control.y !== undefined) {
       if (!unit(control.x) || !unit(control.y) || control.value !== undefined) return null;
     } else if (!unit(control.value)) return null;

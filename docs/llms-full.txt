@@ -642,6 +642,12 @@ The top strip also holds the **MAP** button near the BPM display plus
 [§ 7 Top-bar controls](#7-top-bar-controls) and
 [§ 8 MAP mode](#8-map-mode---mobile-mapping).
 
+**⚙ follows the current tab:** PERF opens Deep Sync, VID opens recognition and
+tracking-loss settings, AUD reuses input/analysis controls, and SNS shows sensor
+capabilities plus explicit enable/calibrate actions. MIX/SNP have no header gear.
+Opening settings never starts a camera, microphone or sensor permission request.
+CONF/REC quick controls and contextual CALIBRATE remain available.
+
 ---
 
 ## 2. Pad modes (A / B / C / D)
@@ -1022,6 +1028,13 @@ click it. Turn SDK Notes OFF before recalling a preset on an already loaded
 device. Audio Sender input is a separate opt-in. Do not automate or MIDI-map
 `RC MIDI Packet v2`: the API requires an automatable parameter, and while SDK
 Notes is ON such automation can play notes.
+
+This candidate also passes upstream MIDI byte-for-byte through **midiin →
+midiout**, separately from SDK/Audio Sender gates and their Panic/flush path.
+Keyboard channels, Note-Off, velocity and controllers keep their original bytes.
+Replace the already loaded Receiver instance with the candidate
+`RC-Midi-Receiver.amxd`; updating the extension does not replace devices in a Set.
+Check the keyboard and generated notes in Live before performing.
 
 Multiple controls can trigger notes on the same MIDI track. Different
 notes are treated as different trigger targets.
@@ -1669,18 +1682,27 @@ Missing hands preserve an active learned pose as **LAST KNOWN**. An unconfirmed
 candidate expires after `unknownGraceMs` (140 ms by default), so a long absence
 requires a fresh full hold before its first ON. Axes and built-in detectors
 report loss immediately. G1–G3 report loss only after that grace interval;
-their mappings then apply Safe loss. **hold** retains output, including a held
-note; **release** turns it off. When the same active pose returns, its channel
-sends ON once to restore released output. A held mapping ignores this repeated
-ON, so it does not play a second note. A different visible pose still releases
-the previous pose through the normal recognition tolerance.
+their mappings then apply Safe loss. VID → ⚙ offers three policies for learned
+G1–G3 note gates: **Hold indefinitely**, **Hold with timeout**, and **Release on
+loss**. New projects use a **10 s** timeout; edit it from 0.1–30 s in 0.1 s steps.
+Existing projects keep inherited behavior until you explicitly choose a mode.
+Per-target Safe loss can release sooner; its hold cannot exceed the chosen VID
+timeout. Continuous controls, built-ins, clips, toggles and timed pulses keep
+their existing behavior. Only a fresh accepted pose renews validity: hand
+presence or last-known activeName alone cannot restore output. A qualified return
+before expiry sustains the existing note without another Note-On; after expiry,
+normal pose confirmation is required to start again.
 Incomplete landmarks count as absence. An explicit inference error releases
 the active pose and remains visible. Saved examples stay intact; TEST stays
 musically silent. A launched clip and its armed continuation keep playing.
 Camera OFF, Panic, unbinding and disconnection retire held and scheduled notes.
-Tracking is separate from the video preview: a silent stall with no inference
-result or explicit error cannot prove hand absence and is not detected by a
-new watchdog.
+The host watchdog advances without new inference frames. Timeout is measured
+from the last qualified host receipt; recognition grace consumes that window.
+Release mode waits only for that grace; indefinite mode has no global deadline.
+The badge distinguishes current tracking, last-known hold/countdown and release.
+Camera OFF and disconnect always stop owned notes. A stalled host/Live cannot
+guarantee a real-time deadline; it evaluates the original deadline upon resuming.
+Reload the client after installing this candidate so new tracking metadata is used.
 
 ### Learned static poses
 

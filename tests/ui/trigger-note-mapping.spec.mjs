@@ -290,7 +290,7 @@ test.describe('Trigger Note Mapping Editor UI', () => {
     await expect(detail.locator('.map-timing-live-status')).toBeHidden();
     await expect(detail.locator('.map-safe-loss-note')).toBeHidden();
     await detail.locator('.map-editor-advanced > summary').click();
-    await expect(detail.locator('.map-safe-loss-note')).toContainText('libera vozes ativas e cancela notas agendadas');
+    await expect(detail.locator('.map-safe-loss-note')).toContainText('Vale para gates de notas das poses aprendidas. Safe loss por alvo pode soltar antes.');
     await detail.locator('.map-editor-advanced > summary').click();
     await detail.locator('[data-value="beat"]').click();
     await expect(detail.locator('[data-duration-mode="grid"]')).toHaveAttribute('aria-pressed', 'true');

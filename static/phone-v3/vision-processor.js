@@ -1043,10 +1043,15 @@
         // Emit release edge when the active gesture transitions away from a name.
         // This fires when: (a) pose dropped to null, (b) pose switched to a different name.
         const nextActiveName = this.gestures?.activeName ?? null;
+        output.poseQualified = evaluation?.accepted === true && evaluation.name === nextActiveName && !evaluation.contradiction;
         if (prevActiveName !== null && prevActiveName !== nextActiveName) {
           try { this.onGestureRelease?.(prevActiveName); } catch { /* UI must not break pipeline */ }
         }
         if (match && this.onGesture) this.onGesture(match);
+        const name = this.gestures?.activeName;
+        if (name && this.onGestureTracking) this.onGestureTracking({name, timestamp,
+          qualified: output.poseQualified,
+          graceMs: this.gestures?.unknownGraceMs ?? 140});
       }
       return output;
     }
@@ -1194,6 +1199,10 @@
         const cameraOptions = {
           onFrame: async () => {
             if (this.active && this.hands) {
+              // A repeated camera frame is no new evidence, even if inference runs.
+              const frameTime = this.video?.currentTime;
+              if (Number.isFinite(frameTime) && frameTime === this.lastSubmittedVideoTime) return;
+              this.lastSubmittedVideoTime = frameTime;
               this.lastSendTime = nowMs();
               try {
                 await this.hands.send({ image: this.video });

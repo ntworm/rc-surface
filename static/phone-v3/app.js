@@ -1733,6 +1733,7 @@
   }
 
   function setupVisionUI() {
+    window.sensorSettingsSummary = () => ['motion', 'orientation'].map(name => `${name}: ${document.querySelector(`[data-sensor-status="${name}"]`)?.textContent || '-'}`).join(' · ');
     const chk = document.getElementById('chk-vision-enable');
     const hud = document.getElementById('vision-hud');
     const video = document.getElementById('vision-video');
@@ -1742,6 +1743,10 @@
     let badgePose = null;
     let badgeTrackingLost = false;
     let badgeNoteState = null;
+    let badgeLossState = null;
+    let badgeLossDeadline = null;
+    let visionTrackingSeq = 0;
+    const visionPoseActivations = new Map();
     const liveGestureSlots = new Set();
     const renderPerformanceBadge = () => {
       if (!performanceBadge) return;
@@ -1749,6 +1754,9 @@
       if (badgePose) parts.push(`${badgePose} · ${badgeTrackingLost
         ? T('vid.poseLastKnown', 'LAST KNOWN') : T('vid.poseHeld', 'HELD')}`);
       if (badgeNoteState) parts.push(`${T('vid.noteBadge', 'NOTE')}: ${badgeNoteState}`);
+      const lossLabel = {holding: T('settings.holding', 'LAST KNOWN'), tracking: T('settings.tracking', 'TRACKING'), released: T('settings.released', 'RELEASED')}[badgeLossState];
+      if (lossLabel) parts.push(lossLabel
+        + (badgeLossState === 'holding' && badgeLossDeadline !== null ? ` · ${Math.max(0, (badgeLossDeadline - performance.now()) / 1000).toFixed(1)} s` : ''));
       setTextIfChanged(performanceBadge, parts.join(' · '));
       const tracking = badgeTrackingLost ? 'lost' : 'live';
       if (performanceBadge.dataset && performanceBadge.dataset.tracking !== tracking) {
@@ -1758,6 +1766,8 @@
     };
     window.onVisionTriggerNoteState = (message) => {
       if (!String(message?.control || '').startsWith('sensor.vision.')) return;
+      if (badgePose && /^sensor\.vision\.gesture\.[123]$/.test(message.control)
+        && badgePose !== `G${String(message.control).split('.').at(-1)}`) return;
       const next = String(message.state || '');
       badgeNoteState = ['pending', 'held', 'sent', 'cancelled', 'unavailable'].includes(next)
         ? next.toUpperCase() : null;
@@ -1892,6 +1902,10 @@
     try {
       visionSafetyConfig = JSON.parse(localStorage.getItem('ableton-rc:vision_safety') || 'null');
     } catch {}
+    const restoredVisionProfile = !!visionSafetyConfig;
+    let visionLoss;
+    try { visionLoss = window.RcPageSettings?.policy(visionSafetyConfig?.visionLoss, restoredVisionProfile); }
+    catch { visionLoss = window.RcPageSettings?.policy(undefined, true); }
     visionSafetyConfig = visionSafetyConfig || {
       version: 2,
       confidence: 'medium',
@@ -1986,6 +2000,7 @@
         incompatibleGestureNames = new Set(visionProcessor.gestures?.getIncompatibleNames?.() || []);
       }
       if (visionSafetyConfig) {
+        visionSafetyConfig.visionLoss = visionLoss;
         visionSafetyConfig.visionControls = visionControls.toJSON();
         try { localStorage.setItem('ableton-rc:vision_safety', JSON.stringify(visionSafetyConfig)); } catch {}
         if (typeof window.sendPhoneCommand === 'function') {
@@ -2006,6 +2021,7 @@
 
     window.applyProjectClientState = (clientState) => {
       if (!clientState) return;
+      try { visionLoss = window.RcPageSettings?.policy(clientState.preferences?.visionLoss, true); } catch { /* retain valid host state */ }
       const restoredGestureOptions = {
         ...(clientState.preferences?.visionGestureOptions || visionSafetyConfig?.gestureOptions || {}),
         maxTakes: 6,
@@ -2021,6 +2037,7 @@
         gestureOptions: restoredGestureOptions,
         gesturePreset: clientState.preferences?.visionGesturePreset || visionSafetyConfig?.gesturePreset || 'balanced',
         visionControls: clientState.preferences?.visionControls || visionSafetyConfig?.visionControls || {},
+        visionLoss,
       };
       visionControls = new window.VisionControlState(visionSafetyConfig.visionControls, visionSafetyConfig.gestures?.templates || []);
       if (confidenceSelect) {
@@ -2039,7 +2056,48 @@
         window.showPhonePage(activePage);
       }
       try { localStorage.setItem('ableton-rc:vision_safety', JSON.stringify(visionSafetyConfig)); } catch {}
+      window.dispatchEvent(new Event('ableton-rc:vision-settings'));
     };
+    const saveLossLocally = () => {
+      visionSafetyConfig.visionLoss = visionLoss;
+      try { localStorage.setItem('ableton-rc:vision_safety', JSON.stringify(visionSafetyConfig)); } catch {}
+      window.dispatchEvent(new Event('ableton-rc:vision-settings'));
+    };
+    window.VisionSettings = {
+      getPolicy: () => visionLoss || window.RcPageSettings?.policy(),
+      summary: () => {
+        const options = GESTURE_PRESETS[visionSafetyConfig.gesturePreset] || GESTURE_PRESETS.balanced;
+        return `${T('settings.confirmation', 'Pose confirmation')}: ${options.holdMs} ms · ${T('settings.transition', 'Pose transition')}: ${options.releaseMs} ms · ${T('settings.grace', 'Tracking tolerance')}: ${options.unknownGraceMs} ms · 3–6`;
+      },
+      setPolicy: value => {
+        const next = window.RcPageSettings.policy(value);
+        const previous = visionLoss;
+        if (window.phoneWs?.readyState === 1) {
+          window.sendPhoneCommand('saveProjectClientState', {preferences: {visionLoss: next}}, response => {
+            if (response?.ok) { visionLoss = window.RcPageSettings.policy(response.result?.preferences?.visionLoss || next); saveLossLocally(); }
+            else { visionLoss = previous; saveLossLocally(); showToast(T('settings.saveFailed', 'Could not save settings. Last valid setting retained.'), 'error'); }
+          });
+        } else { visionLoss = next; saveLossLocally(); }
+      },
+      applyHost: preferences => { try { visionLoss = window.RcPageSettings.policy(preferences?.visionLoss, true); saveLossLocally(); } catch {} },
+      feedback: message => {
+        const slot = Number(String(message.control).split('.').at(-1));
+        if (!state.vision.enabled || !liveGestureSlots.has(slot) || badgePose !== `G${slot}`
+          || (Number.isSafeInteger(message.sequence) && message.sequence < (visionPoseActivations.get(slot) || 0))) return;
+        badgeLossState = message.state;
+        badgeLossDeadline = message.remainingMs === null ? null : performance.now() + message.remainingMs;
+        badgeTrackingLost = message.state !== 'tracking';
+        if (message.state === 'released') {
+          liveGestureSlots.delete(slot);
+          visionPoseActivations.delete(slot);
+          if (visionControls.slotForGesture(visionProcessor?.gestures?.activeName)?.id === slot) visionProcessor.gestures.resetRecognition();
+          document.querySelector(`[data-gesture-slot="${slot}"]`)?.classList.remove('recognized');
+          badgeNoteState = null;
+        }
+        renderPerformanceBadge();
+      },
+    };
+    setInterval(() => { if (badgeLossState === 'holding' && badgeLossDeadline !== null) renderPerformanceBadge(); }, 100);
     const updateGestureOptions = () => {
       const preset = gesturePresetSelect?.value || 'balanced';
       const options = { ...(GESTURE_PRESETS[preset] || GESTURE_PRESETS.balanced), maxTakes: captureCap() };
@@ -2371,7 +2429,7 @@
           // at the 0.5 neutral.
           if (visionControls.detectorEnabled('victory')) visibleReading.rotateVal = data.rotateVal;
           state.sensors.vision_reading = visibleReading;
-          badgeTrackingLost = false;
+          badgeTrackingLost = Boolean(badgePose) && data.poseQualified !== true;
           renderPerformanceBadge();
           renderVisionReadouts();
 
@@ -2496,17 +2554,23 @@
             }
           }
           if (handData && handData.active) {
-            const activeSlot = visionControls.slotForGesture(visionProcessor.gestures?.activeName);
-            if (activeSlot && liveGestureSlots.has(activeSlot.id)) {
-              const name = visionControls.controlForSlot(activeSlot.id);
-              if (lostPoseChannels.has(name)) window.onControl?.({ name, value: 1 });
-            }
+            // Presence alone cannot revive last-known learned pose output.
             poseMissingSince = null;
             lostPoseChannels.clear();
             applyHandReading(handData);
           } else {
             markHandLost(timestamp);
           }
+        };
+        let lastQualifiedTimestamp = -Infinity;
+        visionProcessor.onGestureTracking = (sample) => {
+          if (visionProcessor !== ownedVisionProcessor || sample.timestamp <= lastQualifiedTimestamp || visionGestureTestSlot !== null) return;
+          lastQualifiedTimestamp = sample.timestamp;
+          const slot = visionControls.slotForGesture(sample.name);
+          if (!slot || !liveGestureSlots.has(slot.id)) return;
+          window.onControl?.({name: visionControls.controlForSlot(slot.id), value: 1,
+            tracking: {seq: ++visionTrackingSeq, qualified: sample.qualified, graceMs: sample.graceMs, activation: false}});
+          if (!sample.qualified) { badgeTrackingLost = true; renderPerformanceBadge(); }
         };
         visionProcessor.onGestureLearnReady = beginGestureCaptureWindow;
         visionProcessor.onGestureProgress = (evaluation) => {
@@ -2568,12 +2632,17 @@
           if (status) status.textContent = T('vid.poseRecognized', '✓ {name} recognized · {percent}%', { name: match.name, percent });
           badgePose = `G${slot.id}`;
           badgeTrackingLost = false;
+          badgeLossState = null;
+          badgeLossDeadline = null;
           renderPerformanceBadge();
           if (!window.onControl) return;
           const control = visionControls.controlForSlot(slot.id);
+          const activationSeq = ++visionTrackingSeq;
+          visionPoseActivations.set(slot.id, activationSeq);
           // Emit ON edge. OFF is emitted by onGestureRelease (FSM transition)
           // when a different visible pose is confirmed. Missing hands keep it held.
-          window.onControl({ name: control, value: 1 });
+          window.onControl({ name: control, value: 1, tracking: {seq: activationSeq, qualified: true, activation: true,
+            graceMs: visionProcessor.gestures?.unknownGraceMs ?? 140} });
           liveGestureSlots.add(slot.id);
         };
         visionProcessor.onGestureRelease = (name) => {
@@ -2584,6 +2653,7 @@
           if (badgePose === `G${slot.id}`) badgePose = null;
           renderPerformanceBadge();
           if (!liveGestureSlots.delete(slot.id) || !window.onControl) return;
+          visionPoseActivations.delete(slot.id);
           const control = visionControls.controlForSlot(slot.id);
           window.onControl({ name: control, value: 0 });
         };
@@ -2680,6 +2750,8 @@
       badgePose = null;
       badgeNoteState = null;
       badgeTrackingLost = false;
+      badgeLossState = null;
+      badgeLossDeadline = null;
       renderPerformanceBadge();
       window.PageCalibration?.invalidate('video');
       visionStartGeneration += 1;
@@ -2862,7 +2934,11 @@
         }
         return;
       }
-      if (msg.type === 'control_sync') {
+      if (msg.type === 'project_preferences') {
+        window.VisionSettings?.applyHost(msg.preferences);
+      } else if (msg.type === 'vision_loss_state') {
+        window.VisionSettings?.feedback(msg);
+      } else if (msg.type === 'control_sync') {
         // Another performer moved something on the shared surface. The server
         // never sends a client its own move back, so anything arriving here
         // belongs to someone else's hand.

@@ -73,6 +73,15 @@
         if (typeof raw.lost !== 'boolean') return true;
         control.lost = raw.lost;
       }
+      if (raw.tracking !== undefined) {
+        const t = raw.tracking;
+        if (!/^sensor\.vision\.gesture\.[123]$/.test(raw.name) || !t || !Number.isSafeInteger(t.seq) || t.seq <= 0
+          || typeof t.qualified !== 'boolean' || !Number.isInteger(t.graceMs) || t.graceMs < 0 || t.graceMs > 2000
+          || (t.activation !== undefined && typeof t.activation !== 'boolean')) return true;
+        if ((t.qualified && (control.lost === true || control.value !== 1)) || (t.activation && !t.qualified)) return true;
+        control.tracking = {seq: t.seq, qualified: t.qualified, graceMs: t.graceMs};
+        if (t.activation !== undefined) control.tracking.activation = t.activation;
+      }
       const signature = JSON.stringify(control);
       // Sensor filters/recovery need fresh equal-valued measurements too.
       // Deduplicate only discrete heartbeats, never sustained measurements.
