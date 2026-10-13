@@ -2391,19 +2391,39 @@
 
     if (btnSyncMode) {
       let pressTimer = null;
-      const startPress = () => {
+      let consumeClick = false;
+      let touchPress = false;
+      const endPress = () => {
+        if (pressTimer !== null) clearTimeout(pressTimer);
+        pressTimer = null;
+      };
+      const cancelPress = () => { endPress(); consumeClick = false; touchPress = false; };
+      const startPress = (event) => {
+        // Compatibility mouse events belong to the touch that already opened
+        // settings; they must not clear its pending synthesized click.
+        if (touchPress && consumeClick && event.type === 'mousedown') return;
+        endPress(); consumeClick = false; touchPress = event.type === 'touchstart';
         pressTimer = setTimeout(() => {
-          settings?.open(true);
+          pressTimer = null;
+          consumeClick = settings?.open(true) === true;
         }, 600);
       };
-      const endPress = () => {
-        if (pressTimer) clearTimeout(pressTimer);
-      };
+      // Capture precedes the normal SYNC/FREE handler in modules/sync.js.
+      btnSyncMode.addEventListener('click', (event) => {
+        if (consumeClick) { event.preventDefault(); event.stopImmediatePropagation(); }
+        cancelPress();
+      }, true);
       btnSyncMode.addEventListener('mousedown', startPress);
       btnSyncMode.addEventListener('mouseup', endPress);
-      btnSyncMode.addEventListener('mouseleave', endPress);
+      // Opening the overlay itself can cause mouseleave. Keep the completed
+      // gesture's click consumed; only an unfinished press is canceled here.
+      btnSyncMode.addEventListener('mouseleave', () => { endPress(); if (!consumeClick) touchPress = false; });
       btnSyncMode.addEventListener('touchstart', startPress);
       btnSyncMode.addEventListener('touchend', endPress);
+      btnSyncMode.addEventListener('touchcancel', cancelPress);
+      document.addEventListener('keydown', cancelPress, true);
+      document.addEventListener('click', event => { if (!btnSyncMode.contains(event.target)) cancelPress(); }, true);
+      window.addEventListener('ableton-rc:page-change', cancelPress);
     }
 
 

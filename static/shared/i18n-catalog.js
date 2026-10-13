@@ -26,6 +26,10 @@
   'use strict';
 
   const catalog = {
+    'map.confirmClearAll': {en:'Clear ALL mappings? This cannot be undone.', 'pt-BR':'Apagar TODOS os mapeamentos? Esta ação não pode ser desfeita.'},
+    'map.confirmDeletePreset': {en:'Delete preset "{name}"?', 'pt-BR':'Apagar o preset "{name}"?'},
+    'map.confirmRemove': {en:'Remove this mapping?', 'pt-BR':'Remover este mapeamento?'},
+    'map.confirmClearControl': {en:'Clear all mappings for this control?', 'pt-BR':'Apagar todos os mapeamentos deste controle?'},
     'settings.confirmation': {en:'Pose confirmation','pt-BR':'Confirmação da pose'},
     'settings.transition': {en:'Pose transition','pt-BR':'Transição da pose'},
     'settings.grace': {en:'Tracking tolerance','pt-BR':'Tolerância do tracking'},

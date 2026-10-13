@@ -550,6 +550,29 @@ for(const locale of ['en','pt-BR']) for(const reason of ['receiver_missing','rec
     assert.ok(!calls.some(call=>call.cmd==='setMapping'));
   });
 }
+for(const locale of ['en','pt-BR']) test(`mapping confirmations use ${locale} and cancellation sends no mutations`,async()=>{
+  const scope={};vm.runInNewContext(fs.readFileSync(path.join(root,'../shared/i18n-catalog.js'),'utf8'),scope);
+  const text=(key,params={})=>(scope.RcSurfaceI18nCatalog[key]?.[locale]||key).replace(/\{(\w+)\}/g,(_,name)=>params[name]??'');
+  const prompts=[];
+  const {context,elements,calls}=loadMappingMode({RcSurfaceI18n:{t:text},confirm:message=>{prompts.push(message);return false;}});
+  await context.window.openMobileMappingMode();
+  context.window.mobileMappingState.selectedControl='pad-1';context.window.renderDetail();
+  const name='Studio <safe> "A"';
+  const setPreset=(node)=>{if(node.className==='map-preset-select')node.value=name;for(const child of node.children||[])setPreset(child);};
+  setPreset(elements.get('map-mobile-presets'));setPreset(elements.get('map-mobile-detail'));
+  const before=calls.length;
+  await context.window.clearAllMobileMappings();
+  for(const [rootId,label] of [['map-mobile-presets','mm.delete'],['map-mobile-detail','mm.delete'],['map-mobile-detail','mm.unbindTarget'],['map-mobile-detail','mm.clearControl']]) {
+    const button=findByText(elements.get(rootId),text(label));assert.ok(button,rootId+' '+label);
+    await button.listeners.get('click')();
+  }
+  assert.equal(calls.length,before,'canceled confirmations must not dispatch any RPC');
+  assert.equal(prompts.length,5);
+  const expected=locale==='en'
+    ? ['Clear ALL mappings? This cannot be undone.',`Delete preset "${name}"?`,`Delete preset "${name}"?`,'Remove this mapping?','Clear all mappings for this control?']
+    : ['Apagar TODOS os mapeamentos? Esta ação não pode ser desfeita.',`Apagar o preset "${name}"?`,`Apagar o preset "${name}"?`,'Remover este mapeamento?','Apagar todos os mapeamentos deste controle?'];
+  assert.deepEqual(prompts,expected);
+});
 
 for (const [reason, expected] of [['receiver_upgrade_required', /v2/], ['receiver_ambiguous', /mais de um|more than one/i]]) {
   test(`MIDI picker explains ${reason} without saving`, async () => {

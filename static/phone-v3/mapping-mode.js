@@ -330,7 +330,7 @@
    * and in the desktop panel, it was just never reachable from the phone.
    */
   async function clearAllMobileMappings() {
-    if (window.confirm && !window.confirm('Clear ALL mappings? This cannot be undone.')) return;
+    if (window.confirm && !window.confirm(T('map.confirmClearAll', 'Clear ALL mappings? This cannot be undone.'))) return;
     const response = await command('clearMappings', {});
     if (response && response.ok === false) {
       setStatus(response.error || T('map.clearFailed', 'Could not clear mappings'), 'error');
@@ -806,7 +806,7 @@
     del.type = 'button';
     del.textContent = T('mm.delete', 'Delete');
     del.addEventListener('click', () => {
-      if (window.confirm && !window.confirm(`Delete preset "${select.value}"?`)) return;
+      if (window.confirm && !window.confirm(T('map.confirmDeletePreset', 'Delete preset "{name}"?', {name: select.value}))) return;
       deleteMobileMappingPreset(select.value);
     });
     el.appendChild(del);
@@ -889,7 +889,7 @@
     del.className = 'map-mini-btn';
     del.textContent = T('mm.delete', 'Delete');
     del.addEventListener('click', () => {
-      if (window.confirm && !window.confirm(`Delete preset "${select.value}"?`)) return;
+      if (window.confirm && !window.confirm(T('map.confirmDeletePreset', 'Delete preset "{name}"?', {name: select.value}))) return;
       deleteMobileMappingPreset(select.value);
     });
     container.appendChild(del);
@@ -1199,7 +1199,7 @@
     unbind.disabled = !targets.length;
     unbind.textContent = T('mm.unbindTarget', 'Unbind Target');
     unbind.addEventListener('click', async () => {
-      if (window.confirm && !window.confirm('Remove this mapping?')) return;
+      if (window.confirm && !window.confirm(T('map.confirmRemove', 'Remove this mapping?'))) return;
       await removeMobileMappingTarget(state.selectedTargetIndex);
       state.selectedTargetIndex = 0;
       renderDetail();
@@ -1212,7 +1212,7 @@
     clearControl.disabled = !targets.length;
     clearControl.textContent = T('mm.clearControl', 'Clear Control');
     clearControl.addEventListener('click', async () => {
-      if (window.confirm && !window.confirm('Clear all mappings for this control?')) return;
+      if (window.confirm && !window.confirm(T('map.confirmClearControl', 'Clear all mappings for this control?'))) return;
       await clearSelectedMobileControl();
       state.selectedTargetIndex = 0;
       renderDetail();

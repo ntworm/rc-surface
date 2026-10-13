@@ -48,7 +48,7 @@
     }
     function open(syncOnly = false) {
       page = resolvePage(doc.body.dataset.page, page);
-      if (!supports(page) || (syncOnly && page !== 'performance')) return;
+      if (!supports(page) || (syncOnly && page !== 'performance')) return false;
       close(false); render();
       if (page === 'performance') { sync.classList.remove('hidden'); renderSync(); doc.getElementById('btn-sync-settings-close')?.focus(); }
       else {
@@ -58,6 +58,7 @@
         }
         overlay.classList.remove('hidden'); doc.getElementById('page-settings-close').focus();
       }
+      return true;
     }
     gear.addEventListener('click', () => open());
     doc.getElementById('page-settings-close').addEventListener('click', () => close());

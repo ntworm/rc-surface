@@ -63,3 +63,51 @@ test('SYNC long press is PERF-only and MAP/TRN preserve the underlying video con
   await page.evaluate(()=>document.getElementById('btn-sync-settings').click());
   await expect(page.locator('#page-settings-video')).toBeVisible();await page.keyboard.press('Escape');
 });
+test('PERF long press consumes only its click; short tap, cancel and keyboard keep normal SYNC toggle',async({page})=>{
+  await page.goto('/?lang=en');await page.clock.install();
+  await page.evaluate(()=>{window.testModulatorEmits=0;window.emitAllModulatorStates=()=>window.testModulatorEmits++;});
+  const button=page.locator('#btn-sync-mode'), overlay=page.locator('#sync-settings-overlay');
+  const before=await page.evaluate(()=>window.syncMode);
+  await button.dispatchEvent('touchstart');await page.clock.runFor(650);await button.dispatchEvent('touchend');await button.dispatchEvent('click');
+  await expect(overlay).toBeVisible();expect(await page.evaluate(()=>window.syncMode)).toBe(before);
+  expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(0);
+  await page.keyboard.press('Escape');
+  await button.dispatchEvent('touchstart');await page.clock.runFor(50);await button.dispatchEvent('touchend');await button.dispatchEvent('click');
+  expect(await page.evaluate(()=>window.syncMode)).not.toBe(before);expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(1);
+  await button.dispatchEvent('touchstart');await page.clock.runFor(100);await button.dispatchEvent('touchcancel');await page.clock.runFor(650);
+  await expect(overlay).toBeHidden();
+  await button.focus();await page.keyboard.press('Enter');
+  expect(await page.evaluate(()=>window.syncMode)).toBe(before);expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(2);
+  await button.dispatchEvent('mousedown');await page.clock.runFor(650);await button.dispatchEvent('mouseup');await button.dispatchEvent('click');
+  await expect(overlay).toBeVisible();expect(await page.evaluate(()=>window.syncMode)).toBe(before);expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(2);
+  await page.keyboard.press('Escape');await page.locator('#btn-sync-settings').click();await page.keyboard.press('Escape');
+  await button.click();expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(3);
+  const mode=await page.evaluate(()=>window.syncMode);
+  await button.dispatchEvent('touchstart');await page.clock.runFor(650);await button.dispatchEvent('touchend');
+  await button.dispatchEvent('mousedown');await button.dispatchEvent('mouseup');await button.dispatchEvent('click');
+  await expect(overlay).toBeVisible();expect(await page.evaluate(()=>window.syncMode)).toBe(mode);expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(3);
+  await button.dispatchEvent('touchcancel');await page.keyboard.press('Escape');await button.click();expect(await page.evaluate(()=>window.testModulatorEmits)).toBe(4);
+});
+for(const locale of ['en','pt-BR']) test(`mapping confirmations show ${locale}; cancel preserves mappings and emits no RPC`,async({page})=>{
+  await page.goto('/?lang='+locale);
+  const name='Studio <safe> "A"';
+  await page.evaluate(async name=>{
+    window.testMappingCalls=[];
+    const fixtures={getTargets:{targets:[]},getMappings:{mappings:{'pad-1':[{type:'tempo'}]}},getClients:{clients:[]},listPresets:{presets:[name],current:name},getProjectConfigStatus:{report:{loaded:1,relinked:0,review:0,ambiguous:0,missing:0},clientState:{}}};
+    window.sendPhoneCommand=(cmd,args,callback)=>{window.testMappingCalls.push({cmd,args});callback({ok:true,result:fixtures[cmd]||{}});return true;};
+    window.mobileMappingState.selectedControl='pad-1';await window.openMobileMappingMode();
+  },name);
+  await expect(page.locator('.map-preset-select')).toHaveCount(2);
+  await page.evaluate(name=>{document.querySelectorAll('.map-preset-select').forEach(select=>select.value=name);window.testMappingCalls=[];},name);
+  const prompts=[];page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.dismiss();});
+  await page.evaluate(()=>window.clearAllMobileMappings());
+  for(const [root,labelKey]of [['map-mobile-presets','mm.delete'],['map-mobile-detail','mm.delete'],['map-mobile-detail','mm.unbindTarget'],['map-mobile-detail','mm.clearControl']]){
+    const label=await page.evaluate(key=>window.RcSurfaceI18n.t(key),labelKey);
+    await page.locator('#'+root).getByText(label,{exact:true}).dispatchEvent('click');
+  }
+  const expected=locale==='en'
+    ? ['Clear ALL mappings? This cannot be undone.',`Delete preset "${name}"?`,`Delete preset "${name}"?`,'Remove this mapping?','Clear all mappings for this control?']
+    : ['Apagar TODOS os mapeamentos? Esta ação não pode ser desfeita.',`Apagar o preset "${name}"?`,`Apagar o preset "${name}"?`,'Remover este mapeamento?','Apagar todos os mapeamentos deste controle?'];
+  expect(prompts).toEqual(expected);expect(await page.evaluate(()=>window.testMappingCalls.length)).toBe(0);
+  expect(await page.evaluate(()=>window.mobileMappingState.currentMappings['pad-1'])).toEqual([{type:'tempo'}]);
+});
