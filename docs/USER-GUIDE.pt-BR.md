@@ -1154,7 +1154,9 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até 
 Crie os marcadores do Arrangement no Live antes, depois abra **REC** com o
 playback parado:
 
-1. Escolha a track que quer gravar.
+1. Escolha a track que quer gravar. O botão **ARMADA / DESARMADA** ao lado da
+   track mostra o estado de arm observado no Live. Clique para armar ou
+   desarmar essa track manualmente com o playback parado; só selecionar não arma.
 2. Escolha o marcador de início. A faixa de marcadores mostra os marcadores da
    sessão e a posição observada do playback; use **Zoom** e a rolagem para
    inspecionar a região.
@@ -1166,15 +1168,17 @@ playback parado:
    esse fluxo REC. Aperte REC novamente para armá-la e fazer outra tentativa.
 
 Para ouvir, clique em um marcador na faixa ou escolha o marcador inicial e use
-**Play no cabeçalho**. Selecionar um marcador posiciona o transporte parado;
-selecionar não inicia playback nem gravação. A faixa serve de referência de
-marcadores e posição, sem waveform de áudio nem seleção de take lanes. Um
-marcador movido ou removido precisa ser escolhido novamente.
+**Play no cabeçalho**. A seleção usa o salto nativo de marcador do Live para
+que Play comece nesse marcador. Selecionar posiciona o transporte parado sem
+iniciar playback nem gravação. A faixa serve de referência de marcadores e
+posição, sem waveform de áudio nem seleção de take lanes. Um marcador movido
+ou removido precisa ser escolhido novamente.
 
 Loop repete entre os dois marcadores até STOP; o marcador final não para a
-gravação. REC confirma a região de loop antes de começar. Com Loop desligado,
-REC desliga o Arrangement Loop do Live. STOP mantém a região de loop escolhida
-para reprodução. Configure count-in, monitoração da entrada e take lanes no
+gravação. REC aguarda o Live confirmar a região de loop antes de começar.
+Todas as mudanças de loop compartilham um limite de dois segundos para a
+confirmação; sem ela, a gravação não começa. Com Loop desligado, REC desliga
+o Arrangement Loop do Live. STOP mantém a região escolhida para reprodução. Configure count-in, monitoração da entrada e take lanes no
 Live. Para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
 
 REC exige a track selecionada armável, outras tracks desarmadas e Punch In/Out,

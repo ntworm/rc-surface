@@ -8,7 +8,7 @@ import { recordingCoordinator } from '../src/live/recording-commands.ts';
 
 const writes = {
   recordingSelectTrack:{index:0,id:'1',name:'Track'}, recordingSetPoint:{beats:0}, recordingLocator:{direction:'next'},
-  recordingArm:{enabled:true},recordingPrepare:{},recordingStart:{token:'test'},recordingStop:{},
+  recordingArm:{enabled:true,track:{index:0,id:'1',name:'Track'}},recordingPrepare:{},recordingStart:{token:'test'},recordingStop:{},
   recordingAudition:{disarm:true},recordingClick:{enabled:true},recordingMark:{mark:'good'},
   recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
   recordingSeekMarker:{name:'Start',time:0},
@@ -33,4 +33,17 @@ test('REC real dispatch routes STOP with the current socket and rejects extra ar
   assert.deepEqual(result.result,{observed:true}); assert.equal(called,1);
   const invalid = await dispatchCommand('controller',{cmd:'recordingStop',args:{toggle:true}},{clientId:'current',isCurrent:()=>true});
   assert.equal(invalid.ok,false); assert.match(invalid.error,/ARGUMENTS/); assert.equal(called,1);
+});
+
+test('REC manual arm dispatch requires the viewed track reference and forwards it with the current client',async t=>{
+  const original=recordingCoordinator.arm,track={index:0,id:'11',name:'Guitar'};let called=0;
+  recordingCoordinator.arm=async (enabled,expected,context)=>{
+    called++;assert.equal(enabled,true);assert.deepEqual(expected,track);assert.equal(context.clientId,'phone-a');return {observed:true};
+  };
+  t.after(()=>{recordingCoordinator.arm=original;});
+  const context={clientId:'phone-a',isCurrent:()=>true};
+  const invalid=await dispatchCommand('controller',{cmd:'recordingArm',args:{enabled:true}},context);
+  assert.equal(invalid.ok,false);assert.match(invalid.error,/ARGUMENTS/);assert.equal(called,0);
+  const result=await dispatchCommand('controller',{cmd:'recordingArm',args:{enabled:true,track}},context);
+  assert.equal(result.ok,true);assert.equal(called,1);
 });

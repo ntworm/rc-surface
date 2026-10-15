@@ -115,7 +115,7 @@ export class RecordingTransport extends EventEmitter {
   public dispose(): void { this.active = false; this.invalidate(); }
 
   public sendFailed(address: string, error: Error): void {
-    if ([...Object.values(REC), ...Object.values(getters), CMD.startPlaying, CMD.stopPlaying].includes(address)) {
+    if ([...Object.values(REC), ...Object.values(getters), CMD.startPlaying, CMD.stopPlaying, CMD.cuePointJump].includes(address)) {
       this.operation?.abort.abort(error);
     }
   }
@@ -143,6 +143,22 @@ export class RecordingTransport extends EventEmitter {
       await this.wait(operation, ['songTimeBeats'], state => Math.abs((state.songTimeBeats.value ?? -1) - beats) < 0.001,
         () => this.sendBatch([[REC.setSongTime, [{ type: 'float', value: beats }]], [GET.currentSongTime]]));
       this.requireStopped();
+      return this.snapshot();
+    });
+  }
+
+  /** A real locator jump also moves Live's persistent playback start. Merely
+   * setting current_song_time can read back correctly yet Play starts elsewhere. */
+  public async jumpToMarker(index: number, beats: number, guard: () => void = () => {}): Promise<RecordingTransportState> {
+    if (!Number.isInteger(index) || index < 0 || !Number.isFinite(beats) || beats < 0) throw new Error('Marker index and position must be non-negative finite values');
+    return this.run('marker', async operation => {
+      this.requireStopped();
+      await this.wait(operation, ['songTimeBeats', 'isPlaying', 'recordMode'], state =>
+        Math.abs((state.songTimeBeats.value ?? -1) - beats) < .001 && state.isPlaying.value === false && state.recordMode.value === false, () => {
+          guard();
+          this.sendBatch([[CMD.cuePointJump, [{type: 'integer', value: index}]], [GET.currentSongTime], [GET.isPlaying], [REC.getRecordMode]]);
+        });
+      guard(); this.requireStopped();
       return this.snapshot();
     });
   }

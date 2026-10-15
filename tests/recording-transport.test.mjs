@@ -106,6 +106,41 @@ test('REC metronome uses an explicit integer setter and never confirms from its 
   assert.equal((await setting).metronome.value, false);
 });
 
+test('REC native marker jump waits for fresh position and stopped record-off evidence and validates its arguments',async t=>{
+  const {rec,sent,push,seed}=fixture(t);
+  await assert.rejects(rec.jumpToMarker(1,32),/observed stopped/);
+  seed();
+  for(const [index,beats] of [[-1,32],[.5,32],[1,-1],[1,NaN],[1,Infinity],['1',32]]) await assert.rejects(rec.jumpToMarker(index,beats),/non-negative finite/);
+  let complete=false,guards=0;
+  const jumping=rec.jumpToMarker(1,32,()=>{guards++;}).then(value=>{complete=true;return value;});
+  assert.deepEqual(writes(sent),[[CMD.cuePointJump,[{type:'integer',value:1}]]]);
+  push(RESPONSE.currentSongTime,32);await flush();assert.equal(complete,false,'cached stopped state cannot confirm a new locator jump');
+  push(REC.getRecordMode,false);push(RESPONSE.isPlaying,true);await flush();assert.equal(complete,false);
+  push(RESPONSE.isPlaying,false);const state=await jumping;
+  assert.equal(guards,2);assert.equal(state.songTimeBeats.value,32);assert.equal(state.isPlaying.value,false);assert.equal(state.recordMode.value,false);
+});
+
+test('REC STOP supersedes a native marker jump before confirmation without repeating the jump or starting playback',async t=>{
+  const {rec,sent,push,seed}=fixture(t);seed();
+  const jumping=rec.jumpToMarker(1,32),rejected=assert.rejects(jumping,/superseded/);
+  const before=sent.length,stopping=rec.stopRecording();
+  assert.deepEqual(sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  push(RESPONSE.isPlaying,false);push(REC.getRecordMode,false);await stopping;await rejected;
+  push(RESPONSE.currentSongTime,32);t.mock.timers.tick(3000);await flush();
+  assert.deepEqual(writes(sent),[[CMD.cuePointJump,[{type:'integer',value:1}]],[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+});
+
+test('REC native marker send failure rejects immediately and cannot be confirmed by a later reply',async t=>{
+  const {rec,sent,push,seed}=fixture(t);seed();
+  let failure;
+  const jumping=rec.jumpToMarker(1,32).catch(error=>{failure=error;});
+  rec.sendFailed(CMD.cuePointJump,Error('marker send failed'));await flush();
+  assert.match(failure?.message || 'pending',/marker send failed/);await jumping;
+  push(RESPONSE.currentSongTime,32);push(RESPONSE.isPlaying,false);push(REC.getRecordMode,false);
+  assert.equal(rec.snapshot().pending,null);
+  assert.deepEqual(writes(sent),[[CMD.cuePointJump,[{type:'integer',value:1}]]]);
+});
+
 test('REC mutating waits invalidate the previous field and return settled snapshots', async t => {
   const { rec, push, seed } = fixture(t);
   seed();

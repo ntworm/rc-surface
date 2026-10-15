@@ -44,6 +44,7 @@ function fixture(t) {
     if (address === REC_LOOP.setLength) values.loopLength = args[0].value;
     if (address === CMD.startPlaying) values.playing = true;
     if (address === CMD.stopPlaying) values.playing = false;
+    if (address === CMD.cuePointJump) values.position = song.cuePoints[args[0].value].time;
     if (block === address) return;
     let response;
     if (address === GET.isPlaying) response = [values.playing];
@@ -253,7 +254,7 @@ test('REC missing preflight getter times out unknown; a late report never record
 test('REC explicit arm requires new OSC confirmation; never trusts the SDK setter alone', async t => {
   const f = fixture(t); await f.select();
   Object.defineProperty(f.song.tracks[0],'arm',{get:()=>false,set:()=>{}});
-  await assert.rejects(f.coordinator.arm(true,f.context),/ARM_UNCONFIRMED/);
+  await assert.rejects(f.coordinator.arm(true,recordingTrack,f.context),/ARM_UNCONFIRMED/);
   assert.equal(f.coordinator.snapshot().tracks[0].arm,false);
   assert.equal(f.song.tracks[1].arm,false);
 });
@@ -299,6 +300,255 @@ test('REC multi-track getter overflow cannot masquerade as listener push and hid
 
 const recordingTrack={index:0,id:'11',name:'Guitar'};
 const markerRange=(loop=false)=>({start:{name:'Verse',time:8},end:loop?{name:'Chorus',time:24}:null,loop});
+
+test('manual arm rejects a different controller selection before any SDK or OSC writes',async t=>{
+  const f=fixture(t),writes=[];let firstArm=false,secondArm=false;
+  Object.defineProperty(f.song.tracks[0],'arm',{get:()=>firstArm,set:value=>{firstArm=value;writes.push([0,value]);}});
+  Object.defineProperty(f.song.tracks[1],'arm',{get:()=>secondArm,set:value=>{secondArm=value;writes.push([1,value]);}});
+  await f.select();const viewed={...f.coordinator.snapshot().selected};
+  const other={clientId:'phone-b',isCurrent:()=>true};
+  f.coordinator.selectTrack({index:1,id:'22',name:'Bass'},other);
+  const before=f.sent.length;
+  await assert.rejects(f.coordinator.arm(true,viewed,f.context),/IDENTITY/);
+  assert.deepEqual(writes,[]);assert.equal(firstArm,false);assert.equal(secondArm,false);
+  assert.equal(f.sent.length,before,'reject the obsolete track binding before even starting a new read');
+  assert.equal(f.coordinator.snapshot().selected.id,'22','rejecting client A must not replace client B selection');
+});
+
+test('manual arm requires an exact track reference and rechecks SDK identity after its read',async t=>{
+  const f=fixture(t);await f.select();let writes=0;
+  Object.defineProperty(f.song.tracks[0],'arm',{get:()=>false,set:()=>{writes++;}});
+  const before=f.sent.length;
+  for(const track of [undefined,null,{...recordingTrack,id:'old'},{...recordingTrack,name:'Renamed'},{...recordingTrack,index:1},{...recordingTrack,extra:true}]) {
+    await assert.rejects(f.coordinator.arm(true,track,f.context),/IDENTITY/);
+  }
+  assert.equal(f.sent.length,before);assert.equal(writes,0);
+  const send=f.osc.send;let replaced=false;
+  f.osc.send=(address,args)=>{send(address,args);if(address===GET.currentSongTime && !replaced){replaced=true;f.song.tracks[0].handle.id='replacement';}};
+  await assert.rejects(f.coordinator.arm(true,recordingTrack,f.context),/IDENTITY/);
+  assert.equal(writes,0);assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')),false);
+});
+
+test('manual arm cannot write when its client retires during the confirmation read',async t=>{
+  const f=fixture(t);await f.select();let writes=0;
+  Object.defineProperty(f.song.tracks[0],'arm',{get:()=>false,set:()=>{writes++;}});
+  const send=f.osc.send;
+  f.osc.send=(address,args)=>{send(address,args);if(address===GET.currentSongTime)f.retire();};
+  await assert.rejects(f.coordinator.arm(true,recordingTrack,f.context),/SESSION/);
+  assert.equal(writes,0);
+});
+
+function barNineLoopFixture(t) {
+  const f=fixture(t);
+  f.song.tracks[0].arm=false;
+  const range={start:{name:'REC',time:32},end:{name:'REC2',time:48},loop:true};
+  f.song.cuePoints=[range.start,range.end];
+  return {...f,range};
+}
+const flushRecording=async()=>{for(let i=0;i<80;i++)await Promise.resolve();};
+
+function insertMarkerFixture(t,autoPlayOnRecord=false) {
+  const f=barNineLoopFixture(t),send=f.osc.send;
+  let insertTime=8;
+  f.song.cuePoints.unshift({name:'REC',time:8});
+  f.osc.send=(address,args=[])=>{
+    if(address===CMD.cuePointJump) insertTime=f.song.cuePoints[args[0].value].time;
+    if(address===CMD.startPlaying || (autoPlayOnRecord && address===REC.setRecordMode && args[0]?.value===1)) {
+      f.values.position=insertTime;f.values.playing=true;
+    }
+    send(address,args);
+  };
+  return f;
+}
+
+test('marker jump changes the persistent playback start using the verified numeric cue index, even with duplicate names',async t=>{
+  const f=insertMarkerFixture(t);
+  await f.coordinator.seekMarker(f.range.start,f.context);
+  assert.equal(f.values.position,32);assert.equal(f.values.playing,false);
+  f.osc.play();
+  assert.equal(f.values.position,32,'normal header Play must start at the marker rather than the older insert point');
+  assert.deepEqual(f.sent.filter(([address])=>address===CMD.cuePointJump),[[CMD.cuePointJump,[{type:'integer',value:1}]]]);
+  assert.equal(f.sent.some(([address])=>address===REC.setSongTime),false);
+});
+
+test('marker jump revalidates name, time and index at the transport boundary before any locator packet',async t=>{
+  const f=insertMarkerFixture(t),jump=f.osc.recording.jumpToMarker.bind(f.osc.recording);
+  f.osc.recording.jumpToMarker=(index,time,guard)=>{
+    f.song.cuePoints.reverse();
+    return jump(index,time,guard);
+  };
+  await assert.rejects(f.coordinator.seekMarker(f.range.end,f.context),/MARKER_CHANGED/);
+  assert.equal(f.sent.some(([address])=>address===CMD.cuePointJump || address===REC.setSongTime || address===CMD.startPlaying),false);
+});
+
+test('marker REC cannot enable record mode after its session retires during a locator jump',async t=>{
+  const f=insertMarkerFixture(t),send=f.osc.send;
+  f.osc.send=(address,args=[])=>{send(address,args);if(address===CMD.cuePointJump)f.retire();};
+  await assert.rejects(f.coordinator.record(recordingTrack,{...f.range,end:null,loop:false},f.context),/SESSION/);
+  assert.equal(f.values.position,32);assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+  assert.equal(f.sent.some(([address])=>address===REC.setRecordMode || address===CMD.startPlaying || address===CMD.stopPlaying),false);
+});
+
+for(const automaticPlay of [false,true]) {
+  test('marker REC starts at its marker when Start Playback with Record is '+automaticPlay,async t=>{
+    const f=insertMarkerFixture(t,automaticPlay);
+    await f.coordinator.record(recordingTrack,{...f.range,end:null,loop:false},f.context);
+    assert.equal(f.values.position,32,'record mode must never restart from a stale insert marker');
+    assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+    const jumpIndex=f.sent.findIndex(([address])=>address===CMD.cuePointJump),recordIndex=f.sent.findIndex(([address])=>address===REC.setRecordMode);
+    assert.ok(jumpIndex>=0 && jumpIndex<recordIndex);
+    assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying).length,automaticPlay?0:1);
+    assert.equal(f.sent.some(([address])=>address===REC.setSongTime),false);
+  });
+}
+
+test('loop confirmation waits through an old initial-poll reply before fresh 9.1 to 13.1 evidence',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=barNineLoopFixture(t),send=f.osc.send;let afterSetter=false,staleReplies=0;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_LOOP.setLength)afterSetter=true;
+    if(address===REC_LOOP.getLength && afterSetter && !staleReplies) {
+      f.sent.push([address,args]);staleReplies++;
+      queueMicrotask(()=>f.push(address,[4]));
+      setTimeout(()=>f.push(address,[16]),25);
+      return;
+    }
+    send(address,args);
+  };
+  let status='pending';
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context);
+  const outcome=recording.then(value=>{status='success';return value;},error=>{status=error.message;throw error;});
+  const caught=outcome.catch(error=>error);
+  await flushRecording();
+  assert.equal(status,'pending','an unmatched older reply is not a terminal setter failure');
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.record,false);
+  t.mock.timers.tick(25);const result=await caught;
+  assert.equal(status,'success',result?.message);
+  assert.equal(result.loopRegion.start,32);assert.equal(result.loopRegion.length,16);
+  assert.equal(f.values.playing,true);assert.equal(f.values.record,true);
+  for(const address of [REC_LOOP.setLength,REC_LOOP.setStart,REC_LOOP.setEnabled]) assert.equal(f.sent.filter(([sent])=>sent===address).length,1);
+});
+
+test('loop confirmation polls getters for delayed observations without ever replaying a setter',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=barNineLoopFixture(t),send=f.osc.send;let afterSetter=false,gets=0;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_LOOP.setLength)afterSetter=true;
+    if(address===REC_LOOP.getLength && afterSetter && ++gets===1) {
+      f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[4]));return;
+    }
+    send(address,args);
+  };
+  let complete=false;
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context).then(value=>{complete=true;return value;});
+  await flushRecording();assert.equal(f.song.tracks[0].arm,false);assert.equal(gets,1);
+  t.mock.timers.tick(100);await flushRecording();assert.equal(complete,true,'a fresh retry GET must settle confirmation');const state=await recording;
+  assert.equal(gets>=2,true);assert.equal(state.transport.recordMode.value,true);
+  assert.equal(f.sent.filter(([address])=>address===REC_LOOP.setLength).length,1);
+});
+
+test('loop confirmation also waits for current start and canonical boolean enabled replies',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=barNineLoopFixture(t),send=f.osc.send;let startSet=false,enabledSet=false,startOld=false,enabledOld=false;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_LOOP.setStart)startSet=true;
+    if(address===REC_LOOP.setEnabled)enabledSet=true;
+    if(address===REC_LOOP.getStart && startSet && !startOld) {
+      startOld=true;f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[0]));setTimeout(()=>f.push(address,[32]),25);return;
+    }
+    if(address===REC_PREFLIGHT.loop && enabledSet && !enabledOld) {
+      enabledOld=true;f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[false]));setTimeout(()=>f.push(address,[true]),25);return;
+    }
+    send(address,args);
+  };
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context);
+  await flushRecording();assert.equal(startOld,true);assert.equal(enabledSet,false);assert.equal(f.song.tracks[0].arm,false);
+  t.mock.timers.tick(25);await flushRecording();assert.equal(enabledOld,true);assert.equal(f.song.tracks[0].arm,false);
+  t.mock.timers.tick(25);await flushRecording();await recording;
+  assert.equal(f.values.record,true);
+  assert.deepEqual(f.sent.filter(([address])=>Object.values(REC_LOOP).includes(address) && address.includes('/set/')).map(([address])=>address),
+    [REC_LOOP.setLength,REC_LOOP.setStart,REC_LOOP.setEnabled]);
+});
+
+test('loop confirmation permanent mismatch expires once with expected and observed details; late evidence cannot record',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=barNineLoopFixture(t),send=f.osc.send;let afterSetter=false;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_LOOP.setLength)afterSetter=true;
+    if(address===REC_LOOP.getLength && afterSetter) {f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[4]));return;}
+    send(address,args);
+  };
+  let status='pending';
+  const result=f.coordinator.record(recordingTrack,f.range,f.context).then(value=>{status='success';return value;},error=>{status='failed';return error;});
+  await flushRecording();assert.equal(status,'pending');
+  t.mock.timers.tick(1999);await flushRecording();assert.equal(status,'pending');
+  t.mock.timers.tick(1);await flushRecording();assert.equal(status,'failed');
+  const error=await result;assert.match(error.message,/REC:LOOP_UNCONFIRMED.*loopLength expected=16 observed=4/);
+  const before=f.sent.length;
+  f.push(REC_LOOP.getLength,[16]);t.mock.timers.tick(5000);await flushRecording();
+  assert.equal(f.sent.length,before,'timeout removes getter polling and every delayed continuation');
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+  assert.deepEqual(f.sent.filter(([address])=>address.includes('/set/')).map(([address])=>address),[REC_LOOP.setLength]);
+  assert.equal(f.coordinator.listenerCount('observation'),0);
+});
+
+test('loop confirmation shares one two-second budget across length and start instead of resetting for each setter',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=barNineLoopFixture(t),send=f.osc.send;let lengthSet=false,startSet=false;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_LOOP.setLength) {lengthSet=true;setTimeout(()=>f.push(REC_LOOP.getLength,[16]),1500);}
+    if(address===REC_LOOP.setStart) {startSet=true;setTimeout(()=>f.push(REC_LOOP.getStart,[32]),1000);}
+    if((address===REC_LOOP.getLength && lengthSet && Date.now()<11500) || (address===REC_LOOP.getStart && startSet && Date.now()<12500)) {
+      f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[address===REC_LOOP.getLength?4:0]));return;
+    }
+    send(address,args);
+  };
+  let status='pending';
+  const result=f.coordinator.record(recordingTrack,f.range,f.context).then(value=>{status='success';return value;},error=>{status='failed';return error;});
+  await flushRecording();t.mock.timers.tick(1500);await flushRecording();
+  assert.equal(startSet,true);assert.equal(status,'pending');
+  t.mock.timers.tick(500);await flushRecording();assert.equal(status,'failed','the second setter receives only the remaining budget');
+  assert.match((await result).message,/REC:LOOP_UNCONFIRMED.*loopStart expected=32 observed=0/);
+  t.mock.timers.tick(1000);await flushRecording();
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.record,false);
+  assert.equal(f.sent.some(([address])=>address===REC_LOOP.setEnabled || address===CMD.startPlaying),false);
+});
+
+for(const interruption of ['STOP','retired session','OSC loss','changed track','Punch enabled']) {
+  test('loop confirmation interrupted by '+interruption+' cannot issue later setters, arm or start',async t=>{
+    t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+    const f=barNineLoopFixture(t),send=f.osc.send;let afterSetter=false;
+    f.osc.send=(address,args=[])=>{
+      if(address===REC_LOOP.setLength)afterSetter=true;
+      if(address===REC_LOOP.getLength && afterSetter) {f.sent.push([address,args]);queueMicrotask(()=>f.push(address,[4]));return;}
+      send(address,args);
+    };
+    let settled=false;
+    const result=f.coordinator.record(recordingTrack,f.range,f.context).then(value=>{settled=true;return value;},error=>{settled=true;return error;});
+    await flushRecording();assert.equal(f.song.tracks[0].arm,false);
+    if(interruption==='STOP') {
+      const before=f.sent.length,stopping=f.coordinator.stop(f.context);
+      assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+      await stopping;
+    } else if(interruption==='retired session') {f.retire();t.mock.timers.tick(100);}
+    else if(interruption==='OSC loss') {f.osc.state.lastSeenAt=Date.now()-6000;f.osc.heartbeatTick();}
+    else if(interruption==='changed track') {f.song.tracks[0].handle.id='replaced';f.push(REC_LOOP.getLength,[16]);}
+    else {f.values.punchIn=true;f.push(REC_PREFLIGHT.punchIn,[true]);}
+    await flushRecording();
+    assert.equal(settled,true,'unsafe or superseded confirmation must settle without waiting for its timeout');
+    const error=await result;
+    assert.match(error.message,interruption==='STOP'?/STOPPED/:interruption==='retired session'?/SESSION/:interruption==='OSC loss'?/CONNECTION/:interruption==='changed track'?/IDENTITY/:/PUNCHIN/);
+    const before=f.sent.length;
+    f.push(REC_LOOP.getLength,[16]);t.mock.timers.tick(3000);await flushRecording();
+    if(interruption==='OSC loss') assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/') || address===CMD.stopPlaying),false,'reconnection may query but cannot replay a write');
+    else assert.equal(f.sent.length,before);
+    assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+    assert.equal(f.sent.some(([address])=>address===REC_LOOP.setStart || address===REC_LOOP.setEnabled || address===CMD.startPlaying),false);
+    assert.equal(f.sent.filter(([address])=>address===REC_LOOP.setLength).length,1);
+    assert.equal(f.coordinator.listenerCount('observation'),0);
+    if(interruption!=='STOP') assert.equal(f.sent.some(([address])=>address===CMD.stopPlaying),false);
+  });
+}
 
 test('marker REC owns arm/prepare internally; STOP disarms only its recorded track and marker playback uses no extra listen command',async t=>{
   const f=fixture(t);f.song.tracks[0].arm=false;

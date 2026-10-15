@@ -6,6 +6,9 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
+- Restore the manual track-arm button in REC with observed ARMED/DISARMED state. REC still arms internally; STOP disarms only the track owned by that recording workflow.
+- Use Live's native locator jump when selecting a marker or starting REC, preserving that marker as the next playback start. Setting song position alone could leave Play starting from an older point.
+- Confirm Loop setters with bounded getter reads under one two-second deadline. Send each setter once, retain track/marker/state guards and let STOP cancel pending confirmation; missing confirmation blocks recording.
 - Simplify Arrangement REC to track, start marker and optional Loop/end marker. Add a zoomable marker strip with observed playback position; marker selection seeks, and header Play auditions. REC verifies state, confirms the loop region, arms and records; STOP stops and disarms only the track armed by this workflow. Loop repeats until STOP; Live manages count-in and recorded passages.
 - Keep passive REC refreshes from discarding valid observations, blocking controls or revoking a prepared attempt on read failure. Current user actions supersede passive reads; late read replies cannot replace their state.
 - Blink the white XY mapping-takeover target while pending, respecting reduced motion. Keep the orange dot as the actual XY position.

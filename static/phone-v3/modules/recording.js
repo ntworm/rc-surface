@@ -81,6 +81,13 @@
     const invoke = (name,args) => client.command(name,args).catch(()=>{});
     const cueAt = index => index === '' ? null : client.view().state?.locators[Number(index)] || null;
     const markerRef = cue => ({name:cue.name,time:cue.time});
+    function manualArmTrack(view) {
+      const state=view.state, transport=state?.transport;
+      if(!view.writable || view.busy || state?.pending || !transport?.connected || !transport.isPlaying?.fresh || transport.isPlaying.value!==false
+        || !transport.recordMode?.fresh || transport.recordMode.value!==false) return null;
+      const track=state.tracks.find(track=>track.index===state.selected?.index);
+      return track?.canArm===true && typeof track.arm==='boolean'?track:null;
+    }
     const positionLabel = (time,meter) => {
       if (!Number.isFinite(time) || !meter?.numerator || !meter?.denominator) return '?';
       const pos=beatsToPosition(time,meter);return pos.bar+'.'+pos.beat;
@@ -131,6 +138,8 @@
       el('loop').disabled=!editable || (!looping && !state?.locators?.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
       el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
+      el('arm-state').disabled=!manualArmTrack(view);
+      el('arm-state').textContent='?';el('arm-state').setAttribute('aria-pressed','false');
       for(const marker of el('markers').children) marker.disabled=!editable;
       if(!state) {el('start').disabled=true;el('cursor').hidden=true;return;}
       const signature=JSON.stringify(state.tracks.map(track=>[track.index,track.id,track.name,track.canArm]));
@@ -142,6 +151,8 @@
       if(el('track').value!==selected) el('track').value=selected;
       const selectedTrack=state.tracks.find(track=>track.index===state.selected?.index);
       el('arm-state').textContent=selectedTrack?t(selectedTrack.arm===true?'trackArmed':selectedTrack.arm===false?'trackDisarmed':'unknown'):'';
+      el('arm-state').setAttribute('aria-pressed',String(selectedTrack?.arm===true));
+      el('arm-state').setAttribute('aria-label',t(selectedTrack?.arm===true?'disarm':'arm'));
       const markerKey=JSON.stringify([state.locators,state.meter]);
       if(markerSignature!==markerKey) {
         const previous=startIndex!==''?previousLocators[Number(startIndex)]:null;
@@ -186,6 +197,10 @@
     el('track').addEventListener('change',()=>{
       const track=client.view().state?.tracks.find(track=>String(track.index)===el('track').value);
       if(track) invoke('recordingSelectTrack',{index:track.index,id:track.id,name:track.name});
+    });
+    el('arm-state').addEventListener('click',()=>{
+      const track=manualArmTrack(client.view());
+      if(track) invoke('recordingArm',{enabled:!track.arm,track:{index:track.index,id:track.id,name:track.name}});
     });
     el('start-marker').addEventListener('change',()=>{
       startIndex=el('start-marker').value;updateRange();const cue=cueAt(startIndex);

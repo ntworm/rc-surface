@@ -12,6 +12,8 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-workspace label { font-size:11px; display:flex; align-items:center; gap:8px; }
 .rec-workspace [hidden] { display:none; }
 .rec-track { flex:1; min-width:180px; }
+.rec-workspace .rec-arm-state { min-height:44px; min-width:88px; padding:6px; font-size:11px; }
+.rec-workspace .rec-arm-state[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); }
 .rec-main { position:sticky; top:0; z-index:3; background:var(--bg2); padding:4px 0; }
 .rec-main .rec-start,.rec-main .rec-stop { flex:1; font-size:18px; }
 /* Red distinguishes REC and the priority STOP action. */

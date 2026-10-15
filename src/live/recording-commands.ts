@@ -26,7 +26,7 @@ export const recordingCommands: Record<string, CommandSpec> = {
     exact(args, ['direction']); return recordingCoordinator.chooseLocator(args['direction'], context);
   } },
   recordingArm: { description: 'Explicitly arm or disarm selected REC track', handler: async (args, context) => {
-    exact(args, ['enabled']); return recordingCoordinator.arm(args['enabled'], context);
+    exact(args, ['enabled','track']); return recordingCoordinator.arm(args['enabled'], args['track'], context);
   } },
   recordingPrepare: { description: 'Check conservative REC conditions and seek return point', handler: async (args, context) => {
     exact(args, []); return recordingCoordinator.prepare(context);

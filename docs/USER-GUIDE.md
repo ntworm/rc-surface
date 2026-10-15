@@ -1140,7 +1140,9 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 Create the Arrangement markers in Live first, then open **REC** with playback
 stopped:
 
-1. Choose the track to record.
+1. Choose the track to record. The **ARMED / DISARMED** button beside the
+   track shows Live's observed arm state. Click it to arm or disarm that track
+   manually while playback is stopped; selection alone does not arm it.
 2. Choose the start marker. The marker strip shows the session's markers and
    observed playback position; use **Zoom** and scroll to inspect the region.
 3. For repeated passes, enable **Loop** and choose an end marker after the start.
@@ -1151,15 +1153,17 @@ stopped:
    this REC workflow. Press REC again to arm it for another attempt.
 
 To listen, click a marker in the strip or choose the start marker, then use
-**Play in the header**. Selecting a marker positions the stopped transport;
-selection does not start playback or recording. The strip is a marker and
-position reference, without audio waveforms or take-lane selection. A moved or
-removed marker must be selected again.
+**Play in the header**. Selecting a marker uses Live's native marker jump, so
+Play starts from that marker. Selection positions the stopped transport without
+starting playback or recording. The strip is a marker and position reference,
+without audio waveforms or take-lane selection. A moved or removed marker must
+be selected again.
 
 Loop repeats between the two markers until STOP; the end marker does not stop
-recording. REC confirms the loop region before starting. With Loop off, REC
-turns off Live's Arrangement Loop. STOP retains the chosen loop region for
-playback. Configure count-in, input monitoring and take lanes in Live. For
+recording. REC waits for Live to confirm the loop region before starting. All
+loop changes share a two-second confirmation limit; missing confirmation
+blocks recording. With Loop off, REC turns off Live's Arrangement Loop. STOP
+retains the chosen loop region for playback. Configure count-in, input monitoring and take lanes in Live. For
 listening to the Arrangement, choose Monitor Auto/Off instead of In.
 
 REC requires the selected track to be armable, other tracks disarmed, and

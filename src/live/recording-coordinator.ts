@@ -6,7 +6,7 @@ import { EventEmitter } from 'node:events';
 import { CLIP, REC_LOOP, REC_PREFLIGHT } from '../osc-tokens.js';
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
-import { RECORDING_FRESH_MS } from './recording-transport.js';
+import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 
 interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean }
 interface Song { tracks: readonly Track[]; cuePoints: readonly { name: string; time: number }[] }
@@ -15,6 +15,7 @@ interface MarkerRef { name: string; time: number }
 interface MarkerRange { start: MarkerRef; end: MarkerRef | null; loop: boolean }
 interface Observed { value: unknown; at: number; revision: number }
 interface Operation { name: string; abort: AbortController; context?: CommandExecutionContext }
+interface LoopExpectation { key: 'loop' | 'loopStart' | 'loopLength'; value: number | boolean; getter: string; deadline: number }
 const flags = ['loop', 'punchIn', 'punchOut', 'overdub', 'backToArranger', 'sessionRecord'] as const;
 function fail(code: string): never { throw Error('REC:' + code); }
 // AbletonOSC keeps Python booleans as OSC T/F; older reports may use 0/1.
@@ -92,9 +93,10 @@ export class RecordingCoordinator extends EventEmitter {
     if (operation.context) this.requireContext(operation.context);
     if (operation.name !== 'stop' && (!this.osc.state.available || !this.osc.state.connected)) fail('CONNECTION');
   }
-  private identity(): Track {
+  private identity(expected?: TrackRef): Track {
     const ref = this.selected, tracks = this.currentSong().tracks;
     if (!ref || this.selected !== ref) fail('TRACK_REQUIRED');
+    if (expected && (ref.index !== expected.index || ref.id !== expected.id || ref.name !== expected.name)) fail('IDENTITY');
     const track = tracks[ref.index];
     if (!track || String(track.handle.id) !== ref.id || track.name !== ref.name) fail('IDENTITY');
     const names = this.value('names');
@@ -137,6 +139,15 @@ export class RecordingCoordinator extends EventEmitter {
     const start = this.marker(value.start), end = value.end === null ? null : this.marker(value.end);
     if (value.loop && (!end || end.time <= start.time)) fail('LOOP_RANGE');
     return {start, end, loop: value.loop};
+  }
+  private async jumpMarker(operation: Operation, marker: MarkerRef): Promise<void> {
+    const song = this.currentSong(), point = this.marker(marker);
+    const index = song.cuePoints.findIndex(cue => cue.name === point.name && cue.time === point.time);
+    await this.osc.recording.jumpToMarker(index, point.time, () => {
+      this.check(operation);
+      if (this.currentSong() !== song || song.cuePoints[index]?.name !== point.name || song.cuePoints[index]?.time !== point.time) fail('MARKER_CHANGED');
+      if (this.selected) this.identity();
+    });
   }
   public chooseLocator(direction: 'previous' | 'next', context?: CommandExecutionContext) {
     this.idle(context);
@@ -192,7 +203,7 @@ export class RecordingCoordinator extends EventEmitter {
     }
     if (key !== undefined) { this.observed.set(key, { value, at, revision: ++this.revision }); this.emit('observation'); }
   };
-  private async read(operation: Operation): Promise<void> {
+  private async read(operation: Operation, expected?: LoopExpectation): Promise<void> {
     this.check(operation);
     const song = this.currentSong();
     if (song.tracks.length > 256) fail('TRACK_LIMIT');
@@ -207,16 +218,45 @@ export class RecordingCoordinator extends EventEmitter {
     if (this.range?.loop) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
     const revision = this.revision;
     const evidence = new Promise<void>((resolve, reject) => {
-      const finish = (error?: unknown) => { clearTimeout(timer); this.off('observation', observed); operation.abort.signal.removeEventListener('abort', abort); if (error) reject(error); else resolve(); };
+      let done = false, retry: ReturnType<typeof setTimeout> | undefined;
+      const mismatch = () => Error(`REC:LOOP_UNCONFIRMED (${expected!.key} expected=${expected!.value} observed=${this.value(expected!.key)})`);
+      const matches = () => {
+        if (!expected) return true;
+        const actual = this.value(expected.key);
+        return typeof expected.value === 'number' ? typeof actual === 'number' && Math.abs(actual - expected.value) < .001 : actual === expected.value;
+      };
+      const finish = (error?: unknown) => {
+        if (done) return; done = true;
+        clearTimeout(timer); clearTimeout(retry); this.off('observation', observed); operation.abort.signal.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve();
+      };
       const abort = () => finish(operation.abort.signal.reason);
       const observed = () => {
-        try { this.check(operation); if (keys.every(key => (this.observed.get(key)?.revision ?? 0) > revision && this.value(key) !== null)) finish(); }
+        try {
+          this.check(operation);
+          if (expected && Date.now() >= expected.deadline) { finish(mismatch()); return; }
+          if (keys.every(key => (this.observed.get(key)?.revision ?? 0) > revision && this.value(key) !== null)) {
+            if (expected) { this.preflight(false, false); this.markerRange(this.range!); }
+            if (matches()) finish();
+          }
+        }
         catch (error) { finish(error); }
       };
-      const timer = setTimeout(() => finish(Error('REC:UNKNOWN')), 2000);
+      const poll = () => {
+        if (done || !expected) return;
+        try {
+          this.check(operation);
+          if (Date.now() >= expected.deadline) { finish(mismatch()); return; }
+          this.osc.send(expected.getter);
+          if (!done) retry = setTimeout(poll, Math.min(100, expected.deadline - Date.now()));
+        } catch (error) { finish(error); }
+      };
+      const timer = setTimeout(() => finish(expected && !matches() ? mismatch() : Error('REC:UNKNOWN')),
+        expected ? Math.max(0, expected.deadline - Date.now()) : RECORDING_CONFIRM_MS);
       this.on('observation', observed); operation.abort.signal.addEventListener('abort', abort, { once: true });
       try { for (const [address, index] of packets) this.osc.send(address, index === undefined ? [] : [{ type: 'integer', value: index }]); }
       catch (error) { finish(error); }
+      if (expected && !done) retry = setTimeout(poll, Math.min(100, expected.deadline - Date.now()));
     });
     await Promise.all([evidence, this.osc.recording.readState()]);
     this.check(operation);
@@ -244,16 +284,18 @@ export class RecordingCoordinator extends EventEmitter {
     if (this.currentSong().tracks.some((_, index) => index !== selected.index && this.value('arm:' + index) !== false)) fail('OTHER_ARMED');
     if (this.point === null) fail('POSITION');
   }
-  public async arm(enabled: boolean, context?: CommandExecutionContext) {
+  public async arm(enabled: boolean, expected: TrackRef, context?: CommandExecutionContext) {
     this.requireContext(context); if (typeof enabled !== 'boolean') fail('ARM_VALUE');
+    if (!expected || Object.keys(expected).length !== 3 || !Number.isInteger(expected.index) || expected.index < 0 || typeof expected.id !== 'string' || typeof expected.name !== 'string') fail('IDENTITY');
+    this.identity(expected);
     this.preparedToken = null;
     return this.run('arm', context, async operation => {
-      await this.read(operation); this.identity();
+      await this.read(operation); this.identity(expected);
       const state = this.osc.recording.snapshot();
       if (!state.recordMode.fresh || state.recordMode.value !== false || !state.isPlaying.fresh || state.isPlaying.value !== false) fail('NOT_STOPPED');
       if (this.value('canArm:' + this.selected!.index) !== true) fail('NOT_ARMABLE');
-      this.check(operation); this.identity().arm = enabled;
-      await this.read(operation); this.identity();
+      this.check(operation); this.identity(expected).arm = enabled;
+      await this.read(operation); this.identity(expected);
       if (this.value('arm:' + this.selected!.index) !== enabled) fail('ARM_UNCONFIRMED');
     });
   }
@@ -282,12 +324,15 @@ export class RecordingCoordinator extends EventEmitter {
       await this.read(operation); this.preflight(false, false); this.markerRange(range);
       // The chosen Loop setting is explicit. Never silently clear Punch,
       // Session Record, other armed tracks, or Back to Arrangement.
-      const confirm = async (address: string, value: number, key: string, expected: unknown) => {
+      // Anonymous GET replies may still describe an earlier poll. Wait for
+      // matching evidence using GETs only; all loop writes share one budget.
+      const loopDeadline = Date.now() + RECORDING_CONFIRM_MS;
+      const loopGetters = {loop: REC_PREFLIGHT.loop, loopStart: REC_LOOP.getStart, loopLength: REC_LOOP.getLength};
+      const confirm = async (address: string, value: number, key: LoopExpectation['key'], expected: number | boolean) => {
         this.check(operation); this.identity(); this.stopped(); this.markerRange(range);
+        if (Date.now() >= loopDeadline) fail(`LOOP_UNCONFIRMED (${key} expected=${expected} observed=${this.value(key)})`);
         this.osc.send(address, [{type: address === REC_LOOP.setEnabled ? 'integer' : 'float', value}]);
-        await this.read(operation); this.preflight(false, false);
-        const actual = this.value(key);
-        if (typeof expected === 'number' ? typeof actual !== 'number' || Math.abs(actual - expected) >= .001 : actual !== expected) fail('LOOP_UNCONFIRMED');
+        await this.read(operation, {key, value: expected, getter: loopGetters[key], deadline: loopDeadline}); this.preflight(false, false);
       };
       if (this.value('loop') !== false) await confirm(REC_LOOP.setEnabled, 0, 'loop', false);
       if (range.loop) {
@@ -298,7 +343,7 @@ export class RecordingCoordinator extends EventEmitter {
       this.check(operation); this.preflight(false); this.markerRange(range);
       this.armedByRecorder = {...track}; this.identity().arm = true;
       await this.read(operation); this.preflight(true);
-      await this.osc.recording.seek(range.start.time);
+      await this.jumpMarker(operation, range.start);
       await this.read(operation); this.preflight(true); this.markerRange(range);
       if (Math.abs((this.osc.recording.snapshot().songTimeBeats.value ?? -1) - range.start.time) >= .001) fail('POSITION_CHANGED');
       await this.osc.recording.startRecording(() => {this.check(operation); this.identity(); this.conditions(true); this.markerRange(range);});
@@ -313,7 +358,7 @@ export class RecordingCoordinator extends EventEmitter {
       await this.read(operation); this.stopped(); this.check(operation); this.marker(point);
       const selected = this.selected;
       if (selected && this.value('monitor:' + selected.index) === 0) fail('MONITOR_IN');
-      await this.osc.recording.seek(point.time); this.check(operation);
+      await this.jumpMarker(operation, point); this.check(operation);
     });
   }
   public async start(token: string, context?: CommandExecutionContext) {

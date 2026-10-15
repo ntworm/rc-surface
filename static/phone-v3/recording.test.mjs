@@ -211,3 +211,47 @@ test('REC disconnect disables existing timeline markers and retires queued click
   assert.ok(markers.every(marker=>marker.disabled===true),'retired read cannot reactivate markers');
   assert.equal(calls.length,before);
 });
+
+test('REC manual arm uses observed state and rejects viewer, stale, playing, busy and retired callbacks',async t=>{
+  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+  assert.match(html,/<button\b[^>]*id="rec-arm-state"/);
+  const nodes=new Map(),events=new Map(),calls=[];let generated=0,now=10000;
+  class ClockDate extends Date {static now(){return now;}}
+  const node=id=>{
+    if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
+      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+    return nodes.get(id);
+  };
+  const field=value=>({value,fresh:true,observedAt:now});
+  const state=arm=>({transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(32),metronome:field(false)},
+    selected:{index:0,id:'11',name:'Guitar'},pending:null,range:null,safety:{loop:false},
+    tracks:[{index:0,id:'11',name:'Guitar',arm,canArm:true}],locators:[{name:'REC',time:32},{name:'REC2',time:48}],meter:{numerator:4,denominator:4}});
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
+    createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const context=vm.createContext({document:doc,Date:ClockDate,setTimeout:()=>1,clearTimeout(){},addEventListener:(name,handler)=>events.set(name,handler),
+    RcSurfaceI18n:{t:key=>key},sendPhoneCommand:(name,args,cb)=>calls.push({name,args,cb})});
+  vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
+  const seed=async result=>{const reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result});await reading;};
+  client.session(true,'viewer');await seed(state(false));
+  const click=node('rec-arm-state').listeners.get('click');assert.equal(typeof click,'function');
+  let before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
+  client.session(true,'controller');await seed(state(false));
+  assert.equal(node('rec-arm-state').disabled,false);assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed');
+  click();assert.equal(calls.at(-1).name,'recordingArm');assert.equal(calls.at(-1).args.enabled,true);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1).args.track)),{index:0,id:'11',name:'Guitar'});
+  assert.equal(node('rec-arm-state').disabled,true);assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed','sending is not observed arm confirmation');
+  before=calls.length;click();assert.equal(calls.length,before,'double click cannot queue a second arm');
+  calls.at(-1).cb({ok:true,result:state(true)});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(node('rec-arm-state').textContent,'rec.trackArmed');assert.equal(node('rec-arm-state')['aria-pressed'],'true');
+  click();assert.equal(calls.at(-1).args.enabled,false);const retiredReply=calls.at(-1).cb;
+  const stop=client.command('recordingStop');calls.at(-1).cb({ok:true,result:state(false)});await stop;
+  retiredReply({ok:true,result:state(true)});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed');
+  now+=2001;before=calls.length;click();assert.equal(calls.length,before,'queued tap must recheck freshness even before the next UI poll');
+  const playing=state(false);playing.transport.isPlaying.value=true;await seed(playing);
+  before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
+  await seed({...state(false),pending:'record'});before=calls.length;click();assert.equal(calls.length,before);
+  await seed(state(null));before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
+  events.get('ableton-rc:phone-ws-close')();before=calls.length;assert.equal(node('rec-arm-state').disabled,true);assert.doesNotThrow(click);assert.equal(calls.length,before);
+});
