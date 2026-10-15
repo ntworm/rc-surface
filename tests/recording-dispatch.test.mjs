@@ -9,6 +9,7 @@ import { recordingCoordinator } from '../src/live/recording-commands.ts';
 const writes = {
   recordingSelectTrack:{index:0,id:'1',name:'Track'}, recordingSetPoint:{beats:0}, recordingLocator:{direction:'next'},
   recordingArm:{enabled:true,track:{index:0,id:'1',name:'Track'}},recordingPrepare:{},recordingStart:{token:'test'},recordingStop:{},
+  recordingTrackControl:{track:{index:0,id:'1',name:'Track'},property:'arm',enabled:true,armMode:'multi'},
   recordingAudition:{disarm:true},recordingClick:{enabled:true},recordingMark:{mark:'good'},
   recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
   recordingSeekMarker:{name:'Start',time:0},
@@ -23,6 +24,25 @@ test('REC commands are in the actual mappings registry and viewer cannot invoke 
     const noSocket = await dispatchCommand('controller',{cmd,args});
     assert.equal(noSocket.ok,false); assert.match(noSocket.error,/REC:SESSION/,cmd);
   }
+});
+
+test('REC grid dispatch forwards exact cohort and track controls and rejects mixed or extra schemas',async t=>{
+  const originals={record:recordingCoordinator.record,trackControl:recordingCoordinator.trackControl},calls=[];
+  for(const method of Object.keys(originals))recordingCoordinator[method]=async (...args)=>{calls.push({method,args});return {observed:true};};
+  t.after(()=>Object.assign(recordingCoordinator,originals));
+  const context={clientId:'grid',isCurrent:()=>true},track={index:0,id:'11',name:'Input'},range=writes.recordingRecord.range;
+  let result=await dispatchCommand('controller',{cmd:'recordingRecord',args:{tracks:[track],range,preRollBars:1}},context);
+  assert.equal(result.ok,true);assert.deepEqual(calls.at(-1),{method:'record',args:[[track],range,context,1]});
+  for(const property of ['arm','solo','mute']) {
+    const args={track,property,enabled:true,...(property==='arm'?{armMode:'exclusive'}:{})};
+    result=await dispatchCommand('controller',{cmd:'recordingTrackControl',args},context);
+    assert.equal(result.ok,true);assert.deepEqual(calls.at(-1),{method:'trackControl',args:[track,property,true,property==='arm'?'exclusive':'multi',context]});
+  }
+  const count=calls.length;
+  for(const [cmd,args] of [['recordingRecord',{tracks:[track],track,range}],['recordingTrackControl',{track,property:'arm',enabled:true}],['recordingTrackControl',{track,property:'solo',enabled:true,armMode:'exclusive'}]]) {
+    result=await dispatchCommand('controller',{cmd,args},context);assert.equal(result.ok,false);assert.match(result.error,/ARGUMENTS/);
+  }
+  assert.equal(calls.length,count);
 });
 test('REC real dispatch routes STOP with the current socket and rejects extra arguments',async t => {
   const original = recordingCoordinator.stop;

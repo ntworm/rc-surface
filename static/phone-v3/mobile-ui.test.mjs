@@ -145,9 +145,9 @@ test('vision performance layout fits one screen with compact controls and fixed 
   assert.match(slot, /min-height:\s*136px/);
   assert.match(slot, /display:\s*grid/);
   assert.match(slot, /height:\s*auto/);
-  // The focused full-width deck gives MAP and CLUTCH explicit track counts.
+  // MAP exposes XYZ, PALM and FACE; CLUTCH retains its four controls.
   assert.match(cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
-    /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+    /grid-template-columns:\s*repeat\(5,\s*minmax\(64px,\s*1fr\)\)/);
   assert.match(cssBlock(css, '.vision-readout-card:nth-child(2) .vision-axis-chips'),
     /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   // The readout cards keep their compact label beside the chips.

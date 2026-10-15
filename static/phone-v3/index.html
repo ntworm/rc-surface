@@ -458,10 +458,6 @@
         <div class="vision-camera-sidebar">
           <aside class="vision-camera-stage" aria-label="Camera preview status" data-i18n-aria-label="vid.previewStatus">
             <header><strong data-i18n="vid.camera">CAMERA</strong><span data-i18n="vid.liveCheck">LIVE CHECK</span></header>
-            <div class="vision-camera-diagnostics" aria-label="Camera calibration readings" data-i18n-aria-label="vid.calibration">
-              <span title="Raw palm size used to check the Z depth window." data-i18n-title="vid.palmSizeTip">PALM <b id="vision-value-palm">0.00</b></span>
-              <span title="Signed palm-facing reading used to distinguish palm from back of hand." data-i18n-title="vid.facingTip">FACE <b id="vision-value-facing">+0.00</b></span>
-            </div>
             <div class="vision-camera-placeholder">
               <strong id="vision-camera-state-title" data-i18n="vid.cameraOff">CAMERA OFF</strong>
               <span id="vision-camera-state-detail" data-i18n="vid.enableToBegin">Enable Camera to begin</span>
@@ -569,6 +565,8 @@
                 <span data-name="sensor.vision.x">X <b id="vision-value-x">0.50</b></span>
                 <span data-name="sensor.vision.y">Y <b id="vision-value-y">0.50</b></span>
                 <span data-name="sensor.vision.z">Z <b id="vision-value-z">0.00</b></span>
+                <span data-name="sensor.vision.palm" title="Raw palm size used to check the Z depth window." data-i18n-title="vid.palmSizeTip">PALM <b id="vision-value-palm">0.00</b></span>
+                <span data-name="sensor.vision.face" title="Signed palm-facing reading used to distinguish palm from back of hand." data-i18n-title="vid.facingTip">FACE <b id="vision-value-facing">+0.00</b></span>
               </strong>
             </span>
             <span class="vision-readout-card vision-axis-card">
@@ -597,11 +595,6 @@
         <button id="rec-stop" type="button" class="rec-stop">STOP</button>
         <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
       </div>
-      <div class="rec-row rec-track-row">
-        <label for="rec-track" data-i18n="rec.track">TRACK</label>
-        <select id="rec-track" class="rec-track" aria-label="Track" data-i18n-aria-label="rec.track"></select>
-        <button id="rec-arm-state" class="rec-arm-state" type="button" aria-pressed="false" aria-label="Arm track" data-i18n-aria-label="rec.arm" disabled>?</button>
-      </div>
       <section class="rec-marker-strip" aria-label="Arrangement markers" data-i18n-aria-label="rec.locators">
         <header class="rec-row">
           <span data-i18n="rec.locators">Arrangement markers</span>
@@ -628,6 +621,8 @@
         <button id="rec-pre-roll-2" type="button" aria-pressed="false">2</button>
         <button id="rec-pre-roll-4" type="button" aria-pressed="false">4</button>
       </div>
+      <div class="rec-row rec-track-heading"><span data-i18n="rec.tracks">TRACKS</span><button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button></div>
+      <section id="rec-track-grid" class="rec-track-grid" aria-label="Tracks" data-i18n-aria-label="rec.tracks"></section>
       <details class="rec-help">
         <summary data-i18n="rec.info">INFO</summary>
         <p data-i18n="rec.markerHelp">Create markers in Live. Tap one to position playback, then use the header Play. REC arms this track; STOP disarms it.</p>

@@ -88,6 +88,8 @@ export const REC_PREFLIGHT = {
   backToArranger: "/live/song/get/back_to_arranger",
   sessionRecord: "/live/song/get/session_record",
   trackArm: "/live/track/get/arm",
+  trackSolo: "/live/track/get/solo",
+  trackMute: "/live/track/get/mute",
   trackCanArm: "/live/track/get/can_be_armed",
   trackMonitor: "/live/track/get/current_monitoring_state",
   signatureNumerator: "/live/song/get/signature_numerator",

@@ -76,6 +76,7 @@ test('the public VID catalog contains only deliberate performance controls', () 
   const vision = getControlGroups().find((group) => group.group === 'Sensors: Vision');
   assert.deepEqual(Array.from(vision.items), [
     'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
+    'sensor.vision.palm', 'sensor.vision.face',
     'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
     'sensor.vision.rotateVal', 'sensor.vision.open',
     'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',

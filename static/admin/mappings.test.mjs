@@ -134,6 +134,7 @@ test('admin mappings expose only current canonical phone controls', () => {
   assert.deepEqual(items('Toggles (1-8)'), Array.from({length:8},(_,i)=>`toggle-${i+1}`));
   assert.deepEqual(items('Sensors: Vision'), [
     'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
+    'sensor.vision.palm', 'sensor.vision.face',
     'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
     'sensor.vision.rotateVal', 'sensor.vision.open',
     'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',
@@ -152,7 +153,7 @@ test('admin mappings expose only current canonical phone controls', () => {
     'knob-9', 'fader-9', 'toggle-9', 'button-1', 'button-5', 'rib' + 'bon-3', 'gate-1', 'scene-1', 'sensor.light.lux',
     'sensor.vision.thumb', 'sensor.vision.index', 'sensor.vision.middle',
     'sensor.vision.ring', 'sensor.vision.pinky', 'sensor.vision.active',
-    'sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers',
+    'sensor.vision.fingers',
     'sensor.vision.color.r', 'sensor.vision.color.g', 'sensor.vision.color.b',
   ]) {
     assert.equal(controls.includes(retired), false, `retired control should not be exposed: ${retired}`);

@@ -22,6 +22,7 @@ test('REC phone viewer/read-only guard sends reads but blocks every write locall
   const {client,calls}=api(t); client.session(true,'viewer');
   await assert.rejects(client.command('recordingStart',{token:'x'}),/SESSION/);
   await assert.rejects(client.command('recordingRecord',{}),/SESSION/);
+  await assert.rejects(client.command('recordingTrackControl',{}),/SESSION/);
   await assert.rejects(client.command('recordingSeekMarker',{name:'Verse',time:8}),/SESSION/);
   assert.equal(calls.length,0);
   const read=client.command('getRecordingState'); calls[0].cb({ok:true,result:{transport:{}}}); await read;
@@ -45,13 +46,13 @@ test('REC phone reconnect/timeout do not replay writes or fabricate successful s
 });
 test('REC touch page exposes honest workflow and a separate STOP, loaded after session API',() => {
   const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-  for (const id of ['track','start-marker','end-marker','timeline-track','markers','cursor','loop','start','stop','click']) assert.match(html,new RegExp('id="rec-'+id+'"'));
+  for (const id of ['track-grid','arm-mode','start-marker','end-marker','timeline-track','markers','cursor','loop','start','stop','click']) assert.match(html,new RegExp('id="rec-'+id+'"'));
   for(const removed of ['prepare','audition','retry','good','review','bar','beat','point']) assert.doesNotMatch(html,new RegExp('id="rec-'+removed+'"'));
   assert.ok(html.indexOf('modules/recording.js')>html.indexOf('modules/session.js'));
   assert.match(html,/data-page="recording" role="tab"/);
   const css=fs.readFileSync(new URL('./recording.css',import.meta.url),'utf8'); assert.match(css,/min-height:56px/); assert.match(css,/border-radius:0/);
   assert.match(css,/body\[data-page="recording"\] \{ touch-action:pan-y/); assert.match(css,/\.rec-main \{ position:sticky; top:0/);
-  assert.ok(html.indexOf('id="rec-stop"')<html.indexOf('id="rec-track"'),'STOP precedes scrollable preparation controls');
+  assert.ok(html.indexOf('id="rec-stop"')<html.indexOf('id="rec-track-grid"'),'STOP precedes scrollable preparation controls');
 });
 
 test('REC actual touch wiring respects role, sends explicit actions, keeps STOP enabled, and only polls reads on visibility/reconnect',async t => {
@@ -59,13 +60,13 @@ test('REC actual touch wiring respects role, sends explicit actions, keeps STOP 
   let timerId = 0, generatedId=0, automaticRead=true;
   const node = id => {
     if (!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},listeners:new Map(),children:[],
-      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);}, replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);}, replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
   };
   const field = value => ({value,fresh:true,observedAt:Date.now()});
   const state = {transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(0),metronome:field(false)},
     selected:{index:0,id:'11',name:'Guitar'}, point:0,preparedToken:'ready',safety:{loop:false},
-    tracks:[{index:0,id:'11',name:'Guitar',arm:true,canArm:true}],locators:[{name:'Verse',time:8},{name:'Chorus',time:24}],meter:{numerator:4,denominator:4},lastAttempt:null};
+    tracks:[{index:0,id:'11',name:'Guitar',arm:true,canArm:true,solo:false,mute:false}],locators:[{name:'Verse',time:8},{name:'Chorus',time:24}],meter:{numerator:4,denominator:4},lastAttempt:null};
   const doc = {readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,
     getElementById:node,createElement:()=>node('generated-'+(++generatedId)),addEventListener:(name,handler)=>documentEvents.set(name,handler)};
   const context=vm.createContext({document:doc,Date,setTimeout:handler=>{timers.set(++timerId,handler);return timerId;},clearTimeout:id=>timers.delete(id),
@@ -76,17 +77,17 @@ test('REC actual touch wiring respects role, sends explicit actions, keeps STOP 
   assert.equal(node('rec-start').disabled,true); assert.equal(node('rec-stop').disabled,true);
   events.get('ableton-rc:phone-client-id')({detail:{role:'controller'}});
   assert.equal(node('rec-start').disabled,false); assert.equal(node('rec-stop').disabled,false);
-  const marker=node('rec-markers').children[0],trackOption=node('rec-track').children[1];
+  const marker=node('rec-markers').children[0],trackCard=node('rec-track-grid').children[0];
   automaticRead=false;events.get('ableton-rc:page-change')();
   const read=sent.at(-1);assert.equal(read.cmd,'getRecordingState');
-  assert.equal(node('rec-start').disabled,false);assert.equal(node('rec-track').disabled,false);
-  assert.equal(node('rec-markers').children[0],marker);assert.equal(node('rec-track').children[1],trackOption);
+  assert.equal(node('rec-start').disabled,false);assert.equal(trackCard.children[1].children[0].disabled,false);
+  assert.equal(node('rec-markers').children[0],marker);assert.equal(node('rec-track-grid').children[0],trackCard);
   marker.listeners.get('click')();assert.equal(sent.at(-1).cmd,'recordingSeekMarker');assert.equal(sent.at(-1).args.time,8);
   sent.at(-1).cb({ok:true,result:state});read.cb({ok:true,result:{...state,selected:null}});
   await new Promise(resolve=>setImmediate(resolve));assert.equal(client.view().state.selected.id,'11');
   automaticRead=true;
   node('rec-loop').listeners.get('click')();assert.equal(node('rec-end-field').hidden,false);
-  node('rec-start').listeners.get('click')(); assert.equal(sent.at(-1).cmd,'recordingRecord'); assert.equal(sent.at(-1).args.range.start.time,8); assert.equal(sent.at(-1).args.track.id,'11');
+  node('rec-start').listeners.get('click')(); assert.equal(sent.at(-1).cmd,'recordingRecord'); assert.equal(sent.at(-1).args.range.start.time,8); assert.equal(sent.at(-1).args.tracks[0].id,'11');
   assert.equal(sent.at(-1).args.range.end.time,24);assert.equal(sent.at(-1).args.range.loop,true);
   assert.equal(node('rec-stop').disabled,false,'STOP never waits for start confirmation');
   node('rec-stop').listeners.get('click')(); assert.equal(sent.at(-1).cmd,'recordingStop');
@@ -147,13 +148,13 @@ test('REC Loop can be switched off at the last marker so a non-loop recording re
   const node=id=>{
     if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,dataset:{},style:{},children:[],listeners:new Map(),
       setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
-      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+      replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
   };
   const field=value=>({value,fresh:true,observedAt:Date.now()});
   const state={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},
     selected:{index:0,id:'11',name:'Guitar'},range:null,pending:null,safety:{loop:false},
-    tracks:[{index:0,id:'11',name:'Guitar',canArm:true,arm:false}],
+    tracks:[{index:0,id:'11',name:'Guitar',canArm:true,arm:true,solo:false,mute:false}],
     locators:[{name:'Verse',time:8},{name:'Chorus',time:24}],meter:{numerator:4,denominator:4}};
   const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
     createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
@@ -181,13 +182,13 @@ test('REC disconnect disables existing timeline markers and retires queued click
   const node=id=>{
     if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,dataset:{},style:{},children:[],listeners:new Map(),
       setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
-      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+      replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
   };
   const field=value=>({value,fresh:true,observedAt:Date.now()});
   const state={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},
     selected:{index:0,id:'11',name:'Guitar'},range:null,pending:null,safety:{loop:false},
-    tracks:[{index:0,id:'11',name:'Guitar',canArm:true,arm:false}],
+    tracks:[{index:0,id:'11',name:'Guitar',canArm:true,arm:true,solo:false,mute:false}],
     locators:[{name:'Verse',time:8},{name:'Chorus',time:24}],meter:{numerator:4,denominator:4}};
   const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
     createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
@@ -212,48 +213,60 @@ test('REC disconnect disables existing timeline markers and retires queued click
   assert.equal(calls.length,before);
 });
 
-test('REC manual arm uses observed state and rejects viewer, stale, playing, busy and retired callbacks',async t=>{
-  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-  assert.match(html,/<button\b[^>]*id="rec-arm-state"/);
-  const nodes=new Map(),events=new Map(),calls=[];let generated=0,now=10000;
+function gridHarness(t) {
+  const nodes=new Map(),events=new Map(),documentEvents=new Map(),calls=[],saved=[];let generated=0,now=10000;
   class ClockDate extends Date {static now(){return now;}}
   const node=id=>{
-    if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
       setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
-      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+      replaceChildren(...children){this.children=children;this.replacements=(this.replacements||0)+1;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
   };
   const field=value=>({value,fresh:true,observedAt:now});
-  const state=arm=>({transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(32),metronome:field(false)},
-    selected:{index:0,id:'11',name:'Guitar'},pending:null,range:null,safety:{loop:false},
-    tracks:[{index:0,id:'11',name:'Guitar',arm,canArm:true}],locators:[{name:'REC',time:32},{name:'REC2',time:48}],meter:{numerator:4,denominator:4}});
-  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
-    createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const state=()=>({transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(32),metronome:field(false)},pending:null,range:null,
+    tracks:Array.from({length:10},(_,index)=>({index,id:String(index+11),name:'Input '+(index+1),arm:false,canArm:true,solo:false,mute:false})),
+    locators:[{name:'REC',time:32},{name:'REC2',time:48}],meter:{numerator:4,denominator:4}});
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('generated-'+(++generated)),
+    addEventListener:(name,handler)=>documentEvents.set(name,handler)};
   const context=vm.createContext({document:doc,Date:ClockDate,setTimeout:()=>1,clearTimeout(){},addEventListener:(name,handler)=>events.set(name,handler),
-    RcSurfaceI18n:{t:key=>key},sendPhoneCommand:(name,args,cb)=>calls.push({name,args,cb})});
+    localStorage:{getItem:()=>null,setItem:(...args)=>saved.push(args)},RcSurfaceI18n:{t:key=>key},sendPhoneCommand:(name,args,cb)=>calls.push({name,args,cb})});
   vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
   const seed=async result=>{const reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result});await reading;};
-  client.session(true,'viewer');await seed(state(false));
-  const click=node('rec-arm-state').listeners.get('click');assert.equal(typeof click,'function');
-  let before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
-  client.session(true,'controller');await seed(state(false));
-  assert.equal(node('rec-arm-state').disabled,false);assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed');
-  click();assert.equal(calls.at(-1).name,'recordingArm');assert.equal(calls.at(-1).args.enabled,true);
-  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1).args.track)),{index:0,id:'11',name:'Guitar'});
-  assert.equal(node('rec-arm-state').disabled,true);assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed','sending is not observed arm confirmation');
-  before=calls.length;click();assert.equal(calls.length,before,'double click cannot queue a second arm');
-  calls.at(-1).cb({ok:true,result:state(true)});await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(node('rec-arm-state').textContent,'rec.trackArmed');assert.equal(node('rec-arm-state')['aria-pressed'],'true');
-  click();assert.equal(calls.at(-1).args.enabled,false);const retiredReply=calls.at(-1).cb;
-  const stop=client.command('recordingStop');calls.at(-1).cb({ok:true,result:state(false)});await stop;
-  retiredReply({ok:true,result:state(true)});await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(node('rec-arm-state').textContent,'rec.trackDisarmed');
-  now+=2001;before=calls.length;click();assert.equal(calls.length,before,'queued tap must recheck freshness even before the next UI poll');
-  const playing=state(false);playing.transport.isPlaying.value=true;await seed(playing);
-  before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
-  await seed({...state(false),pending:'record'});before=calls.length;click();assert.equal(calls.length,before);
-  await seed(state(null));before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
-  events.get('ableton-rc:phone-ws-close')();before=calls.length;assert.equal(node('rec-arm-state').disabled,true);assert.doesNotThrow(click);assert.equal(calls.length,before);
+  const flush=()=>new Promise(resolve=>setImmediate(resolve));
+  const buttons=index=>node('rec-track-grid').children[index].children[1].children;
+  return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=2001;}};
+}
+test('REC grid observes ten inputs, preserves cards/focus on polling and sends exact visible armed cohort',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');let state=h.state();await h.seed(state);
+  const cards=[...h.node('rec-track-grid').children],arm=h.buttons(0)[0];arm.focused=true;h.node('rec-track-grid').scrollTop=67;
+  assert.equal(cards.length,10);assert.equal(h.node('rec-start').disabled,true);assert.equal(h.node('rec-status').textContent,'rec.armTracks');
+  assert.equal(h.node('rec-arm-mode').textContent,'rec.armMulti');
+  assert.equal(cards[0].children[0].textContent,'1 \u00b7 Input 1');
+  let before=h.calls.length;h.node('rec-arm-mode').listeners.get('click')();assert.equal(h.calls.length,before);assert.equal(h.saved[0][1],'exclusive');
+  arm.listeners.get('click')();assert.equal(h.calls.at(-1).name,'recordingTrackControl');assert.equal(h.calls.at(-1).args.armMode,'exclusive');
+  assert.equal(arm['aria-pressed'],'false','no optimistic host state');assert.equal(arm.disabled,true);
+  state=h.state();state.tracks.forEach(track=>track.arm=true);h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  const count=h.node('rec-track-grid').replacements;await h.seed({...state,tracks:state.tracks.map(track=>({...track,solo:true}))});
+  h.documentEvents.get('rcsurface:languagechange')();
+  assert.deepEqual(h.node('rec-track-grid').children,cards);assert.equal(h.node('rec-track-grid').replacements,count);assert.equal(arm.focused,true);assert.equal(h.node('rec-track-grid').scrollTop,67);
+  h.node('rec-start').listeners.get('click')();assert.equal(h.calls.at(-1).name,'recordingRecord');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.calls.at(-1).args.tracks)),state.tracks.map(({index,id,name})=>({index,id,name})));
+  assert.equal(h.node('rec-stop').disabled,false);
+  h.calls.at(-1).cb({ok:true,result:{...state,pending:'record',preRoll:{phase:'running'},transport:{...state.transport,isPlaying:{value:true,fresh:true},recordMode:{value:true,fresh:true}}}});await h.flush();
+  assert.equal(arm.disabled,true);assert.equal(h.buttons(0)[1].disabled,false);assert.equal(h.buttons(0)[2].disabled,false);
+  h.buttons(0)[2].listeners.get('click')();assert.equal(h.calls.at(-1).args.property,'mute');assert.equal(h.calls.at(-1).args.enabled,true);
+});
+test('REC grid rejects viewer/stale/busy/playing ARM, keeps group SOLO/MUTE, and retires old clicks',async t=>{
+  const h=gridHarness(t);h.client.session(true,'viewer');let state=h.state();state.tracks[1].canArm=false;await h.seed(state);
+  const arm=h.buttons(0)[0],click=arm.listeners.get('click');let before=h.calls.length;click();assert.equal(h.calls.length,before);assert.equal(arm.disabled,true);
+  h.client.session(true,'controller');await h.seed(state);const currentArm=h.buttons(0)[0],tap=currentArm.listeners.get('click');
+  assert.equal(h.buttons(1)[0].disabled,true);assert.equal(h.buttons(1)[1].disabled,false);assert.equal(h.buttons(1)[2].disabled,false);
+  h.buttons(1)[1].listeners.get('click')();assert.equal(h.calls.at(-1).args.property,'solo');assert.equal(h.calls.at(-1).args.armMode,undefined);
+  before=h.calls.length;tap();assert.equal(h.calls.length,before,'pending mutation blocks ARM');h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  h.age();before=h.calls.length;tap();h.buttons(1)[1].listeners.get('click')();assert.equal(h.calls.length,before,'queued ARM and SOLO taps recheck elapsed freshness');
+  state={...state,transport:{...state.transport,isPlaying:{value:true,fresh:true}}};await h.seed(state);before=h.calls.length;tap();assert.equal(h.calls.length,before);
+  state=h.state();state.tracks[0].arm=null;await h.seed(state);assert.equal(h.buttons(0)[0].disabled,true);assert.equal(h.node('rec-start').disabled,true);
+  h.events.get('ableton-rc:phone-ws-close')();before=h.calls.length;assert.doesNotThrow(tap);assert.equal(h.calls.length,before);
 });
 
 test('REC pre-roll preference defaults OFF, validates stored bars and tolerates disabled local storage',t=>{
@@ -269,13 +282,13 @@ test('REC pre-roll segment wiring persists only a browser preference, sends its 
   const node=id=>{
     if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
       setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
-      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+      replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
   };
   const field=value=>({value,fresh:true,observedAt:Date.now()});
   const state={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(0),metronome:field(false)},
     selected:{index:0,id:'11',name:'Guitar'},pending:null,range:null,
-    tracks:[{index:0,id:'11',name:'Guitar',arm:false,canArm:true}],locators:[{name:'First',time:0},{name:'Last',time:4096}],meter:{numerator:4,denominator:4}};
+    tracks:[{index:0,id:'11',name:'Guitar',arm:true,canArm:true,solo:false,mute:false}],locators:[{name:'First',time:0},{name:'Last',time:4096}],meter:{numerator:4,denominator:4}};
   const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
     createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
   const context=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},

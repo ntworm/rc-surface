@@ -795,10 +795,10 @@ test('VisionProcessor integration: hand active status and mappable X/Y/Z follow 
   });
 
   assert.equal(windowContext.currentControlStates['sensor.vision.active'], 1);
-  for (const axis of ['x', 'y', 'z']) {
+  for (const axis of ['x', 'y', 'z', 'palm', 'face']) {
     assert.equal(typeof windowContext.currentControlStates[`sensor.vision.${axis}`], 'number');
   }
-  for (const diagnostic of ['sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers']) {
+  for (const diagnostic of ['sensor.vision.fingers']) {
     assert.equal(
       windowContext.currentControlStates[diagnostic], undefined,
       `${diagnostic} must remain a local diagnostic instead of a noisy mapping source`,
@@ -2166,6 +2166,23 @@ test('VisionProcessor integration: camera stop emits the complete pre-armed loss
   }
 });
 
+test('actual VID hand callback publishes normalized PALM/FACE, raw readouts and nonfinite/absence as Safe loss',async()=>{
+  const {processor,windowContext:context,mockElements}=await learnedApp();
+  const seen=[],original=context.onControl;context.onControl=event=>{seen.push(event);original(event);};
+  const update=(palmSize,facing)=>processor.onHandUpdate({active:true,x:.5,y:.5,z:.5,palmSize,facing});
+  update(.28,-.6);
+  assert.equal(context.currentControlStates['sensor.vision.palm'],.28);
+  assert.ok(Math.abs(context.currentControlStates['sensor.vision.face']-.2)<1e-9);
+  assert.equal(mockElements['vision-value-palm'].textContent,'0.28');assert.equal(mockElements['vision-value-facing'].textContent,'-0.60');
+  update(2,4);assert.equal(context.currentControlStates['sensor.vision.palm'],1);assert.equal(context.currentControlStates['sensor.vision.face'],1);
+  update(NaN,Infinity);
+  for(const name of ['sensor.vision.palm','sensor.vision.face']){assert.equal(context.currentControlStates[name],1);assert.equal(context.currentControlLost[name],true);}
+  seen.length=0;processor.onHandUpdate(null,context.currentTime+10);
+  assert.ok(seen.some(event=>event.name==='sensor.vision.palm'&&event.lost===true&&event.value===0));
+  assert.ok(seen.some(event=>event.name==='sensor.vision.face'&&event.lost===true&&event.value===.5));
+  assert.equal(seen.some(event=>/sensor\.vision\.(palm|face)$/.test(event.name)&&event.lost!==true),false);
+});
+
 async function learnedApp() {
   const harness = loadVisionAndApp({ gestureSlots: true });
   const { windowContext: context, mockElements, HandsMock } = harness;
@@ -2405,6 +2422,33 @@ test('actual capture UI warns inline, KEEP retains takes and RETAKE removes the 
   card.querySelector('.vision-consistency-retake').onclick();
   assert.equal(processor.gestures.sampleCount('Gesture 1'), 2);
   assert.equal(warning.classList.contains('hidden'), true);
+});
+
+test('actual capture UI diagnoses a three-pose bank, KEEP is advisory and reload/recapture restore its honest warning',async()=>{
+  const {processor,card,windowContext:context,HandsMock}=await learnedApp();processor.gestures.delete('Gesture 1');
+  const fixture=fs.readFileSync(path.join(import.meta.dirname,'static-pose-gesture.test.mjs'),'utf8');
+  vm.runInNewContext(fixture.slice(fixture.indexOf('function handPose('),fixture.indexOf('function transform(')),context);
+  const poses=[{thumb:.15,index:1,middle:.15,ring:.15,pinky:.15},{thumb:.15,index:.15,middle:1,ring:.15,pinky:.15},{thumb:.15,index:.15,middle:.15,ring:.15,pinky:1}];
+  const capture=pose=>{
+    card.querySelector('.vision-slot-learn').onclick();
+    for(let index=0;index<13;index++){context.currentTime+=33;HandsMock.instance.resultsCallback({multiHandLandmarks:[context.handPose(pose)]});}
+    context.scheduledTimeouts.filter(timer=>timer.delay===900).at(-1).cb();
+  };
+  for(const pose of poses)capture(pose);
+  const box=card.querySelector('.vision-slot-consistency');assert.equal(box.classList.contains('hidden'),false);
+  assert.match(box.querySelector('.vision-consistency-message').textContent,/Captures disagree.*latest capture/);
+  assert.doesNotMatch(box.querySelector('.vision-consistency-message').textContent,/Take 3 differs/);
+  const original=JSON.stringify(processor.gestures.toJSON());card.querySelector('.vision-consistency-keep').onclick();
+  assert.equal(box.classList.contains('hidden'),true);assert.equal(JSON.stringify(processor.gestures.toJSON()),original);
+  const reopened=loadVisionAndApp({gestureSlots:true,savedVision:context.savedVision});
+  assert.equal(reopened.mockElements['[data-gesture-slot="1"]'].querySelector('.vision-slot-consistency').classList.contains('hidden'),false);
+  capture(poses[2]);assert.equal(box.classList.contains('hidden'),false,'a new capture resets KEEP without removing an earlier capture');
+  const retained=processor.gestures.templates.get('Gesture 1').slice(0,3).map(sample=>Array.from(sample));
+  card.querySelector('.vision-consistency-retake').onclick();
+  assert.deepEqual(processor.gestures.templates.get('Gesture 1').map(sample=>Array.from(sample)),retained);
+  assert.equal(box.classList.contains('hidden'),false,'the three disagreeing original captures still need review');
+  card.querySelector('.vision-consistency-retake').onclick();assert.equal(processor.gestures.sampleCount('Gesture 1'),2);
+  assert.equal(box.classList.contains('hidden'),true);
 });
 
 test('C19: successful TEST followed by absence emits neither LIVE ON nor phantom OFF', async () => {

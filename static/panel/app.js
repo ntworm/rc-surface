@@ -73,6 +73,8 @@ const allSensorMetadataList = [
   { key: "sensor.vision.x", name: "Hand X", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.y", name: "Hand Y", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.z", name: "Hand Z (Depth)", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.palm", name: "Palm Size", min: 0, max: 1, group: "vision" },
+  { key: "sensor.vision.face", name: "Palm Facing", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.pinch", name: "Pinch", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.rotateVal", name: "Victory Rotate", min: 0, max: 1, group: "vision" },
   { key: "sensor.vision.pinch_x", name: "Pinch Clutch X", min: 0, max: 1, group: "vision" },
@@ -155,6 +157,7 @@ const allControlsGrouped = {
   ],
   VISION: [
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
+    "sensor.vision.palm", "sensor.vision.face",
     "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
     "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
     ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`)
@@ -601,6 +604,7 @@ function buildCtrlGroups() {
     // Hand position first: it is the continuous signal most worth mapping,
     // and it mirrors the DIRECT MAP X/Y/Z readout on the phone's VID page.
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
+    "sensor.vision.palm", "sensor.vision.face",
     "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
     "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
     ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`)
@@ -849,6 +853,8 @@ function processClientSensors(msg) {
       updateSensorLiveControl("sensor.vision.x", controlsMap.get("sensor.vision.x") ?? (visionReading.x ?? 0.5));
       updateSensorLiveControl("sensor.vision.y", controlsMap.get("sensor.vision.y") ?? (visionReading.y ?? 0.5));
       updateSensorLiveControl("sensor.vision.z", controlsMap.get("sensor.vision.z") ?? (visionReading.z ?? 0));
+      updateSensorLiveControl("sensor.vision.palm", controlsMap.get("sensor.vision.palm") ?? (visionReading.palm ?? 0));
+      updateSensorLiveControl("sensor.vision.face", controlsMap.get("sensor.vision.face") ?? (visionReading.face ?? 0.5));
       updateSensorLiveControl("sensor.vision.fist", controlsMap.get("sensor.vision.fist") ?? (visionReading.fist ? 1 : 0));
       // Pinch value can be continuous (pinchVal) or toggle (latched) from the phone, fallback to pinchVal if available
       updateSensorLiveControl("sensor.vision.pinch", controlsMap.get("sensor.vision.pinch") ?? (visionReading.pinchVal ?? (visionReading.pinch ? 1 : 0)));

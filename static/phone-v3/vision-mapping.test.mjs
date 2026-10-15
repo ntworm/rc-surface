@@ -26,21 +26,28 @@ test('VID lower strip contains only direct MAP and intentional CLUTCH controls',
     Array.from(deck.matchAll(/data-name="([^"]+)"/g), (match) => match[1]),
     [
       'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
+      'sensor.vision.palm', 'sensor.vision.face',
       'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',
     ],
   );
-  assert.doesNotMatch(deck, /FINGERS|GESTURE|AMBIENT|sensor\.vision\.(?:active|palm|face|fingers|color)/);
+  assert.doesNotMatch(deck, /FINGERS|GESTURE|AMBIENT|sensor\.vision\.(?:active|fingers|color)/);
 });
 
-test('PALM and FACE remain camera diagnostics and cannot be selected by MAP', () => {
+test('PALM and FACE move into the lower MAP strip with raw readouts', () => {
   const html = read('index.html');
   const cameraStart = html.indexOf('<aside class="vision-camera-stage');
   const cameraEnd = html.indexOf('</aside>', cameraStart);
   const camera = html.slice(cameraStart, cameraEnd);
-  assert.match(camera, /id="vision-value-palm"/);
-  assert.match(camera, /id="vision-value-facing"/);
+  assert.doesNotMatch(camera, /id="vision-value-palm"/);
+  const deck=sensorDeck(html);
+  assert.match(deck, /data-name="sensor\.vision\.palm"[^>]*>PALM <b id="vision-value-palm"/);
+  assert.match(deck, /data-name="sensor\.vision\.face"[^>]*>FACE <b id="vision-value-facing"/);
+  assert.doesNotMatch(camera, /id="vision-value-facing"/);
   assert.doesNotMatch(camera, /data-name=/);
   assert.doesNotMatch(html, /vision-value-(?:palm-pose|index-curved|other-fingers|handedness)/);
+  assert.match(read('style.css'),/\.vision-axis-chips span\[data-name\]\s*\{\s*min-height:\s*44px/);
+  assert.match(read('style.css'),/\.vision-readout-card:nth-child\(1\) \.vision-axis-chips\s*\{[^}]*scrollbar-width:\s*thin;[^}]*scrollbar-color:\s*var\(--text3\) var\(--surface\)/);
+  assert.match(read('style.css'),/\.vision-axis-chips::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--text3\);\s*border-radius:\s*0/);
 });
 
 test('Fingers and passive camera measurements are absent from public mapping surfaces', () => {
@@ -53,7 +60,7 @@ test('Fingers and passive camera measurements are absent from public mapping sur
   assert.match(phone, /MappingInputContract\.getControlGroups\(\)/);
   assert.match(admin, /MappingInputContract\.getControlGroups\(\)/);
   for (const name of [
-    'sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers',
+    'sensor.vision.fingers',
     'sensor.vision.color.r', 'sensor.vision.color.g', 'sensor.vision.color.b',
   ]) {
     const escaped = name.replaceAll('.', '\\.');

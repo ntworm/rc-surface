@@ -1886,6 +1886,8 @@
       { name: 'sensor.vision.x', value: 0.5 },
       { name: 'sensor.vision.y', value: 0.5 },
       { name: 'sensor.vision.z', value: 0 },
+      { name: 'sensor.vision.palm', value: 0 },
+      { name: 'sensor.vision.face', value: 0.5 },
       { name: 'sensor.vision.pinch_x', value: 0.5 },
       { name: 'sensor.vision.pinch_y', value: 0.5 },
       { name: 'sensor.vision.pinch_z', value: 0.5 },
@@ -2072,8 +2074,9 @@
         const warningBox = card.querySelector('.vision-slot-consistency');
         warningBox?.classList.toggle('hidden', !warning);
         const warningMessage = warningBox?.querySelector('.vision-consistency-message');
-        if (warningMessage && warning) warningMessage.textContent = T('vid.takeOutlier',
-          'Take {n} differs from the others', { n: warning.index + 1 });
+        if (warningMessage && warning) warningMessage.textContent = warning.kind === 'no-consensus'
+          ? T('vid.takeNoConsensus', 'Captures disagree. RETAKE replaces the latest capture.')
+          : T('vid.takeOutlier', 'Take {n} differs from the others', { n: warning.index + 1 });
         if (countLabel) countLabel.textContent = `${samples} / ${max}`;
         if (learnButton) learnButton.disabled = samples >= max;
         if (testButton) testButton.disabled = samples < 3;
@@ -2617,6 +2620,8 @@
             window.onControl({ name: 'sensor.vision.x', value: data.x });
             window.onControl({ name: 'sensor.vision.y', value: data.y });
             window.onControl({ name: 'sensor.vision.z', value: data.z });
+            window.onControl({ name: 'sensor.vision.palm', value: normalizeVisionPalm(data.palmSize), ...(!Number.isFinite(data.palmSize) ? { lost: true } : {}) });
+            window.onControl({ name: 'sensor.vision.face', value: normalizeVisionFace(data.facing), ...(!Number.isFinite(data.facing) ? { lost: true } : {}) });
             if (visionControls.detectorEnabled('fist')) {
               window.onControl({ name: 'sensor.vision.fist', value: gestureValue('fist') });
             }

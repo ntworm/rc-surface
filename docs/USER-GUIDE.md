@@ -957,11 +957,14 @@ gap allowance scales with the visible palm; opening the fingers releases the
 clutch. Back-facing hands, fists and a straight pointing index do not gain this
 extra tolerance. Actual recognition still depends on camera tracking.
 
-Only intentional performance signals are mappable: direct **X/Y/Z**, the
-Pinch Clutch **X/Y/Z**, the four opt-in detectors, Victory rotation, and the
-three learned pose slots. **PALM** and **FACE** remain local camera
-diagnostics in the preview. Finger-count, individual-landmark, and whole-frame
-colour readings are internal diagnostics and are not mapping channels.
+The lower **MAP** strip offers **X/Y/Z**, **PALM** (apparent palm size) and
+**FACE** (palm facing versus back of hand, not face tracking). PALM keeps its
+raw 0–1 readout; FACE shows a signed −1–1 readout and maps to 0–1. They can
+drive parameters, notes and clips through the existing mapping actions and
+thresholds. Pinch Clutch **X/Y/Z**, the four opt-in detectors, Victory rotation
+and learned poses remain mappable. Finger-count, individual-landmark and
+whole-frame colour readings remain internal diagnostics. Missing or invalid
+PALM/FACE samples report loss and follow each target's Safe loss policy.
 Missing hands preserve an active learned pose as **LAST KNOWN**. An unconfirmed
 candidate expires after `unknownGraceMs` (140 ms by default), so a long absence
 requires a fresh full hold before its first ON. Axes and built-in detectors
@@ -1020,7 +1023,7 @@ and entry latency p95 before drawing conclusions about extra takes.
 
 Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
 
-Very different takes widen a pose’s tolerance. After three captures, a take that differs markedly from the other two may show an inline warning. **RETAKE** removes that exact take, even when it was captured first; record its replacement. **KEEP** retains every example. The warning is advisory and its provisional thresholds still need real-hand validation.
+Very different takes widen a pose’s tolerance. After three captures, an isolated take may show an inline warning. **RETAKE** removes that exact take, even when it was captured first. If clear finger disagreements leave no majority among three to six captures, the general warning says the captures disagree; RETAKE then removes the latest capture as a review starting point. **KEEP** retains every example and dismisses the current warning; another capture or a reload reviews the bank again. Warnings are advisory and do not change recognition thresholds, ranking or hold/release timing. Camera behavior still needs real-hand acceptance.
 
 The **Balanced** recognition preset is the normal performance setting.
 **Precision** rejects more variation; **Flexible** accepts more. The **Performance**
@@ -1140,9 +1143,12 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 Create the Arrangement markers in Live first, then open **REC** with playback
 stopped:
 
-1. Choose the track to record. The **ARMED / DISARMED** button beside the
-   track shows Live's observed arm state. Click it to arm or disarm that track
-   manually while playback is stopped; selection alone does not arm it.
+1. Use the track cards below the timeline to arm your inputs. Each card shows
+   the observed **ARM / SOLO / MUTE** state. **ARM MULTI** is the default and
+   keeps other inputs armed; **ARM EXCLUSIVE** disarms other tracks only when
+   you press a track's ARM. Changing this mode or clicking a name does not
+   change Live. Groups have SOLO/MUTE but cannot be armed. Live's global arm
+   preference is unchanged; an incompatible host arm result is reported.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
 3. For repeated passes, enable **Loop** and choose an end marker after the start.
@@ -1150,8 +1156,13 @@ stopped:
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
    default and starts directly at the marker. Other choices play the preceding
    bars with click before native Punch In opens capture at the selected marker.
-5. Press **STOP** to stop playback and recording. It disarms the track armed by
-   this REC workflow. Press REC again to arm it for another attempt.
+5. Press **STOP** to stop playback and recording. It disarms only the exact
+   input set owned by this attempt. Arm your inputs again for another attempt.
+
+REC records exactly the armed tracks shown in the cards. It is disabled with
+no armed inputs and verifies the entire set again before recording. ARM changes
+are blocked during recording or pre-roll; SOLO/MUTE remain available for
+listening. A newly armed third-party track is never adopted for STOP cleanup.
 
 To listen, click a marker in the strip or choose the start marker, then use
 **Play in the header**. Selecting a marker uses Live's native marker jump, so
@@ -1178,7 +1189,7 @@ marker before that confirmation, it aborts instead of starting a late capture.
 The host monitors the lead-in after the command returns, so four bars are not
 limited by the phone's command timeout. At the first observed marker crossing,
 it restores the original click setting. STOP restores only click, Punch In and
-the temporary Loop start still owned by this attempt, then disarms its track;
+the temporary Loop start still owned by this attempt, then disarms its input set;
 the temporary start is restored only while Loop remains off. Use this page's
 STOP to finish cleanup even if you stopped transport in Live. Changes to required
 state cancel the lead-in; connection/session loss or a new Set never replays
@@ -1198,9 +1209,12 @@ Live's `count_in_duration` is read-only in the supported API; this feature does
 not set it. Interaction with native count-in and **Enable Only While Recording**
 for the metronome still requires physical Live acceptance after installation.
 
-REC requires the selected track to be armable, other tracks disarmed, and
-observed Punch In/Out, Arrangement Overdub, Session Record and Back to
-Arrangement pending off. Change those conditions in Live. Unknown or stale
+REC requires every input to remain armable and armed, with no armed track
+outside the submitted set. It temporarily sets Punch In ON for pre-roll or
+OFF for a direct start, confirms it, and restores its original observed value
+on STOP or failure only while the change is still owned. An observed external
+Punch In change relinquishes that ownership. Punch Out, Arrangement Overdub,
+Session Record and Back to Arrangement pending must be off in Live. Unknown or stale
 required state blocks recording; background state reads do not lock the page's
 controls. The page reports observed playback and record mode, which do not
 prove audio capture. Earlier passages and take preservation remain Live's

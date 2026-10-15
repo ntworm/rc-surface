@@ -964,11 +964,14 @@ A margem acompanha o tamanho aparente da palma; abrir os dedos solta o clutch.
 Dorso da mão, punho fechado e indicador reto apontando não recebem essa
 tolerância extra. O reconhecimento real ainda depende do rastreamento da câmera.
 
-Só sinais intencionais de performance são mapeáveis: **X/Y/Z** direto, o Pinch
-Clutch **X/Y/Z**, os quatro detectores opcionais, a rotação do Victory, e os
-três slots de pose aprendida. **PALM** e **FACE** seguem como diagnóstico local
-da câmera, na prévia. Contagem de dedos, landmarks individuais e leituras de
-cor do quadro inteiro são diagnóstico interno e não são canais de mapeamento.
+A faixa inferior **MAP** oferece **X/Y/Z**, **PALM** (tamanho aparente da palma)
+e **FACE** (palma versus dorso da mão, sem rastreamento de rosto). PALM mantém
+a leitura bruta 0–1; FACE mostra −1–1 com sinal e mapeia em 0–1. Podem controlar
+parâmetros, notas e clips pelas ações e thresholds do mapeador existente.
+Pinch Clutch **X/Y/Z**, os quatro detectores opcionais, a rotação do Victory e
+poses aprendidas continuam mapeáveis. Contagem de dedos, landmarks individuais
+e cor do quadro inteiro continuam internos. Amostras PALM/FACE ausentes ou
+inválidas informam perda e seguem o Safe loss de cada destino.
 
 A ausência da mão preserva a pose aprendida ativa como **LAST KNOWN**. Um
 candidato ainda não confirmado expira depois de `unknownGraceMs` (140 ms por
@@ -1035,7 +1038,7 @@ falso ON/min e latência p95 antes de concluir o efeito das tomadas extras.
 
 As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
 
-Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada que destoa bastante das outras duas pode mostrar um aviso no card. **REFAZER** remove exatamente essa tomada, mesmo se foi capturada primeiro; grave a substituta. **MANTER** conserva todos os exemplos. O aviso é uma orientação; seus limites provisórios ainda precisam de validação com mão real.
+Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada isolada pode mostrar um aviso. **RETAKE** remove exatamente essa tomada, mesmo se foi capturada primeiro. Quando dedos claramente opostos deixam um banco de três a seis capturas sem maioria, o aviso geral informa que as capturas discordam; RETAKE remove a mais recente como ponto de partida para revisão. **KEEP** conserva todos os exemplos e dispensa o aviso atual; nova captura ou recarga revisa o banco novamente. Os avisos são orientações e não alteram thresholds, ranking nem tempos de hold/release. O comportamento com câmera ainda precisa de aceite com mão real.
 
 O preset de reconhecimento **Equilibrado** é o ajuste normal de performance.
 **Precisão** rejeita mais variação; **Flexível** aceita mais. O preset **Performance**
@@ -1154,9 +1157,12 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até 
 Crie os marcadores do Arrangement no Live antes, depois abra **REC** com o
 playback parado:
 
-1. Escolha a track que quer gravar. O botão **ARMADA / DESARMADA** ao lado da
-   track mostra o estado de arm observado no Live. Clique para armar ou
-   desarmar essa track manualmente com o playback parado; só selecionar não arma.
+1. Arme as entradas nos cartões de tracks abaixo da timeline. Cada cartão
+   mostra **ARM / SOLO / MUTE** observados. **ARM MULTI** é o padrão e mantém
+   outras entradas armadas; **ARM EXCLUSIVE** desarma outras tracks somente
+   quando você aperta ARM de uma track. Trocar o modo ou tocar no nome não
+   altera o Live. Grupos têm SOLO/MUTE, mas não podem ser armados. A preferência
+   global de arm do Live não muda; um resultado incompatível do host é informado.
 2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
    do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
    observada do playback.
@@ -1165,8 +1171,13 @@ playback parado:
 4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
    padrão e começa diretamente no marcador. As outras opções tocam os compassos
    anteriores com click até o Punch In nativo abrir a captura no marcador.
-5. Aperte **STOP** para parar playback e gravação. Ele desarma a track armada por
-   esse fluxo REC. Aperte REC novamente para armá-la e fazer outra tentativa.
+5. Aperte **STOP** para parar playback e gravação. Ele desarma somente o conjunto
+   exato de entradas pertencente à tentativa. Arme as entradas para outra tentativa.
+
+REC grava exatamente as tracks armadas mostradas nos cartões. Fica desabilitado
+sem entradas armadas e confirma o conjunto inteiro antes de gravar. ARM fica
+bloqueado durante gravação ou pré-roll; SOLO/MUTE continuam disponíveis para
+escuta. Uma track de terceiro armada depois nunca entra na limpeza do STOP.
 
 Para ouvir, clique em um marcador na faixa ou escolha o marcador inicial e use
 **Play no cabeçalho**. A seleção usa o salto nativo de marcador do Live para
@@ -1194,7 +1205,7 @@ atrasada. O host acompanha o pré-roll depois de devolver o comando, portanto
 quatro compassos não ficam limitados pelo timeout de comando do celular.
 Na primeira passagem observada pelo marcador, restaura o click original.
 STOP restaura somente click, Punch In e início temporário do Loop ainda
-pertencentes à tentativa, depois desarma sua track; o início temporário só
+pertencentes à tentativa, depois desarma suas entradas; o início temporário só
 volta enquanto Loop permanece desligado. Use STOP desta página para terminar
 a limpeza mesmo se parou o transporte no Live. Mudanças de estado necessário
 cancelam o pré-roll; perda de conexão/sessão ou um novo Set nunca repetem
@@ -1214,9 +1225,12 @@ Confira no Live: reconectar nunca procura nem apaga locators automaticamente.
 não o altera. A interação com count-in nativo e **Enable Only While Recording**
 do metrônomo ainda exige aceite físico no Live depois da instalação.
 
-REC exige a track selecionada armável, outras tracks desarmadas e Punch In/Out,
-Arrangement Overdub, Session Record e retorno ao Arrangement pendente
-observados como desligados. Mude essas condições no Live. Estado necessário
+REC exige todas as entradas armáveis e armadas, sem track armada fora do conjunto
+enviado. Ajusta Punch In temporariamente para ON no pré-roll ou OFF no início
+direto, confirma e restaura o valor original observado no STOP ou falha somente
+enquanto a mudança ainda lhe pertence. Uma alteração externa observada de
+Punch In encerra essa posse. Punch Out, Arrangement Overdub, Session Record e
+retorno ao Arrangement pendente precisam estar desligados no Live. Estado necessário
 desconhecido ou desatualizado bloqueia a gravação; leituras de estado em
 segundo plano não travam os controles da página. A página mostra playback e
 record mode observados, sem comprovar captura de áudio. Passagens anteriores e

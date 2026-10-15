@@ -43,6 +43,7 @@
       group: 'Sensors: Vision',
       items: Object.freeze([
         'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
+        'sensor.vision.palm', 'sensor.vision.face',
         'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
         'sensor.vision.rotateVal', 'sensor.vision.open',
         'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',

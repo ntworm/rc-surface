@@ -405,7 +405,7 @@ test('Connect control groups render expanded controls as sensor cells with corre
   // Four legacy channels (rms, envelope, gate, attack) plus the twelve
   // descriptors; the pitch lane is dormant and no longer offered.
   assert.equal(byGroup.get('AUDIO')?.dataset.count, '16');
-  assert.equal(byGroup.get('HANDS')?.dataset.count, '26');
+  assert.equal(byGroup.get('HANDS')?.dataset.count, '28');
   assert.equal(byGroup.get('PADS')?.dataset.count, '12');
   assert.equal(byGroup.get('XY PADS')?.dataset.count, '4');
   assert.equal(byGroup.get('LFOs')?.dataset.count, '8');
@@ -819,10 +819,10 @@ test('Connect HANDS group exposes only intentional camera controls', () => {
   assert.ok(hands, 'HANDS group must render');
   assert.equal(
     hands.dataset.count,
-    '26',
+    '28',
     'HANDS must carry hand X/Y/Z, opt-in detectors, rotate, pinch clutch, and learned gestures',
   );
-  for (const retired of ['sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers']) {
+  for (const retired of ['sensor.vision.fingers']) {
     assert.equal(
       document.getElementById(`ctrl-cell-HANDS-${retired.replace(/\./g, '-')}`),
       null,
@@ -837,6 +837,8 @@ test('panel knows metadata for public hand position channels only', () => {
     ['sensor.vision.x', 'Hand X'],
     ['sensor.vision.y', 'Hand Y'],
     ['sensor.vision.z', 'Hand Z (Depth)'],
+    ['sensor.vision.palm', 'Palm Size'],
+    ['sensor.vision.face', 'Palm Facing'],
   ]) {
     const meta = context.getControlMetadata(key);
     assert.ok(meta, `${key} must have metadata`);
@@ -862,6 +864,8 @@ test('Connect HANDS tiles show the live hand X/Y/Z coming from the phone', () =>
   const x = cellValue('sensor.vision.x');
   const y = cellValue('sensor.vision.y');
   const z = cellValue('sensor.vision.z');
+  const palm = cellValue('sensor.vision.palm');
+  const face = cellValue('sensor.vision.face');
 
   context.processClientSensors({
     latest: {
@@ -870,6 +874,8 @@ test('Connect HANDS tiles show the live hand X/Y/Z coming from the phone', () =>
         { name: 'sensor.vision.x', value: 0.34 },
         { name: 'sensor.vision.y', value: 0.33 },
         { name: 'sensor.vision.z', value: 0.66 },
+        { name: 'sensor.vision.palm', value: 0.28 },
+        { name: 'sensor.vision.face', value: 0.2 },
       ],
       sensors: {
         vision: 'available',
@@ -881,6 +887,7 @@ test('Connect HANDS tiles show the live hand X/Y/Z coming from the phone', () =>
   assert.equal(x.textContent, '0.34', 'hand X must track the phone reading');
   assert.equal(y.textContent, '0.33', 'hand Y must track the phone reading');
   assert.equal(z.textContent, '0.66', 'hand Z must track the phone reading');
+  assert.equal(palm.textContent, '0.28');assert.equal(face.textContent, '0.20');
 });
 
 test('fresh panel has no previous-install migration banner or scheduled migration query',()=>{

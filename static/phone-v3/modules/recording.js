@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 (function (root) {
   'use strict';
-  const WRITES = new Set(['recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
+  const WRITES = new Set(['recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
   function positionToBeats(bar, beat, meter) {
     const numerator = meter?.numerator, denominator = meter?.denominator;
@@ -25,7 +25,7 @@
         observed = {...state, transport:{...state.transport}};
         for (const key of ['isPlaying','recordMode','songTimeBeats','metronome']) observed.transport[key] = {...state.transport[key],fresh:false};
       }
-      return {connected, role, state:observed, busy, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
+      return {connected, role, state:observed, busy, fresh:Date.now()-receivedAt<=2000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
     };
     const notify = () => render(view());
     function session(open, nextRole = 'viewer') {
@@ -79,24 +79,66 @@
   function setup() {
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
-    const elements = Object.fromEntries(['rec-status','rec-track','rec-start','rec-stop','rec-click','rec-arm-state','rec-start-marker','rec-end-marker',
+    const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-arm-mode','rec-start-marker','rec-end-marker',
       'rec-loop','rec-end-field','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
       'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
     let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null;
     let startIndex='', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[];
     let preRollBars=0;
+    let armMode='multi';
     try { preRollBars=preRollPreference(root.localStorage); } catch { /* Disabled browser storage uses OFF. */ }
+    try {if(root.localStorage?.getItem('rc-surface-v2.rec.armMode')==='exclusive')armMode='exclusive';}catch{}
+    const cards=new Map();
     const client = createClient({send:(name,args,cb)=>root.sendPhoneCommand(name,args,cb),render});
     const invoke = (name,args) => client.command(name,args).catch(()=>{});
     const cueAt = index => index === '' ? null : client.view().state?.locators[Number(index)] || null;
     const markerRef = cue => ({name:cue.name,time:cue.time});
-    function manualArmTrack(view) {
-      const state=view.state, transport=state?.transport;
-      if(!view.writable || view.busy || state?.pending || !transport?.connected || !transport.isPlaying?.fresh || transport.isPlaying.value!==false
-        || !transport.recordMode?.fresh || transport.recordMode.value!==false) return null;
-      const track=state.tracks.find(track=>track.index===state.selected?.index);
-      return track?.canArm===true && typeof track.arm==='boolean'?track:null;
+    function canControl(view,property) {
+      const state=view.state,transport=state?.transport;
+      if(!view.writable||!view.fresh||view.busy||state?.trackPending||!transport?.connected)return false;
+      return property!=='arm'||(!state.pending&&!state.preRoll&&transport.isPlaying?.fresh&&transport.isPlaying.value===false&&transport.recordMode?.fresh&&transport.recordMode.value===false);
+    }
+    function armedTracks(view) {
+      const tracks=view.state?.tracks;
+      return view.fresh&&tracks?.every(track=>typeof track.arm==='boolean')?tracks.filter(track=>track.arm===true&&track.canArm===true):[];
+    }
+    function renderTracks(view) {
+      const tracks=view.state?.tracks||[],signature=JSON.stringify(tracks.map(track=>[track.index,track.id]));
+      for(const track of tracks) {
+        const key=track.index+':'+track.id;
+        if(!cards.has(key)) {
+          const card=doc.createElement('article');card.className='rec-track-card';
+          const name=doc.createElement('span');name.className='rec-track-name';card.appendChild(name);
+          const row=doc.createElement('div');row.className='rec-track-actions';card.appendChild(row);
+          const buttons={};
+          for(const property of ['arm','solo','mute']) {
+            const button=doc.createElement('button');button.type='button';button.dataset.property=property;
+            button.addEventListener('click',()=>{
+              const current=client.view(),ref=current.state?.tracks.find(item=>item.index===track.index&&item.id===track.id);
+              if(!ref||!canControl(current,property)||typeof ref[property]!=='boolean'||property==='arm'&&ref.canArm!==true)return;
+              invoke('recordingTrackControl',{track:{index:ref.index,id:ref.id,name:ref.name},property,enabled:!ref[property],...(property==='arm'?{armMode}:{})});
+            });
+            row.appendChild(button);buttons[property]=button;
+          }
+          cards.set(key,{card,name,buttons});
+        }
+        const entry=cards.get(key),label=(track.index+1)+' · '+track.name;
+        if(entry.name.textContent!==label)entry.name.textContent=label;entry.name.title=track.name;
+        for(const property of ['arm','solo','mute']) {
+          const button=entry.buttons[property],label=t(property==='arm'?'armShort':property);
+          if(button.textContent!==label)button.textContent=label;
+          button.disabled=!canControl(view,property)||typeof track[property]!=='boolean'||property==='arm'&&track.canArm!==true;
+          button.setAttribute('aria-pressed',typeof track[property]==='boolean'?String(track[property]):'mixed');
+          button.setAttribute('aria-label',label+' · '+track.name);
+        }
+      }
+      if(trackSignature!==signature) {
+        trackSignature=signature;
+        const keys=new Set(tracks.map(track=>track.index+':'+track.id));
+        for(const key of cards.keys())if(!keys.has(key))cards.delete(key);
+        el('track-grid').replaceChildren(...tracks.map(track=>cards.get(track.index+':'+track.id).card));
+      }
     }
     const positionLabel = (time,meter) => {
       if (!Number.isFinite(time) || !meter?.numerator || !meter?.denominator) return '?';
@@ -144,29 +186,20 @@
       el('status').textContent=view.error?reason(view.error):state?.preRoll?.phase==='running'?t('preRolling'):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
       el('status').dataset.recording=String(known && transport.recordMode.value===true);
       el('stop').disabled=!view.writable;
-      for(const id of ['track','start-marker','end-marker']) el(id).disabled=!editable;
+      for(const id of ['start-marker','end-marker']) el(id).disabled=!editable;
       el('loop').disabled=!editable || (!looping && !state?.locators?.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
       el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
-      el('arm-state').disabled=!manualArmTrack(view);
+      el('arm-mode').disabled=!editable;
+      el('arm-mode').textContent=t(armMode==='multi'?'armMulti':'armExclusive');
+      el('arm-mode').setAttribute('aria-pressed',String(armMode==='exclusive'));
       for(const bars of [0,1,2,4]) {
         el('pre-roll-'+bars).disabled=!editable;
         el('pre-roll-'+bars).setAttribute('aria-pressed',String(preRollBars===bars));
       }
-      el('arm-state').textContent='?';el('arm-state').setAttribute('aria-pressed','false');
+      renderTracks(view);
       for(const marker of el('markers').children) marker.disabled=!editable;
       if(!state) {el('start').disabled=true;el('cursor').hidden=true;return;}
-      const signature=JSON.stringify(state.tracks.map(track=>[track.index,track.id,track.name,track.canArm]));
-      if(trackSignature!==signature) {
-        trackSignature=signature;el('track').replaceChildren();option(el('track'),'',t('chooseTrack'));
-        for(const track of state.tracks) option(el('track'),String(track.index),(track.index+1)+' · '+track.name).disabled=track.canArm!==true;
-      }
-      const selected=state.selected?String(state.selected.index):'';
-      if(el('track').value!==selected) el('track').value=selected;
-      const selectedTrack=state.tracks.find(track=>track.index===state.selected?.index);
-      el('arm-state').textContent=selectedTrack?t(selectedTrack.arm===true?'trackArmed':selectedTrack.arm===false?'trackDisarmed':'unknown'):'';
-      el('arm-state').setAttribute('aria-pressed',String(selectedTrack?.arm===true));
-      el('arm-state').setAttribute('aria-label',t(selectedTrack?.arm===true?'disarm':'arm'));
       const markerKey=JSON.stringify([state.locators,state.meter]);
       if(markerSignature!==markerKey) {
         const previous=startIndex!==''?previousLocators[Number(startIndex)]:null;
@@ -206,18 +239,17 @@
       }
       updateRange();
       el('loop').disabled=!editable || (!looping && !state.locators.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
-      el('start').disabled=!editable || selectedTrack?.canArm!==true || !cueAt(startIndex) || (looping && !cueAt(endIndex));
-      if(!view.error && !working && stopped) el('status').textContent=t(!selectedTrack?'chooseTrack':!state.locators.length?'createMarkers':!cueAt(startIndex)?'chooseMarker':looping && !cueAt(endIndex)?'chooseEnd':'ready');
+      const armed=armedTracks(view);
+      el('start').disabled=!editable || !armed.length || Boolean(state.trackPending) || !cueAt(startIndex) || (looping && !cueAt(endIndex));
+      if(!view.error && !working && stopped) el('status').textContent=t(!armed.length?'armTracks':!state.locators.length?'createMarkers':!cueAt(startIndex)?'chooseMarker':looping && !cueAt(endIndex)?'chooseEnd':'ready');
       for(const marker of el('markers').children) marker.disabled=!editable;
       drawCursor();
     }
-    el('track').addEventListener('change',()=>{
-      const track=client.view().state?.tracks.find(track=>String(track.index)===el('track').value);
-      if(track) invoke('recordingSelectTrack',{index:track.index,id:track.id,name:track.name});
-    });
-    el('arm-state').addEventListener('click',()=>{
-      const track=manualArmTrack(client.view());
-      if(track) invoke('recordingArm',{enabled:!track.arm,track:{index:track.index,id:track.id,name:track.name}});
+    el('arm-mode').addEventListener('click',()=>{
+      if(el('arm-mode').disabled)return;
+      armMode=armMode==='multi'?'exclusive':'multi';
+      try{root.localStorage?.setItem('rc-surface-v2.rec.armMode',armMode);}catch{}
+      render(client.view());
     });
     el('start-marker').addEventListener('change',()=>{
       startIndex=el('start-marker').value;updateRange();const cue=cueAt(startIndex);
@@ -239,8 +271,8 @@
     });
     el('zoom').addEventListener('input',()=>{zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();});
     el('start').addEventListener('click',()=>{
-      const state=client.view().state,track=state?.tracks.find(track=>track.index===state.selected?.index),start=cueAt(startIndex),end=looping?cueAt(endIndex):null;
-      if(track && start) invoke('recordingRecord',{track:{index:track.index,id:track.id,name:track.name},range:{start:markerRef(start),end:end?markerRef(end):null,loop:looping},preRollBars});
+      const view=client.view(),tracks=armedTracks(view),start=cueAt(startIndex),end=looping?cueAt(endIndex):null;
+      if(!el('start').disabled&&canControl(view,'arm')&&tracks.length&&start) invoke('recordingRecord',{tracks:tracks.map(track=>({index:track.index,id:track.id,name:track.name})),range:{start:markerRef(start),end:end?markerRef(end):null,loop:looping},preRollBars});
     });
     el('stop').addEventListener('click',()=>invoke('recordingStop'));
     el('click').addEventListener('click',()=>invoke('recordingClick',{enabled:!client.view().state?.transport.metronome.value}));
@@ -259,7 +291,7 @@
     root.addEventListener('ableton-rc:phone-ws-close',()=>{client.session(false);clearTimeout(refreshTimer);if(frame!=null) root.cancelAnimationFrame?.(frame);frame=null;});
     root.addEventListener('ableton-rc:page-change',poll);
     doc.addEventListener('visibilitychange',poll);
-    doc.addEventListener('rcsurface:languagechange',()=>{trackSignature='';markerSignature='';render(client.view());});
+    doc.addEventListener('rcsurface:languagechange',()=>{markerSignature='';render(client.view());});
     render(client.view());return client;
   }
   root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, setup});

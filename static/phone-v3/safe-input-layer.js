@@ -583,8 +583,33 @@
       comparison.rebuildSpread(name);
       comparison.recalibrate(name);
       const widen = this.thresholdFor(name) / comparison.thresholdFor(name);
-      return widen >= 1.25 && isolated.isolation > 0 && isolated.isolation >= 3 * otherDistance
-        ? { ...isolated, widen, otherDistance } : null;
+      if (widen >= 1.25 && isolated.isolation > 0 && isolated.isolation >= 3 * otherDistance) {
+        return { ...isolated, widen, otherDistance };
+      }
+      // Diagnose clear anatomical disagreements even when calibration is
+      // capped. This only advises capture review; evaluation is unchanged.
+      const opposed = (a, b) => MCP_LANDMARKS.some(base => {
+        const left = fingerProjection(a, base), right = fingerProjection(b, base);
+        return left !== null && right !== null
+          && ((left <= .35 && right >= .70) || (right <= .35 && left >= .70));
+      }) || (() => {
+        const left = thumbState(a).state, right = thumbState(b).state;
+        return left !== null && right !== null && left !== right;
+      })();
+      const conflicts = samples.map(a => samples.map(b => opposed(a, b)));
+      const single = samples.map((_, index) => index).filter(index =>
+        conflicts[index].every((conflict, other) => other === index || conflict)
+        && samples.every((_, a) => a === index || samples.every((_, b) => b === index || !conflicts[a][b])));
+      if (single.length === 1) return { index: single[0], widen, otherDistance };
+      let largest = 0;
+      for (let mask = 1; mask < 1 << samples.length; mask++) {
+        const members = samples.map((_, index) => index).filter(index => mask & 1 << index);
+        if (members.every(a => members.every(b => !conflicts[a][b]))) largest = Math.max(largest, members.length);
+      }
+      // Without a majority there is no honest unique culprit. RETAKE is
+      // explicitly the latest capture, a deterministic review starting point.
+      return largest <= Math.floor(samples.length / 2)
+        ? { kind: 'no-consensus', index: samples.length - 1, widen, otherDistance } : null;
     }
 
     removeLast(name) {

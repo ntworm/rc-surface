@@ -4071,13 +4071,24 @@ body.mapping-mode [data-name].selected-control {
 .vision-sensor-deck .vision-control-chips span { padding: 3px 4px; font-size: 9px; font-weight: 800; }
 .vision-axis-chips {
   display: grid;
+  min-width: 0;
+  flex: 1;
   gap: 3px;
 }
 .vision-axis-chips[data-name] { cursor: pointer; }
 .vision-readout-card:nth-child(1) .vision-axis-chips {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(64px, 1fr));
   grid-auto-rows: minmax(0, auto);
+  overflow-x: auto;
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text3) var(--surface);
 }
+.vision-readout-card:nth-child(1) .vision-axis-chips::-webkit-scrollbar { height: 6px; }
+.vision-readout-card:nth-child(1) .vision-axis-chips::-webkit-scrollbar-track { background: var(--surface); }
+.vision-readout-card:nth-child(1) .vision-axis-chips::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 0; }
+.vision-readout-card:nth-child(1) .vision-axis-chips::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+.vision-readout-card:nth-child(1) .vision-axis-chips::-webkit-scrollbar-button { display: none; }
 .vision-readout-card:nth-child(2) .vision-axis-chips {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -4105,6 +4116,7 @@ body.mapping-mode [data-name].selected-control {
   font-weight: 800;
 }
 .vision-axis-chips b { color: #65e7ac; font-size: 9.5px; font-weight: 900; }
+.vision-axis-chips span[data-name] { min-height: 44px; }
 .vision-gate-chip { white-space: nowrap; }
 .vision-gate-chip b.is-no { color: #ff8b8b; }
 .vision-gate-chip b.is-ok { color: #65e7ac; }

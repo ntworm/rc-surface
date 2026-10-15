@@ -644,6 +644,36 @@ test('natural curl variation and a looser take do not raise an outlier warning',
   }
 });
 
+for (const count of [3, 4, 5, 6]) test(`take consistency diagnoses ${count} captures without anatomical consensus without changing recognition`, () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const library = new GestureLibrary({ threshold: .16 });
+  const poses = [
+    {thumb:.15,index:1,middle:.15,ring:.15,pinky:.15},
+    {thumb:.15,index:.15,middle:1,ring:.15,pinky:.15},
+    {thumb:.15,index:.15,middle:.15,ring:.15,pinky:1},
+  ];
+  for(let index=0;index<count;index++)library.learn('G1',frames(normalizeHandPose(handPose(poses[index%3]))));
+  const before=JSON.stringify(library.toJSON()),probe=normalizeHandPose(handPose(poses[0]));
+  const evaluation=JSON.stringify(library.evaluate(probe));
+  assert.equal(library.takeConsistency('G1')?.kind,'no-consensus');
+  assert.equal(library.takeConsistency('G1')?.index,count-1,'general RETAKE targets the latest, without blaming it');
+  assert.equal(JSON.stringify(library.toJSON()),before);assert.equal(JSON.stringify(library.evaluate(probe)),evaluation);
+  assert.equal(GestureLibrary.fromJSON(JSON.parse(before)).takeConsistency('G1')?.kind,'no-consensus');
+});
+
+test('anatomical take diagnostic preserves natural position, scale, rotation and curl variation',()=>{
+  const { GestureLibrary, normalizeHandPose }=load();const library=new GestureLibrary({threshold:.16});
+  for(let index=0;index<6;index++)library.learn('G1',frames(normalizeHandPose(transform2D(handPose({thumb:.15,index:1,middle:.18+index*.03,ring:.2,pinky:1}),
+    {scale:.8+index*.04,radians:index*.07,x:index*.01,y:index*.01}))));
+  assert.equal(library.takeConsistency('G1'),null);
+});
+
+test('clear opposing finger in one of six captures is diagnosed even when it does not widen calibration',()=>{
+  const {GestureLibrary,normalizeHandPose}=load(),library=new GestureLibrary({threshold:2});
+  for(let index=0;index<6;index++)library.learn('G1',frames(normalizeHandPose(handPose({thumb:.15,index:index===5?.15:1,middle:index===5?1:.15,ring:.15,pinky:.15}))));
+  const warning=library.takeConsistency('G1');assert.equal(warning?.index,5);assert.equal(warning?.kind,undefined);assert.equal(warning?.widen,1);
+});
+
 test('takes captured with variation accept the gesture repeated loosely, without accepting a different one', () => {
   const { GestureLibrary, normalizeHandPose } = load();
   // The rock: thumb, index and pinky out; middle and ring folded in. The two

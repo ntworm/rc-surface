@@ -12,6 +12,7 @@ test('REC conservative getter addresses match public AbletonOSC handlers literal
     loop:'/live/song/get/loop', punchIn:'/live/song/get/punch_in', punchOut:'/live/song/get/punch_out',
     overdub:'/live/song/get/arrangement_overdub', backToArranger:'/live/song/get/back_to_arranger',
     sessionRecord:'/live/song/get/session_record', trackArm:'/live/track/get/arm', trackCanArm:'/live/track/get/can_be_armed',
+    trackSolo:'/live/track/get/solo',trackMute:'/live/track/get/mute',
     trackMonitor:'/live/track/get/current_monitoring_state', signatureNumerator:'/live/song/get/signature_numerator',
     signatureDenominator:'/live/song/get/signature_denominator',
   });
@@ -21,8 +22,8 @@ function fixture(t,nativePositioning=false) {
   const osc = new OSCTransport();
   Object.assign(osc.state, { available: true, connected: true });
   let song = { tracks: [
-    { name: 'Guitar', handle: { id: '11' }, arm: true },
-    { name: 'Bass', handle: { id: '22' }, arm: false },
+    { name: 'Guitar', handle: { id: '11' }, arm: true,solo:false,mute:false },
+    { name: 'Bass', handle: { id: '22' }, arm: false,solo:false,mute:false },
   ], cuePoints: [{ name: 'Verse', time: 8 }, { name: 'Chorus', time: 24 }] };
   const values = { playing: false, record: false, position: 0, stoppedResume:0, insertion:0, click: false, monitor: 1,
     loop: false, loopStart:0, loopLength:4, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false,
@@ -65,8 +66,10 @@ function fixture(t,nativePositioning=false) {
     }
     const index = args[0]?.value;
     if (address === REC_PREFLIGHT.trackArm) response = [index, song.tracks[index].arm];
-    if (address === REC_PREFLIGHT.trackCanArm) response = [index, true];
-    if (address === REC_PREFLIGHT.trackMonitor) response = [index, values.monitor];
+    if (address === REC_PREFLIGHT.trackSolo) response = [index, song.tracks[index].solo];
+    if (address === REC_PREFLIGHT.trackMute) response = [index, song.tracks[index].mute];
+    if (address === REC_PREFLIGHT.trackCanArm) response = [index, song.tracks[index].canArm??true];
+    if (address === REC_PREFLIGHT.trackMonitor) response = [index, song.tracks[index].monitor??values.monitor];
     if (response) queueMicrotask(() => push(address, response));
   };
   const coordinator = new RecordingCoordinator(osc, () => song);
@@ -967,4 +970,157 @@ for(const loss of ['session','link','Song']) test('REC native pre-roll late crea
   Object.assign(f.osc.state,{connected:true,available:true});await f.coordinator.refresh();await flushRecording();
   assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,0,'reconnect never replays orphan cleanup');
   assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===CMD.cuePointJump || address===REC_PREROLL.setPunchIn),false);
+});
+
+const trackRefs=tracks=>tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
+function cohortFixture(t,count=10) {
+  const f=preRollFixture(t);
+  f.song.tracks=Array.from({length:count},(_,index)=>({name:'Input '+(index+1),handle:{id:String(index+100)},arm:true,solo:false,mute:false,canArm:true}));
+  f.refs=trackRefs(f.song.tracks);return f;
+}
+
+test('REC cohort records ten observed armed inputs and STOP disarms only its original cohort while restoring direct Punch In ON',async t=>{
+  const f=cohortFixture(t);f.values.punchIn=true;
+  f.song.tracks.push({name:'Later',handle:{id:'third'},arm:false,solo:false,mute:false,canArm:true});
+  const state=await f.coordinator.record(f.refs,f.range,f.context,0);
+  assert.equal(state.transport.recordMode.value,true);assert.equal(f.values.punchIn,false);assert.deepEqual(state.lastAttempt.tracks,f.refs);
+  f.song.tracks[10].arm=true;
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.slice(0,10).every(track=>track.arm===false));assert.equal(f.song.tracks[10].arm,true);
+  assert.deepEqual(f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).map(([,args])=>args[0].value),[0,1]);
+});
+
+test('REC cohort pre-roll and Loop retain ten armed inputs while solo/mute confirmations do not replace its running operation',async t=>{
+  const f=cohortFixture(t);f.range={...f.range,end:{name:'End',time:64},loop:true};
+  const state=await f.coordinator.record(f.refs,f.range,f.context,1);
+  assert.equal(state.pending,'record');assert.equal(f.values.loop,true);assert.equal(f.values.punchIn,true);assert.equal(f.song.cuePoints.length,2);
+  const writes=f.sent.filter(([address])=>address===CMD.startPlaying||address===REC.setRecordMode).length;
+  const solo=await f.coordinator.trackControl(f.refs[2],'solo',true,'multi',f.context);
+  assert.equal(solo.tracks[2].solo,true);assert.equal(solo.pending,'record');assert.equal(solo.preRoll.phase,'running');
+  const mute=await f.coordinator.trackControl(f.refs[7],'mute',true,'multi',f.context);
+  assert.equal(mute.tracks[7].mute,true);assert.ok(f.song.tracks.every(track=>track.arm));
+  assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying||address===REC.setRecordMode).length,writes);
+  f.values.position+=.2;t.mock.timers.tick(100);await flushRecording();assert.equal(f.coordinator.snapshot().preRoll.phase,'running');
+  await f.coordinator.stop(f.context);assert.ok(f.song.tracks.every(track=>!track.arm));assert.equal(f.song.tracks[2].solo,true);assert.equal(f.song.tracks[7].mute,true);
+});
+
+test('REC track ARM MULTI accumulates inputs; EXCLUSIVE changes other arms only in its explicit ARM action',async t=>{
+  const f=cohortFixture(t,3);f.song.tracks.forEach(track=>{track.arm=false;});f.song.exclusiveArm=true;
+  await f.coordinator.refresh();
+  await f.coordinator.trackControl(f.refs[0],'arm',true,'multi',f.context);
+  await f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[true,true,false]);assert.equal(f.song.exclusiveArm,true);
+  await f.coordinator.trackControl(f.refs[2],'arm',true,'exclusive',f.context);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,true]);
+  await f.coordinator.trackControl(f.refs[2],'arm',false,'exclusive',f.context);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,false]);assert.equal(f.song.exclusiveArm,true);
+});
+
+test('REC track MULTI rejects host side-effect disarming another input instead of claiming cumulative success',async t=>{
+  const f=cohortFixture(t,2);let arm=false;
+  Object.defineProperty(f.song.tracks[1],'arm',{get:()=>arm,set:value=>{arm=value;if(value)f.song.tracks[0].arm=false;}});
+  await f.coordinator.refresh();
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/ARM_UNCONFIRMED/);
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(arm,true);
+});
+
+test('REC track EXCLUSIVE stops before disarming a replaced same-name non-target identity',async t=>{
+  const f=cohortFixture(t,3);f.song.tracks[2].arm=false;let arm=true;
+  const replacement={...f.song.tracks[1],handle:{id:'replacement'}};
+  Object.defineProperty(f.song.tracks[0],'arm',{get:()=>arm,set:value=>{arm=value;f.song.tracks[1]=replacement;}});
+  await assert.rejects(f.coordinator.trackControl(f.refs[2],'arm',true,'exclusive',f.context),/IDENTITY/);
+  assert.equal(replacement.arm,true);assert.equal(f.song.tracks[2].arm,false);
+});
+
+test('REC group tracks expose observed solo/mute but reject ARM and never change another track',async t=>{
+  const f=cohortFixture(t,2);f.song.tracks[1].canArm=false;f.song.tracks[1].arm=false;
+  await f.coordinator.refresh();await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/NOT_ARMABLE/);
+  await f.coordinator.trackControl(f.refs[1],'solo',true,'multi',f.context);
+  const state=await f.coordinator.trackControl(f.refs[1],'mute',true,'multi',f.context);
+  assert.equal(state.tracks[1].canArm,false);assert.equal(state.tracks[1].solo,true);assert.equal(state.tracks[1].mute,true);
+  assert.equal(f.song.tracks[0].solo,false);assert.equal(f.song.tracks[0].mute,false);assert.equal(f.song.tracks[0].arm,true);
+});
+
+test('REC cohort rejects empty, duplicate, unordered and obsolete identities before a native write',async t=>{
+  const f=cohortFixture(t,2);
+  for(const refs of [[],[f.refs[0],f.refs[0]],[f.refs[1],f.refs[0]],[{...f.refs[0],name:'old'}],[{...f.refs[0],id:'old'}],[{...f.refs[0],extra:true}]]) {
+    await assert.rejects(f.coordinator.record(refs,f.range,f.context),/NO_ARMED|IDENTITY/);
+  }
+  assert.deepEqual(preRollWrites(f),[]);assert.deepEqual(f.cueWrites,[]);
+});
+
+for(const mismatch of ['outside armed','missing arm','reordered','not armable']) test('REC cohort blocks '+mismatch+' from the observed full set without mutating arms or Punch',async t=>{
+  const f=cohortFixture(t,2),refs=[...f.refs];
+  if(mismatch==='outside armed')refs.pop();
+  if(mismatch==='missing arm')f.song.tracks[1].arm=false;
+  if(mismatch==='reordered')f.song.tracks.reverse();
+  if(mismatch==='not armable')f.song.tracks[1].canArm=false;
+  const arms=f.song.tracks.map(track=>track.arm);
+  await assert.rejects(f.coordinator.record(refs,f.range,f.context,0),/OTHER_ARMED|TRACK_NOT_ARMED|IDENTITY|NOT_ARMABLE/);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),arms);assert.equal(f.sent.some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);
+});
+
+test('REC cohort STOP skips a replaced identity, still disarms remaining owned inputs and preserves third-party arm',async t=>{
+  const f=cohortFixture(t,3);await f.coordinator.record(f.refs.slice(0,2),f.range,f.context).catch(error=>{assert.match(error.message,/OTHER_ARMED/);});
+  f.song.tracks[2].arm=false;await f.coordinator.record(f.refs.slice(0,2),f.range,f.context);
+  f.song.tracks[0].handle.id='replacement';f.song.tracks[2].arm=true;
+  await assert.rejects(f.coordinator.stop(f.context),/IDENTITY/);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.song.tracks[1].arm,false);assert.equal(f.song.tracks[2].arm,true);
+});
+
+test('REC solo/mute serialize writes and priority STOP cancels a pending confirmation without aborting into a delayed write',async t=>{
+  const f=cohortFixture(t,2);await f.coordinator.record(f.refs,f.range,f.context,1);
+  f.block(REC_PREFLIGHT.trackSolo);
+  const pending=f.coordinator.trackControl(f.refs[0],'solo',true,'multi',f.context),rejected=assert.rejects(pending,/STOPPED/);
+  const beforePoll=f.sent.length,state=await f.coordinator.refresh();assert.equal(state.trackPending,'track-solo');assert.equal(f.sent.length,beforePoll);
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'mute',true,'multi',f.context),/BUSY/);
+  await assert.rejects(f.coordinator.record(f.refs,f.range,f.context),/BUSY/);
+  const before=f.sent.length,stopping=f.coordinator.stop(f.context);
+  assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  f.block(undefined);await stopping;await rejected;
+  assert.equal(f.song.tracks[0].solo,false);assert.equal(f.song.tracks[1].mute,false);assert.ok(f.song.tracks.every(track=>!track.arm));
+});
+
+test('REC passive poll during an isolated solo/mute confirmation returns observed pending state without an extra read',async t=>{
+  const f=cohortFixture(t,2);await f.coordinator.refresh();f.block(REC_PREFLIGHT.trackMute);
+  const pending=f.coordinator.trackControl(f.refs[0],'mute',true,'multi',f.context),rejected=assert.rejects(pending,/STOPPED/);
+  const before=f.sent.length,state=await f.coordinator.refresh();assert.equal(state.trackPending,'track-mute');assert.equal(f.sent.length,before);
+  f.block(undefined);await f.coordinator.stop(f.context);await rejected;assert.equal(f.song.tracks[0].mute,false);
+});
+
+test('REC cohort failed pre-roll with no owned resources releases baseline Punch so a corrected retry works',async t=>{
+  const f=cohortFixture(t,2),send=f.osc.send;f.values.loop=true;
+  f.osc.send=(address,args)=>{send(address,args);if(address===REC_LOOP.setEnabled)f.song.cuePoints[0].name='Moved';};
+  await assert.rejects(f.coordinator.record(f.refs,f.range,f.context,1),/MARKER_CHANGED/);
+  assert.equal(f.coordinator.snapshot().preRoll,null);assert.equal(f.sent.some(([address])=>address===REC_PREROLL.setPunchIn),false);
+  f.osc.send=send;f.song.cuePoints[0].name='Take';
+  await f.coordinator.record(f.refs,f.range,f.context,1);await f.coordinator.stop(f.context);
+});
+
+for(const bars of [0,1]) for(const original of [false,true]) test('REC automatic Punch In original '+original+' with pre-roll '+bars+' configures and restores only its own temporary change',async t=>{
+  const f=cohortFixture(t,2);f.values.punchIn=original;
+  await f.coordinator.record(f.refs,f.range,f.context,bars);
+  assert.equal(f.values.punchIn,bars>0);await f.coordinator.stop(f.context);assert.equal(f.values.punchIn,original);
+  assert.equal(f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).length,original===(bars>0)?0:2);
+});
+
+test('REC automatic Punch In setter needs confirmation and restores its baseline after a later native-start failure',async t=>{
+  const f=cohortFixture(t,2),send=f.osc.send;f.values.punchIn=true;
+  f.osc.send=(address,args)=>{if(address!==REC_PREROLL.setPunchIn)send(address,args);};
+  const failed=f.coordinator.record(f.refs,f.range,f.context).then(()=>null,error=>error);
+  await flushRecording();t.mock.timers.tick(2001);await flushRecording();
+  assert.match((await failed).message,/PUNCH_UNCONFIRMED/);assert.equal(f.values.punchIn,true);
+  f.osc.send=(address,args)=>{if(address===CMD.cuePointJump)throw Error('native jump failed');send(address,args);};
+  await assert.rejects(f.coordinator.record(f.refs,f.range,f.context),/native jump failed/);
+  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.every(track=>!track.arm));
+});
+
+test('REC automatic Punch In relinquishes ownership after an external change and never restores on reconnect',async t=>{
+  const f=cohortFixture(t,2);await f.coordinator.record(f.refs,f.range,f.context,1);
+  f.values.punchIn=false;f.push(REC_PREFLIGHT.punchIn,[false]);f.values.punchIn=true;f.push(REC_PREFLIGHT.punchIn,[true]);
+  await f.coordinator.stop(f.context);assert.equal(f.values.punchIn,true,'external re-enable is retained instead of overwritten with the original OFF');
+  f.song.tracks.forEach(track=>{track.arm=true;});await f.coordinator.record(f.refs,f.range,f.context,0);
+  assert.equal(f.values.punchIn,false);const setters=f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).length;
+  f.osc.state.connected=false;f.osc.emit('link-lost');f.osc.state.connected=true;await f.coordinator.refresh();
+  assert.equal(f.values.punchIn,false);assert.equal(f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).length,setters);
 });

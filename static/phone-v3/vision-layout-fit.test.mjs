@@ -169,7 +169,7 @@ test('MAP and CLUTCH use explicit track counts instead of content-driven auto-fi
 
   assert.match(
     cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
-    /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    /grid-template-columns:\s*repeat\(5,\s*minmax\(64px,\s*1fr\)\)/,
   );
   assert.match(
     cssBlock(css, '.vision-readout-card:nth-child(2) .vision-axis-chips'),

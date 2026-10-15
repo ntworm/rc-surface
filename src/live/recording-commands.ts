@@ -28,14 +28,19 @@ export const recordingCommands: Record<string, CommandSpec> = {
   recordingArm: { description: 'Explicitly arm or disarm selected REC track', handler: async (args, context) => {
     exact(args, ['enabled','track']); return recordingCoordinator.arm(args['enabled'], args['track'], context);
   } },
+  recordingTrackControl: { description: 'Set one observed REC track arm, solo or mute state', handler: async (args, context) => {
+    exact(args,args['property']==='arm'?['track','property','enabled','armMode']:['track','property','enabled']);
+    return recordingCoordinator.trackControl(args['track'],args['property'],args['enabled'],args['armMode']??'multi',context);
+  } },
   recordingPrepare: { description: 'Check conservative REC conditions and seek return point', handler: async (args, context) => {
     exact(args, []); return recordingCoordinator.prepare(context);
   } },
   recordingStart: { description: 'Start one prepared Arrangement attempt', handler: async (args, context) => {
     exact(args, ['token']); return recordingCoordinator.start(args['token'], context);
   } },
-  recordingRecord: { description: 'Arm chosen track and record from verified Arrangement markers, with optional loop', handler: async (args, context) => {
-    exact(args, Object.hasOwn(args,'preRollBars') ? ['track','range','preRollBars'] : ['track','range']); return recordingCoordinator.record(args['track'], args['range'], context, Object.hasOwn(args,'preRollBars') ? args['preRollBars'] : 0);
+  recordingRecord: { description: 'Record an exact observed armed track cohort from verified Arrangement markers', handler: async (args, context) => {
+    const key=Object.hasOwn(args,'tracks')?'tracks':'track';
+    exact(args, Object.hasOwn(args,'preRollBars') ? [key,'range','preRollBars'] : [key,'range']); return recordingCoordinator.record(args[key], args['range'], context, Object.hasOwn(args,'preRollBars') ? args['preRollBars'] : 0);
   } },
   recordingSeekMarker: { description: 'Position normal header playback at a verified marker without starting it', handler: async (args, context) => {
     exact(args, ['name','time']); return recordingCoordinator.seekMarker(args as {name:string;time:number}, context);
