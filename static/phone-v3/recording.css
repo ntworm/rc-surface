@@ -84,3 +84,196 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-cursor { position:absolute; top:0; bottom:0; width:2px; background:var(--text); pointer-events:none; }
 .rec-region { position:absolute; top:0; bottom:0; background:var(--accent-bg); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; }
 @media(max-width:620px) { .rec-range label { min-width:150px; } .rec-workspace { gap:8px; } .rec-workspace .rec-main button { min-height:48px; } }
+
+@media (max-width: 950px) and (orientation: landscape), (max-height: 520px) and (orientation: landscape) {
+  .page-recording {
+    padding: 2px 6px;
+    overflow-y: hidden;
+  }
+  .rec-workspace {
+    display: grid;
+    grid-template-columns: minmax(290px, 1.25fr) minmax(210px, 0.85fr);
+    grid-template-rows: auto auto auto auto;
+    column-gap: 8px;
+    row-gap: 2px;
+    align-items: start;
+    max-height: calc(100vh - 44px);
+  }
+  .rec-heading {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 2px;
+  }
+  .rec-workspace h1 {
+    font-size: 11px;
+    line-height: 1;
+  }
+  .rec-status {
+    min-height: 16px;
+    font-size: 10px;
+    line-height: 1;
+  }
+  .rec-destination {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 0;
+  }
+  .rec-workspace .rec-destination button {
+    min-height: 28px;
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  .rec-main {
+    grid-column: 1;
+    grid-row: 3;
+    position: static;
+    padding: 0;
+    gap: 4px;
+  }
+  .rec-main .rec-start, .rec-main .rec-stop {
+    min-height: 38px;
+    font-size: 14px;
+    padding: 2px 8px;
+  }
+  .rec-workspace .rec-main button {
+    min-height: 38px;
+    min-width: 38px;
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  .rec-arrangement-panel, .rec-session-panel {
+    grid-column: 1;
+    grid-row: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .rec-marker-strip {
+    padding: 2px 4px;
+  }
+  .rec-marker-strip > header {
+    font-size: 9px;
+    min-height: 20px;
+  }
+  .rec-workspace .rec-zoom {
+    margin-left: auto;
+  }
+  .rec-workspace .rec-zoom input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .rec-timeline-track {
+    height: 34px;
+    margin: 2px 28px 0;
+  }
+  .rec-workspace .rec-marker {
+    top: 2px;
+    width: 60px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+    font-size: 8px;
+  }
+  .rec-marker-position {
+    margin-bottom: 1px;
+  }
+  .rec-range {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .rec-range label {
+    flex: 1;
+    min-width: 65px;
+    font-size: 9px;
+    gap: 2px;
+  }
+  .rec-range select {
+    min-height: 28px;
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+  .rec-workspace #rec-loop {
+    min-height: 28px;
+    min-width: 36px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  .rec-pre-roll {
+    gap: 0;
+    flex-wrap: nowrap;
+  }
+  .rec-pre-roll > span {
+    font-size: 9px;
+    margin-right: 4px;
+  }
+  .rec-workspace .rec-pre-roll button {
+    min-height: 28px;
+    min-width: 30px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  .rec-track-heading {
+    grid-column: 2;
+    grid-row: 1;
+    margin-bottom: 2px;
+    font-size: 10px;
+  }
+  .rec-workspace #rec-arm-mode {
+    min-height: 28px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  .rec-track-grid {
+    grid-column: 2;
+    grid-row: 2 / 5;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100vh - 84px);
+    padding-right: 2px;
+    scrollbar-width: thin;
+  }
+  .rec-track-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 2px 6px;
+    min-height: 44px;
+  }
+  .rec-track-name {
+    flex: 1;
+    min-height: 44px;
+    align-content: center;
+    font-size: 10px;
+    padding: 0 4px;
+  }
+  .rec-workspace .rec-track-name-input {
+    min-height: 44px;
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .rec-track-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .rec-workspace .rec-track-actions button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 2px;
+    font-size: 9px;
+  }
+  .rec-note, .rec-help {
+    display: none;
+  }
+}

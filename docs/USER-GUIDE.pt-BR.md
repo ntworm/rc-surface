@@ -1194,8 +1194,8 @@ playback parado:
 4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
    padrão e começa diretamente no marcador. As outras opções tocam os compassos
    anteriores com click até o Punch In nativo abrir a captura no marcador.
-5. Aperte **STOP** para parar playback e gravação. Ele desarma somente o conjunto
-   exato de entradas pertencente à tentativa. Arme as entradas para outra tentativa.
+5. Aperte **STOP** para parar playback e gravação. Suas tracks permanecem armadas,
+   permitindo novos takes consecutivos sem precisar rearmar.
 
 REC grava exatamente as tracks armadas mostradas nos cartões. Fica desabilitado
 sem entradas armadas e confirma o conjunto inteiro antes de gravar. ARM fica
@@ -1235,7 +1235,7 @@ atrasada. O host acompanha o pré-roll depois de devolver o comando, portanto
 quatro compassos não ficam limitados pelo timeout de comando do celular.
 Na primeira passagem observada pelo marcador, restaura o click original.
 STOP restaura somente click, Punch In e início temporário do Loop ainda
-pertencentes à tentativa, depois desarma suas entradas; o início temporário só
+pertencentes à tentativa, mantendo as entradas armadas; o início temporário só
 volta enquanto Loop permanece desligado. Use STOP desta página para terminar
 a limpeza mesmo se parou o transporte no Live. Mudanças de estado necessário
 cancelam o pré-roll; perda de conexão/sessão ou um novo Set nunca repetem

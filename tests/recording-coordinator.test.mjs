@@ -743,7 +743,7 @@ test('marker REC owns arm/prepare internally; STOP disarms only its recorded tra
   assert.equal(f.song.tracks[0].arm,true);assert.equal(f.values.position,8);
   assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying).length,1);
   await f.coordinator.stop(f.context);
-  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.song.tracks[1].arm,false);
+  assert.equal(f.song.tracks[0].arm,true,'STOP keeps track armed');assert.equal(f.song.tracks[1].arm,false);
   const before=f.sent.length;
   await f.coordinator.seekMarker({name:'Verse',time:8},f.context);
   assert.equal(f.values.position,8);
@@ -832,10 +832,10 @@ test('STOP immediately inside the SDK arm setter disarms its track before confir
   }});
   const recording=f.coordinator.record(recordingTrack,markerRange(),f.context);
   await assert.rejects(recording,/STOPPED/);await stopping;
-  assert.deepEqual(writes,[true,false]);assert.equal(arm,false);assert.equal(f.song.tracks[1].arm,false);
+  assert.deepEqual(writes,[true]);assert.equal(arm,true);assert.equal(f.song.tracks[1].arm,false);
   f.push(REC_PREFLIGHT.trackArm,[0,true]);
   await new Promise(resolve=>setImmediate(resolve));
-  assert.deepEqual(writes,[true,false],'late arm evidence does not replay the interrupted SDK setter');
+  assert.deepEqual(writes,[true],'late arm evidence does not replay the interrupted SDK setter');
   assert.equal(f.sent.some(([address,args])=>address===CMD.startPlaying || (address===REC.setRecordMode && args[0]?.value===1)),false);
   assert.equal(f.values.playing,false);assert.equal(f.values.record,false);
 });
@@ -889,7 +889,7 @@ for(const bars of [1,2,4]) test('REC pre-roll '+bars+' bars follows the observed
   assert.equal(f.sent.filter(([address])=>address===CMD.cuePointJump).length,1);
   assert.equal(f.sent.some(([address])=>address==='/live/song/continue_playing' || address===REC.setSongTime || address.includes('count_in_duration')),false);
   await f.coordinator.stop(f.context);
-  assert.equal(f.values.click,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.values.click,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,true);
 });
 
 test('REC pre-roll returns armed immediately and keeps host ownership through a 16-second lead-in; first crossing restores click',async t=>{
@@ -909,7 +909,7 @@ test('REC pre-roll returns armed immediately and keeps host ownership through a 
   f.values.record=false;f.values.playing=false;
   await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,0),/PRE_ROLL_STATE/);
   await f.coordinator.stop(f.context);
-  assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,true);
 });
 
 test('REC pre-roll preserves an originally enabled click and the explicitly selected native Loop region',async t=>{
@@ -917,7 +917,7 @@ test('REC pre-roll preserves an originally enabled click and the explicitly sele
   await f.coordinator.record(recordingTrack,f.range,f.context,1);
   await f.coordinator.stop(f.context);
   assert.equal(f.values.click,true);assert.equal(f.values.loop,true);assert.equal(f.values.loopStart,32);assert.equal(f.values.loopLength,32);
-  assert.equal(f.values.punchIn,false);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.values.punchIn,false);assert.equal(f.song.tracks[0].arm,true);
   assert.equal(f.sent.some(([address])=>address===REC.setMetronome),false,'click was never owned or changed');
 });
 
@@ -927,7 +927,7 @@ test('REC pre-roll confirms still before marker immediately before Record ON and
   await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_PASSED/);
   assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
   assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);
-  assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);assert.equal(f.coordinator.snapshot().preRoll,null);
+  assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,true);assert.equal(f.coordinator.snapshot().preRoll,null);
 });
 
 for(const phase of ['play confirmation','last pre-Record read']) for(const direction of ['forward','backward']) {
@@ -945,7 +945,7 @@ for(const phase of ['play confirmation','last pre-Record read']) for(const direc
     assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
     assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying).length,1,'never replay the native start');
     assert.equal(f.sent.filter(([address])=>address===CMD.cuePointJump).length,1,'never retry the seek');
-    assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.song.tracks[0].arm,false);
+    assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.song.tracks[0].arm,true);
   });
 }
 
@@ -980,7 +980,7 @@ test('REC STOP during pre-roll setup retains ownership while the aborted start s
   assert.equal(f.sent.some(([address])=>address===REC_PREROLL.continuePlaying || address===CMD.startPlaying),false);
 });
 
-test('REC STOP preempts the running pre-roll monitor, restores ownership and disarms even if click restoration fails',async t=>{
+test('REC STOP preempts the running pre-roll monitor, restores ownership and preserves arm even if click restoration fails',async t=>{
   const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
   const send=f.osc.send;
   f.osc.send=(address,args)=>{if(address===REC.setMetronome && args[0]?.value===0) throw Error('click restore failed');send(address,args);};
@@ -988,7 +988,7 @@ test('REC STOP preempts the running pre-roll monitor, restores ownership and dis
   assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
   await assert.rejects(stopping,/click restore failed/);
   assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);
-  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.coordinator.snapshot().pending,null);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.coordinator.snapshot().pending,null);
   const count=f.sent.length;t.mock.timers.tick(5000);await flushRecording();assert.equal(f.sent.length,count,'cancelled monitor never resumes a write');
 });
 
@@ -1026,7 +1026,7 @@ test('REC pre-roll loop-confirmation failure leaves no stale owner for the next 
   assert.equal(f.sent.some(([address])=>address===REC_PREROLL.continuePlaying || address===REC_PREROLL.setPunchIn),false);
 });
 
-for(const changed of ['marker','meter','track','seek','clock']) test('REC pre-roll aborts '+changed+' changes before the marker and disarms its own track safely',async t=>{
+for(const changed of ['marker','meter','track','seek','clock']) test('REC pre-roll aborts '+changed+' changes before the marker and preserves its own track arm safely',async t=>{
   const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
   if(changed==='marker') f.song.cuePoints[0].time=33;
   if(changed==='meter') f.values.numerator=3;
@@ -1034,8 +1034,7 @@ for(const changed of ['marker','meter','track','seek','clock']) test('REC pre-ro
   if(changed==='seek') f.values.position=40;
   t.mock.timers.tick(changed==='clock'?2100:100);await flushRecording();
   assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
-  if(changed==='track') assert.equal(f.song.tracks[0].arm,true,'a replaced track never inherits arm ownership');
-  else assert.equal(f.song.tracks[0].arm,false,'only the original owned track is disarmed');
+  assert.equal(f.song.tracks[0].arm,true,'track arm remains armed after abort');
   assert.match(f.coordinator.snapshot().error,/REC:/);
   assert.equal(f.sent.filter(([address,args])=>address===REC.setRecordMode && args[0]?.value===1).length,1,'abort never restarts recording');
 });
@@ -1251,7 +1250,7 @@ for(const outcome of ['SDK throws','incompatible confirmed','peer confirmation m
     send(address,args);
   };
   f.onArm((index,value)=>{if(index===1&&value===true){afterWrite=true;f.hostArm(0,false);if(outcome==='SDK throws')throw Error('applied then rejected');}});
-  const action=client.command('recordingTrackControl',{track:f.refs[1],property:'arm',enabled:true,armMode:'multi'}),failed=assert.rejects(action,/applied then rejected|ARM_UNCONFIRMED|UNKNOWN/);
+  const action=client.command('recordingTrackControl',{track:f.refs[1],property:'arm',enabled:true,armMode:'multi'}),failed=assert.rejects(action,/applied then rejected|ARM_COLLATERAL_DISARM|ARM_UNCONFIRMED|UNKNOWN/);
   await flushRecording();if(outcome==='peer confirmation missing'){t.mock.timers.tick(2001);await flushRecording();}await failed;
   assert.equal(f.song.tracks[0].arm,false);assert.equal(f.song.tracks[1].arm,true);assert.equal(arm(0).disabled,true);assert.equal(arm(0)['aria-pressed'],'mixed');
   const before=f.sent.length;
@@ -1317,18 +1316,18 @@ function cohortFixture(t,count=10) {
   f.refs=trackRefs(f.song.tracks);return f;
 }
 
-test('REC cohort records ten observed armed inputs and STOP disarms only its original cohort while restoring direct Punch In ON',async t=>{
+test('REC cohort records ten observed armed inputs and STOP keeps its original cohort armed while restoring direct Punch In ON',async t=>{
   const f=cohortFixture(t);f.values.punchIn=true;
   f.song.tracks.push({name:'Later',handle:{id:'third'},arm:false,solo:false,mute:false,canArm:true});
   const state=await f.coordinator.record(f.refs,f.range,f.context,0);
   assert.equal(state.transport.recordMode.value,true);assert.equal(f.values.punchIn,false);assert.deepEqual(state.lastAttempt.tracks,f.refs);
   f.song.tracks[10].arm=true;
   await f.coordinator.stop(f.context);
-  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.slice(0,10).every(track=>track.arm===false));assert.equal(f.song.tracks[10].arm,true);
+  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.slice(0,10).every(track=>track.arm===true));assert.equal(f.song.tracks[10].arm,true);
   assert.deepEqual(f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).map(([,args])=>args[0].value),[0,1]);
 });
 
-test('REC cohort pre-roll and Loop retain ten armed inputs while solo/mute confirmations do not replace its running operation',async t=>{
+test('REC cohort pre-roll and Loop retain ten armed inputs and STOP keeps armed inputs while restoring pre-roll',async t=>{
   const f=cohortFixture(t);f.range={...f.range,end:{name:'End',time:64},loop:true};
   const state=await f.coordinator.record(f.refs,f.range,f.context,1);
   assert.equal(state.pending,'record');assert.equal(f.values.loop,true);assert.equal(f.values.punchIn,true);assert.equal(f.song.cuePoints.length,2);
@@ -1339,7 +1338,7 @@ test('REC cohort pre-roll and Loop retain ten armed inputs while solo/mute confi
   assert.equal(mute.tracks[7].mute,true);assert.ok(f.song.tracks.every(track=>track.arm));
   assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying||address===REC.setRecordMode).length,writes);
   f.values.position+=.2;t.mock.timers.tick(100);await flushRecording();assert.equal(f.coordinator.snapshot().preRoll.phase,'running');
-  await f.coordinator.stop(f.context);assert.ok(f.song.tracks.every(track=>!track.arm));assert.equal(f.song.tracks[2].solo,true);assert.equal(f.song.tracks[7].mute,true);
+  await f.coordinator.stop(f.context);assert.ok(f.song.tracks.every(track=>track.arm===true));assert.equal(f.song.tracks[2].solo,true);assert.equal(f.song.tracks[7].mute,true);
 });
 
 test('REC track ARM MULTI accumulates inputs; EXCLUSIVE changes other arms only in its explicit ARM action',async t=>{
@@ -1354,12 +1353,19 @@ test('REC track ARM MULTI accumulates inputs; EXCLUSIVE changes other arms only 
   assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,false]);assert.equal(f.song.exclusiveArm,true);
 });
 
-test('REC track MULTI rejects host side-effect disarming another input instead of claiming cumulative success',async t=>{
+test('REC track MULTI rejects host side-effect disarming another input with ARM_COLLATERAL_DISARM',async t=>{
   const f=cohortFixture(t,2);let arm=false;
   Object.defineProperty(f.song.tracks[1],'arm',{get:()=>arm,set:value=>{arm=value;if(value)f.song.tracks[0].arm=false;}});
   await f.coordinator.refresh();
-  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/ARM_UNCONFIRMED/);
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/ARM_COLLATERAL_DISARM/);
   assert.equal(f.song.tracks[0].arm,false);assert.equal(arm,true);
+});
+
+test('REC track arm rejects unconfirmed target arm with ARM_UNCONFIRMED',async t=>{
+  const f=cohortFixture(t,2);
+  Object.defineProperty(f.song.tracks[1],'arm',{get:()=>false,set:()=>{}});
+  await f.coordinator.refresh();
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/ARM_UNCONFIRMED/);
 });
 
 test('REC track EXCLUSIVE stops before disarming a replaced same-name non-target identity',async t=>{
@@ -1381,7 +1387,7 @@ test('REC group tracks expose observed solo/mute but reject ARM and never change
 
 // Live raises on a group's Track.arm; AbletonOSC replies [index, nil].
 const nilArmGroup=f=>{f.song.tracks.push({name:'Group',handle:{id:'group-'+f.song.tracks.length},canArm:false,arm:null,solo:false,mute:false});return trackRefs(f.song.tracks);};
-test('REC full reader accepts nil ARM only from a freshly non-armable group, then records and STOP disarms its own inputs',async t=>{
+test('REC full reader accepts nil ARM only from a freshly non-armable group, then records and STOP keeps its own inputs armed',async t=>{
   const f=cohortFixture(t,2),refs=nilArmGroup(f);let state;
   const reading=f.coordinator.refresh().then(value=>{state=value;},error=>{state=error;});
   await flushRecording();assert.ok(state&&!(state instanceof Error),'fresh can_be_armed=false completes the full read without a timer');await reading;
@@ -1390,7 +1396,7 @@ test('REC full reader accepts nil ARM only from a freshly non-armable group, the
   const recorded=await f.coordinator.record(refs.slice(0,2),f.range,f.context,0);
   assert.equal(recorded.transport.recordMode.value,true);assert.deepEqual(recorded.lastAttempt.tracks,refs.slice(0,2));
   await f.coordinator.stop(f.context);
-  assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,null]);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[true,true,null]);
 });
 
 for(const missing of ['armable input nil','group capability missing'])test('REC full reader keeps '+missing+' unknown and blocks recording without writes',async t=>{
@@ -1430,12 +1436,12 @@ for(const mismatch of ['outside armed','missing arm','reordered','not armable'])
   assert.deepEqual(f.song.tracks.map(track=>track.arm),arms);assert.equal(f.sent.some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);
 });
 
-test('REC cohort STOP skips a replaced identity, still disarms remaining owned inputs and preserves third-party arm',async t=>{
+test('REC cohort STOP keeps armed inputs and preserves third-party arm',async t=>{
   const f=cohortFixture(t,3);await f.coordinator.record(f.refs.slice(0,2),f.range,f.context).catch(error=>{assert.match(error.message,/OTHER_ARMED/);});
   f.song.tracks[2].arm=false;await f.coordinator.record(f.refs.slice(0,2),f.range,f.context);
-  f.song.tracks[0].handle.id='replacement';f.song.tracks[2].arm=true;
-  await assert.rejects(f.coordinator.stop(f.context),/IDENTITY/);
-  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.song.tracks[1].arm,false);assert.equal(f.song.tracks[2].arm,true);
+  f.song.tracks[2].arm=true;
+  await f.coordinator.stop(f.context);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.song.tracks[1].arm,true);assert.equal(f.song.tracks[2].arm,true);
 });
 
 test('REC solo/mute serialize writes and priority STOP cancels a pending confirmation without aborting into a delayed write',async t=>{
@@ -1448,7 +1454,7 @@ test('REC solo/mute serialize writes and priority STOP cancels a pending confirm
   const before=f.sent.length,stopping=f.coordinator.stop(f.context);
   assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
   f.block(undefined);await stopping;await rejected;
-  assert.equal(f.song.tracks[0].solo,false);assert.equal(f.song.tracks[1].mute,false);assert.ok(f.song.tracks.every(track=>!track.arm));
+  assert.equal(f.song.tracks[0].solo,false);assert.equal(f.song.tracks[1].mute,false);assert.ok(f.song.tracks.every(track=>track.arm===true));
 });
 
 test('REC passive poll during an isolated solo/mute confirmation returns observed pending state without an extra read',async t=>{
@@ -1482,7 +1488,7 @@ test('REC automatic Punch In setter needs confirmation and restores its baseline
   assert.match((await failed).message,/PUNCH_UNCONFIRMED/);assert.equal(f.values.punchIn,true);
   f.osc.send=(address,args)=>{if(address===CMD.cuePointJump)throw Error('native jump failed');send(address,args);};
   await assert.rejects(f.coordinator.record(f.refs,f.range,f.context),/native jump failed/);
-  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.every(track=>!track.arm));
+  assert.equal(f.values.punchIn,true);assert.ok(f.song.tracks.every(track=>track.arm===true));
 });
 
 test('REC automatic Punch In relinquishes ownership after an external change and never restores on reconnect',async t=>{

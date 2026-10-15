@@ -538,7 +538,9 @@ export class RecordingCoordinator extends EventEmitter {
           song.tracks[index]!.arm = desired[index] as boolean;
         }
         await this.readArms(operation,song); this.identities(identities); this.stopped();
-        const actual=arms();if (desired.some((value,index) => actual[index] !== value)) fail('ARM_UNCONFIRMED');
+        const actual=arms();
+        if (actual[ref.index] !== enabled) fail('ARM_UNCONFIRMED');
+        if (desired.some((value,index) => actual[index] !== value)) fail('ARM_COLLATERAL_DISARM');
         this.preparedToken = null;
       });
     }
@@ -926,7 +928,7 @@ export class RecordingCoordinator extends EventEmitter {
     const promise = this.run('stop', context, async operation => {
       await this.osc.recording.stopRecording();
       // A newly loaded Set cannot inherit this recorder's track ownership.
-      const song = this.currentSong();
+      this.currentSong();
       let cleanupError: unknown;
       if (preRoll && this.preRoll === preRoll) {
         try { await this.restorePreRoll(preRoll, operation); }
@@ -937,17 +939,7 @@ export class RecordingCoordinator extends EventEmitter {
         try {await this.restorePunch(operation);} catch(error) {cleanupError??=error;} finally {this.punch=null;}
       }
       if (this.lastAttempt) this.lastAttempt.stopped = true;
-      const refs = this.armedByRecorder;
-      if (refs.length) {
-        for(const ref of refs) {
-          this.check(operation);const track=song.tracks[ref.index];
-          if(!track||String(track.handle.id)!==ref.id||track.name!==ref.name) {cleanupError??=Error('REC:IDENTITY');continue;}
-          this.stopped();track.arm=false;
-        }
-        await this.read(operation);
-        if (refs.some(ref=>this.value('arm:'+ref.index)!==false)) cleanupError??=Error('REC:ARM_UNCONFIRMED');
-        this.armedByRecorder = [];
-      }
+      this.armedByRecorder = [];
       if (cleanupError) throw cleanupError;
       this.cohort=null;this.strictCohort=false;this.preRollError=null;
     });

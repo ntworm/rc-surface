@@ -85,12 +85,12 @@
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
     const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-start-marker','rec-end-marker',
-      'rec-loop','rec-end-field','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
+      'rec-loop','rec-end-field','rec-timeline','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
       'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
     let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null;
     let startIndex='', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[];
-    let preRollBars=0;
+    let preRollBars=0, userAdjustedZoom=false, autoZoomTimer=null;
     let armMode='multi';
     let destination='arrangement',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
     let displayMeter=null,displaySongId=null;
@@ -247,6 +247,40 @@
       if(start && end) {el('region').style.left=percent(start.time)+'%';el('region').style.width=(percent(end.time)-percent(start.time))+'%';}
       for(const marker of el('markers').children) marker.setAttribute('aria-pressed',String(marker.dataset.index===startIndex));
     }
+    function scheduleAutoZoom() {
+      if(userAdjustedZoom) return;
+      clearTimeout(autoZoomTimer);
+      autoZoomTimer = setTimeout(applyAutoZoom, 250);
+    }
+    function applyAutoZoom() {
+      autoZoomTimer = null;
+      if(userAdjustedZoom) return;
+      const state = client.view().state;
+      if(!state || !looping) return;
+      const start = cueAt(startIndex), end = cueAt(endIndex);
+      if(!start || !end || end.time <= start.time) return;
+      const totalSpan = bounds.end - bounds.start;
+      const loopSpan = end.time - start.time;
+      if(totalSpan <= 0 || loopSpan <= 0) return;
+      const fraction = loopSpan / totalSpan;
+      const targetZoom = Math.max(1, Math.min(8, Math.round(0.6 / fraction) || 1));
+      zoom = targetZoom;
+      if(el('zoom')) el('zoom').value = String(targetZoom);
+      bounds = timelineBounds(state.locators, zoom);
+      if(el('timeline-track')) el('timeline-track').style.width = 'calc(' + bounds.width + '% - 96px)';
+      drawCursor();
+      centerTimeline(start.time, end.time);
+    }
+    function centerTimeline(startTime, endTime) {
+      const timeline = el('timeline') || el('timeline-track')?.parentElement;
+      if(!timeline) return;
+      const midTime = (startTime + endTime) / 2;
+      const pct = bounds.end <= bounds.start ? 0 : Math.max(0, Math.min(1, (midTime - bounds.start) / (bounds.end - bounds.start)));
+      const trackWidth = el('timeline-track')?.offsetWidth || Math.max(0, (timeline.scrollWidth || 0) - 96);
+      const centerPx = 48 + pct * trackWidth;
+      const viewWidth = timeline.clientWidth || 0;
+      timeline.scrollLeft = Math.max(0, centerPx - viewWidth / 2);
+    }
     function drawCursor() {
       const state=client.view().state, clock=root.triggerNoteClockSnapshot, now=root.performance?.now?.() ?? 0;
       const fresh=clock?.valid && clock.playing && Number.isFinite(clock.receivedAt) && now>=clock.receivedAt && now-clock.receivedAt<=1000;
@@ -313,6 +347,7 @@
           marker.addEventListener('click',()=>{
             if(marker.disabled || !client.view().state) return;
             startIndex=String(index);updateRange();invoke('recordingSeekMarker',markerRef(cue));
+            if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
           });
           el('markers').appendChild(marker);
         });
@@ -330,6 +365,7 @@
           startIndex=index>=0?String(index):'';looping=state.range.loop;
           const end=state.range.end && state.locators.findIndex(cue=>cue.name===state.range.end.name && cue.time===state.range.end.time);
           endIndex=typeof end==='number' && end>=0?String(end):'';
+          if(looping && startIndex!=='' && endIndex!=='' && !userAdjustedZoom) scheduleAutoZoom();
         }
       }
       updateRange();
@@ -356,14 +392,19 @@
     el('start-marker').addEventListener('change',()=>{
       startIndex=el('start-marker').value;updateRange();const cue=cueAt(startIndex);
       if(cue) invoke('recordingSeekMarker',markerRef(cue));
+      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
     });
-    el('end-marker').addEventListener('change',()=>{endIndex=el('end-marker').value;render(client.view());});
+    el('end-marker').addEventListener('change',()=>{
+      endIndex=el('end-marker').value;render(client.view());
+      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
+    });
     el('loop').addEventListener('click',()=>{
       looping=!looping;
       if(looping && !cueAt(endIndex)) {
         const index=client.view().state.locators.findIndex(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity));endIndex=index>=0?String(index):'';
       }
       render(client.view());
+      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
     });
     for(const bars of [0,1,2,4]) el('pre-roll-'+bars).addEventListener('click',()=>{
       if(el('pre-roll-'+bars).disabled) return;
@@ -371,7 +412,11 @@
       try { root.localStorage?.setItem(PRE_ROLL_KEY,String(bars)); } catch { /* The current page preference still works. */ }
       render(client.view());
     });
-    el('zoom').addEventListener('input',()=>{zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();});
+    el('zoom').addEventListener('input',()=>{
+      clearTimeout(autoZoomTimer);autoZoomTimer=null;userAdjustedZoom=true;
+      zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);
+      el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();
+    });
     el('start').addEventListener('click',()=>{
       if(destination==='clip') {
         const view=client.view(),targets=sessionTargets(view);if(!el('start').disabled&&targets)invoke('recordingSessionRecord',{songId:view.state.session.songId,scene:sceneTarget,targets,bars:Number(el('session-bars').value),quantization:el('session-quantization').value});return;

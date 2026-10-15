@@ -606,7 +606,7 @@
           <output id="rec-position">?</output>
           <label class="rec-zoom"><span data-i18n="rec.zoom">ZOOM</span><input id="rec-zoom" type="range" min="1" max="8" step="1" value="1"></label>
         </header>
-        <div class="rec-timeline">
+        <div id="rec-timeline" class="rec-timeline">
           <div id="rec-timeline-track" class="rec-timeline-track">
             <div id="rec-region" class="rec-region" hidden></div>
             <div id="rec-markers" class="rec-markers"></div>
@@ -639,7 +639,7 @@
       <section id="rec-track-grid" class="rec-track-grid" aria-label="Tracks" data-i18n-aria-label="rec.tracks"></section>
       <details class="rec-help">
         <summary data-i18n="rec.info">INFO</summary>
-        <p data-i18n="rec.markerHelp">Create markers in Live. Tap one to position playback, then use the header Play. REC arms this track; STOP disarms it.</p>
+        <p data-i18n="rec.markerHelp">Create markers in Live. Tap one to position playback, then use the header Play.</p>
         <p data-i18n="rec.loopHelp">Loop repeats between the markers until STOP. Live owns recorded passages; manage take lanes and count-in in Live.</p>
         <p data-i18n="rec.loss">Connection loss does not stop Live recording. Use STOP in Live if the phone or host link is unavailable. Reconnection never repeats a write.</p>
       </details>

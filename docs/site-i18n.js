@@ -1687,8 +1687,8 @@
       'pt-BR': "Cartões / ARM / SOLO / MUTE",
     },
     'lp.rec.tracksFlow': {
-      en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP disarms only that attempt’s identities. Groups can SOLO/MUTE but cannot ARM.",
-      'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP desarma só as identidades da tentativa. Grupos têm SOLO/MUTE, sem ARM.",
+      en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP keeps armed inputs intact. Groups can SOLO/MUTE but cannot ARM.",
+      'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP mantém as entradas armadas. Grupos têm SOLO/MUTE, sem ARM.",
     },
     'lp.rec.transport': {
       en: "REC / STOP / CLICK",

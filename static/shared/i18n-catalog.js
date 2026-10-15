@@ -85,6 +85,7 @@
     'rec.reason.LOOP_RANGE': {en:"Choose an end marker after the start.",'pt-BR':"Escolha um marcador final depois do início."},
     'rec.reason.LOOP_UNCONFIRMED': {en:"Live did not confirm the loop region. Recording was not started.",'pt-BR':"Live não confirmou a região de loop. Gravação não iniciada."},
     'rec.reason.ARM_UNCONFIRMED': {en:"Track arm state was not confirmed. Check Live.",'pt-BR':"Arm da faixa não foi confirmado. Confira o Live."},
+    'rec.reason.ARM_COLLATERAL_DISARM': {en:"Live exclusive arm disarmed another track. Check Live.",'pt-BR':"Arm exclusivo do Live desarmou outra faixa. Confira o Live."},
     'rec.title': {en:'REC','pt-BR':'REC'},
     'rec.unknown': {en:"Waiting for Live",'pt-BR':"Aguardando o Live"},
     'rec.recordObserved': {en:"REC · Live",'pt-BR':"REC · Live"},

@@ -446,3 +446,69 @@ test('REC timeline uses fixed gutters for both end cards and separate bar.beat l
   for(const bars of [0,1,2,4]) assert.match(html,new RegExp('id="rec-pre-roll-'+bars+'"'));
   assert.match(html,/class="rec-row rec-pre-roll" role="group"/);
 });
+
+test('REC loop auto-zoom calculates target zoom and centers timeline, respecting manual zoom override',async t=>{
+  const nodes=new Map(),calls=[];let generated=0;
+  const node=id=>{
+    if(!nodes.has(id)) nodes.set(id,{
+      id,value:'',textContent:'',disabled:false,hidden:false,dataset:{},style:{},
+      children:[],listeners:new Map(),clientWidth:400,scrollWidth:1000,scrollLeft:0,offsetWidth:800,
+      setAttribute(name,value){this[name]=value;},
+      addEventListener(name,handler){this.listeners.set(name,handler);},
+      replaceChildren(...children){this.children=children;},
+      appendChild(child){this.children.push(child);}
+    });
+    return nodes.get(id);
+  };
+  const field=value=>({value,fresh:true,observedAt:Date.now()});
+  const state={
+    transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(0),metronome:field(false)},
+    selected:{index:0,id:'1',name:'Audio'},range:null,pending:null,safety:{loop:true},
+    tracks:[{index:0,id:'1',name:'Audio',canArm:true,arm:true,solo:false,mute:false}],
+    locators:[
+      {name:'Intro',time:0},
+      {name:'Verse',time:1000},
+      {name:'Chorus',time:1040},
+      {name:'Outro',time:2000}
+    ],
+    meter:{numerator:4,denominator:4}
+  };
+  const doc={
+    readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
+    createElement:()=>node('generated-'+(++generated)),addEventListener(){}
+  };
+  const timers=[];
+  const fakeSetTimeout=(fn,ms)=>{timers.push(fn);return timers.length;};
+  const fakeClearTimeout=id=>{};
+  const context=vm.createContext({
+    document:doc,Date,setTimeout:fakeSetTimeout,clearTimeout:fakeClearTimeout,addEventListener(){},
+    RcSurfaceI18n:{t:key=>key},
+    sendPhoneCommand:(name,args,cb)=>{calls.push({name,args});cb({ok:true,result:state});}
+  });
+  vm.runInContext(source,context);
+  const client=context.RcRecording.setup();
+  t.after(()=>client.session(false));
+  client.session(true,'controller');
+  await client.command('getRecordingState');
+
+  node('rec-start-marker').value='1';
+  node('rec-start-marker').listeners.get('change')();
+  node('rec-loop').listeners.get('click')();
+  node('rec-end-marker').value='2';
+  node('rec-end-marker').listeners.get('change')();
+
+  assert.ok(timers.length>0,'auto-zoom scheduled after loop markers selected');
+  timers[timers.length-1]();
+
+  assert.equal(node('rec-zoom').value,'8','target zoom automatically zoomed into small loop section');
+  assert.equal(node('rec-timeline-track').style.width,'calc(800% - 96px)');
+  assert.ok(node('rec-timeline').scrollLeft>0,'timeline scroll centered on loop midpoint');
+
+  node('rec-zoom').value='2';
+  node('rec-zoom').listeners.get('input')();
+  assert.equal(node('rec-timeline-track').style.width,'calc(200% - 96px)');
+
+  timers.length=0;
+  await client.command('getRecordingState');
+  assert.equal(node('rec-zoom').value,'2','manual zoom retained and not overwritten');
+});

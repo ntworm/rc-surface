@@ -1179,8 +1179,8 @@ stopped:
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
    default and starts directly at the marker. Other choices play the preceding
    bars with click before native Punch In opens capture at the selected marker.
-5. Press **STOP** to stop playback and recording. It disarms only the exact
-   input set owned by this attempt. Arm your inputs again for another attempt.
+5. Press **STOP** to stop playback and recording. Your armed tracks remain armed,
+   allowing successive takes without re-arming.
 
 REC records exactly the armed tracks shown in the cards. It is disabled with
 no armed inputs and verifies the entire set again before recording. ARM changes
@@ -1219,7 +1219,7 @@ marker before that confirmation, it aborts instead of starting a late capture.
 The host monitors the lead-in after the command returns, so four bars are not
 limited by the phone's command timeout. At the first observed marker crossing,
 it restores the original click setting. STOP restores only click, Punch In and
-the temporary Loop start still owned by this attempt, then disarms its input set;
+the temporary Loop start still owned by this attempt, keeping armed inputs intact;
 the temporary start is restored only while Loop remains off. Use this page's
 STOP to finish cleanup even if you stopped transport in Live. Changes to required
 state cancel the lead-in; connection/session loss or a new Set never replays
