@@ -440,7 +440,13 @@ track identity changes retire confirmation without replay. No arm, solo, mute or
 transport mutation accompanies rename. The client saves only on Enter, cancels
 with Escape and preserves drafts during polling; blur never saves.
 
-Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time.
+`recordingTrackVolume` is a controller/admin `live-write` command with exact
+`{track:{index,id,name},volume:number}` arguments, where volume is in `[0, 1]`.
+The SDK `mixer_device.volume.value` setter writes after fresh identity checks.
+Volume updates serialize with other REC writes, yield to priority STOP, and
+preserve ARM/SOLO/MUTE state. Client double-click resets to 0.85 (0.0 dB).
+
+Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time. XY pad configuration opens via mobile long-press or desktop right-click without shrinking pad dimensions or altering automation loops.
 
 REC submits `tracks` as a nonempty ordered set of `{index,id,name}` refs (up to 256); the backend confirms all identities, armability, ARM and absence of outside ARM. Legacy single-track commands are normalized. ARM MULTI retains other inputs; EXCLUSIVE acts only on explicit ARM and confirms the whole set. SOLO/MUTE use serialized GET confirmation without interrupting pre-roll. Native STOP has priority, stops playback and recording, and restores pre-roll / temporary Punch In while keeping armed track state intact without automatic disarm.
 

@@ -141,7 +141,7 @@ test('REC ARM recovery DOM marks an unconfirmed vector unknown and reconciles be
     sendPhoneCommand:(name,args,cb)=>{calls.push({name,args,cb});if(name==='getRecordingState')cb({ok:true,result:observed});}});
   vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
   client.session(true,'controller');await client.command('getRecordingState');
-  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children[0];
+  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children.find(c=>c.dataset?.property==='arm');
   arm(0).listeners.get('click')();const first=calls.at(-1);assert.equal(first.name,'recordingTrackControl');assert.equal(first.args.track.id,'a');assert.equal(first.args.enabled,true);
   first.cb({ok:false,error:'REC:UNKNOWN'});await new Promise(resolve=>setImmediate(resolve));
   assert.equal(client.view().error,'REC:UNKNOWN');assert.equal(arm(0)['aria-pressed'],'mixed');assert.equal(arm(1)['aria-pressed'],'mixed');assert.equal(arm(0).disabled,true);assert.equal(arm(1).disabled,true);
@@ -164,7 +164,7 @@ test('REC ARM recovery DOM marks an unconfirmed vector unknown and reconciles be
 test('REC timeline geometry covers real marker times and bounds zoom without modifying the Set',t=>{
   const {api:a,calls}=api(t);
   assert.equal(a.timelineBounds([{time:8},{time:24}],2).end,28);
-  assert.equal(a.timelineBounds([],0).width,100);assert.equal(a.timelineBounds([],99).width,800);
+  assert.equal(a.timelineBounds([],0).width,100);assert.equal(a.timelineBounds([],99).width,9900);assert.equal(a.timelineBounds([],500).width,30000);
   assert.equal(calls.length,0);
 });
 
@@ -271,7 +271,7 @@ function gridHarness(t) {
   vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
   const seed=async result=>{const reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result});await reading;};
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
-  const buttons=index=>node('rec-track-grid').children[index].children[1].children;
+  const buttons=index=>node('rec-track-grid').children[index].children[1].children.filter(c=>c.dataset?.property);
   return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=2001;}};
 }
 test('REC polling retains 202 marker menus, full names, selection and scroll when the observed meter becomes stale',async t=>{
@@ -500,8 +500,8 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
   assert.ok(timers.length>0,'auto-zoom scheduled after loop markers selected');
   timers[timers.length-1]();
 
-  assert.equal(node('rec-zoom').value,'8','target zoom automatically zoomed into small loop section');
-  assert.equal(node('rec-timeline-track').style.width,'calc(800% - 96px)');
+  assert.equal(node('rec-zoom').value,'36','target zoom automatically zoomed into small loop section');
+  assert.equal(node('rec-timeline-track').style.width,'calc(3600% - 96px)');
   assert.ok(node('rec-timeline').scrollLeft>0,'timeline scroll centered on loop midpoint');
 
   node('rec-zoom').value='2';
@@ -512,3 +512,43 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
   await client.command('getRecordingState');
   assert.equal(node('rec-zoom').value,'2','manual zoom retained and not overwritten');
 });
+
+test('REC formatVolumeDb calculates dB string matching Ableton mixer scale',t=>{
+  const {api:a}=api(t);
+  assert.equal(a.formatVolumeDb(0),'-inf dB');
+  assert.equal(a.formatVolumeDb(0.00001),'-inf dB');
+  assert.equal(a.formatVolumeDb(0.85),'0.0 dB');
+  assert.equal(a.formatVolumeDb(1),'+6.0 dB');
+  assert.match(a.formatVolumeDb(0.5),/^-\d+\.\d dB$/);
+});
+
+test('REC track volume knob adjusts native mixer volume and resets on double click',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
+  state.tracks[0].volume=0.85;await h.seed(state);
+  const card=h.node('rec-track-grid').children[0];
+  const volBox=card.children[1].children.find(c=>c.className==='rec-track-vol' || c.role==='slider');
+  assert.ok(volBox,'track volume knob exists immediately before arm button');
+  assert.equal(volBox.role,'slider');
+  assert.equal(volBox['aria-valuenow'],'0.85');
+  assert.equal(volBox['aria-valuetext'],'0.0 dB');
+
+  volBox.listeners.get('dblclick')({stopPropagation(){},preventDefault(){}});
+  assert.equal(h.calls.at(-1).name,'recordingTrackVolume');
+  assert.equal(h.calls.at(-1).args.track.id,state.tracks[0].id);
+  assert.equal(h.calls.at(-1).args.volume,0.85);
+  h.calls.at(-1).cb({ok:true,result:state});
+
+  volBox.listeners.get('keydown')({key:'ArrowUp',preventDefault(){},stopPropagation(){}});
+  assert.equal(h.calls.at(-1).name,'recordingTrackVolume');
+  assert.equal(h.calls.at(-1).args.volume,0.87);
+  h.calls.at(-1).cb({ok:true,result:state});
+
+  volBox.listeners.get('keydown')({key:'Home',preventDefault(){},stopPropagation(){}});
+  assert.equal(h.calls.at(-1).args.volume,0);
+  h.calls.at(-1).cb({ok:true,result:state});
+
+  volBox.listeners.get('keydown')({key:'End',preventDefault(){},stopPropagation(){}});
+  assert.equal(h.calls.at(-1).args.volume,1);
+  h.calls.at(-1).cb({ok:true,result:state});
+});
+

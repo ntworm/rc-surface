@@ -68,6 +68,14 @@
     },true);
     document.addEventListener('click',toggleConfig,true);
     document.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' ') toggleConfig(event);},true);
+    document.addEventListener('contextmenu',event=>{
+      if(!mode.state.on) return;
+      const target=named(event);if(!target) return;
+      consume(event);cancelPointer();
+      const name=target.dataset.name;
+      if(mode.state.openFor===name) mode.close();
+      else {mode.state.contextMenuOpen=true;mode.open(name,target.getBoundingClientRect());}
+    },true);
     mode.attach();
     function named(event) {return event.target.closest?.('.xy-pad[data-name]');}
     document.addEventListener('pointerdown',event=>{

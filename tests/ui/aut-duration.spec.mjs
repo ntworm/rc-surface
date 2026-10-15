@@ -13,7 +13,7 @@ for(const locale of ['en','pt-BR'])test(`AUT duration slider and five bar choice
   await page.setViewportSize({width:851,height:393});
   await page.goto('/?lang='+locale);
   await page.locator('#btn-aut-mode').click();
-  await page.locator('[data-aut-config="xy-1"]').click();
+  await page.locator('.xy-pad[data-name="xy-1"]').click({button:'right'});
   const menu=page.locator('#automation-config-menu');
   await expect(menu).toHaveAttribute('data-cfg-open-for','xy-1');
   await expect(menu.locator('.cfg-segment-group').nth(1).locator('button')).toHaveText(['1','2','3','4','5']);

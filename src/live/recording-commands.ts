@@ -47,6 +47,9 @@ export const recordingCommands: Record<string, CommandSpec> = {
   recordingRenameTrack: {description:'Rename one exact observed REC track',handler:async(args,context)=>{
     exact(args,['track','name']);return recordingCoordinator.renameTrack(args['track'] as {index:number;id:string;name:string},args['name'],context);
   }},
+  recordingTrackVolume: {description:'Set one observed REC track volume',handler:async(args,context)=>{
+    exact(args,['track','volume']);return recordingCoordinator.setVolume(args['track'] as {index:number;id:string;name:string},args['volume'] as number,context);
+  }},
   recordingPrepare: { description: 'Check conservative REC conditions and seek return point', handler: async (args, context) => {
     exact(args, []); return recordingCoordinator.prepare(context);
   } },

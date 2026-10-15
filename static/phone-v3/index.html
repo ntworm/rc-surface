@@ -137,10 +137,6 @@
 
     <section class="col col-xy">
       <div class="xy-block">
-        <div class="xy-aut-toolbar">
-          <span data-i18n="perf.xy1">XY 1</span>
-          <button class="xy-aut-config" data-aut-config="xy-1" type="button" aria-controls="automation-config-menu" aria-expanded="false" aria-label="XY 1 automation settings" data-i18n-aria-label="aut.configXY1">AUT</button>
-        </div>
         <div class="xy-pad" data-name="xy-1"><span class="xy-aut-status" aria-live="polite"></span>
           <span class="xy-label" data-i18n="perf.xy1">XY 1</span>
           <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
@@ -149,10 +145,6 @@
         <div class="xy-readout" data-readout="xy-1">0.50 / 0.50</div>
       </div>
       <div class="xy-block">
-        <div class="xy-aut-toolbar">
-          <span data-i18n="perf.xy2">XY 2</span>
-          <button class="xy-aut-config" data-aut-config="xy-2" type="button" aria-controls="automation-config-menu" aria-expanded="false" aria-label="XY 2 automation settings" data-i18n-aria-label="aut.configXY2">AUT</button>
-        </div>
         <div class="xy-pad" data-name="xy-2"><span class="xy-aut-status" aria-live="polite"></span>
           <span class="xy-label" data-i18n="perf.xy2">XY 2</span>
           <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
@@ -604,7 +596,7 @@
         <header class="rec-row">
           <span data-i18n="rec.locators">Arrangement markers</span>
           <output id="rec-position">?</output>
-          <label class="rec-zoom"><span data-i18n="rec.zoom">ZOOM</span><input id="rec-zoom" type="range" min="1" max="8" step="1" value="1"></label>
+          <label class="rec-zoom"><span data-i18n="rec.zoom">ZOOM</span><input id="rec-zoom" type="range" min="1" max="300" step="1" value="1"></label>
         </header>
         <div id="rec-timeline" class="rec-timeline">
           <div id="rec-timeline-track" class="rec-timeline-track">
@@ -628,8 +620,8 @@
       </div>
       </div>
       <section id="rec-session-panel" class="rec-session-panel" hidden aria-label="Session clips" data-i18n-aria-label="rec.sessionClips">
-        <header class="rec-row"><span data-i18n="rec.scene">SCENE</span><output id="rec-session-target">—</output><button id="rec-session-prev" type="button" data-i18n-aria-label="rec.previousScenes">&lt;</button><button id="rec-session-next" type="button" data-i18n-aria-label="rec.nextScenes">&gt;</button><button id="rec-session-cfg" type="button" aria-expanded="false" aria-controls="rec-session-settings">CFG</button></header>
-        <div id="rec-session-settings" class="rec-row rec-session-settings" hidden>
+        <header class="rec-row"><span data-i18n="rec.scene">SCENE</span><output id="rec-session-target">—</output><button id="rec-session-prev" type="button" data-i18n-aria-label="rec.previousScenes">&lt;</button><button id="rec-session-next" type="button" data-i18n-aria-label="rec.nextScenes">&gt;</button></header>
+        <div id="rec-session-settings" class="rec-row rec-session-settings">
           <label><span data-i18n="rec.length">LENGTH</span><select id="rec-session-bars" aria-label="Recording bars" data-i18n-aria-label="rec.length"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="8">8</option><option value="16">16</option></select><span data-i18n="rec.bars">bars</span></label>
           <label><span data-i18n="rec.quantization">QUANTIZE</span><select id="rec-session-quantization"><option value="global" data-i18n="rec.global">Global</option><option value="none" data-i18n="rec.noQuantization">None</option><option value="bar" data-i18n="rec.oneBar">1 bar</option><option value="beat" data-i18n="rec.oneBeat">1 beat</option></select></label>
         </div>

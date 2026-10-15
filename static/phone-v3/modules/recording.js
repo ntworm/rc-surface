@@ -3,8 +3,19 @@
 // Source: https://github.com/ntworm/rc-surface
 (function (root) {
   'use strict';
-  const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
+  const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingTrackVolume','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
+  function formatVolumeDb(v) {
+    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0.0001) return '-inf dB';
+    if (v >= 0.85) {
+      const db = ((v - 0.85) / 0.15) * 6.0;
+      if (Math.abs(db) < 0.05) return '0.0 dB';
+      return (db > 0 ? '+' : '') + db.toFixed(1) + ' dB';
+    }
+    const db = 40 * Math.log10(v / 0.85);
+    if (db <= -70) return '-inf dB';
+    return db.toFixed(1) + ' dB';
+  }
   function positionToBeats(bar, beat, meter) {
     const numerator = meter?.numerator, denominator = meter?.denominator;
     if (!Number.isInteger(bar) || bar < 1 || !Number.isFinite(beat) || beat < 1 || !Number.isInteger(numerator) || numerator < 1
@@ -72,7 +83,7 @@
   // Arrangement marker geometry; no audio data or take-lane representation.
   function timelineBounds(locators, zoom = 1) {
     const end = Math.max(16, ...locators.map(cue => cue.time + 4));
-    return {start:0, end, width:Math.max(1,Math.min(8,zoom)) * 100};
+    return {start:0, end, width:Math.max(1,Math.min(300,zoom)) * 100};
   }
   const PRE_ROLL_KEY = 'rc-surface-v2.rec.preRollBars';
   function preRollPreference(storage) {
@@ -184,6 +195,73 @@
           const card=doc.createElement('article');card.className='rec-track-card';
           const name=doc.createElement('span');name.className='rec-track-name';card.appendChild(name);
           const row=doc.createElement('div');row.className='rec-track-actions';card.appendChild(row);
+          const volBox=doc.createElement('div');volBox.className='rec-track-vol';
+          volBox.setAttribute('role','slider');volBox.tabIndex=0;
+          volBox.setAttribute('aria-valuemin','0');volBox.setAttribute('aria-valuemax','1');
+          const volDial=doc.createElement('div');volDial.className='rec-track-vol-dial';
+          const volPointer=doc.createElement('span');volPointer.className='rec-track-vol-pointer';
+          volDial.appendChild(volPointer);volBox.appendChild(volDial);
+          const volValue=doc.createElement('span');volValue.className='rec-track-vol-val';
+          volBox.appendChild(volValue);
+          row.appendChild(volBox);
+          let volDragging=false, volStartY=0, volStartV=0;
+          function setTrackVol(nextV) {
+            nextV = Math.max(0, Math.min(1, Math.round(nextV * 1000) / 1000));
+            entry.currentV = nextV;
+            const angle = -135 + nextV * 270;
+            volPointer.style.transform = 'rotate(' + angle + 'deg)';
+            const dbText = formatVolumeDb(nextV);
+            volValue.textContent = dbText;
+            volBox.setAttribute('aria-valuenow', String(nextV));
+            volBox.setAttribute('aria-valuetext', dbText);
+            volBox.title = track.name + ' · ' + dbText;
+            const current = client.view();
+            const ref = current.state?.tracks.find(item => item.index === track.index && item.id === track.id);
+            if (ref && current.writable) {
+              invoke('recordingTrackVolume', { track: { index: ref.index, id: ref.id, name: ref.name }, volume: nextV });
+            }
+          }
+          volBox.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || !client.view().writable) return;
+            event.stopPropagation(); event.preventDefault();
+            volDragging = true; entry.volumeDragging = true;
+            volStartY = event.clientY;
+            volStartV = typeof entry.currentV === 'number' ? entry.currentV : 0.85;
+            volBox.setPointerCapture?.(event.pointerId);
+            volBox.dataset.active = 'true';
+          });
+          volBox.addEventListener('pointermove', event => {
+            if (!volDragging) return;
+            event.stopPropagation(); event.preventDefault();
+            const dy = volStartY - event.clientY;
+            setTrackVol(volStartV + dy / 150);
+          });
+          const finishVolDrag = event => {
+            if (!volDragging) return;
+            volDragging = false; entry.volumeDragging = false;
+            delete volBox.dataset.active;
+            event.stopPropagation(); event.preventDefault();
+          };
+          volBox.addEventListener('pointerup', finishVolDrag);
+          volBox.addEventListener('pointercancel', finishVolDrag);
+          volBox.addEventListener('dblclick', event => {
+            event.stopPropagation(); event.preventDefault();
+            if (!client.view().writable) return;
+            setTrackVol(0.85);
+          });
+          volBox.addEventListener('keydown', event => {
+            if (!client.view().writable) return;
+            let step = 0;
+            if (event.key === 'ArrowUp' || event.key === 'ArrowRight') step = 0.02;
+            else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') step = -0.02;
+            else if (event.key === 'PageUp') step = 0.1;
+            else if (event.key === 'PageDown') step = -0.1;
+            else if (event.key === 'Home') { event.preventDefault(); setTrackVol(0); return; }
+            else if (event.key === 'End') { event.preventDefault(); setTrackVol(1); return; }
+            else return;
+            event.preventDefault();
+            setTrackVol((typeof entry.currentV === 'number' ? entry.currentV : 0.85) + step);
+          });
           const buttons={};
           for(const property of ['arm','solo','mute']) {
             const button=doc.createElement('button');button.type='button';button.dataset.property=property;
@@ -194,7 +272,7 @@
             });
             row.appendChild(button);buttons[property]=button;
           }
-          cards.set(key,{card,name,buttons});
+          cards.set(key,{card,name,buttons,volBox,volPointer,volValue,currentV:track.volume ?? 0.85,volumeDragging:false});
           const entry=cards.get(key);
           name.tabIndex=0;name.setAttribute('role','button');
           name.addEventListener('dblclick',()=>editName(entry,track.index,track.id));
@@ -205,6 +283,19 @@
         if(entry.editor)entry.editor.input.readOnly=entry.editor.pending || !canRename(view);
         entry.name.title=track.name+' · '+t('renameTrack');entry.name.setAttribute('aria-label',t('renameTrack')+' · '+track.name);
         entry.name.setAttribute('aria-disabled',String(!canRename(view)));
+        const v = typeof track.volume === 'number' ? track.volume : 0.85;
+        if (!entry.volumeDragging) {
+          entry.currentV = v;
+          const angle = -135 + v * 270;
+          entry.volPointer.style.transform = 'rotate(' + angle + 'deg)';
+          const dbText = formatVolumeDb(v);
+          if (entry.volValue.textContent !== dbText) entry.volValue.textContent = dbText;
+          entry.volBox.setAttribute('aria-valuenow', String(Math.round(v * 1000) / 1000));
+          entry.volBox.setAttribute('aria-valuetext', dbText);
+          entry.volBox.title = track.name + ' · ' + dbText;
+        }
+        entry.volBox.setAttribute('aria-label', t('trackVolume') + ' · ' + track.name);
+        entry.volBox.setAttribute('aria-disabled', String(!view.writable));
         for(const property of ['arm','solo','mute']) {
           const button=entry.buttons[property],label=t(property==='arm'?'armShort':property);
           if(button.textContent!==label)button.textContent=label;
@@ -263,7 +354,7 @@
       const loopSpan = end.time - start.time;
       if(totalSpan <= 0 || loopSpan <= 0) return;
       const fraction = loopSpan / totalSpan;
-      const targetZoom = Math.max(1, Math.min(8, Math.round(0.6 / fraction) || 1));
+      const targetZoom = Math.max(1, Math.min(300, Math.round(0.72 / fraction) || 1));
       zoom = targetZoom;
       if(el('zoom')) el('zoom').value = String(targetZoom);
       bounds = timelineBounds(state.locators, zoom);
@@ -276,8 +367,10 @@
       if(!timeline) return;
       const midTime = (startTime + endTime) / 2;
       const pct = bounds.end <= bounds.start ? 0 : Math.max(0, Math.min(1, (midTime - bounds.start) / (bounds.end - bounds.start)));
-      const trackWidth = el('timeline-track')?.offsetWidth || Math.max(0, (timeline.scrollWidth || 0) - 96);
-      const centerPx = 48 + pct * trackWidth;
+      const track = el('timeline-track');
+      const offsetLeft = track?.offsetLeft ?? 48;
+      const trackWidth = track?.offsetWidth || Math.max(0, (timeline.scrollWidth || 0) - (offsetLeft * 2));
+      const centerPx = offsetLeft + pct * trackWidth;
       const viewWidth = timeline.clientWidth || 0;
       timeline.scrollLeft = Math.max(0, centerPx - viewWidth / 2);
     }
@@ -379,7 +472,7 @@
     for(const mode of ['arrangement','clip'])el(mode+'-mode').addEventListener('click',()=>{
       if(el(mode+'-mode').disabled)return;destination=mode;render(client.view());poll();
     });
-    el('session-cfg').addEventListener('click',()=>{el('session-settings').hidden=!el('session-settings').hidden;el('session-cfg').setAttribute('aria-expanded',String(!el('session-settings').hidden));});
+    if (el('session-cfg')) el('session-cfg').addEventListener('click',()=>{el('session-settings').hidden=!el('session-settings').hidden;el('session-cfg').setAttribute('aria-expanded',String(!el('session-settings').hidden));});
     for(const direction of ['prev','next'])el('session-'+direction).addEventListener('click',()=>{
       if(el('session-'+direction).disabled)return;sceneOffset+=direction==='next'?8:-8;sceneTarget=null;invoke('getSessionRecordingState',{offset:sceneOffset});
     });
@@ -445,7 +538,7 @@
     doc.addEventListener('rcsurface:languagechange',()=>{markerSignature='';render(client.view());});
     render(client.view());return client;
   }
-  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, setup});
+  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, formatVolumeDb, setup});
   if (root.document) {
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded',setup,{once:true});
     else setup();

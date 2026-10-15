@@ -446,7 +446,13 @@ Mudanças de sessão/link/Set ou identidade aposentam a confirmação sem repeti
 Renomear não altera arm, solo, mute ou transporte. Enter salva, Escape cancela;
 polling mantém rascunho/foco e sair do campo não salva.
 
-Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido.
+`recordingTrackVolume` é um comando `live-write` para controller/admin, com
+argumentos exatos `{track:{index,id,name},volume:number}`, com volume em `[0, 1]`.
+O setter SDK `mixer_device.volume.value` grava após checar identidade recente.
+Volume serializa com outras gravações REC, cede ao STOP prioritário e preserva
+ARM/SOLO/MUTE. Duplo-clique no cliente redefine para 0.85 (0.0 dB).
+
+Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido. Configuração dos pads XY abre por toque longo no celular ou clique direito no desktop sem reduzir as dimensões dos pads ou alterar loops de automação.
 
 REC envia `tracks` como conjunto ordenado não vazio de referências `{index,id,name}` (até 256); o backend confirma todas as identidades, armabilidade, ARM e ausência de ARM externo. Comandos legados de uma faixa são normalizados. ARM MULTI preserva outras entradas; EXCLUSIVE age somente no ARM explícito e confirma o conjunto inteiro. SOLO/MUTE usam confirmação GET serializada sem interromper o pré-roll. STOP nativo tem prioridade, para reprodução e gravação, e restaura pré-roll / Punch In temporário mantendo o estado de ARM das faixas intacto sem desarme automático.
 

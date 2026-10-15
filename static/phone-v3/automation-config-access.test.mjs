@@ -76,24 +76,14 @@ function fixture({width=1000,height=800,columnLeft=width*0.36,columnRight=width*
   return {mode:root.RcAutomationMode,buttons,pads,menu,column,body,root,loops,arms,operations,timers,dispatch};
 }
 
-test('AUT exposes config access for both XY targets with dedicated touch space and no pads or toggle badges',()=>{
+test('AUT removes individual XY toolbars and preserves 100% pad dimensions',()=>{
   const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-  assert.deepEqual([...html.matchAll(/data-aut-config="([^"]+)"/g)].map(match=>match[1]),['xy-1','xy-2']);
-  const toolbars=[...html.matchAll(/<div class="xy-block">([\s\S]*?)<div class="xy-pad"/g)].map(match=>match[1]);
-  assert.equal(toolbars.length,2);
-  for(const [index,toolbar] of toolbars.entries()) {
-    assert.match(toolbar,/class="xy-aut-toolbar"/);
-    assert.ok(toolbar.includes(`data-aut-config="xy-${index+1}"`));
-    assert.match(toolbar,/aria-controls="automation-config-menu"/);
-  }
+  assert.equal([...html.matchAll(/data-aut-config="([^"]+)"/g)].length,0,'individual AUT config buttons are removed');
+  assert.equal([...html.matchAll(/class="xy-aut-toolbar"/g)].length,0,'individual AUT toolbars are removed');
   const css=fs.readFileSync(new URL('./style.css',import.meta.url),'utf8');
-  assert.match(css,/\.xy-aut-toolbar\s*\{[^}]*display:\s*none/);
-  assert.match(css,/body\.automation-mode\s+\.xy-aut-toolbar\s*\{[^}]*display:\s*flex/);
-  assert.match(css,/\.xy-aut-config\s*\{[^}]*min-width:\s*44px[^}]*min-height:\s*44px/);
-  assert.match(css,/body\.automation-mode\s+\.xy-pad\[data-name="xy-1"\]::before/);
-  assert.match(css,/body\.automation-mode\s+\.xy-pad\[data-name="xy-2"\]::before/);
-  assert.match(css,/\.xy-aut-config:focus-visible/);
-  assert.match(css,/#automation-config-menu\s*\{[^}]*min-width:\s*0/);
+  assert.equal(css.includes('.xy-aut-toolbar'),false,'no toolbar styles remain');
+  assert.equal(css.includes('.xy-aut-config'),false,'no config button styles remain');
+  assert.match(css,/#automation-config-menu\s*\{[^}]*min-width:\s*0/,'menu styling preserved');
 });
 
 test('AUT uses either free side and retains a closeable bounded menu when no side can fit a touch target',()=>{

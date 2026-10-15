@@ -1243,7 +1243,7 @@ for(const outcome of ['SDK throws','incompatible confirmed','peer confirmation m
     }});
   vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording.js',import.meta.url),'utf8'),browser);
   const client=browser.RcRecording.setup();t.after(()=>client.session(false));client.session(true,'controller');await client.command('getRecordingState');
-  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children[0];
+  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children.find(c=>c.dataset?.property==='arm');
   const send=f.osc.send;
   f.osc.send=(address,args=[])=>{
     if(afterWrite&&outcome==='peer confirmation missing'&&address===REC_PREFLIGHT.trackArm&&args[0]?.value===0){f.sent.push([address,args]);return;}

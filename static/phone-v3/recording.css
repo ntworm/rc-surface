@@ -39,8 +39,15 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-track-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; align-content:center; font-size:11px; }
 .rec-track-name { cursor:text; touch-action:manipulation; }
 .rec-track-name:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-.rec-workspace .rec-track-name-input { display:block; box-sizing:border-box; width:100%; min-width:0; min-height:44px; padding:4px; font-size:11px; }
-.rec-track-actions { display:grid; grid-template-columns:repeat(3,minmax(44px,1fr)); gap:4px; }
+.rec-track-actions { display:flex; align-items:center; gap:4px; }
+.rec-track-vol { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; min-height:44px; width:44px; height:44px; box-sizing:border-box; padding:1px; cursor:ns-resize; touch-action:none; user-select:none; -webkit-user-select:none; }
+.rec-track-vol:focus-visible { outline:2px solid var(--accent); outline-offset:-1px; }
+.rec-track-vol[aria-disabled="true"] { opacity:0.45; pointer-events:none; }
+.rec-track-vol-dial { position:relative; width:24px; height:24px; border-radius:50%; background:var(--surface); border:1.5px solid var(--border); box-sizing:border-box; }
+.rec-track-vol[data-active="true"] .rec-track-vol-dial, .rec-track-vol:hover .rec-track-vol-dial { border-color:var(--accent); }
+.rec-track-vol-pointer { position:absolute; top:2px; left:50%; width:2px; height:8px; margin-left:-1px; background:var(--accent); border-radius:1px; transform-origin:50% 10px; }
+.rec-track-vol-val { display:block; font-size:8px; font-family:var(--mono, monospace); color:var(--text2); white-space:nowrap; line-height:1; margin-top:1px; text-align:center; }
+.rec-track-vol[data-active="true"] .rec-track-vol-val { color:var(--accent); font-weight:700; }
 .rec-workspace .rec-track-actions button { min-height:44px; min-width:44px; padding:4px; font-size:10px; }
 .rec-track-actions button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:var(--accent-bg); }
 /* Red carries armed capture state; flux carries active solo. */
@@ -148,6 +155,33 @@ body[data-page="recording"] { touch-action:pan-y; }
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+  }
+  .rec-session-panel > header {
+    font-size: 9px;
+    gap: 4px;
+    min-height: 20px;
+  }
+  .rec-session-settings {
+    padding: 2px 4px;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .rec-session-settings label {
+    flex: 1;
+    min-width: 65px;
+    font-size: 9px;
+    gap: 2px;
+  }
+  .rec-session-settings select {
+    min-height: 28px;
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+  .rec-workspace .rec-session-panel button {
+    min-height: 28px;
+    min-width: 28px;
+    padding: 2px 4px;
+    font-size: 9px;
   }
   .rec-marker-strip {
     padding: 2px 4px;
@@ -264,8 +298,26 @@ body[data-page="recording"] { touch-action:pan-y; }
   }
   .rec-track-actions {
     display: flex;
+    align-items: center;
     gap: 2px;
     flex-shrink: 0;
+  }
+  .rec-track-vol {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  .rec-track-vol-dial {
+    width: 22px;
+    height: 22px;
+  }
+  .rec-track-vol-pointer {
+    height: 7px;
+    transform-origin: 50% 9px;
+  }
+  .rec-track-vol-val {
+    font-size: 7px;
   }
   .rec-workspace .rec-track-actions button {
     min-height: 44px;

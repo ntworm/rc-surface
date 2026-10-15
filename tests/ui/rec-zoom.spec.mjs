@@ -36,7 +36,7 @@ for (const locale of ['en', 'pt-BR']) {
     const zoom = page.locator('#rec-zoom'), track = page.locator('#rec-timeline-track');
     await expect(zoom).toHaveAttribute('type', 'range');
     await expect(zoom).toHaveAttribute('min', '1');
-    await expect(zoom).toHaveAttribute('max', '8');
+    await expect(zoom).toHaveAttribute('max', '300');
     await expect(zoom).toHaveAttribute('step', '1');
 
     for (const viewport of [{ width: 851, height: 393 }, { width: 1280, height: 800 }]) {
@@ -65,10 +65,10 @@ for (const locale of ['en', 'pt-BR']) {
       await expect(zoom).toHaveCSS('outline-color', 'rgb(255, 161, 51)');
       await page.locator('.rec-marker-strip').screenshot({ path: testInfo.outputPath(`rec-zoom-${locale}-${viewport.width}-focus.png`) });
       await zoom.press('End');
-      await expect(zoom).toHaveValue('8');
-      await expect(track).toHaveAttribute('style', /width: calc\(800% - 96px\)/);
+      await expect(zoom).toHaveValue('300');
+      await expect(track).toHaveAttribute('style', /width: calc\(30000% - 96px\)/);
       await zoom.press('ArrowRight');
-      await expect(zoom).toHaveValue('8');
+      await expect(zoom).toHaveValue('300');
       await zoom.press('Home');
       await expect(zoom).toHaveValue('1');
 
@@ -79,7 +79,7 @@ for (const locale of ['en', 'pt-BR']) {
       await page.mouse.up();
       const value = Number(await zoom.inputValue());
       expect(value, 'native pointer drag changes the zoom').toBeGreaterThan(1);
-      expect(value).toBeLessThanOrEqual(8);
+      expect(value).toBeLessThanOrEqual(300);
       await expect(track).toHaveAttribute('style', new RegExp('width: calc\\(' + value * 100 + '% - 96px\\)'));
       await expect(page.locator('.rec-marker')).toHaveCount(3);
     }

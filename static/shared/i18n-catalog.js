@@ -145,6 +145,7 @@
     'rec.reason.STOPPED': {en:'STOP cancelled the pending preparation.','pt-BR':'STOP cancelou a preparação pendente.'},
     'rec.reason.TRACK_REQUIRED': {en:'Choose a track first.','pt-BR':'Escolha uma track primeiro.'},
     'rec.renameTrack': {en:'Rename track','pt-BR':'Renomear faixa'},
+    'rec.trackVolume': {en:'Track volume','pt-BR':'Volume da faixa'},
     'rec.reason.NAME': {en:'Use a name with 1–128 characters and no control characters.','pt-BR':'Use um nome de 1–128 caracteres, sem caracteres de controle.'},
     'rec.reason.RENAME_UNCONFIRMED': {en:'Track name unconfirmed. Check Live.','pt-BR':'Nome da faixa não confirmado. Confira o Live.'},
     'rec.reason.IDENTITY': {en:'Track identity changed or could not be verified. Refresh and select it again.','pt-BR':'A identidade da track mudou ou não foi verificada. Atualize e selecione novamente.'},

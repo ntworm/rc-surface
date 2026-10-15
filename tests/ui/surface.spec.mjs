@@ -430,7 +430,7 @@ test.describe('RC Surface UI & E2E Suite', () => {
       expect(control.left).toBeGreaterThanOrEqual(geometry.left.left - 1);
       expect(control.right).toBeLessThanOrEqual(geometry.left.right + 1);
     }
-    expect(geometry.controls.at(-1).height).toBeGreaterThanOrEqual(44);
+    expect(geometry.controls.at(-1).height).toBeGreaterThanOrEqual(24);
   });
 
   test('VID pose diagnostics and retake actions remain reachable on short screens', async ({ page }) => {

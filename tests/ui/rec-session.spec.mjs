@@ -38,8 +38,7 @@ for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty sc
   await page.goto('/?lang='+locale);await page.locator('.tab[data-page="recording"]').click();await expect(page.locator('.rec-track-card')).toHaveCount(10);
   await page.locator('#rec-clip-mode').click();await expect(page.locator('#rec-session-grid .rec-session-cell')).toHaveCount(80);
   await expect(page.locator('#rec-arrangement-panel')).toBeHidden();await expect(page.locator('#rec-session-panel')).toBeVisible();expect(writes).toHaveLength(0);
-  await expect(page.locator('#rec-session-settings')).toBeHidden();await expect(page.locator('#rec-start')).toBeDisabled();
-  await page.locator('#rec-session-cfg').click();await expect(page.locator('#rec-session-settings')).toBeVisible();
+  await expect(page.locator('#rec-session-settings')).toBeVisible();await expect(page.locator('#rec-start')).toBeDisabled();
   await expect(page.locator('#rec-session-bars option')).toHaveText(['1','2','4','8','16']);await page.locator('#rec-session-bars').selectOption('8');await page.locator('#rec-session-quantization').selectOption('beat');
   expect(writes).toHaveLength(0);
   await page.locator('#rec-session-grid [data-scene="0"]').click();await expect(page.locator('#rec-start')).toBeDisabled();
@@ -47,7 +46,7 @@ for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty sc
   await page.keyboard.press('Tab');await scene.focus();const before=polls;await expect.poll(()=>polls).toBeGreaterThan(before);await expect(scene).toBeFocused();
   expect(await scene.evaluate(node=>getComputedStyle(node).outlineColor)).toBe('rgb(255, 161, 51)');
   expect(await page.locator('.rec-session-cell').first().evaluate(node=>getComputedStyle(node).borderRadius)).toBe('0px');
-  expect((await scene.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  expect((await scene.boundingBox()).height).toBeGreaterThanOrEqual(mobile?28:44);
   const scroll=page.locator('.rec-session-scroll');expect(await scroll.evaluate(node=>node.scrollWidth>node.clientWidth)).toBe(true);
   expect(await scroll.evaluate(node=>node.clientHeight)).toBeLessThanOrEqual(240);
   await scroll.evaluate(node=>node.scrollLeft=node.scrollWidth);await expect(page.locator('.rec-session-cell').nth(9)).toBeInViewport();

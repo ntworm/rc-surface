@@ -9,7 +9,7 @@ import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 import {SessionRecording,type SessionSong} from './session-recording.js';
 
-interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean }
+interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: any; volume?: number }
 interface Cue { name: string; time: number; handle: { id: string | number | bigint } }
 interface Song {
   tracks: readonly Track[]; cuePoints: readonly Cue[];
@@ -115,6 +115,15 @@ export class RecordingCoordinator extends EventEmitter {
     const arm = this.value('arm:' + index);
     return arm === null && this.value('canArm:' + index) === false ? false : arm;
   }
+  private trackVolume(track: any): number {
+    const mixer = track.mixer;
+    if (mixer && mixer.volume) {
+      if (typeof mixer.volume.value === 'number') return mixer.volume.value;
+      if (typeof mixer.volume._value === 'number') return mixer.volume._value;
+    }
+    if (typeof track.volume === 'number') return track.volume;
+    return 0.85;
+  }
   public snapshot() {
     const song = this.currentSong();
     return {
@@ -130,7 +139,8 @@ export class RecordingCoordinator extends EventEmitter {
       safety: Object.fromEntries(flags.map(key => [key, this.value(key)])),
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
         arm: this.value('arm:' + index), solo: this.value('solo:' + index), mute: this.value('mute:' + index),
-        canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index) })),
+        canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index),
+        volume: this.trackVolume(track) })),
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
       lastAttempt: this.lastAttempt,
@@ -616,6 +626,26 @@ export class RecordingCoordinator extends EventEmitter {
       this.identities([{...ref,name}]);
       if(selected?.index===ref.index && selected.id===ref.id && this.selected===null)this.selected={...ref,name};
     });
+  }
+  public async setVolume(expected: TrackRef, volume: number, context?: CommandExecutionContext) {
+    this.requireContext(context);
+    const ref = this.trackRef(expected);
+    if (typeof volume !== 'number' || !Number.isFinite(volume) || volume < 0 || volume > 1) fail('ARGUMENTS');
+    if (this.operation?.name === 'stop') fail('BUSY');
+    const song = this.currentSong();
+    const track = song.tracks[ref.index];
+    if (!track || String(track.handle.id) !== ref.id || track.name !== ref.name) fail('IDENTITY');
+    const mixer = (track as any).mixer;
+    if (mixer && mixer.volume) {
+      if (typeof mixer.volume.setValue === 'function') {
+        await mixer.volume.setValue(volume);
+      } else {
+        mixer.volume.value = volume;
+      }
+    } else {
+      (track as any).volume = volume;
+    }
+    return this.snapshot();
   }
   private punchContext(owner: PunchOwner, operation: Operation): void {
     this.check(operation);

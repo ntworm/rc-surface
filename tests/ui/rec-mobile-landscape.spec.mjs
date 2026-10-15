@@ -121,10 +121,10 @@ for (const locale of ['en', 'pt-BR']) {
     await page.waitForTimeout(350);
 
     // Loop from 1314.4 to 1354.4 is 40 beats out of 2354 beats (1.7% of song)
-    // Target zoom should automatically increase to 8
-    await expect(zoomSlider).toHaveValue('8');
+    // Target zoom should automatically increase to 42
+    await expect(zoomSlider).toHaveValue('42');
     const track = page.locator('#rec-timeline-track');
-    await expect(track).toHaveAttribute('style', /width: calc\(800% - 96px\)/);
+    await expect(track).toHaveAttribute('style', /width: calc\(4200% - 96px\)/);
 
     // Verify timeline scroll was centered on loop section
     const scrollLeft = await page.locator('#rec-timeline').evaluate(el => el.scrollLeft);
