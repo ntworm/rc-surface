@@ -371,11 +371,18 @@
     for (const base of MCP_LANDMARKS) {
       const current = fingerProjection(descriptor, base);
       const learned = samples.map((sample) => fingerProjection(sample, base));
-      if (current === null || learned.some((value) => value === null)) continue;
-      // Require consensus across all takes and a clear opposing live shape.
-      // The gap protects curled variation, jitter and foreshortened fingers.
-      if ((learned.every((value) => value <= 0.35) && current >= 0.70)
-        || (learned.every((value) => value >= 0.70) && current <= 0.35)) return true;
+      if (current === null) continue;
+      // Keep the original three-take consensus, but do not let one uncertain
+      // or opposing extra take erase it. Require at least three clear takes
+      // and a strict majority of the complete bank (including uncertain takes).
+      // The gap still protects legitimate curl and foreshortening variation.
+      const required = Math.max(3, Math.floor(samples.length / 2) + 1);
+      const folded = learned.filter(value => value !== null && value <= 0.35).length;
+      const extended = learned.filter(value => value !== null && value >= 0.70).length;
+      // Two equally supported opposing identities are not one learned pose.
+      if (folded >= 3 && extended >= 3) return true;
+      if ((folded >= required && current >= 0.70)
+        || (extended >= required && current <= 0.35)) return true;
     }
     return false;
   }

@@ -1167,8 +1167,13 @@ sem falsos disparos com mão aberta ou punho fechado. Um slot aprendido é momen
 (com estados de FSM `ready` → `candidate` → `held` → `releasing`).
 Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
 Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
-O reconhecimento compara contradições fortes da forma dos dedos com todos os
-exemplos salvos antes de aceitar ou manter uma pose. Abrir o quinto dedo
+O reconhecimento compara contradições fortes da forma dos dedos antes de
+aceitar ou manter uma pose. Com três exemplos, exige concordância dos três;
+com quatro a seis, pelo menos três exemplos claros e a maioria estrita do banco
+protegem o estado do dedo. Uma captura extra incerta ou oposta não desativa essa
+proteção. Um banco com três exemplos de cada estado oposto não reconhece nenhum
+dos dois; refaça os exemplos conflitantes deliberadamente. Os exemplos salvos
+permanecem preservados. Abrir o quinto dedo
 (indicador, médio, anelar ou mindinho) que estava consistentemente dobrado na
 pose de quatro solta a pose após o intervalo de liberação; se a mão aberta
 estiver treinada em outro slot, pode trocar diretamente. O polegar fica fora

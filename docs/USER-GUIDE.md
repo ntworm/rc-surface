@@ -1148,8 +1148,13 @@ is momentary (`0` or `1`), persists across page reloads, and rearms only after
 the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
 Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
 To audition actual musical triggers, bind the learned gesture in MAP and perform it in front of the camera. The training TEST only checks recognition and remains MIDI-silent.
-Recognition checks strong finger-shape contradictions against all saved
-learned takes before accepting or holding a pose. Opening a fifth finger
+Recognition checks strong finger-shape contradictions before accepting or
+holding a pose. Three takes require agreement across all three; with four to
+six takes, at least three clear examples and a strict majority of the bank
+protect finger identity. An uncertain or opposing extra take cannot disable
+that protection. A bank with three examples of each opposing state recognizes
+neither state; deliberately replace the conflicting takes. Saved examples
+remain intact. Opening a fifth finger
 (index, middle, ring or pinky) that was consistently curled in a four-finger
 pose releases it after the release interval; if the open hand is trained in
 another slot, it can switch directly. The thumb is not part of this check:

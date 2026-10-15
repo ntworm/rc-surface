@@ -292,6 +292,73 @@ test('same four-finger pose tolerates curl and jitter without retrigger or false
   }
 });
 
+for (const finger of ['index', 'middle', 'ring', 'pinky']) {
+  for (const count of [4, 5, 6]) {
+    test(`${count}-take bank keeps ${finger} identity despite one opposing extra take`, () => {
+      const { GestureLibrary, normalizeHandPose } = load();
+      const shape = curl => normalizeHandPose(handPose({ thumb: 1, [finger]: curl }));
+      const library = new GestureLibrary(performanceOptions);
+      for (let take = 0; take < count - 1; take++) library.learn('Four', frames(shape(.18 + take * .01)));
+      library.learn('Four', frames(shape(.85)));
+      assert.equal(library.sampleCount('Four'), count);
+      assert.equal(library.evaluate(shape(.2)).accepted, true, 'legitimate curl still works');
+      assert.equal(library.evaluate(shape(1)).accepted, false, 'an extra take cannot erase finger identity');
+      assert.equal(library.evaluate(shape(1)).contradiction, true);
+      for (const time of [0, 60, 121, 300]) assert.equal(library.recognize(shape(1), time), null, 'no false onset');
+      library.recognize(shape(.2), 400); library.recognize(shape(.2), 520);
+      assert.equal(library.activeName, 'Four');
+      library.recognize(shape(1), 600); library.recognize(shape(1), 741);
+      assert.equal(library.activeName, null, 'opposing finger releases HOLD');
+      for (const dims of [42, 47]) {
+        const saved = JSON.parse(JSON.stringify(library.toJSON()));
+        saved.templates[0].samples = saved.templates[0].samples.map(sample => sample.slice(0, dims));
+        const restored = GestureLibrary.fromJSON(saved, performanceOptions);
+        assert.equal(restored.sampleCount('Four'), count, 'restore never deletes the extra take');
+        assert.equal(restored.evaluate(shape(.2)).accepted, true);
+        assert.equal(restored.evaluate(shape(1)).accepted, false);
+      }
+    });
+  }
+}
+
+test('six-take bank rejects two opposing extras and preserves held-pose recovery after missing hand', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = pinky => normalizeHandPose(handPose({ thumb: 1, pinky }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const curl of [.18, .19, .2, .21, .85, .86]) library.learn('Four', frames(shape(curl)));
+  assert.equal(library.evaluate(shape(1)).accepted, false);
+  library.recognize(shape(.2), 0); library.recognize(shape(.2), 120);
+  assert.equal(library.activeName, 'Four');
+  library.markMissing(180); library.markMissing(1000);
+  assert.equal(library.activeName, 'Four', 'tracking loss remains distinct from visible contradiction');
+  assert.equal(library.recognize(shape(.22), 1060), null, 'valid return cannot retrigger');
+  assert.equal(library.activeName, 'Four');
+});
+
+test('six-take bank with equally supported opposing finger states cannot trigger either state', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = pinky => normalizeHandPose(handPose({ thumb: 1, pinky }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const curl of [.18, .2, .22, .98, .99, 1]) library.learn('Mixed', frames(shape(curl)));
+  for (const curl of [.2, 1]) assert.equal(library.evaluate(shape(curl)).accepted, false, 'mixed finger identities have no safe majority');
+  assert.equal(library.sampleCount('Mixed'), 6, 'mixed bank remains available to repair deliberately');
+});
+
+test('uncertain extras cannot erase folded identity and opposing extras cannot erase extended identity', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = pinky => normalizeHandPose(handPose({ thumb: 1, pinky }));
+  for (const [takes, correct, wrong] of [
+    [[.18, .2, .22, .70], .2, 1],
+    [[.98, .99, 1, .2], 1, .2],
+  ]) {
+    const library = new GestureLibrary(performanceOptions);
+    for (const curl of takes) library.learn('Pose', frames(shape(curl)));
+    assert.equal(library.evaluate(shape(correct)).accepted, true);
+    assert.equal(library.evaluate(shape(wrong)).accepted, false);
+    assert.equal(library.evaluate(shape(wrong)).contradiction, true);
+  }
+});
+
 test('learned three, four and five fingers switch directly after hold, with matching TEST evaluation', () => {
   const { GestureLibrary, normalizeHandPose } = load();
   const poses = [handPose({ thumb: 1, ring: .2, pinky: .2 }),

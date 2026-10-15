@@ -21,6 +21,11 @@ intermediate release records are intentionally not published.
 
 ### Learned poses
 
+- Preserve learned finger identity with four to six takes: at least three clear
+  examples and a strict majority veto a visibly opposing finger. An extra
+  uncertain/opposing capture cannot disable that protection. Equally supported
+  opposing finger states reject recognition until the bank is repaired; saved
+  takes, three-take behavior and recognition presets remain unchanged.
 - Correct learned-pose geometry for camera frame proportions. Version 8 poses require recapture; new saves use version 9.
 - Preserve active poses during missing-hand tracking and apply pose Safe loss after its grace interval.
 - Every learned pose accepts up to six takes, with recognition starting at three. Show the count directly in each slot and remove the Takes selector; preserve existing captures when restoring older preferences.
