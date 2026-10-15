@@ -570,10 +570,18 @@ pelo celular.
 
 Toque em CFG e no controle (ou clique direito no desktop). Os oito LFOs oferecem
 os mesmos ajustes de onda/modo/ritmo; Square acrescenta swing e ratchet.
-Os dois XY oferecem Estático/Física, atrito, ricochete e velocidade. Pads mantêm
+Os dois XY oferecem Estático/Física; atrito, ricochete e velocidade aparecem só
+em Física. Trocar para Estático preserva esses ajustes para depois. Pads mantêm
 A/B/C/D; knobs, alcance do gesto; faders, valor de reset. Reset remove o override
 daquele controle; segurar CFG lista overrides e oferece Limpar todos. Esc ou toque
 fora fecha o menu.
+
+Onda, modo e tempo usam botões diretos, sem dropdowns; escolher mantém o editor
+aberto. Em SYNC, expanda Subdivisão para escolher Global, Auto ou valor da nota
+com Reta/Pontuada/Tercina. Só aparecem combinações suportadas pela onda efetiva,
+BPM, swing e ratchet, inclusive quando a onda herda Global. FREE oculta essa
+seção. Avançado começa recolhido. Os valores dos toggles animam toda a largura
+com a cor do modo A/B/C/D.
 
 Overrides do navegador usam `ableton-rc:v3:control_config`. Ajustes de LFO/XY
 também são guardados na preferência de performance dos projetos e presets novos.

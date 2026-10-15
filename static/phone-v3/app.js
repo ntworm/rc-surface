@@ -1125,17 +1125,18 @@
     cfg.register(/^xy-[12]$/, name => {
       const cc = window.RcControlConfig;
       const tr = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
+      const physics = cc.get(name,'behavior','static') === 'physics';
       return [
         {segment: {label: tr('cfg.xyBehavior','Behavior'), options: [
           {label: tr('cfg.xyStatic','Static'), value:'static'},
           {label: tr('cfg.xyPhysics','Physics'), value:'physics'}],
-          get: () => cc.get(name,'behavior','static'), set: value => cc.set(name,{behavior:value})}},
-        ...[['friction', 'cfg.frictionLabel', 'Friction', .002, .05, .001, .012],
+          refresh: true, get: () => cc.get(name,'behavior','static'), set: value => cc.set(name,{behavior:value})}},
+        ...(physics ? [['friction', 'cfg.frictionLabel', 'Friction', .002, .05, .001, .012],
           ['bounce','cfg.bounceLabel','Bounce',0,.95,.05,.75],
           ['speed','cfg.xySpeed','Speed',.1,4,.1,1]].map(([key,label,fallback,min,max,step,initial]) => ({slider: {
             label: tr(label,fallback), min,max,step, get: () => cc.get(name,key,initial),
             set: value => cc.set(name,{[key]:value}), format: value => value.toFixed(3),
-          }})),
+          }})) : []),
         {action: {label:tr('cfg.resetToDefault','Reset to default'), run:()=>cc.clear(name)}},
       ];
     });
@@ -1159,7 +1160,7 @@
       const shape = window.getModulatorShape?.(name) || 'sine';
       const pulse = shape === 'square';
       const global = {label:tr('cfg.global','Global'),value:'Global'};
-      const select = (key,label,options) => ({select:{label,options,
+      const choices = (key,label,options) => ({segment:{label,options,refresh:true,
         get: () => {
           const value=cc.get(name,key,'Global');
           if(key==='subdivision' && typeof value==='number' && value>0) return window.getModulatorSubdivision(name);
@@ -1172,22 +1173,51 @@
         set:value=>cc.set(name,{[key]:value}),format:value=>value.toFixed(2),
       }});
       const rows = [
-        select('shape',tr('cfg.waveform','Waveform'),[global,
+        choices('shape',tr('cfg.waveform','Waveform'),[global,
           ...['sine','triangle','ramp_up','ramp_down','square'].map(value=>({
             label:tr({sine:'sync.sine',triangle:'sync.triangle',ramp_up:'sync.rampUp',ramp_down:'sync.rampDn',square:'sync.square'}[value],value),value,
           })),
         ]),
-        select('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))]),
-        select('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]),
+        choices('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))]),
+        choices('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]),
       ];
-      if((cc.get(name,'syncMode',window.syncMode))==='sync') rows.push(
-        select('subdivision',tr('cfg.division','Subdivision'),[global,{label:tr('sync.auto','Auto'),value:0},...window.getModulatorRhythms(name)]),
-      );
+      if((cc.get(name,'syncMode',window.syncMode))==='sync') {
+        // Group the motor's actual rhythm choices, without adding unsupported
+        // values or altering a saved pin merely by opening the editor.
+        const rhythms = window.getModulatorRhythms(name);
+        const groups = new Map();
+        for(const option of rhythms) {
+          const feel = option.label.endsWith(' D') ? 'dotted' : option.label.endsWith(' T') ? 'triplet' : 'straight';
+          const base = option.label.replace(/ [DT]$/,'');
+          if(!groups.has(base)) groups.set(base,new Map());
+          groups.get(base).set(feel,option.value);
+        }
+        const pin = cc.get(name,'subdivision','Global');
+        const effective = window.getModulatorSubdivision(name);
+        const selected = rhythms.find(option=>Math.abs(option.value-effective)<1e-8) || rhythms[0];
+        const base = selected.label.replace(/ [DT]$/,'');
+        const feel = selected.label.endsWith(' D') ? 'dotted' : selected.label.endsWith(' T') ? 'triplet' : 'straight';
+        const explicit = typeof pin === 'number' && pin > 0;
+        const status = pin === 'Global' ? global.label : pin === 0 ? tr('sync.auto','Auto') : selected.label;
+        rows.push({details:{label:`${tr('cfg.division','Subdivision')} · ${status}`,items:[
+          choices('subdivision','',[global,{label:tr('sync.auto','Auto'),value:0}]),
+          {grid:{label:tr('cfg.noteValue','Note value'),refresh:true,
+            options:Array.from(groups.keys(),value=>({label:value,value})),get:()=>explicit?base:null,
+            set:value=>{
+              const variants=groups.get(value);
+              cc.set(name,{subdivision:variants.get(feel) ?? variants.get('straight') ?? variants.values().next().value});
+            }}},
+          {segment:{label:tr('cfg.noteFeel','Rhythm'),refresh:true,
+            options:[['straight',tr('cfg.straight','Straight')],['dotted',tr('cfg.dotted','Dotted')],['triplet',tr('cfg.triplet','Triplet')]]
+              .map(([value,label])=>({value,label,disabled:!groups.get(base).has(value)})),
+            get:()=>explicit?feel:null,set:value=>cc.set(name,{subdivision:groups.get(base).get(value)})}},
+        ]}});
+      }
       const advanced=[slider('phaseOffset',tr('cfg.phase','Phase (beats)'),-4,4,.125,
         pulse?window.syncSettings.pulsePhaseOffset:window.syncSettings.lfoPhaseOffset)];
       if(pulse) advanced.push(
         slider('swing',tr('sync.swing','Swing'),0,.66,.01,window.syncSettings.pulseSwing),
-        select('count',tr('cfg.ratchet','Ratchet'),[1,2,3,4].map((n,i)=>({label:String(n),value:i/3}))),
+        choices('count',tr('cfg.ratchet','Ratchet'),[1,2,3,4].map((n,i)=>({label:String(n),value:i/3}))),
       );
       rows.push({details:{label:tr('cfg.advanced','Advanced'),items:advanced}});
       rows.push({ action: { label: tr('cfg.resetModulator', 'Restore shared defaults'), danger: false, run: () => cc.clear(name) } });

@@ -20,6 +20,8 @@ O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do ce
 
 Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0 até a amplitude, com swing/ratchet em Avançado; não há opção Stutter separada. CFG omite velocidade/amplitude controladas por toque e filtra subdivisões pelo teto real. Os dois XY com física têm rastro e atrito independente dos frames.
 
+Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compacto de valor da nota/ritmo conforme a onda efetiva em SYNC; FREE oculta esse campo. XY estático esconde os ajustes de física e os preserva para uma troca posterior. Os valores dos toggles preenchem toda a largura com a cor do modo.
+
 ## Destaques
 
 - 12 pads de performance com os modos A/B/C/D.

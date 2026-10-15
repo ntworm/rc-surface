@@ -295,18 +295,69 @@ function configRows(context,name) {
 test('real CFG offers five waveforms, touch-owned rate/depth absent, advanced settings collapsed',()=>{
   const ctx=loadControls().context;
   const rows=configRows(ctx,'toggle-1');
-  assert.equal(rows[0].select.options.length,6);
-  assert.deepEqual(Array.from(rows[0].select.options,v=>v.value),['Global','sine','triangle','ramp_up','ramp_down','square']);
-  assert.equal(rows[0].select.get(),'Global');assert.equal(rows[1].select.get(),'Global');
+  assert.equal(rows[0].segment.options.length,6);
+  assert.deepEqual(Array.from(rows[0].segment.options,v=>v.value),['Global','sine','triangle','ramp_up','ramp_down','square']);
+  assert.equal(rows[0].segment.get(),'Global');assert.equal(rows[1].segment.get(),'Global');
+  assert.equal(rows.some(row=>row.select),false);
   assert.equal(rows.some(row=>row.slider),false);
-  assert.equal(rows.find(row=>row.details).details.items.length,1);
+  assert.equal(rows.at(-2).details.items.length,1);
   ctx.RcControlConfig.set('toggle-1',{shape:'square',count:1,swing:.5});
   const pulseRows=configRows(ctx,'toggle-1');
-  assert.equal(pulseRows.find(row=>row.details).details.items.length,3);
-  const division=pulseRows.find(row=>row.select?.label==='Subdivision').select;
-  for(const option of division.options.filter(v=>typeof v.value==='number'&&v.value>0)) assert.ok(2*4/option.value/(1-.5)<=15);
+  assert.equal(pulseRows.at(-2).details.items.length,3);
+  assert.equal(pulseRows.at(-2).details.items.at(-1).segment.options.length,4);
   ctx.RcControlConfig.set('toggle-1',{syncMode:'free'});
-  assert.equal(configRows(ctx,'toggle-1').some(row=>row.select?.label==='Subdivision'),false);
+  assert.equal(configRows(ctx,'toggle-1').some(row=>row.details?.label.startsWith('Subdivision')),false);
+});
+
+test('rhythm editor preserves every valid choice through base and feel, following effective Global wave',()=>{
+  const ctx=loadControls().context;
+  const editor=()=>configRows(ctx,'toggle-1').find(row=>row.details?.label.startsWith('Subdivision')).details;
+  for(const shape of ['sine','triangle','ramp_up','ramp_down','square']) {
+    ctx.syncSettings.lfoShape=shape;
+    ctx.RcControlConfig.clear('toggle-1');
+    const offered=Array.from(ctx.getModulatorRhythms('toggle-1'),option=>option.value);
+    const visited=[];
+    const bases=editor().items[1].grid;
+    for(const base of bases.options) {
+      bases.set(base.value);
+      const feel=editor().items[2].segment;
+      for(const option of feel.options.filter(option=>!option.disabled)) {
+        feel.set(option.value);
+        const value=ctx.RcControlConfig.get('toggle-1','subdivision',null);
+        assert.ok(offered.some(allowed=>Math.abs(allowed-value)<1e-8),`${shape} invalid ${value}`);
+        visited.push(value);
+      }
+    }
+    for(const value of offered) assert.ok(visited.some(seen=>Math.abs(value-seen)<1e-8),`${shape} missing ${value}`);
+    const inheritance=editor().items[0].segment;
+    inheritance.set(0);assert.equal(ctx.RcControlConfig.get('toggle-1','subdivision',null),0);
+    inheritance.set('Global');assert.equal(ctx.RcControlConfig.get('toggle-1','subdivision',null),null);
+    assert.ok(editor().label.includes('Global'));
+  }
+  ctx.syncMode='free';
+  assert.equal(configRows(ctx,'toggle-1').some(row=>row.details?.label.startsWith('Subdivision')),false);
+});
+
+test('Static XY hides physics controls without discarding independent physics settings',()=>{
+  const ctx=loadControls().context;
+  for(const name of ['xy-1','xy-2']) {
+    ctx.RcControlConfig.set(name,{behavior:'static',friction:.04,speed:2});
+    let rows=configRows(ctx,name);
+    assert.equal(rows.some(row=>row.slider),false);
+    rows[0].segment.set('physics');rows=configRows(ctx,name);
+    assert.equal(rows.filter(row=>row.slider).length,3);
+    assert.equal(rows[1].slider.get(),.04);assert.equal(rows[3].slider.get(),2);
+    rows[0].segment.set('static');
+    assert.equal(configRows(ctx,name).some(row=>row.slider),false);
+    assert.equal(ctx.RcControlConfig.get(name,'friction',null),.04);
+  }
+});
+
+test('toggle value fill spans full width with mode colour and live height',()=>{
+  const css=fs.readFileSync(new URL('./style.css',import.meta.url),'utf8');
+  const rule=css.match(/\.toggle \.mod-val-bar\s*\{([^}]+)\}/)[1];
+  assert.match(rule,/left:\s*0/);assert.match(rule,/right:\s*0/);assert.doesNotMatch(rule,/width:\s*4px/);
+  assert.match(rule,/var\(--modulator-mode-color\)/);
 });
 
 test('both physics XY draw their own trail and clear it for Static and after expiry',()=>{

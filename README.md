@@ -20,6 +20,8 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 Eight uniform toggles start in Global. Square is the single 0-to-depth pulse waveform, with swing/ratchet in Advanced; there is no separate Stutter option. CFG hides touch-owned rate/depth and filters subdivisions by the actual ceiling. Both physics XY panels have trails and frame-independent friction.
 
+CFG waveform, mode and timing use direct buttons. Subdivision opens a compact note-value/rhythm editor for the effective waveform in SYNC; FREE hides it. Static XY hides physics settings while retaining them for a later switch. Toggle values fill the whole width in their mode colour.
+
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.

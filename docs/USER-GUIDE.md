@@ -574,9 +574,17 @@ directly from the phone.
 
 Tap CFG, then a control (or right-click on desktop). All eight LFO slots expose
 the same waveform/mode/timing controls; Square adds swing and ratchet. Both XY
-panels expose Static/Physics, friction, bounce and speed. Pads retain A/B/C/D,
+panels expose Static/Physics; friction, bounce and speed appear only in Physics.
+Switching to Static preserves those settings for later use. Pads retain A/B/C/D,
 knobs gesture range and faders reset value. Reset removes that control's override;
 long-press CFG lists overrides and offers Clear all. Escape or tap outside closes.
+
+Waveform, mode and timing use direct buttons, without dropdowns; picking one keeps
+the editor open. In SYNC, expand Subdivision to choose Global, Auto or a note
+value plus Straight/Dotted/Triplet. Only combinations supported by the effective
+waveform, BPM, swing and ratchet are offered, including when the waveform inherits
+Global. FREE hides this section. Advanced stays collapsed until opened. Toggle
+values animate across the full width in the A/B/C/D mode colour.
 
 Browser overrides use `ableton-rc:v3:control_config`. Modulator/XY settings also
 round-trip through the host performance preference in new project profiles and
