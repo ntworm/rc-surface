@@ -7,7 +7,7 @@
  *
  * Same policy as the application catalog: not a literal translation. The terms
  * a Brazilian musician says in English stay in English — pad, knob, fader,
- * LFO, stutter, snapshot, clip, track, loop, preset, clutch, morph, gate,
+ * LFO, square, snapshot, clip, track, loop, preset, clutch, morph, gate,
  * pitch, BPM, bind, trigger, bar, beat. Product and protocol names stay too:
  * Ableton Live, Suite, AbletonOSC, MediaPipe, HTTPS, WSS, OSC, MIDI.
  *
@@ -449,16 +449,16 @@
       'pt-BR': 'LFOs',
     },
     'lp.map.020': {
-      en: "L1 to L8. Each slot chooses its waveform, including Stutter, mode and clock in CFG. Hz in FREE, note values in SYNC.",
-      'pt-BR': "L1 a L8. Cada slot escolhe onda, incluindo Stutter, modo e clock no CFG. Hz em FREE, figuras em SYNC.",
+      en: "T1 to T8. Each slot chooses its waveform, including Square, mode and clock in CFG. Hz in FREE, note values in SYNC.",
+      'pt-BR': "T1 a T8. Cada slot escolhe onda, incluindo Square, modo e clock no CFG. Hz em FREE, figuras em SYNC.",
     },
     'lp.map.021': {
-      en: 'Stutters',
-      'pt-BR': 'Stutters',
+      en: 'Squares',
+      'pt-BR': 'Squares',
     },
     'lp.map.022': {
-      en: "Stutter is a waveform available in any of the eight LFO slots.",
-      'pt-BR': "Stutter é uma onda disponível em qualquer um dos oito slots LFO.",
+      en: "Square is a waveform available in any of the eight LFO slots.",
+      'pt-BR': "Square é uma onda disponível em qualquer um dos oito slots LFO.",
     },
     'lp.map.023': {
       en: "CAP captures, slots 1 to 4 recall, OFF exits.",
@@ -782,16 +782,16 @@
       'pt-BR': 'Dois parâmetros por pad',
     },
     'lp.controls.017': {
-      en: 'LFOs L1–L8',
-      'pt-BR': 'LFOs L1–L8',
+      en: 'LFOs T1–T8',
+      'pt-BR': 'LFOs T1–T8',
     },
     'lp.controls.018': {
       en: "Any mapped parameter",
       'pt-BR': "Qualquer parâmetro mapeado",
     },
     'lp.controls.019': {
-      en: 'Stutter waveform',
-      'pt-BR': 'Onda Stutter',
+      en: 'Square waveform',
+      'pt-BR': 'Onda Square',
     },
     'lp.controls.021': {
       en: 'PERF UTIL column',
@@ -894,8 +894,8 @@
       'pt-BR': "Abre o seletor de mapeamento sobre a página atual.",
     },
     'lp.controls.148': {
-      en: "Per-control settings: pad mode, eight LFO/Stutter slots, Static/Physics on either XY. PERF and MIX only.",
-      'pt-BR': "Ajustes por controle: pads, oito slots LFO/Stutter, Estático/Física nos dois XY. Só PERF e MIX.",
+      en: "Per-control settings: pad mode, eight toggle slots, Static/Physics on either XY. PERF and MIX only.",
+      'pt-BR': "Ajustes por controle: pads, oito slots toggle, Estático/Física nos dois XY. Só PERF e MIX.",
     },
     'lp.controls.059': {
       en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">2.1</a>.",
@@ -938,12 +938,12 @@
       'pt-BR': 'Mapeamento e MIDI',
     },
     'lp.controls.074': {
-      en: 'Pads, LFOs, stutters',
-      'pt-BR': 'Pads, LFOs, stutters',
+      en: 'Pads, LFOs, squares',
+      'pt-BR': 'Pads, LFOs, squares',
     },
     'lp.controls.075': {
-      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. Each of the eight LFO slots can use Stutter; choose its own clock in CFG or follow the global SYNC/FREE setting.",
-      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Stutter; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.",
+      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. Each of the eight LFO slots can use Square; choose its own clock in CFG or follow the global SYNC/FREE setting.",
+      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Square; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.",
     },
     'lp.controls.076': {
       en: 'VALUE ↑',

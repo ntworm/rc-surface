@@ -6,10 +6,14 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
-- Eight uniform configurable LFO slots; Stutter is a waveform in any slot, with independent CFG and one state/gesture model.
-- Both XY panels independently select Static/Physics with friction, bounce and speed; shared engine and persistence.
-- Breaking persistence: isolated surface-v2 storage, project/preset schema 2 and new browser performance keys. No import/migration of earlier data.
-- Existing recognition, thumb identity, MIDI and safe-loss corrections retained. Physical acceptance pending; no publication or installation.
+- Eight uniform Toggles T1–T8, all inheriting Global until explicitly configured. One state/gesture model and CFG; independent destinations.
+- Five waveforms. Square is the single zero-to-depth pulse, retaining swing/ratchet from the former Stutter in Advanced.
+- Preserve Global through performance persistence; shared B/C/D modes follow the pads after save/restore.
+- Compact CFG: no touch-owned rate/depth fields, only supported subdivisions for current BPM/shape/swing/ratchet, Advanced settings and viewport-bounded scrolling.
+- One centred Toggles heading, waveform labels and pad-compatible mode colours; remove the obsolete migration banner.
+- Both XY panels independently select Static/Physics with friction/bounce/speed, independent trails, separate touch/frame clocks and frame-independent friction integration.
+- Breaking persistence: isolated surface-v2 host storage, project/preset schema 2, revised performance payload schema 2 and fresh browser performance keys. No migration of earlier data, including the first candidate's forced overrides/snapshots.
+- Existing recognition, thumb identity, MIDI and safe-loss corrections retained. Physical acceptance pending; no publication or automatic installation. Candidate revisions are distinguished by commit/hash, not a new product version.
 
 ## [Unreleased]
 

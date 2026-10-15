@@ -6,7 +6,7 @@
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 //
-// host-modulators.ts — the LFO / stutter motor.
+// host-modulators.ts — the LFO / pulse motor.
 //
 // The phone sends a modulator's *configuration* once (shape, rate, depth,
 // sync) and then goes quiet; the host generates the signal from there. That
@@ -22,10 +22,10 @@ import { getExtensionContext } from "../context.js";
 import { trackedClients, appendHistory, pushClientUpdate } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs } from "./state.js";
 import { oscTransport } from "./osc-transport.js";
-import { computeSyncedLfoValue, computeSyncedStutterValue, getLfoSubdivision, getLfoMaxHz, getStutterTiming, LFO_SUBDIVISIONS } from "./transport-clock.js";
+import { computeSyncedLfoValue, computeSyncedPulseValue, getLfoSubdivision, getLfoMaxHz, getPulseTiming, LFO_SUBDIVISIONS } from "./transport-clock.js";
 import { applyMapping } from "./mappings.js";
 
-export type HostModulatorKind = "lfo" | "stutter";
+export type HostModulatorKind = "lfo" | "pulse";
 export type HostModulatorSyncMode = "sync" | "free";
 
 interface HostModulatorMorph {
@@ -83,7 +83,7 @@ export interface HostModulatorState {
 /**
  * Smallest change worth a write to Live.
  *
- * Suppress near-identical submissions, including unchanged stutter gates.
+ * Suppress near-identical submissions, including unchanged pulse gates.
  * This is a normalized-value approximation, not a perceptual guarantee.
  * Generator cadence does not prove SDK delivery or automation recording rate.
  */
@@ -171,7 +171,7 @@ function hostModulatorKey(clientId: string, name: string): string {
 
 function isHostModulatorName(kind: HostModulatorKind, name: string): boolean {
   // Slot identity is independent of waveform.
-  return (kind === "lfo" || kind === "stutter") && /^toggle-[1-8]$/.test(name);
+  return (kind === "lfo" || kind === "pulse") && /^toggle-[1-8]$/.test(name);
 }
 
 export function startHostModulatorLoop(): void {
@@ -203,7 +203,7 @@ function getHostModulatorFrequencyHz(state: HostModulatorState, tempo: number): 
     return 0.1 + state.rate * (getLfoMaxHz(state.shape) - 0.1);
   }
 
-  return getStutterTiming(state.rate, state.count, tempo, state.syncMode === "sync",
+  return getPulseTiming(state.rate, state.count, tempo, state.syncMode === "sync",
     state.syncSubdivisionBeats, state.swing).frequency;
 }
 
@@ -303,9 +303,9 @@ async function applyHostGeneratedControl(
 
 export function updateHostModulator(clientId: string, payload: Record<string, any>): void {
   if (!clientId || !payload || typeof payload !== "object") return;
-  const kind = payload["kind"];
+  const kind = payload["shape"] === "square" ? "pulse" : payload["kind"];
   const name = payload["name"];
-  if ((kind !== "lfo" && kind !== "stutter") || typeof name !== "string") return;
+  if ((kind !== "lfo" && kind !== "pulse") || typeof name !== "string") return;
   if (!isHostModulatorName(kind, name)) return;
 
   const key = hostModulatorKey(clientId, name);
@@ -372,11 +372,12 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
     depth: targetDepth,
     count: targetCount,
     syncMode,
-    // FREE LFO starts at the bottom of the sine (-π/2); stutter starts
+    // FREE LFO starts at the bottom of the sine (-π/2); pulse starts
     // with its gate open (0). SYNC first aligns to the song beat.
     phase: kind === "lfo" ? -Math.PI / 2 : 0,
     lastTime: null,
   };
+  if (!existing && kind === "pulse") state.phaseZeroMs = morphStart;
   state.active = true;
   state.syncMode = syncMode;
 
@@ -501,12 +502,12 @@ export async function tickHostModulators(now: number = Date.now()): Promise<void
           applies.push(applyHostGeneratedControl(state.clientId, state.name, value, now));
         }
       } else {
-        const { subdivision: subdiv, ratchet } = getStutterTiming(state.rate, state.count, tempo, true,
+        const { subdivision: subdiv, ratchet } = getPulseTiming(state.rate, state.count, tempo, true,
           state.syncSubdivisionBeats, state.swing);
         const phaseOffset = state.phaseOffsetBeats ?? 0;
         const swing = state.swing ?? 0;
 
-        const isGateOpen = computeSyncedStutterValue(beats, subdiv, phaseOffset, swing, ratchet);
+        const isGateOpen = computeSyncedPulseValue(beats, subdiv, phaseOffset, swing, ratchet);
         const value = (isGateOpen ? state.depth : 0) * burstEnvelope(state, now);
 
         state.phase = ((beats + phaseOffset) / (subdiv / ratchet) * 2 * Math.PI) % (2 * Math.PI);

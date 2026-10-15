@@ -69,7 +69,7 @@ the same `.ablx` file in the project root. Install it the same way
 
 ### Optional: Install AbletonOSC (for Deep Sync)
 
-To enable beat-accurate sync for LFO/Stutter, the flashing metronome header, and the full-screen transport control overlay (`TRN` button), you must install and configure **AbletonOSC**:
+To enable beat-accurate sync for toggle, the flashing metronome header, and the full-screen transport control overlay (`TRN` button), you must install and configure **AbletonOSC**:
 
 1. Download **AbletonOSC** from the repository: [AbletonOSC GitHub](https://github.com/ideoforms/AbletonOSC). Click **Code** -> **Download ZIP**.
 2. Extract the ZIP and place the `AbletonOSC` folder in your Ableton Live **MIDI Remote Scripts** directory:

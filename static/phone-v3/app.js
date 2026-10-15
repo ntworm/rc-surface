@@ -633,7 +633,7 @@
   // ---- Modulator immediate send (uses session.js WS) ----
   function isImmediateModulatorState(modulator) {
     if (!modulator || typeof modulator !== 'object') return false;
-    if (modulator.kind !== 'lfo' && modulator.kind !== 'stutter') return false;
+    if (modulator.kind !== 'lfo' && modulator.kind !== 'pulse') return false;
     if (typeof modulator.name !== 'string') return false;
     if (!/^toggle-[1-8]$/.test(modulator.name)) return false;
     return true;
@@ -659,8 +659,8 @@
       syncSubdivisionBeats: modulator.syncSubdivisionBeats === null
         ? null : typeof modulator.syncSubdivisionBeats === 'number' ? modulator.syncSubdivisionBeats : undefined,
       phaseOffsetBeats: typeof modulator.phaseOffsetBeats === 'number' ? modulator.phaseOffsetBeats : undefined,
-      shape: modulator.kind === 'lfo' && allowedLfoShapes.has(modulator.shape) ? modulator.shape : undefined,
-      swing: modulator.kind === 'stutter' && typeof modulator.swing === 'number' ? modulator.swing : undefined,
+      shape: allowedLfoShapes.has(modulator.shape) ? modulator.shape : undefined,
+      swing: modulator.kind === 'pulse' && typeof modulator.swing === 'number' ? modulator.swing : undefined,
     };
     _ws.send(JSON.stringify({
       type: 'modulator',
@@ -761,7 +761,7 @@
    * state in `hello`, or another performer's move arriving as `control_sync`.
    *
    * Momentary controls are skipped in the modes where they are momentary: in A
-   * and D a pad, LFO toggle or stutter button is held, not latched, so driving
+   * and D a pad, LFO toggle or pulse button is held, not latched, so driving
    * one from a message would fire a trigger nobody's finger asked for.
    *
    * Modulator emission is suppressed for the duration: an LFO's configuration
@@ -1139,7 +1139,7 @@
         {action: {label:tr('cfg.resetToDefault','Reset to default'), run:()=>cc.clear(name)}},
       ];
     });
-    // PERF builders (mode / shape / stutter).
+    // PERF builders (mode / shape / pulse).
     cfg.register(/^pad-\d+$/, (name) => {
       const mode = window.RcControlConfig.get(name, 'mode', 'Global');
       return [
@@ -1157,39 +1157,39 @@
       const cc = window.RcControlConfig;
       const tr = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
       const shape = window.getModulatorShape?.(name) || 'sine';
-      const stutter = shape === 'stutter';
-      const state = window.modulatorStates?.get(name);
-      const segment = (key, label, options) => ({ segment: { label, options,
-        get: () => cc.get(name, key, key === 'count' ? state?.count ?? 0 : 'Global'),
-        set: v => cc.set(name, { [key]: v === 'Global' ? null : v }),
-      } });
-      const slider = (key, label, min, max, step, fallback) => ({ slider: {
-        label, min, max, step, get: () => ['rate', 'depth'].includes(key) ? state?.[key] ?? fallback : cc.get(name, key, fallback),
-        set: v => cc.set(name, { [key]: v }), format: v => v.toFixed(2),
-      } });
-      const global = { label: tr('cfg.global', 'Global'), value: 'Global' };
+      const pulse = shape === 'square';
+      const global = {label:tr('cfg.global','Global'),value:'Global'};
+      const select = (key,label,options) => ({select:{label,options,
+        get: () => {
+          const value=cc.get(name,key,'Global');
+          if(key==='subdivision' && typeof value==='number' && value>0) return window.getModulatorSubdivision(name);
+          return value;
+        },
+        set:value => cc.set(name,{[key]:value==='Global'?null:value}),
+      }});
+      const slider = (key,label,min,max,step,fallback) => ({slider:{
+        label,min,max,step,get:()=>cc.get(name,key,fallback),
+        set:value=>cc.set(name,{[key]:value}),format:value=>value.toFixed(2),
+      }});
       const rows = [
-        segment('shape', tr('cfg.waveform', 'Waveform'), [global,
-          ...['sine', 'triangle', 'ramp_up', 'ramp_down', 'square', 'stutter'].map(value => ({
-            label: tr({ sine: 'sync.sine', triangle: 'sync.triangle', ramp_up: 'sync.rampUp',
-              ramp_down: 'sync.rampDn', square: 'sync.square', stutter: 'cfg.stutter' }[value], value), value,
+        select('shape',tr('cfg.waveform','Waveform'),[global,
+          ...['sine','triangle','ramp_up','ramp_down','square'].map(value=>({
+            label:tr({sine:'sync.sine',triangle:'sync.triangle',ramp_up:'sync.rampUp',ramp_down:'sync.rampDn',square:'sync.square'}[value],value),value,
           })),
         ]),
-        segment('mode', tr('cfg.mode', 'Mode'), [global, ...['A', 'B', 'C', 'D'].map(value => ({ label: value, value }))]),
-        segment('syncMode', tr('cfg.clock', 'Timing'), [global, { label: 'SYNC', value: 'sync' }, { label: 'FREE', value: 'free' }]),
-        { grid: { label: tr('cfg.division', 'Subdivision'), options: [global,
-          { label: tr('sync.auto', 'Auto'), value: 0 }, ...(window.getModulatorRhythms?.(name) || [])],
-          get: () => cc.get(name, 'subdivision', 'Global'), set: v => cc.set(name, { subdivision: v === 'Global' ? null : v }),
-        } },
-        slider('rate', tr('cfg.rate', 'Rate'), 0, 1, .01, state?.rate ?? .5),
-        slider('depth', tr('cfg.depth', 'Depth'), 0, 1, .01, state?.depth ?? .5),
-        slider('phaseOffset', tr('cfg.phase', 'Phase (beats)'), -4, 4, .125,
-          stutter ? window.syncSettings.stutterPhaseOffset : window.syncSettings.lfoPhaseOffset),
+        select('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))]),
+        select('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]),
       ];
-      if (stutter) rows.push(
-        slider('swing', tr('sync.swing', 'Swing'), 0, .66, .01, window.syncSettings.stutterSwing),
-        segment('count', tr('cfg.ratchet', 'Ratchet'), [1, 2, 3, 4].map((n, i) => ({ label: String(n), value: i / 3 }))),
+      if((cc.get(name,'syncMode',window.syncMode))==='sync') rows.push(
+        select('subdivision',tr('cfg.division','Subdivision'),[global,{label:tr('sync.auto','Auto'),value:0},...window.getModulatorRhythms(name)]),
       );
+      const advanced=[slider('phaseOffset',tr('cfg.phase','Phase (beats)'),-4,4,.125,
+        pulse?window.syncSettings.pulsePhaseOffset:window.syncSettings.lfoPhaseOffset)];
+      if(pulse) advanced.push(
+        slider('swing',tr('sync.swing','Swing'),0,.66,.01,window.syncSettings.pulseSwing),
+        select('count',tr('cfg.ratchet','Ratchet'),[1,2,3,4].map((n,i)=>({label:String(n),value:i/3}))),
+      );
+      rows.push({details:{label:tr('cfg.advanced','Advanced'),items:advanced}});
       rows.push({ action: { label: tr('cfg.resetModulator', 'Restore shared defaults'), danger: false, run: () => cc.clear(name) } });
       return rows;
     });
@@ -1208,11 +1208,12 @@
         const shape = cc.get(name, 'shape', null);
         const subdiv = cc.get(name, 'subdivision', null);
         const isPad = name.startsWith('pad-');
-        // P01 (rc-surface-cfg-pad-stutter-polish-2026-09-18): pads use
+        if (/^toggle-[1-8]$/.test(name)) return;
+        // P01 (rc-surface-cfg-pad-pulse-polish-2026-09-18): pads use
         // .pad-mode-tag (the inline letter beside .num) for their mode
         // override. Appending a .mode-badge on top would create a duplicate
         // and overlap the number; skip it. The mode badge still applies to
-        // stutter buttons, toggles, knobs and faders.
+        // pulse buttons, toggles, knobs and faders.
         if (mode && !isPad) {
           const b = document.createElement('span');
           b.className = 'mode-badge';
@@ -1231,7 +1232,7 @@
           b.textContent = String(subdiv);
           el.appendChild(b);
         }
-        // P01 (rc-surface-cfg-pad-stutter-polish-2026-09-18): render a small
+        // P01 (rc-surface-cfg-pad-pulse-polish-2026-09-18): render a small
         // letter tag next to .pad .num when this pad carries a mode override
         // (A/B/C/D). The tag flows inline in the parent .pad flex layout so
         // the pad number and the mode letter sit side by side without

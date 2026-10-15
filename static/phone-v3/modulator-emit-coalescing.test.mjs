@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/rc-surface
 //
-// A drag over an LFO toggle or a stutter button fires one pointermove per
+// A drag over an LFO toggle or a pulse button fires one pointermove per
 // display refresh. Each of those used to become its own WebSocket frame, which
 // put a single finger well past the server's per-client budget — and a
 // rate-limited frame is dropped without a reply, so the only symptom was a
@@ -88,9 +88,9 @@ function loadControls() {
       lfoSubdivisionPinned: false,
       lfoPhaseOffset: 0,
       lfoShape: 'sine',
-      stutterSubdivisionPinned: false,
-      stutterPhaseOffset: 0,
-      stutterSwing: 0,
+      pulseSubdivisionPinned: false,
+      pulsePhaseOffset: 0,
+      pulseSwing: 0,
     },
     __flushFrame: () => {
       const pending = rafQueue.splice(0, rafQueue.length);
@@ -109,7 +109,7 @@ function loadControls() {
   vm.runInNewContext(read('app.js'), context, { filename: 'app.js' });
   vm.runInNewContext(read('modules/snapshots.js'), context, { filename: 'snapshots.js' });
   vm.runInNewContext(read('control-config.js'), context);
-  context.RcControlConfig.set('toggle-5',{shape:'stutter'});
+  context.RcControlConfig.set('toggle-5',{shape:'square'});
   vm.runInNewContext(read('controls.js'), context, { filename: 'controls.js' });
 
   const emitted = [];
@@ -154,7 +154,7 @@ test('an LFO drag emits one modulator frame per animation frame, not per pointer
   assert.ok(state.depth > 0, 'the drag must have moved depth');
 });
 
-test('a stutter drag coalesces the same way', () => {
+test('a pulse drag coalesces the same way', () => {
   const { context, emitted } = loadControls();
 
   context.__fire('toggle-5', 'pointerdown', pointer(1, 100, 100));

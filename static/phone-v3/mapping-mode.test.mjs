@@ -368,7 +368,7 @@ test('conflict banner uses friendly owner label and replace refreshes detail', a
   const detail = elements.get('map-mobile-detail');
   const banner = detail.children.find((child) => child.className === 'map-conflict');
   assert.ok(banner, 'conflict banner should render');
-  assert.match(banner.textContent, /Already mapped to LFO 1/);
+  assert.match(banner.textContent, /Already mapped to T1/);
   assert.doesNotMatch(banner.textContent, /phone-1::toggle-1|toggle-1/);
 
   const replace = banner.children.find((child) => child.textContent === 'Replace');

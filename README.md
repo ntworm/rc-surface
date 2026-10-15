@@ -18,11 +18,13 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 **2.0.0 breaks compatibility:** previous project profiles, presets, mappings and browser performance settings are not imported. Configure this version from a fresh state. Existing files are not deleted. This is a local candidate, not a published release.
 
+Eight uniform toggles start in Global. Square is the single 0-to-depth pulse waveform, with swing/ratchet in Advanced; there is no separate Stutter option. CFG hides touch-owned rate/depth and filters subdivisions by the actual ceiling. Both physics XY panels have trails and frame-independent friction.
+
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.
 - Two identical XY panels, each independently configurable as Static or Physics (friction, bounce and speed).
-- Eight configurable LFO slots (`toggle-1`..`toggle-8`), each with Stutter among its waveforms, and performance utility controls (CAP, OFF, 4 snapshot slots).
+- Eight configurable LFO slots (`toggle-1`..`toggle-8`), each with Square among its waveforms, and performance utility controls (CAP, OFF, 4 snapshot slots).
 - Phone sensors: motion, orientation, audio, and optional camera hand tracking
   via bundled MediaPipe Hands (no CDN).
 - Single-hand vision tracking by design.
@@ -50,9 +52,9 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 ## 1.0 Highlights
 
-- **Config Mode (CFG):** configure each LFO slot (L1–L8), including Stutter as a waveform, and choose Static or Physics independently for each XY. Physics has separate friction, bounce and speed. Pad modes, knob sensitivity and fader reset values remain configurable. Open `CFG` in the phone header; hold it to clear overrides. Performance settings use `ableton-rc:v2:control_config` and are included in new projects and presets.
-- **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 12 Hz).
-- **Desktop keyboard control:** every continuous control (knob, fader, XY pad, toggle, stutter) accepts keyboard nudges while the phone client has focus, so the desktop mapping panel and the phone UI share the same gesture model.
+- **Config Mode (CFG):** configure each LFO slot (T1–T8), including Square as a waveform, and choose Static or Physics independently for each XY. Physics has separate friction, bounce and speed. Pad modes, knob sensitivity and fader reset values remain configurable. Open `CFG` in the phone header; hold it to clear overrides. Performance settings use `ableton-rc:v3:control_config` and are included in new projects and presets.
+- **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 15 Hz).
+- **Desktop keyboard control:** every continuous control (knob, fader, XY pad, toggle, square) accepts keyboard nudges while the phone client has focus, so the desktop mapping panel and the phone UI share the same gesture model.
 - **K-weighted loudness:** the AUD tab reports ITU-R BS.1770 K-weighted momentary, short-term and integrated loudness, alongside the existing twelve descriptors.
 
 ## AbletonOSC Integration (Transport Lite & Deep Sync)
@@ -61,7 +63,7 @@ RC Surface includes built-in optional integration with **AbletonOSC** to enable 
 
 - **Transport Lite**: Tap the `TRN` button in the header topbar to open a full-screen transport overlay. Control Play, Stop, Prev/Next locator, and trigger locator jumps. Includes a search input to filter locators list dynamically.
 - **Visual Metronome**: The `TRN` button rhythmically flashes in sync with Ableton Live's playback beat (Beat 1 flashes green, other beats flash blue).
-- **Deep Sync Settings**: Tap the gear icon (`⚙`) next to `SYNC` (or long-press `SYNC`) to open the Deep Sync Settings panel. Select Clock Source (AbletonOSC, SDK BPM Simulator, or Free/Internal), and configure subdivisions, phase offsets, swing, and shapes for LFOs and Stutters. Settings are persisted in local storage.
+- **Deep Sync Settings**: Tap the gear icon (`⚙`) next to `SYNC` (or long-press `SYNC`) to open the Deep Sync Settings panel. Select Clock Source (AbletonOSC, SDK BPM Simulator, or Free/Internal), and configure subdivisions, phase offsets, swing, and shapes for LFOs and Squares. Settings are persisted in local storage.
 - **Selected Target Picker Helper**: Tap `Selected in Live` in the mobile parameter mapping view to automatically query the selected track and device from the host and pre-populate the search filter.
 
 To use the AbletonOSC features, ensure the **AbletonOSC** extension is running in Ableton Live (outgoing port `11000`, incoming port `11001`). The extension automatically detects its presence and updates the status (`SYNCED` / `SDK` / `FREE`).

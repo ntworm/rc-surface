@@ -101,3 +101,17 @@ test('the public audio catalog exposes all twelve normalized descriptor controls
   assert.equal(profiles['sensor.audio.snare'].kind, 'momentary');
   assert.equal(profiles['sensor.audio.brightness'].kind, 'continuous');
 });
+
+test('MAP catalog exposes one complete Toggles group without retired button IDs',()=>{
+  const groups=getControlGroups();const group=groups.find(entry=>entry.items.includes('toggle-8'));
+  assert.ok(group);assert.equal(group.group,'Toggles (1-8)');
+  assert.deepEqual(Array.from(group.items),Array.from({length:8},(_,i)=>`toggle-${i+1}`));
+  assert.ok(groups.every(entry=>entry.items.every(name=>!/^button-/.test(name))));
+});
+test('starter templates address only the new eight toggles',()=>{
+  vm.runInContext(fs.readFileSync(path.join(import.meta.dirname,'../panel/templates.js'),'utf8'),context);
+  for(const template of Object.values(context.MappingTemplates)) for(const name of Object.keys(template.mappings)) {
+    if(/^(toggle|button)-/.test(name))assert.match(name,/^toggle-[1-8]$/);
+  }
+  assert.equal(context.MappingTemplates['instrument-macro'].mappings['toggle-5'][0].type,'track_solo');
+});

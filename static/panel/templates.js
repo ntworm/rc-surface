@@ -50,7 +50,7 @@ window.MappingTemplates = {
   },
   'instrument-macro': {
     name: 'Instrument Macros & Solos',
-    description: '8 knobs mapped to Device 1 parameters, and 4 solo buttons.',
+    description: '8 knobs mapped to Device 1 parameters, and solo modulation on toggles 5–8.',
     mappings: {
       'knob-1': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 1, label: 'Macro 1', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-2': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 2, label: 'Macro 2', outMin: 0, outMax: 1, curve: 'linear' }],
@@ -60,10 +60,10 @@ window.MappingTemplates = {
       'knob-6': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 6, label: 'Macro 6', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-7': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 7, label: 'Macro 7', outMin: 0, outMax: 1, curve: 'linear' }],
       'knob-8': [{ type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 8, label: 'Macro 8', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-1': [{ type: 'track_solo', trackIndex: 0, label: 'Track 1 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-2': [{ type: 'track_solo', trackIndex: 1, label: 'Track 2 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-3': [{ type: 'track_solo', trackIndex: 2, label: 'Track 3 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-4': [{ type: 'track_solo', trackIndex: 3, label: 'Track 4 Solo', outMin: 0, outMax: 1, curve: 'linear' }]
+      'toggle-5': [{ type: 'track_solo', trackIndex: 0, label: 'Track 1 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-6': [{ type: 'track_solo', trackIndex: 1, label: 'Track 2 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-7': [{ type: 'track_solo', trackIndex: 2, label: 'Track 3 Solo', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-8': [{ type: 'track_solo', trackIndex: 3, label: 'Track 4 Solo', outMin: 0, outMax: 1, curve: 'linear' }]
     }
   },
   'performance': {
@@ -74,10 +74,10 @@ window.MappingTemplates = {
       'xy-1.y': [{ type: 'mixer_send', trackIndex: 0, sendIndex: 1, label: 'Track 1 Send B', outMin: 0, outMax: 1, curve: 'linear' }],
       'xy-2.x': [{ type: 'mixer_send', trackIndex: 1, sendIndex: 0, label: 'Track 2 Send A', outMin: 0, outMax: 1, curve: 'linear' }],
       'xy-2.y': [{ type: 'mixer_send', trackIndex: 1, sendIndex: 1, label: 'Track 2 Send B', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-1': [{ type: 'track_arm', trackIndex: 0, label: 'Track 1 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-2': [{ type: 'track_arm', trackIndex: 1, label: 'Track 2 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-3': [{ type: 'track_arm', trackIndex: 2, label: 'Track 3 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
-      'button-4': [{ type: 'track_arm', trackIndex: 3, label: 'Track 4 Arm', outMin: 0, outMax: 1, curve: 'linear' }]
+      'toggle-5': [{ type: 'track_arm', trackIndex: 0, label: 'Track 1 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-6': [{ type: 'track_arm', trackIndex: 1, label: 'Track 2 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-7': [{ type: 'track_arm', trackIndex: 2, label: 'Track 3 Arm', outMin: 0, outMax: 1, curve: 'linear' }],
+      'toggle-8': [{ type: 'track_arm', trackIndex: 3, label: 'Track 4 Arm', outMin: 0, outMax: 1, curve: 'linear' }]
     }
   }
 };

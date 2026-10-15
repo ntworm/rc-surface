@@ -880,3 +880,16 @@ test('Connect HANDS tiles show the live hand X/Y/Z coming from the phone', () =>
   assert.equal(y.textContent, '0.33', 'hand Y must track the phone reading');
   assert.equal(z.textContent, '0.66', 'hand Z must track the phone reading');
 });
+
+test('fresh panel has no previous-install migration banner or scheduled migration query',()=>{
+  const source=fs.readFileSync(new URL('./app.js',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/checkMigrationNotice|showMigrationNotice|migration-notice|Migrate-RC-Surface-Data/);
+});
+
+test('extension/browser panel consistently names all eight toggles T1-T8',()=>{
+  const {context}=loadPanelApp();
+  for(let i=1;i<=8;i++) {
+    assert.equal(context.controlCellName(`toggle-${i}`),`T${i}`);
+    assert.equal(context.getControlDisplayName(`toggle-${i}`),`T${i} (Toggle)`);
+  }
+});

@@ -82,7 +82,7 @@ test('RCSurface.snapshots loads, captures, and persists 8 snapshot slots', () =>
   assert.deepEqual(snaps.getSnapshots()[0], { 'pad-1': 0.8 });
 
   // Persistence check in localStorage
-  const saved = env.store.get('ableton-rc:v2:snapshots');
+  const saved = env.store.get('ableton-rc:v3:snapshots');
   assert.ok(saved, 'Snapshots must be saved to localStorage');
   const parsed = JSON.parse(saved);
   assert.equal(parsed.length, 8);
@@ -300,23 +300,23 @@ test('Vector Pad Interpolation with 4 snapshots without ReferenceError', () => {
   }, 'setupVectorPad must access snapshots via getSnapshots() without ReferenceError');
 });
 
-test('stutter depth, rate, count captured including zero and recalled without 0.5 fallback', () => {
-  const stutters = new Map();
+test('pulse depth, rate, count captured including zero and recalled without 0.5 fallback', () => {
+  const pulses = new Map();
   for (let i = 1; i <= 4; i++) {
-    stutters.set(`toggle-${i+4}`, {
+    pulses.set(`toggle-${i+4}`, {
       active: false,
       rate: 0,
       depth: 0,
       count: 0,
     });
   }
-  const emittedStutters = [];
+  const emittedPulses = [];
   const env = loadModule({
     window: {
       currentControlStates: {},
-      modulatorStates: stutters,
+      modulatorStates: pulses,
       sendModulatorState(name, state, extra) {
-        emittedStutters.push({ name, ...state, ...extra });
+        emittedPulses.push({ name, ...state, ...extra });
       },
     },
   });
@@ -336,7 +336,7 @@ test('stutter depth, rate, count captured including zero and recalled without 0.
 
   // Change current states to non-zero values
   for (let i = 1; i <= 4; i++) {
-    const s = stutters.get(`toggle-${i+4}`);
+    const s = pulses.get(`toggle-${i+4}`);
     s.active = true;
     s.depth = 0.8;
     s.rate = 0.5;
@@ -344,28 +344,28 @@ test('stutter depth, rate, count captured including zero and recalled without 0.
   }
 
   // Recall slot 0
-  emittedStutters.length = 0;
+  emittedPulses.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const recalledS1 = emittedStutters.find((e) => e.name === 'toggle-5');
-  assert.ok(recalledS1, 'Recall must emit stutter target for toggle-5');
+  const recalledS1 = emittedPulses.find((e) => e.name === 'toggle-5');
+  assert.ok(recalledS1, 'Recall must emit pulse target for toggle-5');
   assert.equal(recalledS1.depth, 0, 'Recalled depth must remain 0, not fallback to 0.5');
   assert.equal(recalledS1.rate, 0, 'Recalled rate must remain 0');
   assert.equal(recalledS1.count, 0, 'Recalled count must remain 0');
   assert.equal(recalledS1.active, false, 'Recalled pressed must be false');
 });
 
-test('stutter non-zero finite values are captured and restored correctly', () => {
-  const stutters = new Map([
+test('pulse non-zero finite values are captured and restored correctly', () => {
+  const pulses = new Map([
     ['toggle-5', { active: true, depth: 0.72, rate: 0.44, count: .75 }],
   ]);
-  const emittedStutters = [];
+  const emittedPulses = [];
   const env = loadModule({
     window: {
       currentControlStates: {},
-      modulatorStates: stutters,
+      modulatorStates: pulses,
       sendModulatorState(name, state, extra) {
-        emittedStutters.push({ name, ...state, ...extra });
+        emittedPulses.push({ name, ...state, ...extra });
       },
     },
   });
@@ -380,14 +380,14 @@ test('stutter non-zero finite values are captured and restored correctly', () =>
   assert.equal(captured['toggle-5.rate'], 0.44);
   assert.equal(captured['toggle-5.count'], .75);
 
-  stutters.get('toggle-5').depth = 0.1;
-  stutters.get('toggle-5').rate = 0.2;
-  stutters.get('toggle-5').count = 1;
+  pulses.get('toggle-5').depth = 0.1;
+  pulses.get('toggle-5').rate = 0.2;
+  pulses.get('toggle-5').count = 1;
 
-  emittedStutters.length = 0;
+  emittedPulses.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const emitted = emittedStutters.find((e) => e.name === 'toggle-5');
+  const emitted = emittedPulses.find((e) => e.name === 'toggle-5');
   assert.ok(emitted);
   assert.equal(emitted.depth, 0.72);
   assert.equal(emitted.rate, 0.44);
@@ -395,17 +395,17 @@ test('stutter non-zero finite values are captured and restored correctly', () =>
 });
 
 test('legacy snapshot without depth/rate/count preserves current values and never injects 0.5 fallback', () => {
-  const stutters = new Map([
+  const pulses = new Map([
     ['toggle-5', { active: false, depth: 0.25, rate: 0.15, count: .5 }],
     ['toggle-6', { active: false }],
   ]);
-  const emittedStutters = [];
+  const emittedPulses = [];
   const env = loadModule({
     window: {
       currentControlStates: {},
-      modulatorStates: stutters,
+      modulatorStates: pulses,
       sendModulatorState(name, state, extra) {
-        emittedStutters.push({ name, ...state, ...extra });
+        emittedPulses.push({ name, ...state, ...extra });
       },
     },
   });
@@ -416,16 +416,16 @@ test('legacy snapshot without depth/rate/count preserves current values and neve
   const legacySnap = { 'toggle-5': 1.0, 'toggle-6': 0.0 };
   snaps.getSnapshots()[0] = legacySnap;
 
-  emittedStutters.length = 0;
+  emittedPulses.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const emitted1 = emittedStutters.find((e) => e.name === 'toggle-5');
+  const emitted1 = emittedPulses.find((e) => e.name === 'toggle-5');
   assert.ok(emitted1, 'Recall must emit for toggle-5');
   assert.equal(emitted1.active, true, 'Pressed state should be true');
-  assert.equal(stutters.get('toggle-5').depth, 0.25, 'Current stutter depth must be preserved');
+  assert.equal(pulses.get('toggle-5').depth, 0.25, 'Current pulse depth must be preserved');
   assert.notEqual(emitted1.depth, 0.5, 'Must never inject fallback 0.5 for toggle-5');
 
-  const emitted2 = emittedStutters.find((e) => e.name === 'toggle-6');
+  const emitted2 = emittedPulses.find((e) => e.name === 'toggle-6');
   assert.ok(emitted2, 'Recall must emit for toggle-6');
   assert.equal(emitted2.active, false, 'Pressed state should be false');
   assert.equal(emitted2.depth, undefined, 'Must not inject fallback 0.5 when depth is absent from both snapshot and state');

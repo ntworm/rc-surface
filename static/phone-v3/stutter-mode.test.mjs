@@ -45,19 +45,19 @@ function makeElement(dataset = {}) {
   };
 }
 
-function loadControls(stutterName = 'toggle-5', { snapshots = false, syncPanel = false, stutterBar = null } = {}) {
+function loadControls(pulseName = 'toggle-5', { snapshots = false, syncPanel = false, pulseBar = null } = {}) {
   const engineFile = path.join(import.meta.dirname, 'mode-engine.js');
   const controlsFile = path.join(import.meta.dirname, 'controls.js');
   const engineSource = fs.readFileSync(engineFile, 'utf8');
   const controlsSource = fs.readFileSync(controlsFile, 'utf8');
 
-  const stutter = makeElement({ name: stutterName });
+  const pulse = makeElement({ name: pulseName });
   // P04 (rc-surface-modulator-quality-2026-09-16): inject an optional
-  // .mod-val-bar child on the stutter gate so makeStutterButton can capture
+  // .mod-val-bar child on the pulse gate so makePulseButton can capture
   // it via el.querySelector('.mod-val-bar'). The override must land BEFORE
   // controls.js runs, otherwise the closure already bound `bar` to null.
-  if (stutterBar) {
-    stutter.querySelector = (selector) => (selector === '.mod-val-bar' ? stutterBar : null);
+  if (pulseBar) {
+    pulse.querySelector = (selector) => (selector === '.mod-val-bar' ? pulseBar : null);
   }
   const lfo = makeElement({ name: 'toggle-1' });
   const overlay = makeElement();
@@ -75,14 +75,14 @@ function loadControls(stutterName = 'toggle-5', { snapshots = false, syncPanel =
       getElementById: id => syncPanel && id === 'sync-settings-overlay' ? overlay
         : syncPanel && id === 'lfo-effective-rate' ? rateReadout : null,
       querySelector(selector) {
-        if (selector === `.toggle[data-name="${stutterName}"]`) return stutter;
+        if (selector === `.toggle[data-name="${pulseName}"]`) return pulse;
         if (selector === '.toggle[data-name="toggle-1"]') return lfo;
         return null;
       },
       querySelectorAll(selector) {
         if (selector === '[data-pad-mode-set]') return modeButtons;
-        if (selector === '.toggle') return [lfo, stutter];
-        if (selector === '.button') return [stutter];
+        if (selector === '.toggle') return [lfo, pulse];
+        if (selector === '.button') return [pulse];
         return [];
       },
       addEventListener() {},
@@ -105,7 +105,7 @@ function loadControls(stutterName = 'toggle-5', { snapshots = false, syncPanel =
   context.window = context;
 
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'control-config.js'), 'utf8'), context);
-  context.RcControlConfig.set(stutterName,{shape:'stutter',rate:.1});
+  context.RcControlConfig.set(pulseName,{shape:'square',rate:.1});
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   if (snapshots) vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'modules/snapshots.js'), 'utf8'), context);
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
@@ -113,7 +113,7 @@ function loadControls(stutterName = 'toggle-5', { snapshots = false, syncPanel =
 
   return {
     context,
-    stutter,
+    pulse,
     lfo,
     rateReadout,
     modeButtons,
@@ -132,7 +132,7 @@ function pointer(pointerId, clientY) {
   return { pointerId, clientX: 50, clientY, button: 0, preventDefault() {} };
 }
 
-for (const [shape, hz] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 })) {
+for (const [shape, hz] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 })) {
   test(`r11 preview ${shape} uses its own FREE ceiling`, () => {
     const app = loadControls();
     const ctx = app.context;
@@ -143,38 +143,38 @@ for (const [shape, hz] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ram
   });
 }
 
-test('Stutter preserves amplitude and pulses at 15Hz instead of freezing above 4Hz', () => {
+test('Pulse preserves amplitude and pulses at 15Hz instead of freezing above 4Hz', () => {
   const app = loadControls();
   const ctx = app.context;
   ctx.syncMode = 'free';
   ctx.controlSetters['toggle-5.rate'](1);
   ctx.controlSetters['toggle-5.depth'](.37);
-  app.stutter.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
   app.tick(0);
-  const on = app.stutter.style.backgroundColor;
+  const on = app.pulse.style.getPropertyValue('--modulator-pulse');
   app.tick(40);
-  const off = app.stutter.style.backgroundColor;
+  const off = app.pulse.style.getPropertyValue('--modulator-pulse');
   app.tick(70);
   assert.equal(ctx.modulatorStates.get('toggle-5').depth, .37);
   assert.notEqual(on, off);
-  assert.equal(app.stutter.style.backgroundColor, on);
-  assert.equal(app.stutter.dataset.pulseView, 'pulse');
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), on);
+  assert.equal(app.pulse.dataset.pulseView, 'pulse');
   assert.equal(ctx.modulatorStates.get('toggle-5').phaseFrequency, 15);
 });
 
-test('Stutter horizontal drag releases an old capped pin; vertical-only drag preserves it', () => {
+test('Pulse horizontal drag releases an old capped pin; vertical-only drag preserves it', () => {
   const app = loadControls();
   const ctx = app.context;
   ctx.syncMode = 'sync'; ctx.currentBpm = 120;
-  ctx.syncSettings.stutterSubdivisionPinned = true;
-  ctx.syncSettings.stutterSubdivision = .03125;
-  app.stutter.listeners.pointerdown(pointer(1, 100));
-  app.stutter.listeners.pointermove(pointer(1, 80));
-  assert.equal(ctx.syncSettings.stutterSubdivisionPinned, true);
-  app.stutter.listeners.pointermove({ ...pointer(1, 80), clientX: -100 });
+  ctx.syncSettings.pulseSubdivisionPinned = true;
+  ctx.syncSettings.pulseSubdivision = .03125;
+  app.pulse.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointermove(pointer(1, 80));
+  assert.equal(ctx.syncSettings.pulseSubdivisionPinned, true);
+  app.pulse.listeners.pointermove({ ...pointer(1, 80), clientX: -100 });
   app.tick(20);
   assert.equal(ctx.RcControlConfig.get('toggle-5','subdivision'), 0);
-  assert.equal(ctx.syncSettings.stutterSubdivisionPinned, true);
+  assert.equal(ctx.syncSettings.pulseSubdivisionPinned, true);
   assert.equal(ctx.modulatorStates.get('toggle-5').phaseFrequency, 2);
   assert.equal(app.modulatorStates.at(-1).syncSubdivisionBeats, null);
 });
@@ -184,21 +184,21 @@ test('SYNC 1/16 flashes the actual 8Hz gate at 60FPS and resumes immediately aft
   const ctx = app.context;
   ctx.syncMode = 'sync'; ctx.currentBpm = 120;
   ctx.playheadActive = true; ctx.playheadStartTime = 100000; ctx.playheadBaseTimeMs = 0;
-  ctx.syncSettings.stutterSubdivisionPinned = true; ctx.syncSettings.stutterSubdivision = .25;
+  ctx.syncSettings.pulseSubdivisionPinned = true; ctx.syncSettings.pulseSubdivision = .25;
   ctx.controlSetters['toggle-5'](1);
   const colors = new Set();
   for (let frame = 0; frame < 60; frame++) {
     const at = frame * 1000 / 60;
     app.tick(at);
-    const color = app.stutter.style.backgroundColor;
+    const color = app.pulse.style.getPropertyValue('--modulator-pulse');
     colors.add(color);
-    assert.equal(color, (at % 125) < 62.5 ? 'rgba(255,159,10,0.82)' : 'rgba(255,159,10,0.10)');
+    assert.equal(color, (at % 125) < 62.5 ? '.22' : '0');
   }
   assert.equal(colors.size, 2);
   app.tick(2090);
-  assert.equal(app.stutter.style.backgroundColor, 'rgba(255,159,10,0.10)');
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), '0');
   app.tick(2125);
-  assert.equal(app.stutter.style.backgroundColor, 'rgba(255,159,10,0.82)');
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), '.22');
 });
 
 test('LFO preview changes synced rate without relocating the current phase', () => {
@@ -307,26 +307,26 @@ for (const bpm of [60, 120, 300]) {
   }
 }
 
-test('stutter mode B auto-deactivates when vertical amplitude is dragged to zero', () => {
+test('pulse mode B auto-deactivates when vertical amplitude is dragged to zero', () => {
   const app = loadControls();
   const modeB = app.modeButtons.find((btn) => btn.dataset.padModeSet === 'B');
   modeB.listeners.click();
 
-  app.stutter.listeners.pointerdown(pointer(1, 100));
-  app.stutter.listeners.pointermove(pointer(1, 200)); // dy=-100, depth=0
-  app.stutter.listeners.pointerup(pointer(1, 200));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointermove(pointer(1, 200)); // dy=-100, depth=0
+  app.pulse.listeners.pointerup(pointer(1, 200));
 
   app.tick(1000);
 
-  assert.equal(app.stutter.classList.contains('pressed'), false);
+  assert.equal(app.pulse.classList.contains('pressed'), false);
   const last = app.modulatorStates.at(-1);
   assert.equal(last.name, 'toggle-5');
   assert.equal(last.active, false);
 });
 
-test('stutter uses vertical depth and horizontal rate, preserving legacy count', () => {
+test('pulse uses vertical depth and horizontal rate, preserving legacy count', () => {
   const app = loadControls();
-  const send = (type, x, y) => app.stutter.listeners[type]({ ...pointer(1, y), clientX: x });
+  const send = (type, x, y) => app.pulse.listeners[type]({ ...pointer(1, y), clientX: x });
   app.context.controlSetters['toggle-5.count'](0.75);
   send('pointerdown', 50, 100);
   send('pointermove', 50, 55); app.tick(16);
@@ -348,8 +348,8 @@ test('vertical drag updates .mod-val-bar height to depth and resets on pointerup
   // when the gate releases. Same gesture as the depth test above.
   const bar = makeElement({}); // fake .mod-val-bar; style.height = '80%' is a direct JS prop
   assert.equal(bar.style.height, undefined); // fresh bar, no prior paint
-  const app = loadControls('toggle-5', { stutterBar: bar });
-  const send = (type, x, y) => app.stutter.listeners[type]({ ...pointer(1, y), clientX: x });
+  const app = loadControls('toggle-5', { pulseBar: bar });
+  const send = (type, x, y) => app.pulse.listeners[type]({ ...pointer(1, y), clientX: x });
 
   send('pointerdown', 50, 100);
   send('pointermove', 50, 55); app.tick(16);
@@ -366,12 +366,12 @@ test('vertical drag updates .mod-val-bar height to depth and resets on pointerup
   assert.ok(Number.parseFloat(bar.style.height) >= 0);
 });
 
-test('stutter depth setter paints the .mod-val-bar so snapshots re-show the saved depth', () => {
+test('pulse depth setter paints the .mod-val-bar so snapshots re-show the saved depth', () => {
   // P04 (rc-surface-modulator-quality-2026-09-16): when a snapshot restores
   // depth through controlSetters[name.depth], the bar must repaint even though
   // no gesture is happening — otherwise the bar stays at 0% and lies.
   const bar = makeElement({});
-  const app = loadControls('toggle-5', { stutterBar: bar });
+  const app = loadControls('toggle-5', { pulseBar: bar });
   const setter = app.context.controlSetters['toggle-5.depth'];
   setter(0.7);
   assert.equal(app.context.modulatorStates.get('toggle-5').depth, 0.7);
@@ -382,19 +382,19 @@ test('stutter depth setter paints the .mod-val-bar so snapshots re-show the save
   assert.equal(bar.style.height, '100%');
 });
 
-test('stutter mode B keeps horizontal speed drag latched even at zero rate', () => {
+test('pulse mode B keeps horizontal speed drag latched even at zero rate', () => {
   const app = loadControls();
   app.modeButtons.find(btn => btn.dataset.padModeSet === 'B').listeners.click();
-  app.stutter.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
   const end = { ...pointer(1, 100), clientX: 0 };
-  app.stutter.listeners.pointermove(end); app.stutter.listeners.pointerup(end);
+  app.pulse.listeners.pointermove(end); app.pulse.listeners.pointerup(end);
   const state = app.context.modulatorStates.get('toggle-5');
   assert.equal(state.rate, 0);
   assert.equal(state.depth, 0.5);
   assert.equal(state.active, true);
 });
 
-test('stutter amplitude setter clamps, rejects non-finite data and respects morph suppression', () => {
+test('pulse amplitude setter clamps, rejects non-finite data and respects morph suppression', () => {
   const app = loadControls();
   const setter = app.context.controlSetters['toggle-5.depth'];
   assert.equal(typeof setter, 'function');
@@ -408,7 +408,7 @@ test('stutter amplitude setter clamps, rejects non-finite data and respects morp
   assert.equal(app.modulatorStates.length, before);
 });
 
-test('stutter snapshot recalls depth with one host morph and preserves depth in old snapshots', () => {
+test('pulse snapshot recalls depth with one host morph and preserves depth in old snapshots', () => {
   const app = loadControls('toggle-5', { snapshots: true });
   const { context } = app;
   const setter = context.controlSetters['toggle-5.depth'];
@@ -418,68 +418,68 @@ test('stutter snapshot recalls depth with one host morph and preserves depth in 
   snapshots.setSnapshotCaptureMode(true); snapshots.handleSnapshotSlot(0);
   setter(0.2); app.modulatorStates.length = 0;
   snapshots.handleSnapshotSlot(0);
-  const stutterEvents = () => app.modulatorStates.filter(event => event.name === 'toggle-5');
-  assert.equal(stutterEvents().length, 1);
-  assert.equal(stutterEvents()[0].depth, 0.8);
-  assert.equal(stutterEvents()[0].morphMs, 1000);
+  const pulseEvents = () => app.modulatorStates.filter(event => event.name === 'toggle-5');
+  assert.equal(pulseEvents().length, 1);
+  assert.equal(pulseEvents()[0].depth, 0.8);
+  assert.equal(pulseEvents()[0].morphMs, 1000);
   app.tick(500); assert.ok(Math.abs(context.modulatorStates.get('toggle-5').depth - 0.5) < 1e-9);
   app.tick(1000); assert.equal(context.modulatorStates.get('toggle-5').depth, 0.8);
-  assert.equal(stutterEvents().length, 1, 'local interpolation must not restart host morph');
+  assert.equal(pulseEvents().length, 1, 'local interpolation must not restart host morph');
   app.modulatorStates.length = 0;
   snapshots.startLinearMorph({ 'toggle-5.rate': 0.3 }, 1);
   assert.equal(app.modulatorStates[0].depth, 0.8, 'old snapshot missing depth retains current amplitude');
   app.tick(2000); assert.equal(context.modulatorStates.get('toggle-5').depth, 0.8);
 });
 
-test('stutter visual state follows the active performance mode while pulsing the full interior', () => {
+test('pulse visual state follows the active performance mode while pulsing the full interior', () => {
   const app = loadControls();
   const modeC = app.modeButtons.find((btn) => btn.dataset.padModeSet === 'C');
   modeC.listeners.click();
 
-  app.stutter.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
 
-  assert.equal(app.stutter.classList.contains('mode-c'), true);
+  assert.equal(app.pulse.classList.contains('mode-c'), true);
 
   app.tick(16);
 
-  assert.match(app.stutter.style.backgroundColor, /^rgba\(255,\s*159,\s*10,/);
-  assert.equal(app.stutter.style.getPropertyValue('--stut-glow-size'), '12px');
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), '.22');
+  assert.equal(app.pulse.style.getPropertyValue('--stut-glow-size'), '');
 });
 
-test('stutter keeps emitting while hidden but skips visual writes until Performance returns', () => {
+test('pulse keeps emitting while hidden but skips visual writes until Performance returns', () => {
   const app = loadControls();
   const modeB = app.modeButtons.find((btn) => btn.dataset.padModeSet === 'B');
   modeB.listeners.click();
 
-  app.stutter.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
 
   app.context.document.body.dataset.page = 'media';
   app.tick(1000);
 
-  assert.equal(app.stutter.style.backgroundColor, '');
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), '');
   assert.equal(app.modulatorStates.at(-1).name, 'toggle-5');
 
   app.context.document.body.dataset.page = 'performance';
   app.tick(1016);
 
-  assert.match(app.stutter.style.backgroundColor, /^rgba\(255,\s*159,\s*10,/);
+  assert.equal(app.pulse.style.getPropertyValue('--modulator-pulse'), '.22');
 });
 
-test('stutter high sync rates send configuration, never per-frame pulse samples', () => {
+test('pulse high sync rates send configuration, never per-frame pulse samples', () => {
   const app = loadControls();
   const modeB = app.modeButtons.find((btn) => btn.dataset.padModeSet === 'B');
   modeB.listeners.click();
 
-  app.stutter.listeners.pointerdown(pointer(1, 100));
+  app.pulse.listeners.pointerdown(pointer(1, 100));
   app.context.controlSetters['toggle-5.rate'](1);
   app.context.controlSetters['toggle-5.count'](1);
 
   app.tick(1002);
 
-  const stutterEvents = app.emitted.filter((event) => event.name === 'toggle-5');
-  assert.equal(stutterEvents.length, 0);
+  const pulseEvents = app.emitted.filter((event) => event.name === 'toggle-5');
+  assert.equal(pulseEvents.length, 0);
   assert.equal(app.modulatorStates.at(-1).name, 'toggle-5');
-  assert.equal(app.modulatorStates.at(-1).kind, 'stutter');
+  assert.equal(app.modulatorStates.at(-1).kind, 'pulse');
   assert.equal(app.modulatorStates.at(-1).active, true);
 });
 

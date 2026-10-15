@@ -67,7 +67,7 @@
     "Twelve performance pads with four modes (momentary, hold, toggle, burst)",
     "Two XY pads, each with optional independent physics",
     "Eight knobs and eight faders for the mixer",
-    "Eight configurable LFO/Stutter slots and two configurable XY panels",
+    "Eight configurable toggle slots and two configurable XY panels",
     "Eight snapshots with timed and vector morph",
     "Motion and orientation sensors as mapping sources",
     "Twelve audio descriptors from the phone microphone or an audio interface",
@@ -1250,8 +1250,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">
     <text x="59" y="94">PADS</text>
     <text x="444" y="94"></text>
-    <text x="694" y="94">LFO 1–4</text>
-    <text x="839" y="94">LFO 5–8</text>
+    <text x="766" y="94">TOGGLES</text>
     <text x="984" y="94">UTIL</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
@@ -1333,10 +1332,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="751" y="290" width="59" height="96"/>
   </g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
-    <text x="681" y="118">L1</text>
-    <text x="753" y="118">L2</text>
-    <text x="681" y="266">L3</text>
-    <text x="753" y="266">L4</text>
+    <text x="681" y="118">T1</text>
+    <text x="753" y="118">T2</text>
+    <text x="681" y="266">T3</text>
+    <text x="753" y="266">T4</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
     <rect x="820" y="100" width="67" height="142"/>
@@ -1346,10 +1345,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <rect x="820" y="100" width="67" height="142" fill="#e47b1a" stroke="none"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="16">
-    <text x="842" y="180" fill="#141414">L5</text>
-    <text x="914" y="180" fill="#c0c0c0">L6</text>
-    <text x="842" y="328" fill="#c0c0c0">L7</text>
-    <text x="914" y="328" fill="#c0c0c0">L8</text>
+    <text x="842" y="180" fill="#141414">T5</text>
+    <text x="914" y="180" fill="#c0c0c0">T6</text>
+    <text x="842" y="328" fill="#c0c0c0">T7</text>
+    <text x="914" y="328" fill="#c0c0c0">T8</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
     <rect x="965" y="100" width="55" height="92"/>
@@ -1383,7 +1382,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">2</td><td data-i18n="lp.map.013">Pad grid</td><td class="c2">12</td><td data-i18n="lp.map.014">Four across, three down. Behaviour comes from the pad mode, not the pad.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.015">Pad mode</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentary, B hold, C toggle, D burst. Sets all twelve; CFG overrides one pad.</td></tr>
               <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Captioned <code>XY 1</code> and <code data-i18n="lp.fig.016">XY 2</code>. Each axis maps on its own.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">L1 to L4. Hz in FREE, note values in SYNC. Ceilings: sine 4 Hz, square 12 Hz. Shape in CFG.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">L1 to L4. Hz in FREE, note values in SYNC. Ceilings: sine 4 Hz, square 15 Hz. Shape in CFG.</td></tr>
               <tr><td class="c1">7</td><td>PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.023">CAP captures, slots 1 to 4 recall, OFF exits.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
@@ -1964,7 +1963,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4>MAP</h4><p data-i18n="lp.controls.058">Opens the mapping picker over the current page.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
-          <h4>CFG</h4><p data-i18n="lp.controls.148">Per-control settings: pad mode, eight LFO/Stutter slots, Static/Physics on either XY. PERF and MIX only.</p></span></div>
+          <h4>CFG</h4><p data-i18n="lp.controls.148">Per-control settings: pad mode, eight toggle slots, Static/Physics on either XY. PERF and MIX only.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-wave"/></svg></span><span class="bd">
           <h4>SYNC</h4><p data-i18n-html="lp.controls.059">Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href="#clock">2.1</a>.</p></span></div>
@@ -1999,8 +1998,8 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <div class="control-sheet" id="control-family-performance" data-control-family="performance" role="region" aria-labelledby="control-label-performance">
       <div class="feature">
         <div class="feature-copy">
-          <h3 data-i18n="lp.controls.074">Pads, LFOs, stutters</h3>
-          <p data-i18n-html="lp.controls.075"><code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. LFOs and stutters share the clock: locked to Live's beat in SYNC, free-running in FREE.</p>
+          <h3 data-i18n="lp.controls.074">Pads, LFOs, squares</h3>
+          <p data-i18n-html="lp.controls.075"><code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. LFOs and squares share the clock: locked to Live's beat in SYNC, free-running in FREE.</p>
         </div>
         <div class="feature-figure">
                     <div class="pf-wrap" data-control-illustration="performance">

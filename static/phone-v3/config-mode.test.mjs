@@ -370,3 +370,25 @@ test('switching away from PERF/MIX turns CFG off automatically', () => {
   cfg._internals.onPageChange({ detail: { page: 'mixer' } });
   assert.equal(cfg.state.on, true);
 });
+
+test('compact select keeps numeric option types and details start collapsed',()=>{
+  const {cfg,documentRef}=createConfigMode();let chosen;
+  cfg.register('toggle-1',()=>[
+    {select:{label:'Subdivision',options:[{label:'Global',value:'Global'},{label:'1/16',value:.25}],get:()=>.25,set:v=>{chosen=v;}}},
+    {details:{label:'Advanced',items:[{info:{text:'Phase'}}]}},
+  ]);
+  cfg.open('toggle-1',{left:0,top:10,bottom:30});
+  const body=documentRef.getElementById('control-config-menu').children[1];
+  const select=body.children[0].children[1];
+  assert.equal(select.tagName,'SELECT');assert.equal(select.value,'1');
+  select._listeners.change();assert.equal(chosen,.25);
+  assert.equal(body.children[1].tagName,'DETAILS');assert.ok(!body.children[1].open);
+});
+
+test('small viewport bounds the whole popover rather than only its body',()=>{
+  const {cfg,documentRef,windowRef}=createConfigMode();windowRef.innerHeight=260;windowRef.innerWidth=320;
+  documentRef.documentElement.clientHeight=260;documentRef.documentElement.clientWidth=320;
+  cfg.open('toggle-1',{left:20,top:190,bottom:230});
+  const menu=documentRef.getElementById('control-config-menu');
+  assert.equal(menu.style.maxHeight,'244px');assert.equal(menu.style.top,'8px');
+});

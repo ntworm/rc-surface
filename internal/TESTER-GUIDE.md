@@ -2,18 +2,18 @@
 
 Thank you for testing RC Surface v1.0.2.
 
-## Local 2.0.0 candidate acceptance
+## Local candidate 2.0.0 — toggles and XY acceptance
 
-Configure this candidate from scratch: old mappings, presets, project profiles and performance browser keys are intentionally incompatible. The prior recognition candidate remains a separate physical acceptance anchor.
+- Install only manually; record the package hash. Do not close the separate recognition/camera acceptance by inference.
+- Eight toggles T1–T8 start in Global. Change shared A/B/C/D, save/reload a project/preset/snapshot, then verify that Global still follows those changes. Test both ordinary LFOs and Square pulses.
+- Square is the only pulse waveform, 0 to depth, with swing/ratchet in Advanced. Confirm 50% depth produces 0%/50%, with no separate Stutter option.
+- Verify compact CFG: no rate/depth sliders; five waveforms, valid subdivisions for BPM/shape/swing/ratchet, no subdivision row in FREE. Expand Advanced in short portrait/landscape viewports and reach every field without clipping.
+- Verify one centred TOGGLES title, T1–T8 ordering, short waveform labels, A/B/C/D colours matching pads, thin value rail and no oversized yellow/blue bar or legacy migration banner.
+- For both XY, exercise Static/Static, Physics/Static, Static/Physics and Physics/Physics, with different friction/speed/bounce. Trails are independent and disappear on Static/OFF/after stopping. Hold still before releasing: no stale fling. Compare the feel at different frame rates; real hardware remains to be judged.
+- The first 2.0.0 candidate's browser performance overrides/snapshots and schema-1 performance payload are not imported. Existing files remain; this candidate starts with fresh performance settings. Reconfigure deliberately, without running an old migration script.
+- Recognition, MIDI, loss and the two Max companions retain the previous source; repeat physical regressions separately.
 
-- Manually install RC-Surface-2.0.0.ablx only when selected by the operator; verify SHA256SUMS.txt.
-- In CFG, exercise eight LFOs, eight Stutters, 1+7, 7+1 and a mixed layout. All controls are L1–L8 with identical interaction. Check independent shape, mode, FREE/SYNC, subdivisions, phase, depth, swing and ratchet.
-- Exercise both XY panels as Static/Static, Physics/Static, Static/Physics and Physics/Physics. Use different friction, bounce and speed. Static switch/OFF must stop motion; opening CFG must not send values.
-- Save/reload a new preset, project profile and snapshot; verify target identity and configuration, including XY settings. Old import formats must fail clearly.
-- Re-run the existing recognition/thumb, MIDI bytes, loss/return and prolonged camera checklist below. These remain physical acceptance, not automated proof.
-- Browser geometry/real phone acceptance is pending. No automatic browser/camera/Live operation was used for this candidate.
-
-The sections below describe previous acceptance procedures and historical 1.0.2 kit details; they do not claim 2.0.0 physical approval.
+The sections below describe historical 1.0.2 kit procedures, not 2.0.0 physical approval.
 
 ## Current kit: 1.0.2
 

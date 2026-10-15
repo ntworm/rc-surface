@@ -2839,7 +2839,7 @@ export const commands: Record<string, CommandSpec> = {
 
       const saved = {
         format: 'rc-surface-preset', version: 2, mappings: obj,
-        performance: validatePerformanceSettings(args["performance"] ?? currentProjectPreferences.performance ?? {version: 1, slots: {}}),
+        performance: validatePerformanceSettings(args["performance"] ?? currentProjectPreferences.performance ?? {version: 2, slots: {}}),
       };
       const staged = await stageTextFile(filePath, JSON.stringify(saved, null, 2));
       await staged.commit();

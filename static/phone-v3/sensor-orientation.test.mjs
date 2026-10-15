@@ -173,7 +173,7 @@ test('Modulator state sends an immediate host-modulator message after handshake'
   const socket = completeHandshake(context);
 
   context.window.onModulatorState({
-    kind: 'stutter',
+    kind: 'pulse',
     name: 'toggle-5',
     active: true,
     rate: 1,
@@ -187,7 +187,7 @@ test('Modulator state sends an immediate host-modulator message after handshake'
     client_id: 'client-1',
     ts: socket.sent.at(-1).ts,
     modulator: {
-      kind: 'stutter',
+      kind: 'pulse',
       name: 'toggle-5',
       active: true,
       rate: 1,
@@ -199,7 +199,7 @@ test('Modulator state sends an immediate host-modulator message after handshake'
   assert.equal(typeof socket.sent.at(-1).ts, 'number');
 });
 
-test('LFO and Stutter Auto clear survives actual modulator WebSocket serialization', () => {
+test('LFO and Pulse Auto clear survives actual modulator WebSocket serialization', () => {
   const context = loadApp();
   const socket = completeHandshake(context);
   const config = { kind: 'lfo', name: 'toggle-1', active: true, rate: 1,
@@ -210,7 +210,7 @@ test('LFO and Stutter Auto clear survives actual modulator WebSocket serializati
   assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
   context.onModulatorState(config);
   assert.equal(Object.hasOwn(socket.sent.at(-1).modulator, 'syncSubdivisionBeats'), false);
-  context.onModulatorState({ ...config, kind: 'stutter', name: 'toggle-5', syncSubdivisionBeats: null });
+  context.onModulatorState({ ...config, kind: 'pulse', name: 'toggle-5', syncSubdivisionBeats: null });
   assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
 });
 

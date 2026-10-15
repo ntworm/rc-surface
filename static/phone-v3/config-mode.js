@@ -93,7 +93,7 @@
       const title = documentRef.createElement("span");
       title.className = "cfg-menu-title";
       title.setAttribute("data-cfg-menu-title", "");
-      title.textContent = name || "";
+      title.textContent = /^toggle-[1-8]$/.test(name) ? name.replace('toggle-','T') : name || "";
       header.appendChild(title);
       const closeBtn = documentRef.createElement("button");
       closeBtn.type = "button";
@@ -119,8 +119,8 @@
       }
       if (!Array.isArray(items)) items = [];
       renderItems(body, items);
-      positionMenu(el, anchorRect);
       el.classList.remove("hidden");
+      positionMenu(el, anchorRect);
       el.setAttribute("data-cfg-open-for", name || "");
     }
 
@@ -139,6 +139,8 @@
         if (item.segment) renderSegment(container, item.segment);
         else if (item.grid) renderGrid(container, item.grid);
         else if (item.slider) renderSlider(container, item.slider);
+        else if (item.select) renderSelect(container, item.select);
+        else if (item.details) renderDetails(container, item.details);
         else if (item.action) renderAction(container, item.action);
         else if (item.info) renderInfo(container, item.info);
       }
@@ -206,6 +208,51 @@
       }
       wrap.appendChild(group);
       container.appendChild(wrap);
+    }
+
+    function renderSelect(container, item) {
+      const row = documentRef.createElement('label');
+      row.className = 'cfg-select-row';
+      const label = documentRef.createElement('span');
+      label.className = 'cfg-item-label';
+      label.textContent = item.label;
+      row.appendChild(label);
+      const input = documentRef.createElement('select');
+      input.className = 'cfg-select';
+      const options = item.options || [];
+      const current = item.get?.();
+      options.forEach((option, index) => {
+        const element = documentRef.createElement('option');
+        element.value = String(index);
+        element.textContent = option.label;
+        element.selected = option.value === current;
+        input.appendChild(element);
+      });
+      input.value = String(Math.max(0, options.findIndex(option => option.value === current)));
+      input.addEventListener('change', () => {
+        const option = options[Number(input.value)];
+        if (!option) return;
+        item.set?.(option.value);
+        close();
+      });
+      row.appendChild(input);
+      container.appendChild(row);
+    }
+
+    function renderDetails(container, item) {
+      const details = documentRef.createElement('details');
+      details.className = 'cfg-details';
+      const summary = documentRef.createElement('summary');
+      summary.textContent = item.label;
+      details.appendChild(summary);
+      const body = documentRef.createElement('div');
+      body.className = 'cfg-advanced-body';
+      renderItems(body, item.items || []);
+      details.appendChild(body);
+      details.addEventListener('toggle', () => {
+        positionMenu(menu(), rectFor(closestDataName(state.openFor)));
+      });
+      container.appendChild(details);
     }
 
     function renderSlider(container, item) {
@@ -286,8 +333,9 @@
         || (windowRef && windowRef.innerHeight) || 768;
       const margin = 8;
       const w = Math.min(320, vw - margin * 2);
-      const h = Math.min(el.offsetHeight || 320, vh - margin * 2);
       el.style.width = w + "px";
+      el.style.maxHeight = Math.max(44,vh-margin*2) + "px";
+      const h = Math.min(el.offsetHeight || 320, vh - margin * 2);
       let left = anchorRect.left;
       let top = anchorRect.bottom + 6;
       if (left + w + margin > vw) left = Math.max(margin, vw - w - margin);

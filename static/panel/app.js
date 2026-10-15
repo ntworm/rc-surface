@@ -24,7 +24,6 @@ const GROUP_ACCENTS = {
   "PADS":      "#0a84ff",
   "XY PADS":   "#ff9f0a",
   "LFOs":      "#5e5ce6",
-  "STUTTERS":  "#ff9500",
   "KNOBS":     "#5ac8fa",
   "FADERS":    "#ffd60a",
 };
@@ -192,8 +191,8 @@ function getControlDisplayName(ctrl) {
   }
   if (ctrl.startsWith("toggle-")) {
     const num = parseInt(ctrl.slice(7));
-    if (num <= 8) return `L${num} (LFO / Stutter)`;
-    return `LFO ${num}`;
+    if (num >= 1 && num <= 8) return `T${num} (Toggle)`;
+    return ctrl;
   }
   if (ctrl.startsWith("xy-")) {
     const parts = ctrl.split(".");
@@ -291,52 +290,11 @@ window.addEventListener("DOMContentLoaded", () => {
   initAutostartToggle();
   buildCtrlGroups();
   connectWS();
-  checkMigrationNotice();
 
   // Poll server state and VU meter regularly
   setInterval(updateVUMeter, 1000);
   setInterval(refreshServerInfo, 3000);
 });
-
-/**
- * Check whether the mappings file exists. If not, show a one-line notice
- * pointing the user to the kit's Migrate-RC-Surface-Data script. The notice
- * is informational only — the extension never reads outside its storage folder.
- */
-function checkMigrationNotice() {
-  if (typeof sendWS !== "function") return;
-  // Wait briefly for WS to be ready, then query project config status.
-  const tryQuery = () => {
-    sendWS("getProjectConfigStatus", {}, (res) => {
-      if (!res || !res.result) return;
-      const status = res.result;
-      if (status.mappingsFileExists === false) {
-        showMigrationNotice();
-      }
-    });
-  };
-  // Small delay so connectWS finishes setting up the message handler.
-  setTimeout(tryQuery, 1500);
-}
-
-function showMigrationNotice() {
-  if (document.getElementById("migration-notice")) return;
-  const t = (key) => {
-    if (window.RcSurfaceI18n && typeof window.RcSurfaceI18n.t === "function") {
-      return window.RcSurfaceI18n.t(key);
-    }
-    return key;
-  };
-  const div = document.createElement("div");
-  div.id = "migration-notice";
-  div.className = "migration-notice";
-  div.setAttribute("role", "status");
-  div.textContent = t("panel.migrationNotice");
-  // Insert near the top of the main panel body.
-  const target = document.querySelector("main") || document.body;
-  target.insertBefore(div, target.firstChild);
-}
-
 
 // ── Tab Navigation ───────────────────────────────────────────
 function initTabs() {
@@ -483,7 +441,7 @@ function controlCellName(key, fallbackName) {
   if (key.startsWith("pad-")) return `PAD ${key.slice(4)}`;
   if (key.startsWith("knob-")) return `KNOB ${key.slice(5)}`;
   if (key.startsWith("fader-")) return `FADER ${key.slice(6)}`;
-  if (key.startsWith("toggle-")) return `L${key.slice(7)}`;
+  if (key.startsWith("toggle-")) return `T${key.slice(7)}`;
   if (key.startsWith("xy-")) {
     const [pad, axis = ""] = key.split(".");
     return `XY ${pad.slice(3)} ${axis.toUpperCase()}`;
@@ -618,7 +576,7 @@ function buildControlCell(key, options = {}) {
   return cell;
 }
 
-// Grouped control categories: PADS, XY PADS, LFOs, STUTTERS, KNOBS, FADERS, SENSORS.
+// Grouped control categories: PADS, XY PADS, TOGGLES, KNOBS, FADERS, SENSORS.
 // Each category is a clickable header showing name + count. Click expands
 // the same big cells used by the top Connect grid.
 function buildCtrlGroups() {
@@ -631,7 +589,6 @@ function buildCtrlGroups() {
   unregisterControlCellScope("PADS");
   unregisterControlCellScope("XY PADS");
   unregisterControlCellScope("LFOs");
-  unregisterControlCellScope("STUTTERS");
   unregisterControlCellScope("KNOBS");
   unregisterControlCellScope("FADERS");
 
@@ -663,7 +620,7 @@ function buildCtrlGroups() {
     { id: "AUDIO", label: "AUDIO", keys: audioKeys },
     { id: "PADS", label: "PADS", keys: allControlsGrouped.Pads || [] },
     { id: "XY PADS", label: "XY PADS", keys: allControlsGrouped["XY Pads"] || [] },
-    { id: "LFOs", label: "LFO 1–8", keys: allControlsGrouped.LFOs || [] },
+    { id: "LFOs", label: "TOGGLES", keys: allControlsGrouped.LFOs || [] },
     { id: "KNOBS", label: "KNOBS", keys: allControlsGrouped.Knobs || [] },
     { id: "FADERS", label: "FADERS", keys: allControlsGrouped.Faders || [] },
   ];

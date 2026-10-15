@@ -19,8 +19,7 @@
   const controlGroups = Object.freeze([
     Object.freeze({ group: 'Pads', items: Object.freeze(Array.from({ length: 12 }, (_, i) => `pad-${i + 1}`)) }),
     Object.freeze({ group: 'XY Pads', items: Object.freeze(['xy-1.x', 'xy-1.y', 'xy-2.x', 'xy-2.y']) }),
-    Object.freeze({ group: 'LFOs (1-4)', items: Object.freeze(['toggle-1', 'toggle-2', 'toggle-3', 'toggle-4']) }),
-    Object.freeze({ group: 'Stutters (Buttons 1-4)', items: Object.freeze(['button-1', 'button-2', 'button-3', 'button-4']) }),
+    Object.freeze({ group: 'Toggles (1-8)', items: Object.freeze(Array.from({length:8},(_,i)=>`toggle-${i+1}`)) }),
     Object.freeze({ group: 'Mix Knobs (1-8)', items: Object.freeze(Array.from({ length: 8 }, (_, i) => `knob-${i + 1}`)) }),
     Object.freeze({ group: 'Mix Faders (1-8)', items: Object.freeze(Array.from({ length: 8 }, (_, i) => `fader-${i + 1}`)) }),
     Object.freeze({

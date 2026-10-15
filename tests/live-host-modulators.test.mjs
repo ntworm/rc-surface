@@ -244,7 +244,8 @@ test("host synced LFO applies updated shape while already active", async () => {
     });
     await tickHostModulators(0);
 
-    assert.equal(applied.at(-2), 0.5);
+    assert.ok(applied.includes(0.5));
+    assert.equal(applied.at(-2), 0, "switch releases the previous waveform");
     assert.equal(applied.at(-1), 1);
     assert.equal(hostModulators.get("client-1::toggle-1")?.shape, "square");
   } finally {
@@ -346,13 +347,13 @@ test("host LFO motor applies to Live before publishing admin panel updates", asy
   }
 });
 
-test("host stutter motor generates mapped pulses from modulator state", async () => {
+test("host pulse motor generates mapped pulses from modulator state", async () => {
   resetState();
   const applied = setupMappedParam("toggle-5");
 
   try {
     updateHostModulator("client-1", {
-      kind: "stutter",
+      kind: "pulse",
       name: "toggle-5",
       active: true,
       rate: 1,
@@ -376,7 +377,7 @@ test("clearing a client stops host modulators and sends a final zero", async () 
 
   try {
     updateHostModulator("client-1", {
-      kind: "stutter",
+      kind: "pulse",
       name: "toggle-5",
       active: true,
       rate: 1,
@@ -405,7 +406,7 @@ test("a mode D burst shapes the values the host generates", async () => {
   // envelope applied only on the phone changes the picture and nothing else.
   const escalados = source.match(/burstEnvelope\(state, now\)/g) || [];
   assert.equal(escalados.length, 4,
-    "every generated value must be scaled: two LFO paths and two stutter gates");
+    "every generated value must be scaled: two LFO paths and two pulse gates");
 
   // The start is stamped here. Taking it from the phone would compare two
   // unrelated clocks, and a coalesced re-send would restart the envelope.
@@ -463,11 +464,11 @@ test("the subdivision tables agree on both sides of the socket", async () => {
   const lfo = [32, 16, 8, 4, 3, 8 / 3, 2, 1.5, 4 / 3, 1, 0.75, 2 / 3, 0.5,
     0.375, 1 / 3, 0.25, 0.1875, 1 / 6, 0.125, 0.09375, 1 / 12,
     0.0625, 0.046875, 1 / 24, 0.03125];
-  const stutter = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
+  const pulse = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
   assert.deepEqual(subdivisionTable(phone, 'LFO_SUBDIVISIONS'), lfo, "phone LFO table");
-  assert.deepEqual(subdivisionTable(phone, 'STUTTER_SUBDIVISIONS'), stutter, "phone stutter table");
+  assert.deepEqual(subdivisionTable(phone, 'PULSE_SUBDIVISIONS'), pulse, "phone pulse table");
   assert.deepEqual(LFO_SUBDIVISIONS, lfo, "host LFO table");
-  assert.deepEqual(subdivisionTable(host, 'STUTTER_SUBDIVISIONS'), stutter, "host stutter table");
+  assert.deepEqual(subdivisionTable(host, 'PULSE_SUBDIVISIONS'), pulse, "host pulse table");
 });
 
 test("the LFO waveform is the same curve on the phone and in the host", async () => {
@@ -500,4 +501,17 @@ test("the LFO waveform is the same curve on the phone and in the host", async ()
         `${shape} at ${phase} differs between the phone and the host`);
     }
   }
+});
+
+for(const syncMode of ['free','sync']) test(`canonical Square ${syncMode} is a zero-to-depth pulse even when sent as an LFO waveform`,async()=>{
+  resetState();const applied=setupMappedParam('toggle-8');
+  oscTransport.state.available=true;oscTransport.state.connected=true;oscTransport.state.isPlaying=true;
+  oscTransport.state.currentSongTimeBeats=0;oscTransport.lastSongTimeUpdateAt=Date.now();
+  try {
+    updateHostModulator('client-1',{kind:'lfo',name:'toggle-8',shape:'square',active:true,rate:.5,depth:.37,syncMode,clockSource:'osc'});
+    for(let t=0;t<=500;t+=10)await tickHostModulators(t);
+    assert.equal(hostModulators.get('client-1::toggle-8').kind,'pulse');
+    assert.ok(applied.some(value=>Math.abs(value-.37)<1e-6));assert.ok(applied.includes(0));
+    assert.ok(applied.every(value=>value===0 || Math.abs(value-.37)<1e-6));
+  } finally {resetState();}
 });

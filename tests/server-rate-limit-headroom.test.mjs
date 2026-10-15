@@ -10,7 +10,7 @@
 // The phone's own designed output, per second:
 //   ~30  snapshots        (app.js TICK_MS = 33)
 //  ~120  descriptor frames (short audio analysis, one batch per display frame)
-//  ~120  modulator frames (LFO/stutter drag, one per 120 Hz display frame)
+//  ~120  modulator frames (LFO/pulse drag, one per 120 Hz display frame)
 //   0.2  pings             (session.js PING_MS = 5000)
 // Anything at or below that budget must pass untouched.
 import test from "node:test";

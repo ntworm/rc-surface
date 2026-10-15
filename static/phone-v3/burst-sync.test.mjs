@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 // Pad mode D fired a fixed 520 ms envelope with a 70 ms attack, hardcoded at
-// two call sites, while LFOs and stutters both took their length from Live's
+// two call sites, while LFOs and pulses both took their length from Live's
 // tempo under SYNC. A burst is the one modulator where being off the grid is
 // audible immediately, so it now resolves its length the same way — and, like
 // the others, only while SYNC is on.
@@ -156,7 +156,7 @@ test('the panel exposes the burst the way it exposes the other families', () => 
 // A burst has to end the same way it started, everywhere it can be started.
 
 test('every mode D burst takes its length from the one resolver', () => {
-  // LFOs and stutters carried a hardcoded 1100 ms at four call sites, so the
+  // LFOs and pulses carried a hardcoded 1100 ms at four call sites, so the
   // burst length configured under SYNC governed pads only and the same press
   // lasted two different times depending on which control it landed on.
   const literais = [...source.matchAll(/burstUntil\s*=\s*performance\.now\(\)\s*\+\s*(\d+)/g)]

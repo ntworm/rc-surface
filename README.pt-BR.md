@@ -18,11 +18,13 @@ O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do ce
 
 **2.0.0 quebra compatibilidade:** projetos, presets, mappings e configurações de performance anteriores não são importados. Configure esta versão do zero. Arquivos existentes não são apagados. Candidato local; não é release publicada.
 
+Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0 até a amplitude, com swing/ratchet em Avançado; não há opção Stutter separada. CFG omite velocidade/amplitude controladas por toque e filtra subdivisões pelo teto real. Os dois XY com física têm rastro e atrito independente dos frames.
+
 ## Destaques
 
 - 12 pads de performance com os modos A/B/C/D.
 - Dois XY pads (`xy-1`, `xy-2`), cada um configurável como estático ou com física própria.
-- Oito slots LFO (`toggle-1`..`toggle-8`), cada um com Stutter entre suas ondas e atalhos de performance (CAP, OFF, 4 slots de snapshot).
+- Oito slots LFO (`toggle-1`..`toggle-8`), cada um com Square entre suas ondas e atalhos de performance (CAP, OFF, 4 slots de snapshot).
 - Sensores do celular: movimento, orientação, áudio e rastreio de mãos opcional pela câmera,
   com o MediaPipe Hands embutido (sem CDN).
 - Visão de uma mão só, por decisão de projeto.
@@ -51,9 +53,9 @@ O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do ce
 
 ## Novidades da 1.0
 
-- **Modo Config (CFG):** configure cada slot LFO (L1–L8), incluindo Stutter como onda, e escolha Estático ou Física de forma independente para cada XY. Cada física tem atrito, quique e velocidade próprios. Modos dos pads, sensibilidade dos knobs e reset dos faders continuam configuráveis. Abra `CFG` no header do celular; segure para limpar os ajustes. As configurações usam `ableton-rc:v2:control_config` e fazem parte dos novos projetos e presets.
+- **Modo Config (CFG):** configure cada slot LFO (T1–T8), incluindo Square como onda, e escolha Estático ou Física de forma independente para cada XY. Cada física tem atrito, quique e velocidade próprios. Modos dos pads, sensibilidade dos knobs e reset dos faders continuam configuráveis. Abra `CFG` no header do celular; segure para limpar os ajustes. As configurações usam `ableton-rc:v3:control_config` e fazem parte dos novos projetos e presets.
 - **Prévia da forma de onda do LFO:** o modal de ajustes do SYNC desenha a forma ativa do LFO (senoide, triangular, rampa para cima, rampa para baixo, quadrada), para você ver a curva que vai mandar para o Live, incluindo a subdivisão travada de 32 tempos e o teto de cada forma (senoide até 4 Hz, quadrada até 12 Hz).
-- **Controle pelo teclado no desktop:** todo controle contínuo (knob, fader, XY pad, toggle, stutter) aceita ajustes pelo teclado quando o cliente está em foco, então o painel de mapeamento do desktop e a interface do celular usam o mesmo modelo de gesto.
+- **Controle pelo teclado no desktop:** todo controle contínuo (knob, fader, XY pad, toggle, square) aceita ajustes pelo teclado quando o cliente está em foco, então o painel de mapeamento do desktop e a interface do celular usam o mesmo modelo de gesto.
 - **Loudness ponderado K:** a aba AUD mostra loudness momentâneo, de curto prazo e integrado com ponderação K (ITU-R BS.1770), ao lado dos doze descritores.
 
 ## Integração com o AbletonOSC (Transport Lite e Deep Sync)
@@ -62,7 +64,7 @@ O RC Surface tem integração opcional com o **AbletonOSC**, que libera transpor
 
 - **Transport Lite**: toque no botão `TRN` do header para abrir o transporte em tela cheia. Controle Play, Stop, locator anterior/próximo e pule para qualquer locator. Tem uma busca que filtra a lista de locators na hora.
 - **Metrônomo visual**: o botão `TRN` pisca no ritmo do Live (o tempo 1 pisca em verde, os outros em azul).
-- **Ajustes de Deep Sync**: toque no ícone de engrenagem (`⚙`) ao lado do `SYNC` (ou segure o `SYNC`) para abrir os ajustes. Escolha a fonte de clock (AbletonOSC, simulador de BPM do SDK ou Free/interno) e configure subdivisões, deslocamento de fase, swing e formas dos LFOs e stutters. Os ajustes ficam salvos no navegador.
+- **Ajustes de Deep Sync**: toque no ícone de engrenagem (`⚙`) ao lado do `SYNC` (ou segure o `SYNC`) para abrir os ajustes. Escolha a fonte de clock (AbletonOSC, simulador de BPM do SDK ou Free/interno) e configure subdivisões, deslocamento de fase, swing e formas dos LFOs e squares. Os ajustes ficam salvos no navegador.
 - **Atalho para o alvo selecionado**: toque em `Selecionado no Live` na tela de mapeamento do celular para buscar a track e o device selecionados no Live e já filtrar a lista.
 
 Para usar os recursos do AbletonOSC, deixe a extensão **AbletonOSC** rodando no Ableton Live (porta de saída `11000`, porta de entrada `11001`). A extensão detecta sozinha e mostra o estado (`SINCRONIZADO` / `SDK` / `FREE`).

@@ -35,3 +35,25 @@ test('static switch and explicit stop cancel residual velocity; stalled frames r
   engine.tick(state,{...physics,behavior:'static'},100017);assert.equal(state.vx,0);assert.equal(state.vy,0);
   state.vx=1;engine.stop(state);assert.equal(state.vx,0);
 });
+
+test('render frames during a drag do not change the measured release velocity',()=>{
+  const sample=frames=>{
+    const state=engine.create();state.dragging=true;
+    engine.move(state,.2,.5,0);
+    for(const t of frames)engine.tick(state,physics,t);
+    engine.move(state,.22,.5,20);
+    return state.vx;
+  };
+  assert.equal(sample([]),sample([5,10,15,19]));
+  assert.ok(Math.abs(sample([])-1)<1e-9);
+});
+
+test('holding the puck then releasing does not replay an old fling',()=>{
+  const state=engine.create();state.dragging=true;engine.move(state,.2,.5,0);engine.move(state,.3,.5,20);
+  engine.tick(state,physics,150);engine.release(state,151);assert.equal(state.vx,0);
+});
+test('friction displacement is independent of 30/60/120 FPS away from walls',()=>{
+  const run=frames=>{const state={...engine.create(),x:.1,vx:.1,time:0};for(let i=1;i<=frames;i++)engine.tick(state,physics,i*1000/frames);return state;};
+  const a=run(30),b=run(60),c=run(120);
+  assert.ok(Math.abs(a.x-b.x)<.00001);assert.ok(Math.abs(a.x-c.x)<.00001);
+});

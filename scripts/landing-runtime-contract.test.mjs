@@ -520,7 +520,7 @@ test('the guide states the subdivisions the code actually offers', () => {
   );
 
   // SYNC is the switch for all three families, and the section says so.
-  assert.match(guide, /LFO and Stutter rates[\s\S]{0,260}burst[\s\S]{0,200}snapshot transition/i);
+  assert.match(guide, /LFO and Square rates[\s\S]{0,260}burst[\s\S]{0,200}snapshot transition/i);
 });
 
 // ---------------------------------------------------------------------------

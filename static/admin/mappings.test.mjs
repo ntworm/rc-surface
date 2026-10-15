@@ -131,8 +131,7 @@ test('admin mappings expose only current canonical phone controls', () => {
   assert.deepEqual(items('Pads'), Array.from({ length: 12 }, (_, i) => `pad-${i + 1}`));
   assert.deepEqual(items('Mix Knobs (1-8)'), Array.from({ length: 8 }, (_, i) => `knob-${i + 1}`));
   assert.deepEqual(items('Mix Faders (1-8)'), Array.from({ length: 8 }, (_, i) => `fader-${i + 1}`));
-  assert.deepEqual(items('LFOs (1-4)'), ['toggle-1', 'toggle-2', 'toggle-3', 'toggle-4']);
-  assert.deepEqual(items('Stutters (Buttons 1-4)'), ['button-1', 'button-2', 'button-3', 'button-4']);
+  assert.deepEqual(items('Toggles (1-8)'), Array.from({length:8},(_,i)=>`toggle-${i+1}`));
   assert.deepEqual(items('Sensors: Vision'), [
     'sensor.vision.x', 'sensor.vision.y', 'sensor.vision.z',
     'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
@@ -150,7 +149,7 @@ test('admin mappings expose only current canonical phone controls', () => {
     assert.equal(controls.includes(current), true, `current control should be exposed: ${current}`);
   }
   for (const retired of [
-    'knob-9', 'fader-9', 'toggle-5', 'button-5', 'rib' + 'bon-3', 'gate-1', 'scene-1', 'sensor.light.lux',
+    'knob-9', 'fader-9', 'toggle-9', 'button-1', 'button-5', 'rib' + 'bon-3', 'gate-1', 'scene-1', 'sensor.light.lux',
     'sensor.vision.thumb', 'sensor.vision.index', 'sensor.vision.middle',
     'sensor.vision.ring', 'sensor.vision.pinky', 'sensor.vision.active',
     'sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers',

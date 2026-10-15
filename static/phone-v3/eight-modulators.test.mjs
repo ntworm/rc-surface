@@ -41,29 +41,29 @@ function makeElement(dataset = {}) {
   };
 }
 
-function loadControls(stutterName = 'toggle-5', { snapshots = true, syncPanel = false, stutterBar = null, saved = {}, withXY = false } = {}) {
+function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = false, pulseBar = null, saved = {}, withXY = false } = {}) {
   const engineFile = path.join(import.meta.dirname, 'mode-engine.js');
   const controlsFile = path.join(import.meta.dirname, 'controls.js');
   const engineSource = fs.readFileSync(engineFile, 'utf8');
   const controlsSource = fs.readFileSync(controlsFile, 'utf8');
 
-  const stutter = makeElement({ name: stutterName });
+  const pulse = makeElement({ name: pulseName });
   // P04 (rc-surface-modulator-quality-2026-09-16): inject an optional
-  // .mod-val-bar child on the stutter gate so makeStutterButton can capture
+  // .mod-val-bar child on the pulse gate so makePulseButton can capture
   // it via el.querySelector('.mod-val-bar'). The override must land BEFORE
   // controls.js runs, otherwise the closure already bound `bar` to null.
-  if (stutterBar) {
-    stutter.querySelector = (selector) => (selector === '.mod-val-bar' ? stutterBar : null);
+  if (pulseBar) {
+    pulse.querySelector = (selector) => (selector === '.mod-val-bar' ? pulseBar : null);
   }
   const lfo = makeElement({ name: 'toggle-1' });
   const lfos = [lfo, ...[2,3,4].map(i => makeElement({name: `toggle-${i}`}))];
-  const stutters = [stutter, ...[2,3,4].map(i => makeElement({name: `toggle-${i+4}`}))];
-  const all = [...lfos, ...stutters];
+  const pulses = [pulse, ...[2,3,4].map(i => makeElement({name: `toggle-${i+4}`}))];
+  const all = [...lfos, ...pulses];
   lfos.forEach(el => el.classList.add('toggle'));
-  stutters.forEach(el => el.classList.add('toggle'));
+  pulses.forEach(el => el.classList.add('toggle'));
   const storage = new Map(Object.entries(saved));
   const xy = [1,2].map(i => makeElement({name:`xy-${i}`}));
-  xy.forEach(el => {el.querySelector=selector=>selector==='.xy-dot'?{style:{}}:null;});
+  xy.forEach(el=>{el.trail={points:'',setAttribute(key,value){this[key]=value;}};el.querySelector=selector=>selector==='.xy-dot'?{style:{}}:selector==='.xy-trail-line'?el.trail:null;});
   const overlay = makeElement();
   const rateReadout = makeElement();
   const modeButtons = ['A', 'B', 'C', 'D'].map((mode) => makeElement({ padModeSet: mode }));
@@ -81,8 +81,8 @@ function loadControls(stutterName = 'toggle-5', { snapshots = true, syncPanel = 
       querySelector(selector) {
         const xyEl=xy.find(el=>selector===`.xy-pad[data-name="${el.dataset.name}"]`);
         if(xyEl)return xyEl;
-        if (selector === `.button[data-name="${stutterName}"]`) return stutter;
-        if (selector === '.toggle[data-name="toggle-1"]') return lfo;
+        const slot = all.find(el => selector === `.toggle[data-name="${el.dataset.name}"]`);
+        if (slot) return slot;
         return null;
       },
       querySelectorAll(selector) {
@@ -122,7 +122,7 @@ function loadControls(stutterName = 'toggle-5', { snapshots = true, syncPanel = 
     all,
     xy,
     storage,
-    stutter,
+    pulse,
     lfo,
     rateReadout,
     modeButtons,
@@ -143,13 +143,13 @@ function pointer(pointerId, clientY) {
 
 const names = Array.from({length:8}, (_,i)=>`toggle-${i+1}`);
 for (let n = 0; n <= 8; n++) {
-  test(`phone runs ${n} LFOs / ${8-n} Stutters through the real CFG store`, () => {
+  test(`phone runs ${n} LFOs / ${8-n} Pulses through the real CFG store`, () => {
     const app = loadControls(); const ctx = app.context;
-    names.forEach((name, i) => ctx.RcControlConfig.set(name, {shape: i < n ? 'triangle' : 'stutter'}));
+    names.forEach((name, i) => ctx.RcControlConfig.set(name, {shape: i < n ? 'triangle' : 'square'}));
     names.forEach(name => ctx.controlSetters[name](1));
     assert.equal([...ctx.modulatorStates.values()].filter(v=>v.kind==='lfo').length,n);
     assert.equal(ctx.modulatorStates.size,8);
-    names.forEach((name, i) => assert.equal(app.modulatorStates.findLast(v => v.name === name)?.kind, i < n ? 'lfo' : 'stutter'));
+    names.forEach((name, i) => assert.equal(app.modulatorStates.findLast(v => v.name === name)?.kind, i < n ? 'lfo' : 'pulse'));
     assert.equal(new Set(app.modulatorStates.filter(v => v.active).map(v => v.name)).size, 8);
   });
 }
@@ -157,7 +157,7 @@ test('slot switch stops old gate, preserves rate/depth/count, and clear restores
   const app=loadControls(); const ctx=app.context;
   ctx.controlSetters['toggle-1.rate'](.73); ctx.controlSetters['toggle-1.depth'](.42);
   ctx.controlSetters['toggle-1.count'](.66); ctx.controlSetters['toggle-1'](1);
-  ctx.RcControlConfig.set('toggle-1', {shape:'stutter'});
+  ctx.RcControlConfig.set('toggle-1', {shape:'square'});
   assert.equal(app.modulatorStates.at(-1).kind, 'lfo'); assert.equal(app.modulatorStates.at(-1).active, false);
   const state=ctx.modulatorStates.get('toggle-1');
   assert.equal(state.active,false); assert.equal(state.rate,.73); assert.equal(state.depth,.42); assert.equal(state.count,.66);
@@ -169,13 +169,13 @@ test('slot switch stops old gate, preserves rate/depth/count, and clear restores
 });
 test('independent subdivision/swing/phase/sync/ratchet reach both host and preview', () => {
   const app=loadControls(); const ctx=app.context;
-  ctx.RcControlConfig.set('toggle-1',{shape:'stutter',syncMode:'sync',subdivision:1,swing:.3,phaseOffset:-.5,count:1});
+  ctx.RcControlConfig.set('toggle-1',{shape:'square',syncMode:'sync',subdivision:1,swing:.3,phaseOffset:-.5,count:1});
   ctx.RcControlConfig.set('toggle-5',{shape:'square',syncMode:'free',subdivision:3,phaseOffset:1.25,rate:.5});
   ctx.controlSetters['toggle-1'](1); ctx.controlSetters['toggle-5'](1);
   const stut=app.modulatorStates.findLast(v=>v.name==='toggle-1'); const lfo=app.modulatorStates.findLast(v=>v.name==='toggle-5');
   assert.equal(stut.swing,.3); assert.equal(stut.count,1); assert.equal(stut.phaseOffsetBeats,-.5); assert.equal(stut.syncSubdivisionBeats,1);
   assert.equal(lfo.shape,'square'); assert.equal(lfo.syncMode,'free'); assert.equal(lfo.phaseOffsetBeats,1.25);
-  app.tick(20); assert.equal(ctx.modulatorStates.get('toggle-5').phaseFrequency,6.05);
+  app.tick(20); assert.equal(ctx.modulatorStates.get('toggle-5').phaseFrequency,8);
   ctx.RcControlConfig.set('toggle-1',{subdivision:0});
   assert.equal(app.modulatorStates.at(-1).syncSubdivisionBeats,null);
 });
@@ -193,7 +193,7 @@ test('new snapshots restore categorical configuration before morphing slot value
   ctx.controlSetters['toggle-5.depth'](.61);ctx.controlSetters['toggle-5'](1);
   sn.setSnapshotCaptureMode(true);sn.handleSnapshotSlot(0);
   assert.equal(sn.getSnapshots()[0].__performance.slots['toggle-5'].shape,'triangle');
-  ctx.RcControlConfig.set('toggle-5',{shape:'stutter'});assert.equal(ctx.modulatorStates.get('toggle-5').kind,'stutter');
+  ctx.RcControlConfig.set('toggle-5',{shape:'square'});assert.equal(ctx.modulatorStates.get('toggle-5').kind,'pulse');
   sn.handleSnapshotSlot(0);app.tick(1000);
   assert.equal(ctx.modulatorStates.get('toggle-5').kind,'lfo');assert.equal(ctx.modulatorStates.get('toggle-5').depth,.61);
   const msg=app.modulatorStates.findLast(v=>v.name==='toggle-5' && v.morphMs);
@@ -206,7 +206,7 @@ test('clearing a phase override updates a running motor immediately',()=>{
   assert.equal(app.modulatorStates.at(-1).phaseOffsetBeats,0);
 });
 
-for(const shape of ['sine','stutter']) test(`mode D ${shape} expires without stale mode color or active gate`,()=>{
+for(const shape of ['sine','square']) test(`mode D ${shape} expires without stale mode color or active gate`,()=>{
  const app=loadControls();const ctx=app.context;
  ctx.RcControlConfig.set('toggle-1',{shape,mode:'D',syncMode:'free'});
  ctx.controlSetters['toggle-1'](1);app.tick(521);
@@ -239,7 +239,7 @@ for(const first of ['static','physics']) for(const second of ['static','physics'
  });
 }
 
-for (const shape of ['sine', 'stutter']) test(`released ${shape} drag persists rate/depth for reload without changing slot kind`, () => {
+for (const shape of ['sine', 'square']) test(`released ${shape} drag persists rate/depth for reload without changing slot kind`, () => {
   const app = loadControls(); const ctx = app.context;
   ctx.RcControlConfig.set('toggle-1', {shape, mode:'B', rate:.2, depth:.3});
   app.lfo.listeners.pointerdown({...pointer(1, 50), clientX:30});
@@ -249,14 +249,84 @@ for (const shape of ['sine', 'stutter']) test(`released ${shape} drag persists r
   const restored = loadControls('toggle-5', {saved:Object.fromEntries(app.storage)}).context;
   assert.equal(restored.modulatorStates.get('toggle-1').rate, expected.rate);
   assert.equal(restored.modulatorStates.get('toggle-1').depth, expected.depth);
-  assert.equal(restored.modulatorStates.get('toggle-1').kind, shape === 'stutter' ? 'stutter' : 'lfo');
+  assert.equal(restored.modulatorStates.get('toggle-1').kind, shape === 'square' ? 'pulse' : 'lfo');
   assert.equal(restored.modulatorStates.get('toggle-1').active, false);
 });
 test('clearing slot overrides resets rate/depth/count together with categorical settings', () => {
   const ctx=loadControls().context;
-  ctx.RcControlConfig.set('toggle-8', {shape:'stutter',rate:.9,depth:.8,count:1});
+  ctx.RcControlConfig.set('toggle-8', {shape:'square',rate:.9,depth:.8,count:1});
   ctx.RcControlConfig.clear('toggle-8');
   const state=ctx.modulatorStates.get('toggle-8');
   assert.equal(state.kind,'lfo');
   assert.equal(state.rate,.5); assert.equal(state.depth,.5); assert.equal(state.count,0);
+});
+
+for (const shape of ['sine','square']) for (const mode of ['B','C','D']) test(`Global ${mode} ${shape} survives the real performance save/host echo`, () => {
+  const app=loadControls(); const ctx=app.context;
+  ctx.RcControlConfig.set('toggle-1',{shape});
+  ctx.PerformanceSettings.applyHost(JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture())));
+  for (const name of names) assert.equal(ctx.RcControlConfig.get(name,'mode',null),null);
+  app.modeButtons.find(b=>b.dataset.padModeSet===mode).listeners.click();
+  app.lfo.listeners.pointerdown(pointer(1,50));
+  if (mode==='B') app.lfo.listeners.pointermove({...pointer(1,20),clientX:60});
+  app.lfo.listeners.pointerup(pointer(1,20));
+  const state=ctx.modulatorStates.get('toggle-1');
+  assert.equal(state.active,true);
+  assert.equal(app.lfo.classList.contains('mode-'+mode.toLowerCase()),true);
+  if (mode==='C') {app.lfo.listeners.pointerdown(pointer(2,50));app.lfo.listeners.pointerup(pointer(2,50));assert.equal(state.active,false);}
+  if (mode==='D') {assert.ok(state.burstUntil>0);app.tick(600);assert.equal(state.active,false);}
+});
+test('CFG rhythm choices respect the current waveform bandwidth and BPM', () => {
+  const ctx=loadControls().context;ctx.currentBpm=120;
+  for(const shape of ['sine','triangle','ramp_up','ramp_down','square']) {
+    ctx.RcControlConfig.set('toggle-1',{shape});
+    for(const option of ctx.getModulatorRhythms('toggle-1')) assert.ok(2/option.value <= ctx.getLfoMaxHz(shape),`${shape} offered ${option.label}`);
+  }
+});
+
+function configRows(context,name) {
+  let build;
+  context.RcConfigMode={create:()=>({register:(pattern,builder)=>{if(pattern.test(name))build=builder;},attach(){}})};
+  const source=fs.readFileSync(new URL('./app.js',import.meta.url),'utf8');
+  const start=source.indexOf('  function setupConfigMode()');const end=source.indexOf('  function setupAudioUI()',start);
+  vm.runInNewContext(source.slice(start,end)+';setupConfigMode();',context);
+  return build(name);
+}
+test('real CFG offers five waveforms, touch-owned rate/depth absent, advanced settings collapsed',()=>{
+  const ctx=loadControls().context;
+  const rows=configRows(ctx,'toggle-1');
+  assert.equal(rows[0].select.options.length,6);
+  assert.deepEqual(Array.from(rows[0].select.options,v=>v.value),['Global','sine','triangle','ramp_up','ramp_down','square']);
+  assert.equal(rows[0].select.get(),'Global');assert.equal(rows[1].select.get(),'Global');
+  assert.equal(rows.some(row=>row.slider),false);
+  assert.equal(rows.find(row=>row.details).details.items.length,1);
+  ctx.RcControlConfig.set('toggle-1',{shape:'square',count:1,swing:.5});
+  const pulseRows=configRows(ctx,'toggle-1');
+  assert.equal(pulseRows.find(row=>row.details).details.items.length,3);
+  const division=pulseRows.find(row=>row.select?.label==='Subdivision').select;
+  for(const option of division.options.filter(v=>typeof v.value==='number'&&v.value>0)) assert.ok(2*4/option.value/(1-.5)<=15);
+  ctx.RcControlConfig.set('toggle-1',{syncMode:'free'});
+  assert.equal(configRows(ctx,'toggle-1').some(row=>row.select?.label==='Subdivision'),false);
+});
+
+test('both physics XY draw their own trail and clear it for Static and after expiry',()=>{
+  const app=loadControls('toggle-5',{withXY:true});
+  for(let i=0;i<2;i++) {
+    app.context.RcControlConfig.set(`xy-${i+1}`,{behavior:'physics'});
+    app.xy[i].listeners.pointerdown({...pointer(i+1,50),clientX:20});
+    app.setTime(20);app.xy[i].listeners.pointermove({...pointer(i+1,50),clientX:25});
+    app.xy[i].listeners.pointerup(pointer(i+1,50));
+  }
+  app.tick(40);
+  assert.ok(app.xy[0].trail.points.length>0);assert.ok(app.xy[1].trail.points.length>0);
+  app.context.RcControlConfig.set('xy-1',{behavior:'static'});assert.equal(app.xy[0].trail.points,'');
+  app.context.controlSetters['xy-2.x'](.5);app.tick(400);assert.equal(app.xy[1].trail.points,'');
+});
+
+test('first candidate forced mode overrides and retired waveform are not restored',()=>{
+ const saved={'ableton-rc:v2:control_config':JSON.stringify({'toggle-1':{mode:'A',shape:'stutter'}})};
+ const ctx=loadControls('toggle-5',{saved}).context;
+ ctx.PerformanceSettings.applyHost({version:1,slots:{'toggle-1':{mode:'A',shape:'stutter'}}});
+ assert.equal(ctx.RcControlConfig.get('toggle-1','mode',null),null);
+ assert.equal(ctx.getModulatorShape('toggle-1'),'sine');
 });

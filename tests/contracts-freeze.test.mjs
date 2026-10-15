@@ -138,7 +138,7 @@ test("transport-clock shape ceilings are frozen", async () => {
   const tc = await import("../src/live/transport-clock.ts");
   // Source: internal/LIVE-WRITE-CEILING-1.0.md fallback (write-ceiling P04 pendente);
   // rule maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape)), teto_efetivo ~ 50 escritas/s.
-  const expected = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 };
+  const expected = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 };
   for (const [shape, max] of Object.entries(expected)) {
     assert.equal(tc.getLfoMaxHz(shape), max, `getLfoMaxHz(${shape}) drifted`);
   }
@@ -153,10 +153,10 @@ test("controls.js rhythmic tables match the frozen values", () => {
   const table = source.match(/LFO_SHAPE_MAX_HZ\s*=\s*\{[\s\S]*?\}/);
   assert.ok(table, "LFO_SHAPE_MAX_HZ table missing");
   const sliced = table[0];
-  for (const [shape, max] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 })) {
+  for (const [shape, max] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 })) {
     const entryRegex = new RegExp(`(?:^|[,\\s{])${shape}\\s*:\\s*${max}\\b`);
     assert.ok(entryRegex.test(sliced), `LFO_SHAPE_MAX_HZ.${shape} !== ${max} (table: ${sliced})`);
   }
-  // STUTTER_SUBDIVISIONS is a separate table: reachability check.
-  assert.match(source, /STUTTER_SUBDIVISIONS\s*=\s*\[/);
+  // PULSE_SUBDIVISIONS is a separate table: reachability check.
+  assert.match(source, /PULSE_SUBDIVISIONS\s*=\s*\[/);
 });

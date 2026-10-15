@@ -31,7 +31,7 @@ the top strip:
 
 | Tab    | What it does                                                 |
 | ------ | ------------------------------------------------------------ |
-| PERF   | Performance: pads, XY, LFOs, Stutters, UTIL shortcuts       |
+| PERF   | Performance: pads, XY, LFOs, Squares, UTIL shortcuts       |
 | MIX    | Eight knobs and eight faders for mixer control                   |
 | SNP    | Snapshots: 8 capture slots, morph between them               |
 | SNS    | Sensors: live readouts for motion and orientation            |
@@ -62,7 +62,7 @@ The pad mode selector sits in the middle column of the PERF tab:
 ```
 
 The selected mode applies to **all 12 pads** (`pad-1`..`pad-12`),
-**all eight LFO slots** (`toggle-1`..`toggle-8`, `L1`..`L8`).
+**all eight LFO slots** (`toggle-1`..`toggle-8`, `T1`..`T8`).
 The mode is shared: pick once, every control plays by the same rule.
 
 ### Mode A — Momentary (default)
@@ -70,7 +70,7 @@ The mode is shared: pick once, every control plays by the same rule.
 - Touch sends a non-zero value; release sends zero.
 - Drag **vertically** to scale the value from `0` (release point) to `1`
   (150 px above the touch start). This is the same range used by
-  knobs, faders, LFOs, and Stutters.
+  knobs, faders, LFOs, and Squares.
 - Best for: drum hits, one-shot samples, momentary effects on a button
   press.
 
@@ -79,11 +79,11 @@ The mode is shared: pick once, every control plays by the same rule.
 - Touch latches the control **on**; release without any drag sends it
   back off. Any movement (vertical or horizontal) keeps it held until
   you deliberately drag the value back to zero.
-- For Stutters specifically (see [§ 4](#4-stutters-s1--s2--s3--s4)): a tap
-  turns the stutter off; release with amplitude below `0.02` also turns
+- For Squares specifically (see [§ 4](#4-square-pulse)): a tap
+  turns the square off; release with amplitude below `0.02` also turns
   it off. Horizontal speed changes keep it running while amplitude is nonzero.
 - Best for: latched LFOs that keep modulating after release, sustained
-  stutter sweeps, pads that you want to keep ringing.
+  square sweeps, pads that you want to keep ringing.
 
 ### Mode C — Toggle
 
@@ -105,7 +105,7 @@ The mode is shared: pick once, every control plays by the same rule.
 
 **The whole page bursts, not just the pads.** Mode D is a shape, and every
 control it applies to follows it: a pad's value rises and falls, and an LFO or
-Stutter opens its depth over the attack and closes it over the release. In
+Square opens its depth over the attack and closes it over the release. In
 `FREE` the envelope is a fixed 520 ms with a 70 ms attack, the same on all of
 them. Switch the header to `SYNC` and the length comes from Live's tempo
 instead, chosen in **Deep Sync Settings → Burst Config (Pad Mode D)**:
@@ -131,56 +131,50 @@ length falls back to 120 BPM rather than going silent.
 
 ---
 
-## 3. Eight configurable LFOs (L1–L8)
+## 3. Eight toggles (T1–T8)
 
-All eight controls use the same IDs, `toggle-1` through `toggle-8`, and the
-same interaction. A fresh configuration starts with eight sine LFOs. Open
-**CFG**, then any L1–L8, to select **Sine, Triangle, Ramp Up, Ramp Down,
-Square or Stutter**. Any allocation works, including eight Stutters.
-Each slot has its own mode A/B/C/D, FREE/SYNC override, subdivision or Auto,
-phase, rate and depth. Stutter additionally exposes swing and ratchet 1–4.
-Global means inherit the corresponding shared setting; Auto explicitly releases
-a subdivision pin for that slot. Switching between LFO and Stutter stops that
-slot; touch it again to start the new waveform. Other slots keep running.
+All eight slots (`toggle-1`..`toggle-8`) share the same component and start in
+**Global** for waveform, mode and timing. CFG offers **Sine, Triangle, Ramp Up,
+Ramp Down and Square**. Any combination is possible. There is one centred
+TOGGLES heading, with T1–T4 above T5–T8. Each slot shows a short waveform label
+and its effective A/B/C/D mode.
 
-Vertical drag adjusts depth; horizontal drag adjusts rate. Shift gives fine
-horizontal adjustment on desktop. A is momentary; B holds after a drag, but
-a tap or release below depth 0.02 stops; C toggles; D runs the configured burst
-envelope. These modes apply identically to every slot. The local bar/readout
-shows intended modulation, not confirmed delivery to Live.
+The active mode colours match the pads: A blue, B amber, C green, D pink.
+Waveforms do not introduce a second colour system. Drag horizontally for speed
+and vertically for depth; those values are deliberately absent from CFG.
+A stops on release, B retains a dragged setting, C toggles, and D runs one burst.
+The existing burst length/attack and snapshots remain available.
 
-The continuous waves span `0.5 - depth/2` to `0.5 + depth/2`. FREE covers
-0.1 Hz up to the selected shape ceiling: **sine 4 Hz, triangle and ramps 3 Hz,
-square 12 Hz**. These remain interim limits; physical Live fidelity is pending.
-SYNC retains straight, dotted (D) and triplet (T) divisions from 8 whole notes
-through the existing fast divisions, filtered/capped to the shape ceiling.
-1/4 means one beat; 1/8 means half a beat. Requested divisions above the ceiling
-play slower by octaves. Rate edits preserve phase; play/seek relocks to song
-position. A stopped transport uses the existing running internal fallback;
-transport Stop is not modulator OFF. Changing FREE/SYNC need not preserve rate.
+CFG is compact: waveform, mode, timing and a subdivision selector in SYNC.
+Only rhythms supported at the current BPM and waveform are offered; Square
+also accounts for ratchet and swing. Unsupported old pins display their effective
+limited rhythm. FREE hides the subdivision row. Expand **Advanced** for phase
+and Square's swing/ratchet. The menu body scrolls within the viewport.
 
-## 4. Stutter waveform
+Global inheritance survives project/preset/snapshot capture and recall.
+Global does not mean a saved explicit A or Sine. A per-slot selection remains
+local to that slot; restoring shared defaults removes its overrides.
 
-Stutter alternates the mapped value between zero and depth; it does not record
-or repeat audio itself. Choose it in any slot's CFG. FREE covers 1–15 Hz;
-ratchet raises the minimum. SYNC uses straight subdivisions with swing and
-ratchet, respecting the 15 Hz effective ceiling including the shortest interval.
-Horizontal drag releases only that slot's pin; vertical drag preserves it.
-The screen can miss fast pulses and never replays missed frames.
+Generator ceilings remain conservative: sine 4 Hz, triangle/ramps 3 Hz,
+Square pulse 15 Hz including ratchet. These are software limits, not measured
+physical fidelity guarantees for Live.
 
-Continuous target writes retain the newest unsent value. OFF supersedes pending
-pulses with zero and bypasses smoothing; an SDK write already in flight cannot
-be cancelled. Discrete/MIDI event ordering and existing safe-loss handling remain.
+## 4. Square pulse
 
-**Breaking data format:** 2.0.0 uses new performance browser keys, host storage
-under `surface-v2/`, project schema 2 and preset envelope 2. Earlier formats are
-rejected, with no aliases or migration. New project profiles and presets include
-performance configuration; browser snapshots also include waveform/XY settings.
-Snapshot recall applies categorical settings before the numeric morph. Vector
-morph blends numeric values using the current categorical configuration.
-Reconfigure this candidate from scratch; older stored data is left untouched.
+Square now alternates between **0 and the chosen depth**: at 50% depth it
+alternates 0%/50%, rather than the former centred Square's 25%/75%.
+It includes the former Stutter's swing and ratchet (1–4), so Stutter is no
+longer a separate waveform or control. The pulse does not sample or repeat audio;
+its musical effect depends on the mapped destination. Any of T1–T8 can use it.
 
----
+The local pulse indicator follows the actual gate, with a thin value rail.
+It is a preview, not confirmation of Live delivery; a display may miss fast pulses.
+Changing to/from Square safely stops the old algorithm before the next touch.
+
+2.0.0 uses performance payload schema 2 and fresh browser performance keys.
+Overrides and snapshots created by the first 2.0.0 candidate are not imported;
+that avoids restoring the forced mode A and the retired Stutter waveform.
+Existing files remain untouched; configure this candidate afresh.
 
 ## 5. PERF UTIL shortcuts
 
@@ -191,7 +185,7 @@ set without leaving the performance surface.
 - **1-4** recall snapshot slots 1 through 4.
 - **CAP + 1-4** saves the current performance state into that slot.
 - **OFF** cancels active snapshot morphing, turns off pads, LFOs, and
-  Stutters, and returns XY pads to center. It does not reset MIX
+  Squares, and returns XY pads to center. It does not reset MIX
   knobs, faders, sensors, audio, vision, or transport.
 
 ---
@@ -221,7 +215,7 @@ Three buttons on the top strip of every page.
 Toggles the BPM clock between **SYNC** (locked to Live) and **FREE**
 (internal).
 
-- **SYNC** (cyan): LFO and Stutter rates are quantized to Live's BPM,
+- **SYNC** (cyan): LFO and Square rates are quantized to Live's BPM,
   the pad mode D burst takes its length from the grid (see
   [§ 2](#2-pad-modes-a--b--c--d)), and a snapshot transition set to Sync
   does the same (see [§ 10](#10-snp-tab--snapshots-and-morph)).
@@ -297,7 +291,7 @@ control you are already using.
 While MAP mode is active, mappable controls on the visible performance
 page become selectable with a blue MAP outline/label. This includes:
 
-- PERF controls: pads, XY pads, LFOs, Stutters.
+- PERF controls: pads, XY pads, LFOs, Squares.
 - MIX controls: knobs and faders.
 - Sensor controls from the fallback list in the MAP panel.
 
@@ -325,7 +319,7 @@ which parameter belongs to which track.
 Use **Trigger Note** when a phone control should send a MIDI note instead
 of continuously moving a parameter.
 
-1. Select a pad, LFO, Stutter, XY axis, knob, or fader in MAP mode.
+1. Select a pad, LFO, Square, XY axis, knob, or fader in MAP mode.
 2. Tap **Trigger Note**.
 3. Pick a MIDI track.
 4. The extension checks for `RC-Midi-Receiver.amxd` on that track. If it
@@ -579,15 +573,15 @@ directly from the phone.
 ## 9.5 Config Mode (CFG)
 
 Tap CFG, then a control (or right-click on desktop). All eight LFO slots expose
-the same waveform/mode/timing controls; Stutter adds swing and ratchet. Both XY
+the same waveform/mode/timing controls; Square adds swing and ratchet. Both XY
 panels expose Static/Physics, friction, bounce and speed. Pads retain A/B/C/D,
 knobs gesture range and faders reset value. Reset removes that control's override;
 long-press CFG lists overrides and offers Clear all. Escape or tap outside closes.
 
-Browser overrides use `ableton-rc:v2:control_config`. Modulator/XY settings also
+Browser overrides use `ableton-rc:v3:control_config`. Modulator/XY settings also
 round-trip through the host performance preference in new project profiles and
-named presets. Saved performance configurations resolve Global defaults to their
-current values; loading them restores explicit per-slot settings. Snapshot capture
+named presets. Saved performance configurations preserve Global inheritance; loading never
+turns a shared mode into a per-slot override. Snapshot capture
 includes the current settings and scalar values.
 They do not save the Live Set itself. Browser-only pad/knob/fader overrides still
 stay on the phone. Previous performance keys and formats are not loaded.
@@ -604,7 +598,7 @@ slots show their slot number.
 
 ### Capture
 
-1. Set the controls (pads, XY, LFOs, Stutters, knobs, faders) to a
+1. Set the controls (pads, XY, LFOs, Squares, knobs, faders) to a
    state you want to remember.
 2. Press **CAPTURE** (red record button).
 3. Tap an empty slot. The slot now stores the current state.
@@ -631,7 +625,7 @@ The **Free / Sync** pair above it decides what the slider means:
   changing the tempo moves every later transition without touching the
   slider. At 120 BPM, `4 beats` is 2 seconds. Beats here are quarter notes, independent of meter.
 
-These straight subdivisions also appear in the stutter grid; LFOs have their own
+These straight subdivisions also appear in the square grid; LFOs have their own
 expanded rhythmic grid within the selected shape ceiling. Snapshot transitions additionally
 offer 8 and 16 quarter-note beats for slower gestures. If Live has not reported a tempo yet, the
 length falls back to 120 BPM rather than stalling.
@@ -649,7 +643,7 @@ length falls back to 120 BPM rather than stalling.
   Useful for live continuous exploration between four macro configurations.
 
 Mapped Live parameters follow the morph while the transition is running.
-For example, if an LFO, Stutter, knob, or fader is mapped to Live, the
+For example, if an LFO, Square, knob, or fader is mapped to Live, the
 mapped value should move through the transition instead of waiting until
 the morph ends.
 
@@ -1058,7 +1052,7 @@ physical scale keeps your muscle memory honest across the surface.
 | D    | burst on touch   | peak (0.15..1)         | no horizontal effect |
 
 In `SYNC`, mode D takes its length from Deep Sync Settings rather than the
-fixed 520 ms envelope, and it applies to pads, LFOs and stutters alike — see
+fixed 520 ms envelope, and it applies to pads, LFOs and squares alike — see
 [§ 2](#2-pad-modes-a--b--c--d).
 
 ### Control names (for mapping)
@@ -1087,7 +1081,7 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 - **Drag up** — increase value (depth, rate, count, etc).
 - **Drag down** — decrease value. Reaching the bottom of the range
   sends `0`.
-- **Drag horizontally on a Stutter** — change speed; vertically changes amplitude.
+- **Drag horizontally on a Square** — change speed; vertically changes amplitude.
 - **Drag horizontally on an LFO** — change modulation rate.
 
 ---

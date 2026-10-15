@@ -16,7 +16,7 @@
   // Mirrors transport-clock.ts; host/preview bandwidth parity is regression tested.
   // Source: internal/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
   // Fallback applied 2026-09-17: write-ceiling P04 pendente, teto_efetivo ~ 50 escritas/s, min pontos/cycle = sine 10 / triangle 16 / ramp_up 16 / ramp_down 16 / square 4.
-  const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 };
+  const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 };
   function getLfoMaxHz(shape = window.syncSettings?.lfoShape || 'sine') {
     return Object.hasOwn(LFO_SHAPE_MAX_HZ, shape) ? LFO_SHAPE_MAX_HZ[shape] : LFO_SHAPE_MAX_HZ.sine;
   }
@@ -82,7 +82,7 @@
   window.playheadStartTime = Date.now();
   window.playheadBaseTimeMs = 0;
 
-  // Global performance mode (A/B/C/D) -- shared by pads, LFOs, and stutters.
+  // Global performance mode (A/B/C/D) -- shared by pads, LFOs, and pulses.
   let padMode = 'A';
   const latchedValues = new Map();    // B: last value before release
   const toggledStates = new Map();    // C: on/off boolean
@@ -120,26 +120,26 @@
     }
     return window.syncSettings.lfoSubdivisionPinned ? window.syncSettings.lfoSubdivision : null;
   }
-  function perInstanceStutterSubdivision(name) {
+  function perInstancePulseSubdivision(name) {
     if (window.RcControlConfig) {
       const pinned = window.RcControlConfig.get(name, 'subdivision', null);
       if (pinned !== null && pinned !== undefined) return pinned === 0 ? null : pinned;
     }
-    return window.syncSettings.stutterSubdivisionPinned ? window.syncSettings.stutterSubdivision : null;
+    return window.syncSettings.pulseSubdivisionPinned ? window.syncSettings.pulseSubdivision : null;
   }
-  function perInstanceStutterSwing(name) {
+  function perInstancePulseSwing(name) {
     if (window.RcControlConfig) {
       const v = window.RcControlConfig.get(name, 'swing', null);
       if (v !== null && v !== undefined) return v;
     }
-    return window.syncSettings.stutterSwing;
+    return window.syncSettings.pulseSwing;
   }
-  function perInstanceStutterPhaseOffset(name) {
+  function perInstancePulsePhaseOffset(name) {
     if (window.RcControlConfig) {
       const v = window.RcControlConfig.get(name, 'phaseOffset', null);
       if (v !== null && v !== undefined) return v;
     }
-    return window.syncSettings.stutterPhaseOffset;
+    return window.syncSettings.pulsePhaseOffset;
   }
 
   function modulatorSyncMode(name) {
@@ -403,7 +403,7 @@
     };
   }
 
-  // Active scalar bursts are shared by pads, LFOs, and stutters.
+  // Active scalar bursts are shared by pads, LFOs, and pulses.
   const activeScalarBursts = new Map();
 
   // ---- LFO Modulators ----
@@ -420,10 +420,10 @@
     lfoSubdivisionPinned: false,
     lfoShape: 'sine',
     lfoPhaseOffset: 0.0,
-    stutterSubdivision: 0.25,
-    stutterSubdivisionPinned: false,
-    stutterSwing: 0.0,
-    stutterPhaseOffset: 0.0,
+    pulseSubdivision: 0.25,
+    pulseSubdivisionPinned: false,
+    pulseSwing: 0.0,
+    pulsePhaseOffset: 0.0,
     // One beat, because at 120 BPM that is 500 ms and the free-running burst
     // is 520 — switching SYNC on should not change the feel out from under you.
     burstSubdivision: 1.0,
@@ -432,7 +432,7 @@
     burstAttackRatio: 0.135
   };
 
-  const savedSyncSettings = localStorage.getItem('ableton-rc:v2:sync_settings');
+  const savedSyncSettings = localStorage.getItem('ableton-rc:v3:sync_settings');
   if (savedSyncSettings) {
     try {
       Object.assign(window.syncSettings, JSON.parse(savedSyncSettings));
@@ -563,9 +563,20 @@
     }
     return String(Number((beats / 4).toFixed(4)));
   }
-  window.getModulatorRhythms = name => (modulatorShape(name) === 'stutter'
-    ? [4, 2, ...STUTTER_SUBDIVISIONS] : LFO_SUBDIVISIONS)
-    .map(value => ({ label: formatMusicalRate(value), value }));
+  window.getModulatorRhythms = name => {
+    const shape = modulatorShape(name);
+    const bps = (Number.isFinite(window.currentBpm) && window.currentBpm > 0 ? window.currentBpm : 120) / 60;
+    const state = modulatorStates.get(name) || {name,rate:.5,count:0};
+    const timing = shape === 'square' ? getPulseTiming(state) : null;
+    const values = timing ? LFO_SUBDIVISIONS.filter(value=>bps*timing.ratchet/value/(1-timing.swing)<=15)
+      : LFO_SUBDIVISIONS.filter(value => bps / value <= getLfoMaxHz(shape));
+    return values.map(value => ({label:formatMusicalRate(value),value}));
+  };
+  window.getModulatorSubdivision = name => {
+    const state = modulatorStates.get(name);
+    return modulatorShape(name) === 'square' ? getPulseTiming(state).subdivision
+      : getLfoSubdivision(state.rate,window.currentBpm,perInstanceSyncSubdivision(name),modulatorShape(name));
+  };
 
   /**
    * The burst window a modulator is inside, for the host that generates its
@@ -584,7 +595,7 @@
     const name = event?.name;
     const state = modulatorStates.get(name);
     if (!state) return;
-    const nextKind = modulatorShape(name) === 'stutter' ? 'stutter' : 'lfo';
+    const nextKind = modulatorShape(name) === 'square' ? 'pulse' : 'lfo';
     if (state.kind !== nextKind) {
       state.active = false;
       emitModulatorState(name, state); // release the old engine before changing type
@@ -620,24 +631,24 @@
   }
 
   // Mirrors transport-clock.ts; shortest swing interval also respects the ceiling.
-  const STUTTER_SUBDIVISIONS = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-  function getStutterSubdivisions(bps, ratchet, swing) {
+  const PULSE_SUBDIVISIONS = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
+  function getPulseSubdivisions(bps, ratchet, swing) {
     const minimum = bps * ratchet / (15 * (1 - swing));
-    const allowed = STUTTER_SUBDIVISIONS.filter(subdivision => subdivision >= minimum);
+    const allowed = PULSE_SUBDIVISIONS.filter(subdivision => subdivision >= minimum);
     if (allowed.length) return allowed;
     let slowest = 1;
     while (slowest < minimum) slowest *= 2;
     return [slowest];
   }
-  function getStutterTiming(state) {
+  function getPulseTiming(state) {
     const rate = state.rate, count = state.count;
     const ratchet = [1, 2, 3, 4][Math.floor(clamp(count, 0, 1) * 3.99)] ?? 1;
     const tempo = window.currentBpm;
     const bps = (Number.isFinite(tempo) && tempo > 0 ? tempo : 120) / 60;
-    const pinned = perInstanceStutterSubdivision(state.name);
-    const swing = clamp(perInstanceStutterSwing(state.name), 0, .66);
+    const pinned = perInstancePulseSubdivision(state.name);
+    const swing = clamp(perInstancePulseSwing(state.name), 0, .66);
     const safeRate = Number.isFinite(rate) ? clamp(rate, 0, 1) : 0;
-    const allowed = getStutterSubdivisions(bps, ratchet, swing);
+    const allowed = getPulseSubdivisions(bps, ratchet, swing);
     let subdivision = pinned !== undefined && Number.isFinite(pinned) && pinned > 0
       ? pinned : allowed[Math.floor(safeRate * (allowed.length - .01))];
     const sync = modulatorSyncMode(state.name) === 'sync';
@@ -646,8 +657,8 @@
     return { subdivision, ratchet, frequency, bps, swing };
   }
 
-  function advanceStutterPhase(state, now = performance.now()) {
-    const timing = getStutterTiming(state);
+  function advancePulsePhase(state, now = performance.now()) {
+    const timing = getPulseTiming(state);
     if (!state.active) {
       state.phase = 0; state.phaseTime = now; state.phaseFrequency = timing.frequency;
       return false;
@@ -658,7 +669,7 @@
     state.phaseFrequency = timing.frequency;
     if (modulatorSyncMode(state.name) === 'sync' && window.playheadActive && window.syncSettings.clockSource !== 'free') {
       const beats = ((window.playheadBaseTimeMs + Date.now() - window.playheadStartTime) / 1000) * timing.bps;
-      const offset = perInstanceStutterPhaseOffset(state.name);
+      const offset = perInstancePulsePhaseOffset(state.name);
       const cycle = 2 * timing.subdivision;
       const time = ((beats + offset) % cycle + cycle) % cycle;
       const split = timing.subdivision * (1 + timing.swing);
@@ -670,15 +681,16 @@
   }
 
   function sendModulatorState(name, state, extra) {
-    const stutter = state.kind === 'stutter';
-    if (stutter) advanceStutterPhase(state); else advanceLfoPhase(state);
+    const pulse = state.kind === 'pulse';
+    if (pulse) advancePulsePhase(state); else advanceLfoPhase(state);
     window.onModulatorState?.({
       kind: state.kind, name, active: !!state.active,
       rate: state.rate, depth: state.depth, count: state.count,
       syncMode: modulatorSyncMode(name), clockSource: window.syncSettings.clockSource,
-      syncSubdivisionBeats: stutter ? perInstanceStutterSubdivision(name) : perInstanceSyncSubdivision(name),
-      phaseOffsetBeats: stutter ? perInstanceStutterPhaseOffset(name) : lfoPhaseOffset(name),
-      ...stutter ? {swing: perInstanceStutterSwing(name)} : {shape: modulatorShape(name)},
+      syncSubdivisionBeats: pulse ? perInstancePulseSubdivision(name) : perInstanceSyncSubdivision(name),
+      phaseOffsetBeats: pulse ? perInstancePulsePhaseOffset(name) : lfoPhaseOffset(name),
+      shape: modulatorShape(name),
+      ...pulse ? {swing: perInstancePulseSwing(name)} : {},
       ...burstWindow(state), ...(extra || {}),
     });
   }
@@ -762,15 +774,19 @@
     el.classList.toggle('on', state.active);
     el.classList.toggle('burst', state.active && state.burstUntil > 0);
     setModeClass(el, state.active, state.name);
+    const waveLabel=el.querySelector('.modulator-wave-label');
+    if(waveLabel) waveLabel.textContent={sine:'SIN',triangle:'TRI',ramp_up:'R↑',ramp_down:'R↓',square:'SQR'}[modulatorShape(state.name)];
+    const modeLabel=el.querySelector('.modulator-mode-label');
+    if(modeLabel) modeLabel.textContent=modeFor(state.name);
     if (!state.active) {
       const fill = el.querySelector('.mod-val-bar');
       if (fill) fill.style.height = '0%';
-      for (const key of ['background-color','--stut-pulse','--stut-glow-size','--stut-scale']) el.style.removeProperty(key);
+      for (const key of ['background-color','--modulator-pulse']) el.style.removeProperty(key);
     }
   }
   function makeModulator(el) {
     const name = el.dataset.name;
-    const kind = modulatorShape(name) === 'stutter' ? 'stutter' : 'lfo';
+    const kind = modulatorShape(name) === 'square' ? 'pulse' : 'lfo';
     const config = (key, fallback) => window.RcControlConfig?.get(name, key, fallback) ?? fallback;
     const state = { name, kind, active: false, rate: config('rate', .5), depth: config('depth', .5),
       count: config('count', 0), phase: kind === 'lfo' ? -Math.PI/2 : 0,
@@ -778,7 +794,7 @@
     modulatorStates.set(name, state);
     for (const key of ['rate','depth','count']) window.currentControlStates[`${name}.${key}`] = state[key];
     let activeId = null, gestureMode = null, startX = 0, startY = 0, startDepth = .5, lastX = 0;
-    const advance = now => state.kind === 'lfo' ? advanceLfoPhase(state, now) : advanceStutterPhase(state, now);
+    const advance = now => state.kind === 'lfo' ? advanceLfoPhase(state, now) : advancePulsePhase(state, now);
     const clearDrag = () => {
       for (const key of ['--lfo-drag-y','--lfo-drag-x','--stut-drag-y','--stut-drag-x']) el.style.removeProperty(key);
     };
@@ -810,10 +826,10 @@
       const dx = t.clientX - startX, dy = startY - t.clientY;
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) { state.moved = true; state.pendingToggleOff = false; }
       advance(performance.now());
-      if (state.kind === 'stutter' && Math.abs(dx) > 4 && modulatorSyncMode(name) === 'sync'
-        && perInstanceStutterSubdivision(name) !== null) {
-        const timing = getStutterTiming(state);
-        const allowed = getStutterSubdivisions(timing.bps, timing.ratchet, timing.swing);
+      if (state.kind === 'pulse' && Math.abs(dx) > 4 && modulatorSyncMode(name) === 'sync'
+        && perInstancePulseSubdivision(name) !== null) {
+        const timing = getPulseTiming(state);
+        const allowed = getPulseSubdivisions(timing.bps, timing.ratchet, timing.swing);
         let index = 0;
         for (let i = 1; i < allowed.length; i++) {
           if (Math.abs(allowed[i] - timing.subdivision) < Math.abs(allowed[index] - timing.subdivision)) index = i;
@@ -826,7 +842,7 @@
       advance(performance.now());
       window.currentControlStates[`${name}.rate`] = state.rate;
       window.currentControlStates[`${name}.depth`] = state.depth;
-      const prefix = state.kind === 'stutter' ? '--stut' : '--lfo';
+      const prefix = state.kind === 'pulse' ? '--stut' : '--lfo';
       el.style.setProperty(prefix+'-drag-y', state.depth.toFixed(3));
       el.style.setProperty(prefix+'-drag-x', state.rate.toFixed(3));
       const fill = el.querySelector('.mod-val-bar');
@@ -871,17 +887,17 @@
     capture() {
       const slots = {};
       for (const [name, state] of modulatorStates) {
-        slots[name] = {
-          shape: modulatorShape(name), mode: modeFor(name), syncMode: modulatorSyncMode(name),
-          subdivision: (state.kind === 'lfo' ? perInstanceSyncSubdivision(name) : perInstanceStutterSubdivision(name)) ?? 0,
-          phaseOffset: state.kind === 'lfo' ? lfoPhaseOffset(name) : perInstanceStutterPhaseOffset(name),
-          swing: perInstanceStutterSwing(name), rate: state.rate, depth: state.depth, count: state.count ?? 0,
-        };
+        const configured = window.RcControlConfig?.get(name) || {};
+        const fields = ['shape', 'mode', 'syncMode', 'subdivision', 'phaseOffset', 'swing'];
+        const overrides = Object.fromEntries(fields
+          .filter(key => Object.hasOwn(configured, key))
+          .map(key => [key, configured[key]]));
+        slots[name] = { ...overrides, rate: state.rate, depth: state.depth, count: state.count ?? 0 };
       }
-      return { version: 1, slots, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
+      return { version: 2, slots, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
     },
     apply(value, preserveValues = false) {
-      if (value?.version !== 1 || !value.slots || typeof value.slots !== 'object') return;
+      if (value?.version !== 2 || !value.slots || typeof value.slots !== 'object') return;
       applyingPerformanceSettings = true;
       try {
         for (const name of modulatorStates.keys()) {
@@ -898,7 +914,7 @@
       } finally { applyingPerformanceSettings = false; }
     },
     applyHost(value) {
-      if (!value) return;
+      if (value?.version !== 2) return;
       const signature = JSON.stringify(value);
       if (signature === lastHostPerformanceSettings) return;
       lastHostPerformanceSettings = signature;
@@ -910,10 +926,19 @@
   function makeXYPad(el) {
     const name = el.dataset.name;
     const dot = el.querySelector('.xy-dot');
+    const trailLine=el.querySelector('.xy-trail-line');const trail=[];
     const readout = document.querySelector(`[data-readout="${name}"]`);
     const engine = window.RcXYEngine;
     const state = engine.create(); xyStates.set(name, state);
     let activeId = null;
+    function drawTrail(now=performance.now(),sample=false) {
+      if(xySettings(name).behavior!=='physics') trail.length=0;
+      while(trail.length && now-trail[0].time>300) trail.shift();
+      if(sample && xySettings(name).behavior==='physics') {
+        trail.push({x:state.x,y:state.y,time:now});if(trail.length>20)trail.shift();
+      }
+      trailLine?.setAttribute('points',trail.length>1?trail.map(p=>`${p.x*100},${p.y*100}`).join(' '):'');
+    }
     function render() {
       el.dataset.behavior = xySettings(name).behavior;
       if (dot) { dot.style.left = `${state.x * 100}%`; dot.style.top = `${state.y * 100}%`; }
@@ -922,7 +947,7 @@
     function emit() {
       window.currentControlStates[name+'.x'] = state.x;
       window.currentControlStates[name+'.y'] = state.y;
-      render();
+      render();drawTrail(performance.now(),true);
       window.onControl?.({ name, x: state.x, y: state.y });
     }
     function move(t) {
@@ -932,28 +957,28 @@
       emit();
     }
     bindPointerGesture(el, () => activeId, {
-      start(t) { activeId = t.pointerId; state.dragging = true; move(t); engine.stop(state); },
+      start(t) { activeId = t.pointerId; trail.length=0; state.dragging = true; move(t); engine.stop(state); },
       move,
       end(pointerId) {
         if (pointerId !== activeId) return;
-        activeId = null; state.dragging = false; state.time = performance.now();
+        activeId = null; engine.release(state,performance.now());
         if (xySettings(name).behavior !== 'physics') engine.stop(state);
       },
     });
     window.RcControlConfig?.subscribe(event => {
       if (event.name !== name) return;
       if (xySettings(name).behavior !== 'physics') engine.stop(state);
-      render();
+      render();drawTrail();
     });
     window.controlSetters = window.controlSetters || {};
     for (const axis of ['x','y']) window.controlSetters[name+'.'+axis] = value => {
       if (!Number.isFinite(value)) return;
-      engine.stop(state); state[axis] = clamp(value, 0, 1); emit();
+      engine.stop(state); trail.length=0; state[axis] = clamp(value, 0, 1); emit();
     };
     for (const key of ['friction','bounce','speed']) window.controlSetters[name+'.'+key] = value => {
       if (Number.isFinite(value)) window.RcControlConfig?.set(name, {[key]: value});
     };
-    state.render = render; state.emit = emit;
+    state.render = render; state.emit = emit;state.drawTrail=drawTrail;
     render();
   }
 
@@ -1240,39 +1265,38 @@
     });
   }
 
-  function renderStutterFeedback(el, state, gate) {
+  function renderPulseFeedback(el, state, gate) {
     // Paint the actual local gate on each frame, including fast subdivisions.
     // Never substitute a slower animation or replay pulses missed by the display.
     const hz = state.phaseFrequency;
     el.dataset.pulseView = state.active ? 'pulse' : 'off';
-    if (state.active) {
-      el.style.backgroundColor = gate ? 'rgba(255,159,10,0.82)' : 'rgba(255,159,10,0.10)';
-      el.style.setProperty('--stut-glow-size', gate ? '12px' : '7px');
-    }
+    el.style.setProperty('--modulator-pulse',state.active && gate ? '.22' : '0');
+    const fill=el.querySelector('.mod-val-bar');
+    if(fill) fill.style.height=state.active && gate ? `${state.depth*100}%` : '0%';
     const rate = el.querySelector('.modulator-rate-readout');
     if (rate) {
-      const timing = getStutterTiming(state);
-      rate.textContent = window.syncMode === 'sync'
+      const timing = getPulseTiming(state);
+      rate.textContent = modulatorSyncMode(state.name) === 'sync'
         ? formatMusicalRate(timing.subdivision / timing.ratchet) : `${hz.toFixed(2)} Hz`;
     }
   }
 
-  function renderStutterSettings() {
-    const grid = document.getElementById('stutter-rate-grid');
-    const readout = document.getElementById('stutter-effective-rate');
+  function renderPulseSettings() {
+    const grid = document.getElementById('pulse-rate-grid');
+    const readout = document.getElementById('pulse-effective-rate');
     if (!grid || !readout) return;
     // The menu is shared. Account for the most demanding active ratchet among
     // all four controls; do not offer a base division that one silently clips.
-    const count = Math.max(0, ...Array.from(modulatorStates.values()).filter(state => state.kind === 'stutter').map(state => state.count));
-    const timing = getStutterTiming({ rate: 1, count });
-    const allowed = getStutterSubdivisions(timing.bps, timing.ratchet, timing.swing);
+    const count = Math.max(0, ...Array.from(modulatorStates.values()).filter(state => state.kind === 'pulse').map(state => state.count));
+    const timing = getPulseTiming({ rate: 1, count });
+    const allowed = getPulseSubdivisions(timing.bps, timing.ratchet, timing.swing);
     // Shared menu: per-control subdivision pins live in RcControlConfig; the
     // global pinned flag still controls the "auto" vs explicit indicator.
-    const pinned = window.syncSettings.stutterSubdivisionPinned || (window.RcControlConfig && Array.from(document.querySelectorAll('[data-name]')).some((el) => {
+    const pinned = window.syncSettings.pulseSubdivisionPinned || (window.RcControlConfig && Array.from(document.querySelectorAll('[data-name]')).some((el) => {
       const n = el.getAttribute('data-name');
       return n && window.RcControlConfig.get(n, 'subdivision', null) != null;
     }));
-    const selected = pinned ? (window.syncSettings.stutterSubdivisionPinned ? window.syncSettings.stutterSubdivision : Array.from(document.querySelectorAll('[data-name]')).map((el) => window.RcControlConfig.get(el.getAttribute('data-name'), 'subdivision', null)).find((v) => v != null)) : 'auto';
+    const selected = pinned ? (window.syncSettings.pulseSubdivisionPinned ? window.syncSettings.pulseSubdivision : Array.from(document.querySelectorAll('[data-name]')).map((el) => window.RcControlConfig.get(el.getAttribute('data-name'), 'subdivision', null)).find((v) => v != null)) : 'auto';
     grid.querySelectorAll('.grid-btn').forEach(btn => {
       const val = btn.dataset.val;
       btn.disabled = window.syncMode !== 'sync' || (val !== 'auto' && !allowed.includes(Number(val)));
@@ -1346,12 +1370,13 @@
       window.drawBurstEnvelope();
     }
     if (syncPanel && !syncPanel.classList.contains('hidden')) {
-      renderStutterSettings();
+      renderPulseSettings();
       renderLfoSettings();
     }
 
     for (const [name, state] of xyStates) {
       if (window.RcXYEngine.tick(state, xySettings(name), now)) state.emit();
+      state.drawTrail(now);
     }
 
     // 1. Run scalar bursts (mode D pads)
@@ -1366,9 +1391,9 @@
     // 2. Run all eight configurable modulators.
     for (const [name, state] of modulatorStates) {
       const el = document.querySelector(`.toggle[data-name="${name}"]`);
-      const stutter = state.kind === 'stutter';
+      const pulse = state.kind === 'pulse';
       const readout = el?.querySelector('.modulator-rate-readout');
-      if (readout && performanceVisible && !stutter) {
+      if (readout && performanceVisible && !pulse) {
         const shape = modulatorShape(name);
         readout.textContent = modulatorSyncMode(name) === 'sync'
           ? formatMusicalRate(getLfoSubdivision(state.rate, window.currentBpm, perInstanceSyncSubdivision(name), shape))
@@ -1379,15 +1404,15 @@
         renderModulator(state); emitModulatorState(name, state);
       }
       if (!state.active) {
-        if (stutter) {
-          advanceStutterPhase(state,now);
-          if (el && performanceVisible) renderStutterFeedback(el,state,false);
+        if (pulse) {
+          advancePulsePhase(state,now);
+          if (el && performanceVisible) renderPulseFeedback(el,state,false);
         }
         continue;
       }
-      if (stutter) {
-        const gate = advanceStutterPhase(state, now);
-        if (el && performanceVisible) renderStutterFeedback(el,state,gate);
+      if (pulse) {
+        const gate = advancePulsePhase(state, now);
+        if (el && performanceVisible) renderPulseFeedback(el,state,gate);
       } else {
         const phase = advanceLfoPhase(state,now);
         const wave = computeLfoWaveValue(modulatorShape(name),phase);
@@ -1702,7 +1727,7 @@
       draw();
     };
 
-    window.addEventListener('ableton-rc:v2:snapshots-updated', draw);
+    window.addEventListener('ableton-rc:v3:snapshots-updated', draw);
     window.addEventListener('ableton-rc:morph-mode-change', cancelVectorRaf);
   }
 
@@ -1808,6 +1833,7 @@
         btn.addEventListener('click', () => {
           settleLfoPhases();
           window.syncSettings.lfoShape = btn.dataset.val;
+          for(const name of modulatorStates.keys()) onControlConfigPatch({name,patch:{shape:null}});
           updateGridActiveState(lfoShapeGrid, btn.dataset.val);
           saveSyncSettings();
           emitAllModulatorStates();
@@ -1829,31 +1855,31 @@
       });
     }
 
-    const stutterRateGrid = document.getElementById('stutter-rate-grid');
-    if (stutterRateGrid && typeof stutterRateGrid.querySelectorAll === 'function') {
-      stutterRateGrid.querySelectorAll('.grid-btn').forEach(btn => {
+    const pulseRateGrid = document.getElementById('pulse-rate-grid');
+    if (pulseRateGrid && typeof pulseRateGrid.querySelectorAll === 'function') {
+      pulseRateGrid.querySelectorAll('.grid-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           if (btn.disabled) return;
           const val = btn.dataset.val;
-          window.syncSettings.stutterSubdivisionPinned = val !== 'auto';
-          if (window.syncSettings.stutterSubdivisionPinned) {
-            window.syncSettings.stutterSubdivision = parseFloat(val);
+          window.syncSettings.pulseSubdivisionPinned = val !== 'auto';
+          if (window.syncSettings.pulseSubdivisionPinned) {
+            window.syncSettings.pulseSubdivision = parseFloat(val);
           }
-          updateGridActiveState(stutterRateGrid, val);
+          updateGridActiveState(pulseRateGrid, val);
           saveSyncSettings();
           emitAllModulatorStates();
-          renderStutterSettings();
+          renderPulseSettings();
         });
       });
     }
 
-    const stutterSwingInput = document.getElementById('stutter-swing');
-    const stutterSwingVal = document.getElementById('stutter-swing-val');
-    if (stutterSwingInput) {
-      stutterSwingInput.addEventListener('input', () => {
-        const val = parseFloat(stutterSwingInput.value);
-        window.syncSettings.stutterSwing = val;
-        if (stutterSwingVal) stutterSwingVal.textContent = val.toFixed(2);
+    const pulseSwingInput = document.getElementById('pulse-swing');
+    const pulseSwingVal = document.getElementById('pulse-swing-val');
+    if (pulseSwingInput) {
+      pulseSwingInput.addEventListener('input', () => {
+        const val = parseFloat(pulseSwingInput.value);
+        window.syncSettings.pulseSwing = val;
+        if (pulseSwingVal) pulseSwingVal.textContent = val.toFixed(2);
         saveSyncSettings();
         emitAllModulatorStates();
       });
@@ -1988,13 +2014,13 @@
       drawBurstEnvelope();
     }
 
-    const stutterPhaseInput = document.getElementById('stutter-phase-offset');
-    const stutterPhaseVal = document.getElementById('stutter-phase-offset-val');
-    if (stutterPhaseInput) {
-      stutterPhaseInput.addEventListener('input', () => {
-        const val = parseFloat(stutterPhaseInput.value);
-        window.syncSettings.stutterPhaseOffset = val;
-        if (stutterPhaseVal) stutterPhaseVal.textContent = val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
+    const pulsePhaseInput = document.getElementById('pulse-phase-offset');
+    const pulsePhaseVal = document.getElementById('pulse-phase-offset-val');
+    if (pulsePhaseInput) {
+      pulsePhaseInput.addEventListener('input', () => {
+        const val = parseFloat(pulsePhaseInput.value);
+        window.syncSettings.pulsePhaseOffset = val;
+        if (pulsePhaseVal) pulsePhaseVal.textContent = val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
         saveSyncSettings();
         emitAllModulatorStates();
       });
@@ -2005,7 +2031,7 @@
         inputEl.value = defaultVal;
         window.syncSettings[key] = defaultVal;
         if (valEl) valEl.textContent = defaultVal >= 0 ? `+${defaultVal.toFixed(2)}` : defaultVal.toFixed(2);
-        if (key === 'stutterSwing' && valEl) valEl.textContent = defaultVal.toFixed(2);
+        if (key === 'pulseSwing' && valEl) valEl.textContent = defaultVal.toFixed(2);
         saveSyncSettings();
         emitAllModulatorStates();
       };
@@ -2022,11 +2048,11 @@
     };
 
     if (lfoPhaseInput) resetInput(lfoPhaseInput, lfoPhaseVal, 0.0, 'lfoPhaseOffset');
-    if (stutterSwingInput) resetInput(stutterSwingInput, stutterSwingVal, 0.0, 'stutterSwing');
-    if (stutterPhaseInput) resetInput(stutterPhaseInput, stutterPhaseVal, 0.0, 'stutterPhaseOffset');
+    if (pulseSwingInput) resetInput(pulseSwingInput, pulseSwingVal, 0.0, 'pulseSwing');
+    if (pulsePhaseInput) resetInput(pulsePhaseInput, pulsePhaseVal, 0.0, 'pulsePhaseOffset');
 
     function saveSyncSettings() {
-      localStorage.setItem('ableton-rc:v2:sync_settings', JSON.stringify(window.syncSettings));
+      localStorage.setItem('ableton-rc:v3:sync_settings', JSON.stringify(window.syncSettings));
     }
 
     function updateGridActiveState(parent, activeValue) {
@@ -2054,23 +2080,23 @@
         }
       }
 
-      if (stutterRateGrid) updateGridActiveState(stutterRateGrid, settings.stutterSubdivisionPinned ? settings.stutterSubdivision : 'auto');
+      if (pulseRateGrid) updateGridActiveState(pulseRateGrid, settings.pulseSubdivisionPinned ? settings.pulseSubdivision : 'auto');
       
-      if (stutterSwingInput) {
-        stutterSwingInput.value = settings.stutterSwing;
-        if (stutterSwingVal) stutterSwingVal.textContent = settings.stutterSwing.toFixed(2);
+      if (pulseSwingInput) {
+        pulseSwingInput.value = settings.pulseSwing;
+        if (pulseSwingVal) pulseSwingVal.textContent = settings.pulseSwing.toFixed(2);
       }
 
-      if (stutterPhaseInput) {
-        stutterPhaseInput.value = settings.stutterPhaseOffset;
-        if (stutterPhaseVal) {
-          const val = settings.stutterPhaseOffset;
-          stutterPhaseVal.textContent = val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
+      if (pulsePhaseInput) {
+        pulsePhaseInput.value = settings.pulsePhaseOffset;
+        if (pulsePhaseVal) {
+          const val = settings.pulsePhaseOffset;
+          pulsePhaseVal.textContent = val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
         }
       }
 
       renderLfoSettings();
-      renderStutterSettings();
+      renderPulseSettings();
     }
 
     renderSyncSettingsUI();
@@ -2099,7 +2125,7 @@
 
     document.querySelectorAll('.xy-pad').forEach(makeXYPad);
 
-    // LFO & Stutters
+    // LFO & Pulses
     document.querySelectorAll('.toggle').forEach(makeModulator);
 
     // Start the background animation loop for physics + modulators

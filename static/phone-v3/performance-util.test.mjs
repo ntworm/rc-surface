@@ -108,7 +108,7 @@ function loadControls({ snapshots = null } = {}) {
   ]);
   const store = new Map();
   if (snapshots) {
-    store.set('ableton-rc:v2:snapshots', JSON.stringify(snapshots));
+    store.set('ableton-rc:v3:snapshots', JSON.stringify(snapshots));
   }
 
   let rafCallback = null;
@@ -176,7 +176,7 @@ function loadControls({ snapshots = null } = {}) {
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   vm.runInNewContext(snapshotsSource, context, { filename: snapshotsFile });
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname,'control-config.js'),'utf8'),context);
-  for(let i=5;i<=8;i++) context.RcControlConfig.set(`toggle-${i}`,{shape:'stutter'});
+  for(let i=5;i<=8;i++) context.RcControlConfig.set(`toggle-${i}`,{shape:'square'});
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
@@ -198,7 +198,7 @@ function loadControls({ snapshots = null } = {}) {
       if (cb) cb(at);
     },
     storedSnapshots() {
-      return JSON.parse(store.get('ableton-rc:v2:snapshots') || '[]');
+      return JSON.parse(store.get('ableton-rc:v3:snapshots') || '[]');
     },
   };
 }
@@ -249,7 +249,7 @@ test('old snapshot keys without setters are skipped during recall', () => {
   assert.equal(app.emitted.some((event) => event.name === oldKey), false);
 });
 
-test('PERF capture and recall correctly stores LFO/stutter active state and rate/depth parameters', () => {
+test('PERF capture and recall correctly stores LFO/pulse active state and rate/depth parameters', () => {
   const app = loadControls();
 
   // Configure LFO 1 active, rate=0.85, depth=0.65
@@ -257,7 +257,7 @@ test('PERF capture and recall correctly stores LFO/stutter active state and rate
   app.context.window.controlSetters['toggle-1.rate'](0.85);
   app.context.window.controlSetters['toggle-1.depth'](0.65);
 
-  // Configure Stutter 1 active, rate=0.45, count=0.75
+  // Configure Pulse 1 active, rate=0.45, count=0.75
   app.context.window.controlSetters['toggle-5'](1.0);
   app.context.window.controlSetters['toggle-5.rate'](0.45);
   app.context.window.controlSetters['toggle-5.count'](0.75);
@@ -413,14 +413,14 @@ test('PERF recall keeps host LFO active until inactive morph completes', () => {
   assert.equal(app.modulatorStates.filter(e => e.name === 'toggle-1').length, 1);
 });
 
-test('PERF Mode D snapshot recall triggers burst decays for pads/LFOs/stutters', () => {
+test('PERF Mode D snapshot recall triggers burst decays for pads/LFOs/pulses', () => {
   const app = loadControls();
 
   // Set padMode to D by clicking the mode button
   const modeD = app.modeButtons.find((btn) => btn.dataset.padModeSet === 'D');
   app.click(modeD);
 
-  // Recall LFO-1, Stutter-1, Pad-1 as active
+  // Recall LFO-1, Pulse-1, Pad-1 as active
   app.context.window.controlSetters['toggle-1'](1.0);
   app.context.window.controlSetters['toggle-5'](1.0);
   app.context.window.controlSetters['pad-1'](0.8);

@@ -30,22 +30,23 @@ function setup(t, kind = 'lfo') {
 const sine = cycles => 0.5 + 0.5 * Math.sin(2 * Math.PI * cycles - Math.PI / 2);
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 0.00051, `${actual} != ${expected}`);
 const syncedSine = cycles => 0.5 + 0.5 * Math.sin(2 * Math.PI * cycles);
-for (const [shape, hz] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 })) {
-  test(`r11 ${shape} FREE ceiling and shape changes preserve oscillator phase`, async t => {
+for (const [shape, hz] of Object.entries({ sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 })) {
+  test(`r11 ${shape} FREE ceiling and waveform transition keep valid phase`, async t => {
     const app = setup(t);
     app.update({ shape: 'sine', rate: 1 });
     await app.tick(0); await app.tick(17);
     const phase = app.state().phase;
     app.update({ shape, rate: 1 });
-    assert.equal(app.state().phase, phase);
+    const anchor=shape==='square'?0:phase;
+    assert.equal(app.state().phase,anchor);
     await app.tick(27);
-    const delta = (app.state().phase - phase + 2 * Math.PI) % (2 * Math.PI);
+    const delta = (app.state().phase - anchor + 2 * Math.PI) % (2 * Math.PI);
     assert.ok(Math.abs(delta / (2 * Math.PI * .01) - hz) < 1e-8);
   });
 }
 
-test('r11 Stutter SYNC respects 15Hz even with ratchet and swing', async t => {
-  const app = setup(t, 'stutter');
+test('r11 Pulse SYNC respects 15Hz even with ratchet and swing', async t => {
+  const app = setup(t, 'pulse');
   playingAt(0);
   app.update({ syncMode: 'sync', rate: 1, count: 1, swing: .66, syncSubdivisionBeats: .03125 });
   let previous, lastEdge = 0;
@@ -93,7 +94,7 @@ test('HOST accepts dotted and triplet pins only for LFO', async t => {
     app.update({ syncMode: 'sync', syncSubdivisionBeats: subdivision });
     assert.equal(app.state().syncSubdivisionBeats, subdivision);
   }
-  updateHostModulator('phase-test', { kind: 'stutter', name: 'toggle-5', active: true,
+  updateHostModulator('phase-test', { kind: 'pulse', name: 'toggle-5', active: true,
     syncMode: 'sync', syncSubdivisionBeats: 0.75 });
   stopHostModulatorLoop();
   assert.equal(hostModulators.get('phase-test::toggle-5').syncSubdivisionBeats, undefined);
@@ -267,8 +268,8 @@ test('FREE LFO snapshot rate morph integrates frequency, including a dropped tic
   close(await app.tick(1503), sine(0.103 * 0.88 + (0.88 + 3.22) / 2 + 0.4 * 3.22));
 });
 
-test('FREE stutter rate change preserves pulse phase instead of recalculating its history', async t => {
-  const app = setup(t, 'stutter');
+test('FREE pulse rate change preserves pulse phase instead of recalculating its history', async t => {
+  const app = setup(t, 'pulse');
   app.update({ rate: 0 }); await app.tick(0);
   assert.equal(await app.tick(210), 1);
   // Keep the original 1 -> 2.9Hz phase probe under the r12 1..15Hz range.

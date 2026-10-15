@@ -10,9 +10,8 @@ import { commands, configureMappingStorage, controlMappings, getProjectConfigSta
 import { validatePerformanceSettings } from '../src/live/project-config.ts';
 
 const performance = {
-  version: 1,
-  slots: Object.fromEntries(Array.from({length:8},(_,i)=>[`toggle-${i+1}`,{
-    shape:i%2?'stutter':'triangle',mode:'C',syncMode:'free',subdivision:0,
+  version:2,slots: Object.fromEntries(Array.from({length:8},(_,i)=>[`toggle-${i+1}`,{
+    shape:i%2?'square':'triangle',mode:'C',syncMode:'free',subdivision:0,
     phaseOffset:-.5,rate:.3,depth:.7,count:2/3,swing:.2,
   }])),
   xy: {'xy-1':{behavior:'physics',friction:.004,bounce:.7,speed:2},
@@ -34,7 +33,7 @@ test('version 2 project and preset round-trip all eight slots and both independe
     const exported=await commands.exportProjectConfig.handler({});
     const project=JSON.parse(exported.content);
     assert.equal(project.version,2);assert.deepEqual(project.preferences.performance,performance);
-    await commands.saveProjectClientState.handler({preferences:{performance:{version:1,slots:{}}}});
+    await commands.saveProjectClientState.handler({preferences:{performance:{version:2,slots:{}}}});
     await commands.loadPreset.handler({name:'complete'});
     assert.deepEqual(getProjectConfigStatus().preferences.performance,performance);
     assert.equal(controlMappings.get('toggle-8')[0].outMin,48);
@@ -50,6 +49,6 @@ test('version 2 project and preset round-trip all eight slots and both independe
 });
 test('performance schema rejects retired slot IDs, unsupported versions and invalid XY parameters',()=>{
   assert.throws(()=>validatePerformanceSettings({...performance,version:9}),/Unsupported/);
-  assert.throws(()=>validatePerformanceSettings({version:1,slots:{'button-1':{shape:'stutter'}}}),/Invalid modulator slot/);
+  assert.throws(()=>validatePerformanceSettings({version:2,slots:{'button-1':{shape:'square'}}}),/Invalid modulator slot/);
   assert.throws(()=>validatePerformanceSettings({...performance,xy:{'xy-1':{...performance.xy['xy-1'],speed:99}}}),/Invalid XY speed/);
 });

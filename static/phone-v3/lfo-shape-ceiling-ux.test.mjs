@@ -332,7 +332,7 @@ test('P01-3: switching shape dynamically recalculates button availability and sh
   assert.equal(h.rateButtons.get('0.5').disabled, false, '1/8 re-enabled on square (4 Hz <= 12 Hz)');
   assert.equal(h.rateButtons.get('0.25').disabled, false, '1/16 re-enabled on square (8 Hz <= 12 Hz)');
   assert.equal(h.rateButtons.get('0.125').disabled, true, '1/32 still disabled on square (16 Hz > 12 Hz)');
-  assert.equal(h.shapeLimit.textContent, 'square · MAX 12 Hz');
+  assert.equal(h.shapeLimit.textContent, 'square · MAX 15 Hz');
 
   // Switch to Sine: 4 Hz ceiling (exact limit for 1/8)
   h.shapeButtons.get('sine').click();

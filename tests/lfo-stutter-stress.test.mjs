@@ -5,9 +5,9 @@
 // This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-// tests/lfo-stutter-stress.test.mjs
+// tests/lfo-pulse-stress.test.mjs
 //
-// Stress tests for the LFO/stutter host-side motor. Builds on the
+// Stress tests for the LFO/pulse host-side motor. Builds on the
 // foundation in tests/lfo-high-rate-jitter.test.mjs by pushing the motor
 // to sustained high-frequency operation, concurrent modulators, and
 // live configuration changes. The goal is to catch regressions that
@@ -235,8 +235,8 @@ test("CPU budget: 4 modulators at 4ms tick stays under 4ms per tick (avg)", asyn
     setupMappedParam("toggle-7");
 
     upd("toggle-4", { kind: "lfo", active: true, rate: 0.5, depth: 0.8, shape: "sine", syncMode: "free" });
-    upd("toggle-5", { kind: "stutter", active: true, rate: 0.6, depth: 0.8, shape: "square", syncMode: "free" });
-    upd("toggle-6", { kind: "stutter", active: true, rate: 0.7, depth: 0.8, shape: "triangle", syncMode: "free" });
+    upd("toggle-5", { kind: "pulse", active: true, rate: 0.6, depth: 0.8, shape: "square", syncMode: "free" });
+    upd("toggle-6", { kind: "pulse", active: true, rate: 0.7, depth: 0.8, shape: "triangle", syncMode: "free" });
     upd("toggle-7", { kind: "lfo", active: true, rate: 0.9, depth: 0.8, shape: "sine", syncMode: "free" });
 
     // Warm up

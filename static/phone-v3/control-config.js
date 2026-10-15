@@ -8,7 +8,7 @@
 // tests can use an in-memory storage and freeze time. In production the module
 // reads `window.localStorage` and `Date.now()` via the default factory.
 //
-// Persistence key: `ableton-rc:v2:control_config`
+// Persistence key: `ableton-rc:v3:control_config`
 // Wire shape: { [controlName]: { mode?, shape?, subdivision?, swing?, friction?,
 //   bounce?, resetValue?, knobRange? } }
 //
@@ -25,10 +25,10 @@
 }(typeof globalThis !== "undefined" ? globalThis : (typeof self !== "undefined" ? self : this), function () {
   "use strict";
 
-  const STORAGE_KEY = "ableton-rc:v2:control_config";
+  const STORAGE_KEY = "ableton-rc:v3:control_config";
 
   const VALID_MODES = new Set(["A", "B", "C", "D"]);
-  const VALID_SHAPES = new Set(["sine", "triangle", "ramp_up", "ramp_down", "square", "stutter"]);
+  const VALID_SHAPES = new Set(["sine", "triangle", "ramp_up", "ramp_down", "square"]);
   const VALID_KEYS = new Set([
     "mode",
     "shape",

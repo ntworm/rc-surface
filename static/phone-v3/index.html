@@ -107,7 +107,7 @@
 
   <!--
     Page: Performance
-    Layout optimized for thumbs: Left column 12 pads, center XY controls, right column eight configurable LFO/Stutter slots and utilities.
+    Layout optimized for thumbs: Left column 12 pads, center XY controls, right column eight configurable toggles and utilities.
   -->
   <main class="page page-performance" data-page="performance">
     <section class="col col-pads">
@@ -136,6 +136,7 @@
       <div class="xy-block">
         <div class="xy-pad" data-name="xy-1">
           <span class="xy-label" data-i18n="perf.xy1">XY 1</span>
+          <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
           <div class="xy-dot"></div>
         </div>
         <div class="xy-readout" data-readout="xy-1">0.50 / 0.50</div>
@@ -143,6 +144,7 @@
       <div class="xy-block">
         <div class="xy-pad" data-name="xy-2">
           <span class="xy-label" data-i18n="perf.xy2">XY 2</span>
+          <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
           <div class="xy-dot"></div>
         </div>
         <div class="xy-readout" data-readout="xy-2">0.50 / 0.50</div>
@@ -160,32 +162,20 @@
     <section class="col col-right-perf">
       <div class="right-perf-section">
         <div class="grid-right-perf">
-          <!-- Modulator slots 1–4 -->
-          <div class="perf-sub-col">
-            <header class="section-head">
-              <span class="section-title" data-i18n="perf.lfos">LFO 1–4</span>
-            </header>
+          <div class="perf-sub-col perf-toggles">
+            <header class="section-head"><span class="section-title" data-i18n="perf.toggles">TOGGLES</span></header>
             <div class="grid-modulators-perf">
-              <div class="toggle" data-name="toggle-1"><span class="num">L1</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-2"><span class="num">L2</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-3"><span class="num">L3</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-4"><span class="num">L4</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-1"><span class="num">T1</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-2"><span class="num">T2</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-3"><span class="num">T3</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-4"><span class="num">T4</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-5"><span class="num">T5</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-6"><span class="num">T6</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-7"><span class="num">T7</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-8"><span class="num">T8</span><span class="modulator-wave-label"></span><span class="modulator-mode-label"></span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
             </div>
           </div>
-          
-          <!-- Modulator slots 5–8 -->
-          <div class="perf-sub-col">
-            <header class="section-head">
-              <span class="section-title" data-i18n="perf.modulators2">LFO 5–8</span>
-            </header>
-            <div class="grid-modulators-perf">
-              <div class="toggle" data-name="toggle-5"><span class="num">L5</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-6"><span class="num">L6</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-7"><span class="num">L7</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-8"><span class="num">L8</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
-            </div>
-          </div>
-          
+
           <!-- Utility Column -->
           <div class="perf-sub-col">
             <header class="section-head">
@@ -735,7 +725,7 @@
         <div class="setting-group-section">
           <span class="section-divider-label" data-i18n="sync.lfoConfig">LFO CONFIG</span>
           <p class="setting-label" data-i18n="sync.lfoBandwidth">Experimental ceilings: sine 5 Hz, triangle 8 Hz, ramps 6 Hz, square 15 Hz. FREE is continuous; SYNC stays rhythmic within the shape ceiling. Live fidelity still needs testing.</p>
-          <p class="setting-label" data-i18n="sync.rateNotation">SYNC: 1/4 = one beat, 1/8 = half a beat. T = triplet; D = dotted. FREE uses Hz. Stutter shows the effective rate including ratchet; swing alternates spacing.</p>
+          <p class="setting-label" data-i18n="sync.rateNotation">SYNC: 1/4 = one beat, 1/8 = half a beat. T = triplet; D = dotted. FREE uses Hz. Square shows the effective rate including ratchet; swing alternates spacing.</p>
           <div class="readout-val" id="lfo-effective-rate">AUTO · 1 → 1/8</div>
           
           <div class="setting-group">
@@ -782,14 +772,14 @@
           </div>
         </div>
 
-        <!-- Stutter Settings -->
+        <!-- Square Settings -->
         <div class="setting-group-section">
-          <span class="section-divider-label" data-i18n="sync.stutterConfig">STUTTER CONFIG</span>
-          <p class="setting-label" data-i18n="sync.stutterBandwidth">Up to 15 Hz including ratchet. Unavailable base divisions are disabled for the current BPM, swing and ratchet. Horizontal drag returns to Auto; vertical drag changes amplitude. Flashing follows the local gate, not confirmed Live delivery; the screen can miss fast pulses.</p>
+          <span class="section-divider-label" data-i18n="sync.pulseConfig">SQUARE TIMING</span>
+          <p class="setting-label" data-i18n="sync.pulseBandwidth">Up to 15 Hz including ratchet. Unavailable base divisions are disabled for the current BPM, swing and ratchet. Horizontal drag returns to Auto; vertical drag changes amplitude. Flashing follows the local gate, not confirmed Live delivery; the screen can miss fast pulses.</p>
           
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.rate">Rate (Subdivision)</label>
-            <div class="setting-row rate-grid" id="stutter-rate-grid">
+            <div class="setting-row rate-grid" id="pulse-rate-grid">
               <button class="grid-btn" data-val="auto" data-i18n="sync.auto">Auto</button>
               <button class="grid-btn" data-val="1">1/4</button>
               <button class="grid-btn" data-val="0.5">1/8</button>
@@ -798,22 +788,22 @@
               <button class="grid-btn" data-val="0.0625">1/64</button>
               <button class="grid-btn" data-val="0.03125">1/128</button>
             </div>
-            <div id="stutter-effective-rate" class="readout-val"></div>
+            <div id="pulse-effective-rate" class="readout-val"></div>
           </div>
           
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.swing">Swing</label>
             <div class="setting-row slider-row">
-              <input type="range" id="stutter-swing" min="0" max="0.66" step="0.05" value="0">
-              <span id="stutter-swing-val" class="readout-val">0.00</span>
+              <input type="range" id="pulse-swing" min="0" max="0.66" step="0.05" value="0">
+              <span id="pulse-swing-val" class="readout-val">0.00</span>
             </div>
           </div>
           
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.phaseOffset">Phase Offset (Beats)</label>
             <div class="setting-row slider-row">
-              <input type="range" id="stutter-phase-offset" min="-2" max="2" step="0.125" value="0">
-              <span id="stutter-phase-offset-val" class="readout-val">0.0</span>
+              <input type="range" id="pulse-phase-offset" min="-2" max="2" step="0.125" value="0">
+              <span id="pulse-phase-offset-val" class="readout-val">0.0</span>
             </div>
           </div>
 

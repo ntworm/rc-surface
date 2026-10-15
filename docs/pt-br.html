@@ -67,7 +67,7 @@
     "Doze pads de performance com quatro modos (momentâneo, hold, toggle, burst)",
     "Dois XY pads, cada um com física opcional independente",
     "Oito knobs e oito faders para o mixer",
-    "Oito slots LFO/Stutter e dois painéis XY configuráveis",
+    "Oito slots toggle e dois painéis XY configuráveis",
     "Oito snapshots com morph por tempo e morph vetorial",
     "Sensores de movimento e orientação como fontes de mapeamento",
     "Doze descritores de áudio do microfone do celular ou de uma interface de áudio",
@@ -1250,8 +1250,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">
     <text x="59" y="94">PADS</text>
     <text x="444" y="94"></text>
-    <text x="694" y="94">LFO 1–4</text>
-    <text x="839" y="94">LFO 5–8</text>
+    <text x="766" y="94">TOGGLES</text>
     <text x="984" y="94">UTIL</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
@@ -1333,10 +1332,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="751" y="290" width="59" height="96"/>
   </g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
-    <text x="681" y="118">L1</text>
-    <text x="753" y="118">L2</text>
-    <text x="681" y="266">L3</text>
-    <text x="753" y="266">L4</text>
+    <text x="681" y="118">T1</text>
+    <text x="753" y="118">T2</text>
+    <text x="681" y="266">T3</text>
+    <text x="753" y="266">T4</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
     <rect x="820" y="100" width="67" height="142"/>
@@ -1346,10 +1345,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <rect x="820" y="100" width="67" height="142" fill="#e47b1a" stroke="none"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="16">
-    <text x="842" y="180" fill="#141414">L5</text>
-    <text x="914" y="180" fill="#c0c0c0">L6</text>
-    <text x="842" y="328" fill="#c0c0c0">L7</text>
-    <text x="914" y="328" fill="#c0c0c0">L8</text>
+    <text x="842" y="180" fill="#141414">T5</text>
+    <text x="914" y="180" fill="#c0c0c0">T6</text>
+    <text x="842" y="328" fill="#c0c0c0">T7</text>
+    <text x="914" y="328" fill="#c0c0c0">T8</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
     <rect x="965" y="100" width="55" height="92"/>
@@ -1383,7 +1382,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">2</td><td data-i18n="lp.map.013">Grade de pads</td><td class="c2">12</td><td data-i18n="lp.map.014">Quatro por linha, três linhas. O comportamento vem do modo, não do pad.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.015">Modo do pad</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentâneo, B hold, C toggle, D burst. Vale para os doze; CFG sobrescreve um pad.</td></tr>
               <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Marcados <code>XY 1</code> e <code data-i18n="lp.fig.016">XY 2</code>. Cada eixo é mapeado separadamente.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">L1 a L8. Cada slot escolhe onda, incluindo Stutter, modo e clock no CFG. Hz em FREE, figuras em SYNC.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">T1 a T8. Cada slot escolhe onda, incluindo Square, modo e clock no CFG. Hz em FREE, figuras em SYNC.</td></tr>
               <tr><td class="c1">7</td><td>PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.023">CAP captura, os slots 1 a 4 recuperam, OFF sai.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Painel do Live</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transporte, TRN, MAP, CFG.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Bloco de sync</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, ajustes, STAGE; CALIBRAR em SNS/AUD/VID.</td></tr>
@@ -1936,7 +1935,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tr><td class="c1">00</td><td data-i18n="lp.controls.010">Pads de performance</td><td class="c2">12</td><td>PERF</td><td class="c2">MIDI</td><td data-i18n="lp.controls.011">Clip, cena ou nota de trigger</td></tr>
             <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Modos de pad A–D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Comportamento do pad; CFG sobrescreve por pad</td></tr>
             <tr><td class="c1">02</td><td>XY pads</td><td class="c2">2</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.016">Dois parâmetros por pad</td></tr>
-            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs L1–L8</td><td class="c2">8</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Qualquer parâmetro mapeado</td></tr>
+            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs T1–T8</td><td class="c2">8</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Qualquer parâmetro mapeado</td></tr>
             <tr><td class="c1">05</td><td data-i18n="lp.controls.021">Coluna PERF UTIL</td><td class="c2">6</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.023">CAP, slots 1–4, OFF</td></tr>
             <tr><td class="c1">06</td><td>Knobs</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.025">Parâmetro de device</td></tr>
             <tr><td class="c1">07</td><td>Faders</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.027">Volume da track</td></tr>
@@ -1964,7 +1963,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4>MAP</h4><p data-i18n="lp.controls.058">Abre o seletor de mapeamento sobre a página atual.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
-          <h4>CFG</h4><p data-i18n="lp.controls.148">Ajustes por controle: pads, oito slots LFO/Stutter, Estático/Física nos dois XY. Só PERF e MIX.</p></span></div>
+          <h4>CFG</h4><p data-i18n="lp.controls.148">Ajustes por controle: pads, oito slots toggle, Estático/Física nos dois XY. Só PERF e MIX.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-wave"/></svg></span><span class="bd">
           <h4>SYNC</h4><p data-i18n-html="lp.controls.059">Alterna <b>SYNC</b> / <b>FREE</b>. Segure para abrir os Ajustes de Deep Sync, <a href="#clock">2.1</a>.</p></span></div>
@@ -1999,8 +1998,8 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <div class="control-sheet" id="control-family-performance" data-control-family="performance" role="region" aria-labelledby="control-label-performance">
       <div class="feature">
         <div class="feature-copy">
-          <h3 data-i18n="lp.controls.074">Pads, LFOs, stutters</h3>
-          <p data-i18n-html="lp.controls.075"><code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Stutter; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.</p>
+          <h3 data-i18n="lp.controls.074">Pads, LFOs, squares</h3>
+          <p data-i18n-html="lp.controls.075"><code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Square; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.</p>
         </div>
         <div class="feature-figure">
                     <div class="pf-wrap" data-control-illustration="performance">

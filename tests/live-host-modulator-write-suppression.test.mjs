@@ -21,6 +21,8 @@ import {
   updateHostModulator,
 } from "../src/live/mappings.ts";
 
+test.beforeEach(t => t.mock.method(Date, "now", () => 0));
+
 const TICK_MS = 4; // production HOST_MODULATOR_INTERVAL_MS
 const TICKS_PER_SECOND = 1000 / TICK_MS; // 250
 
@@ -90,12 +92,12 @@ test("a 4 Hz LFO at full depth retains at least90 percent of generator samples",
   }
 });
 
-test("a stutter gate writes on its edges, not on every tick", async () => {
+test("a pulse gate writes on its edges, not on every tick", async () => {
   resetState();
   const applied = setupParam("toggle-5");
   try {
     updateHostModulator("client-1", {
-      kind: "stutter",
+      kind: "pulse",
       name: "toggle-5",
       active: true,
       rate: 0, // free mode floor = 1 Hz base
@@ -176,7 +178,7 @@ test("deactivation is written even though it repeats the resting value", async (
   const applied = setupParam("toggle-5");
   try {
     updateHostModulator("client-1", {
-      kind: "stutter",
+      kind: "pulse",
       name: "toggle-5",
       active: true,
       rate: 0,
@@ -186,7 +188,7 @@ test("deactivation is written even though it repeats the resting value", async (
     await tickHostModulators(TICK_MS);
     applied.length = 0;
 
-    updateHostModulator("client-1", { kind: "stutter", name: "toggle-5", active: false });
+    updateHostModulator("client-1", { kind: "pulse", name: "toggle-5", active: false });
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     assert.ok(applied.includes(0), "turning a modulator off must always reach Live");

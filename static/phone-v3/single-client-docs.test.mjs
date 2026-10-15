@@ -72,7 +72,7 @@ test('INSTALL.pt-BR.md documents single controller limitation and phone/desktop 
 test('LFO shape configuration docs do not mention long-press and point to CFG mode', () => {
   for (const file of ['USER-GUIDE.md', 'USER-GUIDE.pt-BR.md']) {
     const content = readDoc(file);
-    const lfoSection = content.match(/## 3\.[^\n]*LFO[\s\S]*?(?=\n## 4)/i)?.[0] || '';
+    const lfoSection = content.match(/## 3\.[^\n]*(?:LFO|toggles)[\s\S]*?(?=\n## 4)/i)?.[0] || '';
     assert.doesNotMatch(lfoSection, /long-press|long press|toque longo|pressão longa/i, `should not mention long press in LFO section of ${file}`);
     assert.match(lfoSection, /CFG/, `should mention CFG in LFO section of ${file}`);
   }

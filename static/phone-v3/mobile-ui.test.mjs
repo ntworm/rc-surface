@@ -410,9 +410,10 @@ test('performance mode states color rings without replacing family fill feedback
   const css = read('style.css');
   const modeSelectors = [
     '.toggle.on',
-    '.toggle.burst',
-    '.toggle[data-waveform="stutter"].on',
-    '.toggle[data-waveform="stutter"].burst',
+    '.toggle.mode-a',
+    '.toggle.mode-b',
+    '.toggle.mode-c',
+    '.toggle.mode-d',
   ];
 
   for (const selector of modeSelectors) {
@@ -682,32 +683,32 @@ test('Sync Settings overlay markup and buttons exist in index.html', () => {
   assert.match(html, /id="lfo-rate-grid"/);
   assert.match(html, /id="lfo-shape-grid"/);
   assert.match(html, /id="lfo-phase-offset"/);
-  assert.match(html, /id="stutter-rate-grid"/);
-  assert.match(html, /id="stutter-swing"/);
-  assert.match(html, /id="stutter-phase-offset"/);
+  assert.match(html, /id="pulse-rate-grid"/);
+  assert.match(html, /id="pulse-swing"/);
+  assert.match(html, /id="pulse-phase-offset"/);
 });
 
 test('Sync Settings rate grids include Auto pin mode for per-control synced rates', () => {
   const html = read('index.html');
   const controls = read('controls.js');
   assert.match(html, /id="lfo-rate-grid"[\s\S]*data-val="auto"[\s\S]*Auto/);
-  assert.match(html, /id="stutter-rate-grid"[\s\S]*data-val="auto"[\s\S]*Auto/);
+  assert.match(html, /id="pulse-rate-grid"[\s\S]*data-val="auto"[\s\S]*Auto/);
   assert.match(controls, /lfoSubdivisionPinned:\s*false/);
-  assert.match(controls, /stutterSubdivisionPinned:\s*false/);
+  assert.match(controls, /pulseSubdivisionPinned:\s*false/);
 });
 
-test('controls.js loads and updates window.syncSettings, and integrates with LFO/Stutter state messages', () => {
+test('controls.js loads and updates window.syncSettings, and integrates with LFO/Pulse state messages', () => {
   const controls = read('controls.js');
   assert.match(controls, /setupSyncSettingsUI/);
   assert.match(controls, /window\.syncSettings\s*=/);
-  assert.match(controls, /'ableton-rc:v2:sync_settings'/);
+  assert.match(controls, /'ableton-rc:v3:sync_settings'/);
   assert.match(controls, /clockSource:\s*window\.syncSettings\.clockSource/);
   assert.match(controls, /syncSubdivisionBeats:[^\n]*perInstanceSyncSubdivision/);
   assert.match(controls, /phaseOffsetBeats:[^\n]*lfoPhaseOffset/);
   assert.match(controls, /shape:\s*modulatorShape/);
-  assert.match(controls, /syncSubdivisionBeats:[^\n]*perInstanceStutterSubdivision/);
-  assert.match(controls, /phaseOffsetBeats:[^\n]*perInstanceStutterPhaseOffset/);
-  assert.match(controls, /swing:\s*(?:window\.syncSettings\.stutterSwing|perInstanceStutterSwing)/);
+  assert.match(controls, /syncSubdivisionBeats:[^\n]*perInstancePulseSubdivision/);
+  assert.match(controls, /phaseOffsetBeats:[^\n]*perInstancePulsePhaseOffset/);
+  assert.match(controls, /swing:\s*(?:window\.syncSettings\.pulseSwing|perInstancePulseSwing)/);
 });
 
 test('controls.js renders local LFO feedback with the selected shape', () => {
@@ -793,8 +794,8 @@ test('controls.js / index.html / app.js / mapping-mode.js new features: header t
   assert.match(controls, /inputEl\.addEventListener\('dblclick'/);
   assert.match(controls, /valEl\.addEventListener\('dblclick'/);
   assert.match(controls, /resetInput\(lfoPhaseInput, lfoPhaseVal, 0\.0, 'lfoPhaseOffset'\)/);
-  assert.match(controls, /resetInput\(stutterSwingInput, stutterSwingVal, 0\.0, 'stutterSwing'\)/);
-  assert.match(controls, /resetInput\(stutterPhaseInput, stutterPhaseVal, 0\.0, 'stutterPhaseOffset'\)/);
+  assert.match(controls, /resetInput\(pulseSwingInput, pulseSwingVal, 0\.0, 'pulseSwing'\)/);
+  assert.match(controls, /resetInput\(pulsePhaseInput, pulsePhaseVal, 0\.0, 'pulsePhaseOffset'\)/);
 
   // App.js updates header play state
   assert.match(app, /window\.updateHeaderPlayState\(state\.isPlaying\)/);
@@ -802,4 +803,12 @@ test('controls.js / index.html / app.js / mapping-mode.js new features: header t
   // Mapping mode sets pickerMode to null on conflict to show details pane UI
   assert.match(mappingMode, /state\.pendingConflict = \{ owner: conflict, target: normalized \};/);
   assert.match(mappingMode, /state\.pickerMode = null;/);
+});
+
+test('Performance has one centred Toggles group and both XY trail layers',()=>{
+  const html=read('index.html');const css=read('style.css');
+  assert.equal((html.match(/data-i18n="perf.toggles"/g)||[]).length,1);
+  assert.equal((html.match(/class="xy-trail"/g)||[]).length,2);
+  assert.doesNotMatch(html,/LFO [15][–-][48]|>STUTTER CONFIG</);
+  assert.match(css,/perf-toggles > \.section-head[^}]*justify-content: center/);
 });

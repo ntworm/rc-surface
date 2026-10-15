@@ -81,14 +81,14 @@ function isRecord(value: unknown): value is Record<string, any> {
 
 // Version 2 uses one eight-slot model. Earlier configurations are incompatible.
 export function validatePerformanceSettings(value: unknown): Record<string, any> {
-  if (!isRecord(value) || value.version !== 1 || !isRecord(value.slots)) {
+  if (!isRecord(value) || value.version !== 2 || !isRecord(value.slots)) {
     throw new Error('Unsupported modulator configuration');
   }
   const ranges: Record<string, [number, number]> = {
     rate: [0, 1], depth: [0, 1], count: [0, 1], subdivision: [0, 32],
     swing: [0, .66], phaseOffset: [-4, 4],
   };
-  const shapes = new Set(['sine', 'triangle', 'ramp_up', 'ramp_down', 'square', 'stutter']);
+  const shapes = new Set(['sine', 'triangle', 'ramp_up', 'ramp_down', 'square']);
   for (const [name, entry] of Object.entries(value.slots)) {
     if (!/^toggle-[1-8]$/.test(name) || !isRecord(entry)) throw new Error('Invalid modulator slot');
     for (const [key, item] of Object.entries(entry)) {

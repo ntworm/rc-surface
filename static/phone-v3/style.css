@@ -261,10 +261,11 @@ body.stage-mode .xy-readout {
 .col-xy .xy-block.physics { margin-top: 4px; }
 
 .col-right-perf .right-perf-section { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-.grid-right-perf { display: grid; grid-template-columns: 1.1fr 1.1fr 0.9fr; gap: 6px; flex: 1; min-height: 0; }
+.grid-right-perf { display: grid; grid-template-columns: 2.2fr 0.9fr; gap: 6px; flex: 1; min-height: 0; }
+.perf-toggles > .section-head { justify-content: center; }
 .perf-sub-col { display: flex; flex-direction: column; min-height: 0; gap: 4px; }
 .grid-modulators-perf { display: grid; gap: 3px; flex: 1 1 0; min-width: 0; min-height: 0;
-                     grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+                     grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); }
 
 
 /* ---- Section head ---- */
@@ -354,64 +355,32 @@ body.stage-mode .xy-readout {
 .perf-snapshot-slot:not(.empty) .status-indicator { color: #30d158; }
 .perf-snapshot-slot.morphing { border-color: var(--accent); box-shadow: 0 0 10px rgba(255,161,51,0.22); }
 
-/* ---- LFO Modulators ---- */
-.toggle { background: linear-gradient(145deg, rgba(48,209,88,0.20), rgba(48,209,88,0.06) 55%, var(--bg2));
-          border: 1px solid rgba(48,209,88,0.26); border-radius: 0;
-          position: relative; display: flex; align-items: center; justify-content: center;
-          touch-action: none; min-width: 0; min-height: 0; font-weight: 800; overflow: hidden;
-           }
-.toggle .num { font-size: 10px; color: #c9f7d5; z-index: 2; pointer-events: none; letter-spacing: 0.05em; }
-.toggle.on { border-color: var(--mode-a); box-shadow: inset 0 0 0 1px rgba(10,132,255,0.2), 0 0 9px rgba(10,132,255,0.18); }
-.toggle.on .num { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-.toggle.burst { border-color: var(--mode-d); box-shadow: inset 0 0 0 1px rgba(255,55,95,0.25), 0 0 10px rgba(255,55,95,0.28); }
-.toggle.mode-a { border-color: var(--mode-a); box-shadow: inset 0 0 0 1px rgba(10,132,255,0.22), 0 calc(-1 * var(--lfo-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--lfo-drag-y, 0) * 8px) rgba(10,132,255, calc(0.24 + var(--lfo-drag-y, 0) * 0.25)), calc(-1 * var(--lfo-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--lfo-drag-x, 0) * 8px) rgba(10,132,255, calc(0.18 + var(--lfo-drag-x, 0) * 0.25)); }
-.toggle.mode-b { border-color: var(--mode-b); box-shadow: inset 0 0 0 1px rgba(255,161,51,0.22), 0 calc(-1 * var(--lfo-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--lfo-drag-y, 0) * 8px) rgba(255,161,51, calc(0.22 + var(--lfo-drag-y, 0) * 0.30)), calc(-1 * var(--lfo-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--lfo-drag-x, 0) * 8px) rgba(255,161,51, calc(0.16 + var(--lfo-drag-x, 0) * 0.30)); }
-.toggle.mode-c { border-color: var(--mode-c); box-shadow: inset 0 0 0 1px rgba(48,209,88,0.22), 0 calc(-1 * var(--lfo-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--lfo-drag-y, 0) * 8px) rgba(48,209,88, calc(0.24 + var(--lfo-drag-y, 0) * 0.25)), calc(-1 * var(--lfo-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--lfo-drag-x, 0) * 8px) rgba(48,209,88, calc(0.18 + var(--lfo-drag-x, 0) * 0.25)); }
-.toggle.mode-d { border-color: var(--mode-d); box-shadow: inset 0 0 0 1px rgba(255,55,95,0.25), 0 calc(-1 * var(--lfo-drag-y, 0) * 4px) var(--stut-glow-size, 8px) calc(var(--lfo-drag-y, 0) * 8px) rgba(255,55,95, calc(0.30 + var(--lfo-drag-y, 0) * 0.30)), calc(-1 * var(--lfo-drag-x, 0) * 4px) 0 var(--stut-glow-size, 8px) calc(var(--lfo-drag-x, 0) * 8px) rgba(255,55,95, calc(0.22 + var(--lfo-drag-x, 0) * 0.30)); }
-.mod-val-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
-               background: rgba(48, 209, 88, 0.26); pointer-events: none;  }
-.toggle.on .mod-val-bar { background: rgba(48, 209, 88, 0.40); }
+/* Toggles share pad mode colours. The waveform label carries function identity. */
+.toggle { --modulator-mode-color: var(--mode-a); position:relative; display:flex; align-items:center; justify-content:center;
+  background:var(--surface); border:1px solid var(--border); border-radius:0; overflow:hidden;
+  touch-action:none; min-width:0; min-height:0; font-weight:800; }
+.toggle.mode-a { --modulator-mode-color:var(--mode-a); }
+.toggle.mode-b { --modulator-mode-color:var(--mode-b); }
+.toggle.mode-c { --modulator-mode-color:var(--mode-c); }
+.toggle.mode-d { --modulator-mode-color:var(--mode-d); }
+.toggle.on { border-color:var(--modulator-mode-color); }
+.toggle::after { content:''; position:absolute; inset:0; pointer-events:none; background:var(--modulator-mode-color); opacity:0; }
+.toggle.on::after { opacity:var(--modulator-pulse,.10); }
+.toggle .num { font-size:10px; color:var(--text); z-index:2; pointer-events:none; letter-spacing:.05em; }
+.toggle.on .num { color:#fff; }
+.toggle .mod-val-bar { position:absolute; bottom:0; right:0; width:4px; height:0%; background:var(--modulator-mode-color); opacity:.65; pointer-events:none; }
+.modulator-wave-label { position:absolute; top:5px; left:4px; color:var(--text2); font-size:8px; pointer-events:none; }
+.modulator-mode-label { position:absolute; top:4px; right:4px; color:var(--text2); border:1px solid var(--border); font-size:8px; padding:0 2px; pointer-events:none; }
+.toggle.on .modulator-mode-label { color:var(--modulator-mode-color); border-color:var(--modulator-mode-color); }
+body.config-mode .toggle .modulator-mode-label { visibility:hidden; }
+.modulator-rate-readout { position:absolute; bottom:6px; left:2px; right:6px; z-index:2;
+  font-size:9px; line-height:1.2; text-align:center; white-space:nowrap; pointer-events:none; }
+#lfo-rate-grid .grid-btn:disabled, #lfo-rate-grid .grid-btn.disabled,
+#pulse-rate-grid .grid-btn:disabled, #pulse-rate-grid .grid-btn.disabled { opacity:.35; cursor:not-allowed; }
+@media (max-width:950px) { .modulator-rate-readout { font-size:7px; } .modulator-wave-label { font-size:7px; } }
+.xy-trail { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.xy-trail-line { fill:none; stroke:var(--accent); stroke-opacity:.4; stroke-width:2; vector-effect:non-scaling-stroke; }
 
-/* Waveform-specific gate/depth feedback. */
-.toggle[data-waveform="stutter"] .mod-val-bar { width: 30%; left: 35%; right: auto;
-                       background: rgba(255, 161, 51, 0.35); opacity: 1; }
-.toggle[data-waveform="stutter"].on.mode-a .mod-val-bar,
-.toggle[data-waveform="stutter"].mode-a .mod-val-bar { background: rgba(10, 132, 255, 0.40); }
-.toggle[data-waveform="stutter"].on.mode-b .mod-val-bar,
-.toggle[data-waveform="stutter"].mode-b .mod-val-bar { background: rgba(255, 161, 51, 0.40); }
-.toggle[data-waveform="stutter"].on.mode-c .mod-val-bar,
-.toggle[data-waveform="stutter"].mode-c .mod-val-bar { background: rgba(48, 209, 88, 0.40); }
-.toggle[data-waveform="stutter"].on.mode-d .mod-val-bar,
-.toggle[data-waveform="stutter"].mode-d .mod-val-bar { background: rgba(255, 55, 95, 0.40); }
-
-/* Stutter waveform feedback uses the same toggle component. */
-.toggle[data-waveform="stutter"] { background: linear-gradient(145deg, rgba(255,161,51,0.22), rgba(255,161,51,0.07) 55%, var(--surface));
-          border: 1px solid rgba(255,161,51,0.30); border-radius: 0;
-          display: flex; align-items: center; justify-content: center;
-          touch-action: none; min-width: 0; min-height: 0; font-weight: 800; position: relative; overflow: hidden; }
-.toggle[data-waveform="stutter"] .num { font-size: 10px; color: #ffe2a8; pointer-events: none; z-index: 1; }
-.toggle[data-waveform="stutter"].on { border-color: var(--mode-b); box-shadow: inset 0 0 0 1px rgba(255,161,51,0.24), 0 0 10px rgba(255,161,51,0.24); }
-.toggle[data-waveform="stutter"].on .num { color: #fff; }
-.toggle[data-waveform="stutter"].burst { border-color: var(--mode-d); box-shadow: inset 0 0 0 1px rgba(255,55,95,0.26), 0 0 10px rgba(255,55,95,0.28); }
-
-.modulator-rate-readout {
-  position: absolute; bottom: 6px; left: 2px; right: 2px; z-index: 2;
-  font-size: 9px; line-height: 1.2; text-align: center; white-space: nowrap; pointer-events: none;
-}
-#lfo-rate-grid .grid-btn:disabled,
-#lfo-rate-grid .grid-btn.disabled,
-#stutter-rate-grid .grid-btn:disabled,
-#stutter-rate-grid .grid-btn.disabled { opacity: 0.35; cursor: not-allowed; }
-@media (max-width: 950px) {
-  .modulator-rate-readout { font-size: 7px; }
-}
-.toggle[data-waveform="stutter"] .num { z-index: 3; position: relative; }
-.toggle[data-waveform="stutter"].mode-a { border-color: var(--mode-a); box-shadow: inset 0 0 0 1px rgba(10,132,255,0.22), 0 calc(-1 * var(--stut-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--stut-drag-y, 0) * 8px) rgba(10,132,255, calc(0.24 + var(--stut-drag-y, 0) * 0.25)), calc(-1 * var(--stut-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--stut-drag-x, 0) * 8px) rgba(10,132,255, calc(0.18 + var(--stut-drag-x, 0) * 0.25)); }
-.toggle[data-waveform="stutter"].mode-b { border-color: var(--mode-b); box-shadow: inset 0 0 0 1px rgba(255,161,51,0.24), 0 calc(-1 * var(--stut-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--stut-drag-y, 0) * 8px) rgba(255,161,51, calc(0.24 + var(--stut-drag-y, 0) * 0.30)), calc(-1 * var(--stut-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--stut-drag-x, 0) * 8px) rgba(255,161,51, calc(0.18 + var(--stut-drag-x, 0) * 0.30)); }
-.toggle[data-waveform="stutter"].mode-c { border-color: var(--mode-c); box-shadow: inset 0 0 0 1px rgba(48,209,88,0.24), 0 calc(-1 * var(--stut-drag-y, 0) * 4px) var(--stut-glow-size, 7px) calc(var(--stut-drag-y, 0) * 8px) rgba(48,209,88, calc(0.24 + var(--stut-drag-y, 0) * 0.25)), calc(-1 * var(--stut-drag-x, 0) * 4px) 0 var(--stut-glow-size, 7px) calc(var(--stut-drag-x, 0) * 8px) rgba(48,209,88, calc(0.18 + var(--stut-drag-x, 0) * 0.25)); }
-.toggle[data-waveform="stutter"].mode-d { border-color: var(--mode-d); box-shadow: inset 0 0 0 1px rgba(255,55,95,0.26), 0 calc(-1 * var(--stut-drag-y, 0) * 4px) var(--stut-glow-size, 8px) calc(var(--stut-drag-y, 0) * 8px) rgba(255,55,95, calc(0.30 + var(--stut-drag-y, 0) * 0.30)), calc(-1 * var(--stut-drag-x, 0) * 4px) 0 var(--stut-glow-size, 8px) calc(var(--stut-drag-x, 0) * 8px) rgba(255,55,95, calc(0.22 + var(--stut-drag-x, 0) * 0.30)); }
-
-/* ---- XY Physics Pad ---- */
 /* ---- MIX page: faders, knobs, etc (redesigned) ---- */
 .page-mixer {
   display: flex;
@@ -1959,12 +1928,16 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
 .cfg-menu {
   position: fixed;
   z-index: 2000;
-  background: #1c1c1e;
-  color: #f5f5f7;
-  border: 1px solid #3a3a3c;
-  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0;
   padding: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100dvh - 16px);
   font-family: inherit;
   font-size: 13px;
   max-width: 320px;
@@ -1972,12 +1945,13 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
 }
 .cfg-menu.hidden { display: none; }
 .cfg-menu-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #3a3a3c;
+  border-bottom: 1px solid var(--border);
 }
 .cfg-menu-title {
   font-weight: 700;
@@ -1997,14 +1971,14 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 60vh;
+  min-height: 0;
   overflow-y: auto;
 }
 .cfg-item-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #c7c7cc;
+  color: var(--text2);
   margin-bottom: 4px;
 }
 .cfg-segment-group,
@@ -2015,10 +1989,10 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
 }
 .cfg-segment-btn,
 .cfg-grid-btn {
-  background: #2c2c2e;
-  color: #f5f5f7;
-  border: 1px solid #3a3a3c;
-  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0;
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
@@ -2026,9 +2000,9 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
 }
 .cfg-segment-btn.on,
 .cfg-grid-btn.on {
-  background: #ff8a00;
+  background: var(--accent);
   color: #1c1c1e;
-  border-color: #ff8a00;
+  border-color: var(--accent);
 }
 .cfg-slider-row {
   display: flex;
@@ -2040,13 +2014,13 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-size: 12px;
-  color: #c7c7cc;
+  color: var(--text2);
 }
 .cfg-action {
-  background: #2c2c2e;
-  color: #f5f5f7;
-  border: 1px solid #3a3a3c;
-  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0;
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
@@ -2064,7 +2038,7 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
 }
 .cfg-info {
   font-size: 11px;
-  color: #c7c7cc;
+  color: var(--text2);
   font-style: italic;
 }
 
@@ -4871,3 +4845,12 @@ body.mapping-mode [data-name].selected-control {
 #page-settings-overlay select, #page-settings-overlay input, #page-settings-overlay button { min-height: 44px; }
 #vision-loss-timeout { width: 100%; box-sizing: border-box; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); font: inherit; border-radius: 0; }
 #page-settings-overlay output { overflow-wrap: anywhere; }
+
+.cfg-select-row { display:flex; gap:8px; align-items:center; justify-content:space-between; min-height:44px; }
+.cfg-select-row .cfg-item-label { margin:0; flex:1; }
+.cfg-select { color-scheme:dark; min-width:0; width:58%; min-height:44px; padding:6px; font:inherit; color:var(--text); background:var(--surface-soft); border:1px solid var(--border); border-radius:0; }
+.cfg-details { border-top:1px solid var(--border); }
+.cfg-details > summary { min-height:44px; cursor:pointer; align-content:center; color:var(--text2); }
+.cfg-advanced-body { display:flex; flex-direction:column; gap:12px; padding:8px 0; }
+.cfg-menu-close { min-width:44px; min-height:44px; }
+.cfg-action { min-height:44px; }

@@ -182,8 +182,8 @@
     if (knob) return `Knob ${knob[1]}`;
     const fader = raw.match(/^fader-(\d+)$/);
     if (fader) return `Fader ${fader[1]}`;
-    const lfo = raw.match(/^toggle-(\d+)$/);
-    if (lfo) return `LFO ${lfo[1]}`;
+    const toggle = raw.match(/^toggle-(\d+)$/);
+    if (toggle) return `T${toggle[1]} (Toggle)`;
     return raw.replace(/^sensor\./, '').replace(/\./g, ' ');
   }
 

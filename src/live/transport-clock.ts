@@ -10,7 +10,7 @@
 // Source: internal/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
 // Measured 2026-09 on Windows 11; write-ceiling P04 (Live 12.4.5 + Automation Arm) pendente, fallback aplicado:
 // teto_efetivo ~ 50 escritas/s, min pontos por ciclo = sine 10 / triangle 16 / ramp_up 16 / ramp_down 16 / square 4.
-export const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 12 } as const;
+export const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 } as const;
 export function getLfoMaxHz(shape = 'sine'): number {
   return Object.hasOwn(LFO_SHAPE_MAX_HZ, shape)
     ? LFO_SHAPE_MAX_HZ[shape as keyof typeof LFO_SHAPE_MAX_HZ] : LFO_SHAPE_MAX_HZ.sine;
@@ -39,21 +39,21 @@ export function getLfoSubdivision(rate: number, tempo: number, pinned?: number, 
 }
 
 // Bound the shortest swing half-step, including ratchets. SYNC slows by octaves.
-export const STUTTER_SUBDIVISIONS = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
-export function getStutterSubdivisions(bps: number, ratchet: number, swing: number): number[] {
+export const PULSE_SUBDIVISIONS = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125];
+export function getPulseSubdivisions(bps: number, ratchet: number, swing: number): number[] {
   const minimum = bps * ratchet / (15 * (1 - swing));
-  const allowed = STUTTER_SUBDIVISIONS.filter(subdivision => subdivision >= minimum);
+  const allowed = PULSE_SUBDIVISIONS.filter(subdivision => subdivision >= minimum);
   if (allowed.length) return allowed;
   let slowest = 1;
   while (slowest < minimum) slowest *= 2;
   return [slowest];
 }
-export function getStutterTiming(rate: number, count: number, tempo: number, sync: boolean, pinned?: number, swing = 0) {
+export function getPulseTiming(rate: number, count: number, tempo: number, sync: boolean, pinned?: number, swing = 0) {
   const ratchet = [1, 2, 3, 4][Math.floor(Math.max(0, Math.min(1, count)) * 3.99)] ?? 1;
   const bps = (Number.isFinite(tempo) && tempo > 0 ? tempo : 120) / 60;
   const safeRate = Number.isFinite(rate) ? Math.max(0, Math.min(1, rate)) : 0;
   const safeSwing = Math.max(0, Math.min(.66, swing));
-  const allowed = getStutterSubdivisions(bps, ratchet, safeSwing);
+  const allowed = getPulseSubdivisions(bps, ratchet, safeSwing);
   let subdivision = pinned !== undefined && Number.isFinite(pinned) && pinned > 0
     ? pinned : allowed[Math.floor(safeRate * (allowed.length - .01))]!;
   const shortRatio = 1 - safeSwing;
@@ -105,7 +105,7 @@ export function computeSyncedLfoValue(
   }
 }
 
-export function computeSyncedStutterValue(
+export function computeSyncedPulseValue(
   beats: number,
   stepBeats: number,
   phaseOffsetBeats: number,

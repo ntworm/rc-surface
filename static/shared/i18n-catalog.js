@@ -148,15 +148,13 @@
     'hdr.trn': { en: 'TRN', 'pt-BR': 'TRN' },
     'hdr.map': { en: 'MAP', 'pt-BR': 'MAP' },
     'hdr.cfg': { en: 'CFG', 'pt-BR': 'CFG' },
-    'perf.modulators2': { en: 'LFO 5–8', 'pt-BR': 'LFO 5–8' },
+    'perf.toggles': {en:'TOGGLES','pt-BR':'TOGGLES'},
+    'cfg.advanced': {en:'Advanced','pt-BR':'Avançado'},
     'cfg.global': { en: 'Global', 'pt-BR': 'Global' },
     'cfg.waveform': { en: 'Waveform', 'pt-BR': 'Onda' },
-    'cfg.stutter': { en: 'Stutter', 'pt-BR': 'Stutter' },
     'cfg.mode': { en: 'Mode', 'pt-BR': 'Modo' },
     'cfg.clock': { en: 'Timing', 'pt-BR': 'Tempo' },
     'cfg.division': { en: 'Subdivision', 'pt-BR': 'Subdivisão' },
-    'cfg.rate': { en: 'Rate', 'pt-BR': 'Velocidade' },
-    'cfg.depth': { en: 'Depth', 'pt-BR': 'Amplitude' },
     'cfg.phase': { en: 'Phase (beats)', 'pt-BR': 'Fase (beats)' },
     'cfg.ratchet': { en: 'Ratchet', 'pt-BR': 'Ratchet' },
     'cfg.resetModulator': { en: 'Restore shared defaults', 'pt-BR': 'Restaurar padrões globais' },
@@ -183,7 +181,6 @@
     'cfg.bipolarInfo': { en: 'Bipolar fader', 'pt-BR': 'Fader bipolar' },
     'cfg.unipolarInfo': { en: 'Unipolar fader', 'pt-BR': 'Fader unipolar' },
     'cfg.xy2Info': { en: 'Standard XY pad (no physics overrides).', 'pt-BR': 'XY padrão (sem override de física).' },
-    'cfg.stutterInfo': { en: 'Per-instance stutter subdivision / swing / phase.', 'pt-BR': 'Stutter por instância: subdivisão / swing / fase.' },
     'cfg.closeAria': { en: 'Close', 'pt-BR': 'Fechar' },
     'cfg.overridesEmpty': { en: 'No control overrides yet.', 'pt-BR': 'Nenhum override ainda.' },
     'hdr.sync': { en: 'SYNC', 'pt-BR': 'SYNC' },
@@ -193,7 +190,6 @@
 
     // ── PERF ─────────────────────────────────────────────────────────────
     'perf.pads': { en: 'PADS', 'pt-BR': 'PADS' },
-    'perf.lfos': { en: 'LFO 1–4', 'pt-BR': 'LFO 1–4' },
     'perf.stut': { en: 'STUT', 'pt-BR': 'STUT' },
     'perf.util': { en: 'UTIL', 'pt-BR': 'UTIL' },
     'perf.cap': { en: 'CAP', 'pt-BR': 'CAP' },
@@ -377,16 +373,16 @@
       en: 'Measured fallback ceilings: sine 4 Hz, triangle 3 Hz, ramps 3 Hz, square 12 Hz (rule `maxHz = floor(effectiveCeiling / minPointsPerCycle)`; `effectiveCeiling ≈ 50 writes/s`, write-ceiling task P04 pending). FREE is continuous; SYNC stays rhythmic within the shape ceiling. Live fidelity still needs testing.',
       'pt-BR': 'Tetos medidos (fallback): senoide 4 Hz, triângulo 3 Hz, rampas 3 Hz, quadrada 12 Hz (regra `maxHz = floor(teto_efetivo / minPontosPorCiclo)`; `teto_efetivo ≈ 50 escritas/s`, write-ceiling P04 pendente). FREE é contínuo; SYNC mantém o ritmo dentro do teto da forma. Fidelidade no Live ainda precisa de teste.',
     },
-    'sync.stutterConfig': { en: 'STUTTER CONFIG', 'pt-BR': 'CONFIG DE STUTTER' },
+    'sync.pulseConfig': { en: 'SQUARE CONFIG', 'pt-BR': 'CONFIG DE SQUARE' },
     'sync.burstConfig': { en: 'BURST CONFIG (PAD MODE D)', 'pt-BR': 'CONFIG DE BURST (PAD MODO D)' },
     'sync.rate': { en: 'Rate (Subdivision)', 'pt-BR': 'Taxa (subdivisão)' },
     'sync.length': { en: 'Length (Subdivision)', 'pt-BR': 'Duração (subdivisão)' },
     'sync.attack': { en: 'Attack — drag the peak', 'pt-BR': 'Attack — arraste o pico' },
     'sync.rateNotation': {
-      en: 'SYNC: 1/4 = one beat, 1/8 = half a beat. T = triplet; D = dotted. FREE uses Hz. Stutter shows the effective rate including ratchet; swing alternates spacing.',
-      'pt-BR': 'SYNC: 1/4 = um tempo, 1/8 = meio tempo. T = tercina; D = pontuada. FREE usa Hz. Stutter mostra a divisão efetiva incluindo ratchet; swing alterna os intervalos.',
+      en: 'SYNC: 1/4 = one beat, 1/8 = half a beat. T = triplet; D = dotted. FREE uses Hz. Square shows the effective rate including ratchet; swing alternates spacing.',
+      'pt-BR': 'SYNC: 1/4 = um tempo, 1/8 = meio tempo. T = tercina; D = pontuada. FREE usa Hz. Square mostra a divisão efetiva incluindo ratchet; swing alterna os intervalos.',
     },
-    'sync.stutterBandwidth': {
+    'sync.pulseBandwidth': {
       en: 'Up to 15 Hz including ratchet. Unavailable base divisions are disabled for the current BPM, swing and ratchet. Horizontal drag returns to Auto; vertical drag changes amplitude. Flashing follows the local gate, not confirmed Live delivery; the screen can miss fast pulses.',
       'pt-BR': 'Até 15 Hz incluindo ratchet. Divisões-base indisponíveis ficam desativadas conforme BPM, swing e ratchet. Arrastar na horizontal volta ao Auto; na vertical muda a amplitude. O piscar segue o gate local, não confirma entrega no Live; a tela pode perder pulsos rápidos.',
     },
@@ -817,7 +813,6 @@
     'common.on': { en: 'On', 'pt-BR': 'Ligado' },
     'common.off': { en: 'Off', 'pt-BR': 'Desligado' },
     'admin.editOnPhone': { en: 'Curve, range and takeover are edited from MAP on the phone.', 'pt-BR': 'Curva, faixa e takeover são editados pelo MAP no celular.' },
-    'panel.migrationNotice': { en: 'Data from a previous install (Ableton-RC-Surface)? Run Migrate-RC-Surface-Data from the tester kit.', 'pt-BR': 'Dados de uma instalação anterior (Ableton-RC-Surface)? Rode o Migrate-RC-Surface-Data que vem no kit de teste.' },
   };
   globalScope.RcSurfaceI18nCatalog = catalog;
   globalScope.RcSurfaceI18n?.registerCatalog?.(catalog);

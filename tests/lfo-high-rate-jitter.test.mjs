@@ -5,7 +5,7 @@
 // This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-// Fake phone + Live API mock for end-to-end LFO/stutter jitter test.
+// Fake phone + Live API mock for end-to-end LFO/pulse jitter test.
 //
 // Reproduces the production wiring:
 //   phone (WebSocket) → server (ws.ts) → mappings.ts (host motor) → Live param
@@ -82,7 +82,7 @@ function setupLiveParam({ min = 0, max = 1 } = {}) {
   return { param, applied };
 }
 
-function setupStutterParam() {
+function setupPulseParam() {
   const applied = [];
   const param = {
     min: 0,
@@ -248,15 +248,15 @@ test('4Hz sine bounds curve error with modeled14–19ms sampling and duplicate s
   } finally { resetState(); }
 });
 
-test("fake phone: stutter at high rate generates regular on/off pulses", async () => {
+test("fake phone: pulse at high rate generates regular on/off pulses", async () => {
   resetState();
   fakeNowValue = 0;
-  const { applied } = setupStutterParam();
+  const { applied } = setupPulseParam();
   setupTrackedClient();
 
   try {
     updateHostModulator("client-1", {
-      kind: "stutter",
+      kind: "pulse",
       name: "toggle-5",
       active: true,
       rate: 1, // effective FREE ceiling = 15 Hz including ratchet
@@ -273,12 +273,12 @@ test("fake phone: stutter at high rate generates regular on/off pulses", async (
       await tickHostModulators(fakeNow());
     }
 
-    // Stutter should produce alternating 0/1 (or run of 1s then 0s).
+    // Pulse should produce alternating 0/1 (or run of 1s then 0s).
     const values = applied.map((a) => a.v);
     const unique = new Set(values);
     assert.ok(
       unique.size >= 1 && unique.size <= 2,
-      `stutter should produce ~0/1 values, got unique=${[...unique]}`,
+      `pulse should produce ~0/1 values, got unique=${[...unique]}`,
     );
     // Count rising edges (0 → non-zero) = number of pulses
     let pulses = 0;
@@ -287,7 +287,7 @@ test("fake phone: stutter at high rate generates regular on/off pulses", async (
     }
     assert.ok(
       pulses >= 10,
-      `expected several stutter pulses in 1s, got ${pulses}`,
+      `expected several pulse pulses in 1s, got ${pulses}`,
     );
   } finally {
     resetState();

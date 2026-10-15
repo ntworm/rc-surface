@@ -67,7 +67,7 @@ Instale do mesmo jeito, com dois cliques.
 
 ### Opcional: instalar o AbletonOSC (para o Deep Sync)
 
-Para habilitar sincronia travada no beat para LFO e stutter, o metrônomo que
+Para habilitar sincronia travada no beat para LFO e square, o metrônomo que
 pisca no header, e o overlay de transporte em tela cheia (botão `TRN`), você
 precisa instalar e configurar o **AbletonOSC**:
 

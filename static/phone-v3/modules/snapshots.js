@@ -69,7 +69,7 @@
   function loadSnapshots() {
     try {
       if (typeof localStorage === 'undefined') return;
-      const saved = localStorage.getItem('ableton-rc:v2:snapshots');
+      const saved = localStorage.getItem('ableton-rc:v3:snapshots');
       if (!saved) return;
       const parsed = JSON.parse(saved);
       snapshots = Array.isArray(parsed) && parsed.length === SNAPSHOT_COUNT ? parsed : emptySnapshots();
@@ -81,7 +81,7 @@
   function saveSnapshots() {
     try {
       if (typeof localStorage === 'undefined') return;
-      localStorage.setItem('ableton-rc:v2:snapshots', JSON.stringify(snapshots));
+      localStorage.setItem('ableton-rc:v3:snapshots', JSON.stringify(snapshots));
     } catch {}
   }
 
@@ -109,7 +109,7 @@
       updateSnapshotButton(btn, Number(btn.dataset.perfSnapshotSlot) - 1);
     });
     if (typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
-      window.dispatchEvent(new Event('ableton-rc:v2:snapshots-updated'));
+      window.dispatchEvent(new Event('ableton-rc:v3:snapshots-updated'));
     }
   }
 
