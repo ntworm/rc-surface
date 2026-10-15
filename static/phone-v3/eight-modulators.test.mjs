@@ -41,7 +41,7 @@ function makeElement(dataset = {}) {
   };
 }
 
-function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = false, pulseBar = null, saved = {}, withXY = false } = {}) {
+function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = false, pulseBar = null, saved = {}, withXY = false, visuals = false, withPads = false } = {}) {
   const engineFile = path.join(import.meta.dirname, 'mode-engine.js');
   const controlsFile = path.join(import.meta.dirname, 'controls.js');
   const engineSource = fs.readFileSync(engineFile, 'utf8');
@@ -59,11 +59,19 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
   const lfos = [lfo, ...[2,3,4].map(i => makeElement({name: `toggle-${i}`}))];
   const pulses = [pulse, ...[2,3,4].map(i => makeElement({name: `toggle-${i+4}`}))];
   const all = [...lfos, ...pulses];
+  const paints={height:0,transform:0,text:0,trail:0,queries:0};
+  if(visuals) for(const el of all) {
+    const style={};
+    for(const key of ['height','transform']) Object.defineProperty(style,key,{get(){return this['_'+key];},set(value){paints[key]++;this['_'+key]=value;}});
+    el.fill={style};el.rate={_text:'',get textContent(){return this._text;},set textContent(value){paints.text++;this._text=value;}};
+    el.querySelector=selector=>selector==='.mod-val-bar'?el.fill:selector==='.modulator-rate-readout'?el.rate:null;
+  }
   lfos.forEach(el => el.classList.add('toggle'));
   pulses.forEach(el => el.classList.add('toggle'));
   const storage = new Map(Object.entries(saved));
   const xy = [1,2].map(i => makeElement({name:`xy-${i}`}));
-  xy.forEach(el=>{el.trail={points:'',setAttribute(key,value){this[key]=value;}};el.querySelector=selector=>selector==='.xy-dot'?{style:{}}:selector==='.xy-trail-line'?el.trail:null;});
+  const pads=Array.from({length:12},(_,i)=>makeElement({name:`pad-${i+1}`}));
+  xy.forEach(el=>{el.trail={points:'',setAttribute(key,value){paints.trail++;this[key]=value;}};el.querySelector=selector=>selector==='.xy-dot'?{style:{}}:selector==='.xy-trail-line'?el.trail:null;});
   const overlay = makeElement();
   const rateReadout = makeElement();
   const modeButtons = ['A', 'B', 'C', 'D'].map((mode) => makeElement({ padModeSet: mode }));
@@ -79,6 +87,7 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
       getElementById: id => syncPanel && id === 'sync-settings-overlay' ? overlay
         : syncPanel && id === 'lfo-effective-rate' ? rateReadout : null,
       querySelector(selector) {
+        paints.queries++;
         const xyEl=xy.find(el=>selector===`.xy-pad[data-name="${el.dataset.name}"]`);
         if(xyEl)return xyEl;
         const slot = all.find(el => selector === `.toggle[data-name="${el.dataset.name}"]`);
@@ -86,6 +95,7 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
         return null;
       },
       querySelectorAll(selector) {
+        if (selector === '.pad') return withPads ? pads : [];
         if (selector === '.xy-pad') return withXY ? xy : [];
         if (selector === '[data-pad-mode-set]') return modeButtons;
         if (selector === '.toggle') return all;
@@ -104,6 +114,7 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
     Event: class { constructor(type) { this.type = type; } },
     CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
     setTimeout() {},
+    clearTimeout() {},
     setInterval() {},
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
     onControl(ctrl) { emitted.push(ctrl); },
@@ -119,7 +130,9 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
 
   return {
     context,
+    paints,
     all,
+    pads,
     xy,
     storage,
     pulse,
@@ -153,19 +166,107 @@ for (let n = 0; n <= 8; n++) {
     assert.equal(new Set(app.modulatorStates.filter(v => v.active).map(v => v.name)).size, 8);
   });
 }
-test('slot switch stops old gate, preserves rate/depth/count, and clear restores legacy kind', () => {
+test('slot switch keeps activation and rate/depth/count, and clear restores inherited kind', () => {
   const app=loadControls(); const ctx=app.context;
   ctx.controlSetters['toggle-1.rate'](.73); ctx.controlSetters['toggle-1.depth'](.42);
   ctx.controlSetters['toggle-1.count'](.66); ctx.controlSetters['toggle-1'](1);
   ctx.RcControlConfig.set('toggle-1', {shape:'square'});
-  assert.equal(app.modulatorStates.at(-1).kind, 'lfo'); assert.equal(app.modulatorStates.at(-1).active, false);
+  assert.equal(app.modulatorStates.at(-1).kind, 'pulse'); assert.equal(app.modulatorStates.at(-1).active, true);
   const state=ctx.modulatorStates.get('toggle-1');
-  assert.equal(state.active,false); assert.equal(state.rate,.73); assert.equal(state.depth,.42); assert.equal(state.count,.66);
-  assert.equal(ctx.currentControlStates['toggle-1'],0);
+  assert.equal(state.active,true); assert.equal(state.rate,.73); assert.equal(state.depth,.42); assert.equal(state.count,.66);
+  assert.equal(ctx.currentControlStates['toggle-1'],1);
   ctx.RcControlConfig.clear('toggle-1');
   assert.equal(ctx.modulatorStates.get('toggle-1').kind,'lfo');
   app.lfo.listeners.pointerdown(pointer(1,100));
   assert.equal(app.modulatorStates.at(-1).kind,'lfo'); assert.equal(app.modulatorStates.at(-1).active,true);
+});
+
+for(const mode of ['A','B','C','D']) test(`${mode} live waveform swaps keep gate state and original burst deadline`,()=>{
+  const app=loadControls();const ctx=app.context;
+  ctx.RcControlConfig.set('toggle-1',{mode,syncMode:'free'});
+  ctx.controlSetters['toggle-1'](1);app.tick(100);
+  const state=ctx.modulatorStates.get('toggle-1');const deadline=state.burstUntil;
+  for(const shape of ['square','triangle','square','sine']) {
+    ctx.RcControlConfig.set('toggle-1',{shape});
+    assert.equal(state.active,true);assert.equal(state.burstUntil,deadline);
+    assert.equal(app.modulatorStates.at(-1).active,true);
+  }
+  ctx.controlSetters['toggle-1'](0);
+  ctx.RcControlConfig.set('toggle-1',{shape:'square'});assert.equal(state.active,false);
+  if(mode==='D') {
+    ctx.controlSetters['toggle-1'](1);const end=state.burstUntil;
+    app.setTime(end+1);ctx.RcControlConfig.set('toggle-1',{shape:'triangle'});
+    assert.equal(state.active,false,'an expired burst must not restart before the next frame');
+  }
+});
+
+test('steady visual frames use transforms, cache slot elements and skip unchanged labels and trails',t=>{
+  const app=loadControls('toggle-5',{visuals:true,withXY:true});
+  for(const name of names) app.context.controlSetters[name](1);
+  for(const key of Object.keys(app.paints)) app.paints[key]=0;
+  for(let i=1;i<=120;i++)app.tick(i*1000/120);
+  t.diagnostic(JSON.stringify(app.paints));
+  assert.equal(app.paints.height,0,'value animation must not resize layout');
+  assert.ok(app.paints.transform>0);
+  assert.ok(app.paints.text<=8,'stable rate labels change once, not each frame');
+  assert.equal(app.paints.trail,0,'stationary Static XY must not repaint an empty trail');
+  assert.ok(app.paints.queries<=16,'slot DOM lookup must not repeat every frame');
+});
+
+test('individual pad touch/drag, latch tap reset, and toggle level reach real handlers',()=>{
+  const app=loadControls('toggle-5',{withPads:true});const ctx=app.context;
+  const send=(i,type,y=100)=>app.pads[i].listeners[type](pointer(1,y));
+  ctx.RcControlConfig.set('pad-1',{mode:'A',padRange:100,padCurve:'fine',padTouchValue:.2});
+  send(0,'pointerdown');assert.equal(app.emitted.at(-1).value,.2);
+  send(0,'pointermove',50);assert.equal(app.emitted.at(-1).value,.45);
+  send(0,'pointerup');assert.equal(app.emitted.at(-1).value,0);
+  ctx.RcControlConfig.set('pad-2',{mode:'B',padLatchTapReset:true,padRange:100});
+  ctx.controlSetters['pad-2'](.7);send(1,'pointerdown');send(1,'pointercancel');assert.equal(app.emitted.at(-1).value,.7);
+  send(1,'pointerdown');send(1,'pointerup');assert.equal(app.emitted.at(-1).value,0);
+  ctx.RcControlConfig.set('pad-3',{mode:'C',padToggleValue:.6});
+  send(2,'pointerdown');assert.equal(app.emitted.at(-1).value,.6);send(2,'pointerup');
+  send(2,'pointerdown');send(2,'pointerup');assert.equal(app.emitted.at(-1).value,0);
+  send(2,'pointerdown');assert.equal(app.emitted.at(-1).value,.6);
+});
+
+test('two custom D pads use independent duration, attack and peak; disconnect respects effective mode',()=>{
+  const app=loadControls('toggle-5',{withPads:true});const ctx=app.context;
+  ctx.setPadMode('B');
+  ctx.RcControlConfig.set('pad-1',{mode:'D',syncMode:'sync',burstSubdivision:1,burstAttackRatio:.2,burstPeak:.4});
+  ctx.RcControlConfig.set('pad-2',{mode:'D',syncMode:'free',burstDurationMs:1000,burstAttackRatio:.5,burstPeak:.8});
+  for(const pad of app.pads.slice(0,2))pad.listeners.pointerdown(pointer(1,100));
+  app.tick(100);
+  assert.equal(app.emitted.findLast(v=>v.name==='pad-1').value,.4);
+  assert.equal(app.emitted.findLast(v=>v.name==='pad-2').value,.16);
+  ctx.resetTransientControls();app.tick(150);
+  for(const name of ['pad-1','pad-2']) assert.equal(app.emitted.findLast(v=>v.name===name).value,0);
+  ctx.RcControlConfig.set('pad-3',{mode:'B'});ctx.controlSetters['pad-3'](.7);
+  ctx.setPadMode('A');ctx.controlSetters['pad-3'](.7);ctx.resetTransientControls();
+  assert.equal(app.emitted.findLast(v=>v.name==='pad-3').value,.7);
+});
+
+test('pad configuration round-trips Global/sparse overrides and snapshots',()=>{
+  const app=loadControls('toggle-5',{withPads:true});const ctx=app.context;
+  const config={mode:'D',syncMode:'free',burstDurationMs:750,burstAttackRatio:.3,burstPeak:.6};
+  ctx.RcControlConfig.set('pad-1',config);
+  const saved=JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture()));
+  assert.deepEqual(saved.pads['pad-1'],config);assert.deepEqual(saved.pads['pad-2'],{});
+  ctx.RcControlConfig.clear('pad-1');ctx.PerformanceSettings.applyHost(saved);
+  for(const [key,value] of Object.entries(config))assert.equal(ctx.RcControlConfig.get('pad-1',key,null),value);
+  const snapshots=ctx.RCSurface.snapshots;snapshots.setSnapshotCaptureMode(true);snapshots.handleSnapshotSlot(0);
+  assert.equal(snapshots.getSnapshots()[0].__performance.pads['pad-1'].burstPeak,.6);
+});
+
+test('pad CFG exposes only effective mode settings and opening never emits controls',()=>{
+  const app=loadControls('toggle-5',{withPads:true});const ctx=app.context;
+  for(const mode of ['A','B','C','D']) {
+    ctx.RcControlConfig.set('pad-1',{mode});const before=app.emitted.length;
+    const rows=configRows(ctx,'pad-1');assert.equal(app.emitted.length,before);
+    const labels=rows.map(row=>row.slider?.label || row.segment?.label || row.details?.label);
+    assert.equal(labels.includes('Attack'),mode==='D');assert.equal(labels.includes('Drag travel'),mode!=='D');
+    assert.equal(labels.includes('Touch level'),mode==='A');assert.equal(labels.includes('Tap without drag'),mode==='B');
+    assert.equal(labels.includes('On level'),mode==='C');
+  }
 });
 test('independent subdivision/swing/phase/sync/ratchet reach both host and preview', () => {
   const app=loadControls(); const ctx=app.context;

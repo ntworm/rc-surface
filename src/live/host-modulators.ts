@@ -311,6 +311,7 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
   const key = hostModulatorKey(clientId, name);
   const active = !!payload["active"];
   let existing = hostModulators.get(key);
+  const replaced = existing && existing.kind !== kind ? existing : undefined;
   if (existing && existing.kind !== kind) {
     hostModulators.delete(key);
     void applyHostGeneratedControl(clientId, name, 0, Date.now(), true);
@@ -380,6 +381,11 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
   if (!existing && kind === "pulse") state.phaseZeroMs = morphStart;
   state.active = true;
   state.syncMode = syncMode;
+  if (replaced && burstDurationMs !== undefined && replaced.burstStartMs !== undefined && replaced.burstDurationMs !== undefined) {
+    state.burstStartMs = replaced.burstStartMs;
+    state.burstDurationMs = replaced.burstDurationMs;
+    if (replaced.burstAttackMs !== undefined) state.burstAttackMs = replaced.burstAttackMs;
+  }
 
   // Stamped here, not taken from the phone: the two clocks are unrelated. A
   // repeat of the same configuration while a burst is already running must not
@@ -398,8 +404,7 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
     }
   }
 
-  const allowedSubdivisions = new Set<number>(kind === "lfo"
-    ? LFO_SUBDIVISIONS : [4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125]);
+  const allowedSubdivisions = new Set<number>(LFO_SUBDIVISIONS);
   // Explicit Auto survives JSON; omission remains a partial-update no-op.
   if (payload["syncSubdivisionBeats"] === null) {
     delete state.syncSubdivisionBeats;

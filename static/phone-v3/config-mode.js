@@ -146,13 +146,19 @@
       }
     }
 
+    function refreshMenu() {
+      if (state.openFor) {
+        const scrollTop = menu().children[1]?.scrollTop || 0;
+        renderMenuFor(state.openFor, rectFor(closestDataName(state.openFor)));
+        menu().children[1].scrollTop = scrollTop;
+      }
+    }
+
     function pick(item, value) {
       if (typeof item.set !== 'function') return;
       item.set(value);
       if (item.refresh && state.openFor) {
-        const scrollTop = menu().children[1]?.scrollTop || 0;
-        renderMenuFor(state.openFor, rectFor(closestDataName(state.openFor)));
-        menu().children[1].scrollTop = scrollTop;
+        refreshMenu();
         menu().querySelector?.(`[data-cfg-choice="${cssEscape(item.label || '')}"] [data-value="${cssEscape(String(value))}"]`)?.focus?.();
       } else close();
     }
@@ -255,6 +261,7 @@
       const input = documentRef.createElement("input");
       input.type = "range";
       input.className = "morph-slider";
+      input.setAttribute('aria-label',item.label || '');
       if (typeof item.min === "number") input.min = String(item.min);
       if (typeof item.max === "number") input.max = String(item.max);
       if (typeof item.step === "number") input.step = String(item.step);
@@ -279,6 +286,10 @@
         const v = Number(input.value);
         if (Number.isFinite(v) && typeof item.set === "function") item.set(v);
         valueLabel.textContent = format(v);
+      });
+      if (item.refresh) input.addEventListener('change',()=>{
+        refreshMenu();
+        menu()?.querySelector?.(`input[aria-label="${cssEscape(item.label || '')}"]`)?.focus?.();
       });
       row.appendChild(input);
       row.appendChild(valueLabel);
@@ -450,6 +461,10 @@
       if (!page) return;
       ev.preventDefault();
       if (typeof ev.stopPropagation === "function") ev.stopPropagation();
+      if (state.openFor === named.getAttribute("data-name")) {
+        close();
+        return;
+      }
       state.contextMenuOpen = true;
       open(named.getAttribute("data-name"), rectFor(named));
     }

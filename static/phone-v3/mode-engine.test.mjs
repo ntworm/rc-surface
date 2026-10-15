@@ -196,3 +196,93 @@ test('the attack stays inside the burst it belongs to', () => {
   assert.ok(curto.attackMs < curto.durationMs, 'attack must leave room for release');
   assert.ok(curto.attackMs > 0);
 });
+
+test('pad drag curves shape signed relative movement without changing zero or endpoints', () => {
+  const modes = loadEngine();
+  for (const sign of [-1, 1]) {
+    assert.equal(modes.calculatePadDragDelta(sign * 50, 200, 'linear'), sign * .25);
+    assert.equal(modes.calculatePadDragDelta(sign * 50, 200, 'fine'), sign * .0625);
+    assert.equal(modes.calculatePadDragDelta(sign * 50, 200, 'fast'), sign * .5);
+  }
+  for (const curve of ['linear', 'fine', 'fast']) {
+    assert.equal(modes.calculatePadDragDelta(0, 150, curve), 0);
+    assert.equal(modes.calculatePadDragDelta(400, 40, curve), 1);
+    assert.equal(modes.calculatePadDragDelta(-400, 40, curve), -1);
+  }
+});
+
+test('A touch level and drag curve affect the gesture, while release and cancel remain zero', () => {
+  const modes = loadEngine();
+  for (const cancelled of [false, true]) {
+    const state = modes.createScalarGestureState();
+    const opts = { mode: 'A', pointerId: 1, y: 100, rangePx: 100, curve: 'fine', touchValue: .2 };
+    assert.equal(modes.beginScalarGesture(state, opts).value, .2);
+    opts.curve = 'fast'; opts.touchValue = .8;
+    assert.equal(modes.moveScalarGesture(state, { pointerId: 1, y: 50 }).value, .45);
+    assert.equal(modes.endScalarGesture(state, { pointerId: 1, cancelled }).value, 0);
+  }
+});
+
+test('B optional tap reset never resets a drag, a cancelled pointer, or the default latch', () => {
+  const modes = loadEngine();
+  const begin = (state, extra = {}) => modes.beginScalarGesture(state,
+    { mode: 'B', pointerId: 1, y: 100, rangePx: 100, latchTapReset: true, ...extra });
+  const tap = modes.createScalarGestureState(.6);
+  begin(tap);
+  assert.deepEqual(plain(modes.endScalarGesture(tap, { pointerId: 1 })), { value: 0, phase: 'release', active: false });
+  const drag = modes.createScalarGestureState(.6);
+  begin(drag);
+  modes.moveScalarGesture(drag, { pointerId: 1, y: 99 });
+  assert.equal(modes.endScalarGesture(drag, { pointerId: 1 }), null);
+  assert.equal(drag.value, .61, 'even a small value-changing drag must latch');
+  const cancelled = modes.createScalarGestureState(.6);
+  begin(cancelled);
+  assert.equal(modes.endScalarGesture(cancelled, { pointerId: 1, cancelled: true }), null);
+  assert.equal(cancelled.value, .6);
+  const legacy = modes.createScalarGestureState(.6);
+  begin(legacy, { latchTapReset: undefined });
+  assert.equal(modes.endScalarGesture(legacy, { pointerId: 1 }), null);
+  assert.equal(legacy.value, .6);
+});
+
+test('C explicit on level overrides remembered drag level, while absent on level preserves memory', () => {
+  const modes = loadEngine();
+  for (const explicit of [false, true]) {
+    const state = modes.createScalarGestureState();
+    const begin = id => modes.beginScalarGesture(state, { mode: 'C', pointerId: id, y: 100, rangePx: 100,
+      ...(explicit ? { defaultToggleValue: .4 } : {}) });
+    begin(1);
+    modes.moveScalarGesture(state, { pointerId: 1, y: 110 });
+    const remembered = state.value;
+    modes.endScalarGesture(state, { pointerId: 1 });
+    begin(2);
+    assert.equal(modes.endScalarGesture(state, { pointerId: 2 }).value, 0);
+    assert.equal(begin(3).value, explicit ? .4 : remembered);
+  }
+});
+
+test('D explicit peak is both initial peak and drag base; absent peak preserves legacy base', () => {
+  const modes = loadEngine();
+  for (const explicit of [false, true]) {
+    const state = modes.createScalarGestureState();
+    modes.beginScalarGesture(state, { mode: 'D', pointerId: 1, y: 100, rangePx: 100,
+      burstDurationMs: 400, burstAttackMs: 80, curve: 'fine', ...(explicit ? { burstPeak: .4 } : {}) });
+    assert.equal(modes.tickBurstGesture(state, { now: 80 }).value, explicit ? .4 : 1);
+    modes.moveScalarGesture(state, { pointerId: 1, y: 50 });
+    assert.equal(modes.tickBurstGesture(state, { now: 80 }).value, explicit ? .65 : 1);
+    modes.moveScalarGesture(state, { pointerId: 1, y: 100 });
+    assert.equal(modes.tickBurstGesture(state, { now: 80 }).value, explicit ? .4 : .75);
+    modes.endScalarGesture(state, { pointerId: 1 });
+    assert.equal(modes.tickBurstGesture(state, { now: 400 }).value, 0);
+  }
+});
+
+test('invalid scalar options cannot produce NaN or override the safe zero release', () => {
+  const modes = loadEngine();
+  const state = modes.createScalarGestureState();
+  const event = modes.beginScalarGesture(state, { mode: 'A', pointerId: 1, y: 100,
+    rangePx: NaN, curve: 'unknown', touchValue: NaN });
+  assert.equal(event.value, 0);
+  assert.equal(modes.moveScalarGesture(state, { pointerId: 1, y: 0 }).value, 1);
+  assert.equal(modes.endScalarGesture(state, { pointerId: 1 }).value, 0);
+});

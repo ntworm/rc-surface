@@ -100,6 +100,26 @@ export function validatePerformanceSettings(value: unknown): Record<string, any>
       if (!valid) throw new Error(`Invalid modulator ${key}`);
     }
   }
+  if (value.pads !== undefined) {
+    if (!isRecord(value.pads)) throw new Error('Invalid pad configuration');
+    const padRanges: Record<string, [number, number]> = {
+      padRange: [40, 400], padTouchValue: [0, 1], padToggleValue: [.01, 1],
+      burstSubdivision: [.03125, 32], burstDurationMs: [34, 10000],
+      burstAttackRatio: [.05, .5], burstPeak: [.15, 1],
+    };
+    for (const [name, entry] of Object.entries(value.pads)) {
+      if (!/^pad-(?:[1-9]|1[0-2])$/.test(name) || !isRecord(entry)) throw new Error('Invalid pad slot');
+      for (const [key, item] of Object.entries(entry)) {
+        const range = Object.hasOwn(padRanges, key) ? padRanges[key] : undefined;
+        const valid = range ? typeof item === 'number' && Number.isFinite(item) && item >= range[0] && item <= range[1]
+          : key === 'mode' ? ['A', 'B', 'C', 'D'].includes(item)
+            : key === 'syncMode' ? ['sync', 'free'].includes(item)
+              : key === 'padCurve' ? ['linear', 'fine', 'fast'].includes(item)
+                : key === 'padLatchTapReset' && typeof item === 'boolean';
+        if (!valid) throw new Error(`Invalid pad ${key}`);
+      }
+    }
+  }
   if (value.xy !== undefined) {
     if (!isRecord(value.xy)) throw new Error('Invalid XY configuration');
     for (const [name, entry] of Object.entries(value.xy)) {

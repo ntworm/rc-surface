@@ -18,7 +18,7 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 **2.0.0 breaks compatibility:** previous project profiles, presets, mappings and browser performance settings are not imported. Configure this version from a fresh state. Existing files are not deleted. This is a local candidate, not a published release.
 
-Eight uniform toggles start in Global. Square is the single 0-to-depth pulse waveform, with swing/ratchet in Advanced; there is no separate Stutter option. CFG hides touch-owned rate/depth and filters subdivisions by the actual ceiling. Both physics XY panels have trails and frame-independent friction.
+Eight uniform toggles start in Global. Square is the single 0-to-depth pulse waveform, with swing/ratchet in Advanced; there is no separate Stutter option. CFG hides touch-owned rate/depth and filters subdivisions by the actual ceiling. Both physics XY panels have trails and frame-independent friction. Live waveform changes retain activation, including Square, and visual fill uses transforms instead of resizing every frame.
 
 CFG waveform, mode and timing use direct buttons. Subdivision opens a compact note-value/rhythm editor for the effective waveform in SYNC; FREE hides it. Static XY hides physics settings while retaining them for a later switch. Toggle values fill the whole width in their mode colour.
 
@@ -241,3 +241,5 @@ not permitted. See [LICENSE](LICENSE) for the full text and Required Notice.
 
 Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
 project, not affiliated with, endorsed by, or sponsored by Ableton AG.
+
+Individual pad CFG follows its effective A/B/C/D mode: A touch level, B optional tap-to-zero, C remembered or fixed On level, plus drag travel/response in A/B/C. D has its own sync/free length, attack and peak. Pad settings round-trip in projects, presets and snapshots; output level is not MIDI velocity. A second right-click on the same control closes CFG.

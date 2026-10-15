@@ -78,9 +78,10 @@ test('in the page order, a CFG shape override on an active LFO reaches the host 
   modulatorStates.length = 0;
   context.RcControlConfig.set('toggle-1', { shape: 'square' });
 
-  const sent = modulatorStates.filter((s) => s.kind === 'lfo' && s.name === 'toggle-1');
+  const sent = modulatorStates.filter((s) => s.kind === 'pulse' && s.name === 'toggle-1');
   assert.equal(sent.length, 1, 'one modulator state must be pushed to the host');
   assert.equal(sent[0].shape, 'square');
+  assert.equal(sent[0].active,true,'live Square swap preserves the running gate');
 });
 
 test('if control-config.js loads after controls.js, the subscription is deferred to DOMContentLoaded', () => {

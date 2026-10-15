@@ -368,7 +368,8 @@ body.stage-mode .xy-readout {
 .toggle.on::after { opacity:var(--modulator-pulse,.10); }
 .toggle .num { font-size:10px; color:var(--text); z-index:2; pointer-events:none; letter-spacing:.05em; }
 .toggle.on .num { color:#fff; }
-.toggle .mod-val-bar { position:absolute; bottom:0; left:0; right:0; height:0%; background:var(--modulator-mode-color); opacity:.55; pointer-events:none; }
+.toggle .mod-val-bar { position:absolute; bottom:0; left:0; right:0; height:100%; transform:scaleY(0); transform-origin:bottom; background:var(--modulator-mode-color); opacity:.55; pointer-events:none; }
+.toggle.on .mod-val-bar { will-change:transform; }
 .modulator-wave-label { position:absolute; top:5px; left:4px; z-index:2; color:var(--text2); font-size:8px; pointer-events:none; }
 .modulator-mode-label { position:absolute; top:4px; right:4px; z-index:2; color:var(--text2); border:1px solid var(--border); font-size:8px; padding:0 2px; pointer-events:none; }
 .toggle.on .modulator-mode-label { color:var(--modulator-mode-color); border-color:var(--modulator-mode-color); }

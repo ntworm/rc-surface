@@ -6,6 +6,9 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
+- Keep active toggles running across Square waveform swaps, preserving mode-D deadlines and valid rhythmic pins on the host. Animate full-width values with transforms; avoid repeated DOM reads/writes for unchanged labels/trails.
+- Add mode-specific pad CFG, sparse project/preset/snapshot persistence and effective-mode echo/disconnect guards. Second right-click on the same control closes CFG.
+
 - Eight uniform Toggles T1–T8, all inheriting Global until explicitly configured. One state/gesture model and CFG; independent destinations.
 - Five waveforms. Square is the single zero-to-depth pulse, retaining swing/ratchet from the former Stutter in Advanced.
 - Preserve Global through performance persistence; shared B/C/D modes follow the pads after save/restore.

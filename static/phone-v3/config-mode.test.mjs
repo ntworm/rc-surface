@@ -290,6 +290,18 @@ test('Escape closes the open menu', () => {
   assert.equal(cfg.state.openFor, null);
 });
 
+test('second right-click on the same control closes CFG; another control opens its own menu',()=>{
+  const {cfg,documentRef}=createConfigMode();
+  const a=documentRef.makeElement('div',{name:'pad-1'}),b=documentRef.makeElement('div',{name:'toggle-2'});
+  documentRef.makePage('performance',[a,b]);
+  const rightClick=target=>cfg._internals.onContextMenu({target,preventDefault(){},stopPropagation(){}});
+  rightClick(a);assert.equal(cfg.state.openFor,'pad-1');
+  rightClick(b);assert.equal(cfg.state.openFor,'toggle-2');
+  rightClick(b);assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,false);
+  cfg.on();cfg.open('pad-1');rightClick(a);
+  assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,true,'explicit CFG mode stays enabled');
+});
+
 test('register/render: builder is invoked with the control name and returns declarative items', () => {
   // The renderer is exercised end-to-end by Playwright (tests/ui/config-mode.spec.mjs).
   // The Node unit test only verifies that the builder contract works: name is

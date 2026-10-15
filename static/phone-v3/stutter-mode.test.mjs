@@ -342,12 +342,12 @@ test('pulse uses vertical depth and horizontal rate, preserving legacy count', (
   assert.equal(app.modulatorStates.at(-1).rate, 0.5);
 });
 
-test('vertical drag updates .mod-val-bar height to depth and resets on pointerup', () => {
+test('vertical drag scales .mod-val-bar to depth and resets on pointerup', () => {
   // P04 (rc-surface-modulator-quality-2026-09-16): the bar inside the
   // momentary gate must follow depth live (intent) and snap back to 0%
   // when the gate releases. Same gesture as the depth test above.
-  const bar = makeElement({}); // fake .mod-val-bar; style.height = '80%' is a direct JS prop
-  assert.equal(bar.style.height, undefined); // fresh bar, no prior paint
+  const bar = makeElement({});
+  assert.equal(bar.style.transform, undefined);
   const app = loadControls('toggle-5', { pulseBar: bar });
   const send = (type, x, y) => app.pulse.listeners[type]({ ...pointer(1, y), clientX: x });
 
@@ -355,15 +355,15 @@ test('vertical drag updates .mod-val-bar height to depth and resets on pointerup
   send('pointermove', 50, 55); app.tick(16);
   let state = app.context.modulatorStates.get('toggle-5');
   assert.equal(state.depth, 0.8);
-  assert.equal(bar.style.height, '80%');
+  assert.equal(bar.style.transform, 'scaleY(0.8)');
 
   send('pointermove', 50, 100); app.tick(32);
   state = app.context.modulatorStates.get('toggle-5');
   assert.equal(state.depth, 0.5);
-  assert.equal(bar.style.height, '50%');
+  assert.equal(bar.style.transform, 'scaleY(0.5)');
 
   send('pointerup', 50, 100);
-  assert.ok(Number.parseFloat(bar.style.height) >= 0);
+  assert.equal(bar.style.transform,'scaleY(0)');
 });
 
 test('pulse depth setter paints the .mod-val-bar so snapshots re-show the saved depth', () => {
@@ -375,11 +375,11 @@ test('pulse depth setter paints the .mod-val-bar so snapshots re-show the saved 
   const setter = app.context.controlSetters['toggle-5.depth'];
   setter(0.7);
   assert.equal(app.context.modulatorStates.get('toggle-5').depth, 0.7);
-  assert.equal(bar.style.height, '70%');
+  assert.equal(bar.style.transform, 'scaleY(0.7)');
   setter(-1); // clamps to 0
-  assert.ok(Number.parseFloat(bar.style.height) >= 0);
+  assert.equal(bar.style.transform,'scaleY(0)');
   setter(2); // clamps to 1
-  assert.equal(bar.style.height, '100%');
+  assert.equal(bar.style.transform, 'scaleY(1)');
 });
 
 test('pulse mode B keeps horizontal speed drag latched even at zero rate', () => {

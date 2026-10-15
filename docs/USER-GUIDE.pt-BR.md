@@ -583,11 +583,27 @@ BPM, swing e ratchet, inclusive quando a onda herda Global. FREE oculta essa
 seção. Avançado começa recolhido. Os valores dos toggles animam toda a largura
 com a cor do modo A/B/C/D.
 
+Cada pad mostra os ajustes do seu modo efetivo, inclusive quando herda Global:
+
+- A: nível ao tocar, curso do arrasto (40–400 px) e resposta Linear/Fina/Rápida; soltar continua enviando zero.
+- B: curso/resposta e Manter valor ou Zerar num toque sem arrasto. Toque cancelado não zera o latch.
+- C: curso/resposta e Lembrar último ou nível Fixo ao ligar. Outro toque continua desligando para zero.
+- D: tempo Global/SYNC/FREE, duração musical ou 40–10000 ms, proporção de ataque e pico. Duração/ataque efetivos aparecem; o piso de transmissão continua um frame de 30 Hz. Ajustes valem no próximo gesto.
+
+Fina dá precisão a movimentos pequenos; Rápida alcança mudanças maiores antes.
+Esses níveis controlam o sinal mapeado, não a velocity da nota MIDI. Threshold e
+velocity de Trigger Note continuam no MAP. Trocar o modo solta o estado anterior
+com segurança. Ajustes individuais entram no perfil de performance e snapshots.
+Segundo clique direito no mesmo controle fecha o CFG; em outro, troca o editor.
+Trocar onda, inclusive Square, mantém o toggle ativo sem novo toque; burst do modo
+D conserva o fim original. Preenchimento usa transformações e evita reescrever
+rótulos/rastros sem mudança; fluidez no dispositivo ainda exige teste físico.
+
 Overrides do navegador usam `ableton-rc:v3:control_config`. Ajustes de LFO/XY
 também são guardados na preferência de performance dos projetos e presets novos.
 A configuração salva preserva a herança Global; carregar não transforma o modo
 global em override por slot. Snapshot inclui configurações e valores atuais. Isso não salva o Set do Live.
-Overrides de pad/knob/fader continuam locais ao celular. Chaves e formatos de
+Overrides de knob/fader continuam locais ao celular. Chaves e formatos de
 performance anteriores não são carregados.
 
 ---

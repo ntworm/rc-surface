@@ -40,3 +40,28 @@ test('changing engine on one ID resets phase/morph instead of retaining the prev
     assert.equal(hostModulators.size, 0);
   } finally { hostModulators.clear(); stopHostModulatorLoop(); }
 });
+
+test('live engine replacement preserves host burst origin and deadline',t=>{
+  t.mock.timers.enable({apis:['Date'],now:10000});
+  try {
+    const payload={name:'toggle-1',active:true,syncMode:'free',burstDurationMs:520,burstAttackMs:70};
+    updateHostModulator('burst-swap',{...payload,kind:'lfo',shape:'sine'});
+    t.mock.timers.tick(200);
+    updateHostModulator('burst-swap',{...payload,kind:'pulse',shape:'square'});
+    let state=hostModulators.get('burst-swap::toggle-1');
+    assert.equal(state.active,true);assert.equal(state.burstStartMs,10000);assert.equal(state.burstDurationMs,520);
+    t.mock.timers.tick(100);
+    updateHostModulator('burst-swap',{...payload,kind:'lfo',shape:'triangle'});
+    state=hostModulators.get('burst-swap::toggle-1');
+    assert.equal(state.burstStartMs,10000);assert.equal(state.burstAttackMs,70);
+  } finally {hostModulators.clear();stopHostModulatorLoop();}
+});
+
+test('Square host keeps the long, dotted and triplet pins offered by its CFG',()=>{
+  try {
+    for(const subdivision of [32,16,8,3,8/3,1.5,4/3,.75,2/3,.375,1/3,.25]) {
+      updateHostModulator('pins',{name:'toggle-1',kind:'pulse',shape:'square',active:true,syncMode:'sync',syncSubdivisionBeats:subdivision});
+      assert.equal(hostModulators.get('pins::toggle-1').syncSubdivisionBeats,subdivision);
+    }
+  } finally {hostModulators.clear();stopHostModulatorLoop();}
+});

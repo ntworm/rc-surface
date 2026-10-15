@@ -772,12 +772,13 @@
     if (!values || typeof values !== 'object') return;
     if (!window.controlSetters) return;
     const currentMode = document.body.dataset.padMode || 'A';
-    const momentaryMode = currentMode === 'A' || currentMode === 'D';
 
     const apply = () => {
       for (const [k, v] of Object.entries(values)) {
         if (typeof window.controlSetters[k] !== 'function') continue;
-        if (momentaryMode && /^(?:pad|toggle|button)-/.test(k)) continue;
+        const base=k.split('.')[0];
+        const mode=window.getControlMode?.(base) || window.RcControlConfig?.get(base,'mode',currentMode) || currentMode;
+        if ((mode==='A' || mode==='D') && /^(?:pad|toggle|button)-\d+$/.test(k)) continue;
         controlStream?.discard(k);
         try {
           window.controlSetters[k](v);
@@ -1142,17 +1143,42 @@
     });
     // PERF builders (mode / shape / pulse).
     cfg.register(/^pad-\d+$/, (name) => {
-      const mode = window.RcControlConfig.get(name, 'mode', 'Global');
-      return [
-        { segment: { label: 'Mode override', options: [
-          { label: 'Global', value: 'Global' },
-          { label: 'A', value: 'A' },
-          { label: 'B', value: 'B' },
-          { label: 'C', value: 'C' },
-          { label: 'D', value: 'D' },
-        ], get: () => mode, set: (v) => window.RcControlConfig.set(name, v === 'Global' ? { mode: null } : { mode: v }) } },
-        { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
-      ];
+      const cc=window.RcControlConfig;
+      const tr=(key,fallback)=>window.RcSurfaceI18n?.t(key) ?? fallback;
+      const get=(key,fallback)=>cc.get(name,key,fallback);
+      const global={label:tr('cfg.global','Global'),value:'Global'};
+      const choice=(key,label,options,fallback='Global')=>({segment:{label,options,refresh:true,
+        get:()=>get(key,fallback),set:value=>cc.set(name,{[key]:value==='Global'?null:value})}});
+      const slider=(key,label,min,max,step,fallback,format=value=>value.toFixed(2))=>({slider:{
+        label,min,max,step,refresh:true,get:()=>get(key,fallback),set:value=>cc.set(name,{[key]:value}),format}});
+      const mode=window.getControlMode?.(name) || get('mode',document.body.dataset.padMode || 'A');
+      const rows=[choice('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))])];
+      if(mode!=='D') {
+        rows.push(slider('padRange',tr('cfg.padRange','Drag travel'),40,400,10,150,value=>`${value}px`),
+          choice('padCurve',tr('cfg.padCurve','Response'),[['linear','Linear'],['fine','Fine'],['fast','Fast']].map(([value,label])=>({value,label:tr('cfg.'+value,label)})),'linear'));
+        if(mode==='A') rows.push(slider('padTouchValue',tr('cfg.touchLevel','Touch level'),0,1,.01,0));
+        if(mode==='B') rows.push(choice('padLatchTapReset',tr('cfg.tapAction','Tap without drag'),[
+          {label:tr('cfg.keepValue','Keep value'),value:false},{label:tr('cfg.resetZero','Reset to zero'),value:true}],false));
+        if(mode==='C') {
+          rows.push({segment:{label:tr('cfg.toggleOn','On level'),refresh:true,
+            options:[{label:tr('cfg.rememberLevel','Remember last'),value:'memory'},{label:tr('cfg.fixedLevel','Fixed'),value:'fixed'}],
+            get:()=>get('padToggleValue',null)===null?'memory':'fixed',set:value=>cc.set(name,{padToggleValue:value==='memory'?null:1})}});
+          if(get('padToggleValue',null)!==null)rows.push(slider('padToggleValue',tr('cfg.toggleOn','On level'),.01,1,.01,1));
+        }
+      } else {
+        rows.push(choice('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]));
+        if(get('syncMode',window.syncMode)==='sync') rows.push({details:{label:tr('cfg.burstLength','Burst length'),items:[
+          choice('burstSubdivision',tr('cfg.division','Subdivision'),[global,...[[4,'1'],[2,'1/2'],[1,'1/4'],[.5,'1/8'],[.25,'1/16'],[.125,'1/32'],[.0625,'1/64']].map(([value,label])=>({value,label}))]),
+        ]}});
+        else rows.push(slider('burstDurationMs',tr('cfg.burstDuration','Duration (ms)'),40,10000,10,520,value=>`${value}ms`));
+        rows.push(slider('burstAttackRatio',tr('cfg.burstAttack','Attack'),.05,.5,.005,
+          get('syncMode',window.syncMode)==='sync'?window.syncSettings.burstAttackRatio:70/520,value=>`${Math.round(value*100)}%`),
+        slider('burstPeak',tr('cfg.burstPeak','Peak level'),.15,1,.01,1));
+        const shape=window.resolveBurstShape?.(name);
+        if(shape)rows.push({info:{text:tr('cfg.effectiveBurst','Effective burst')+`: ${Math.max(1000/30,shape.durationMs).toFixed(0)}ms / ${tr('cfg.burstAttack','Attack')} ${Math.max(1,Math.min(shape.attackMs,Math.max(1000/30,shape.durationMs)*.9)).toFixed(0)}ms`}});
+      }
+      rows.push({action:{label:tr('cfg.resetToDefault','Reset to default'),run:()=>cc.clear(name)}});
+      return rows;
     });
     cfg.register(/^toggle-[1-8]$/, (name) => {
       const cc = window.RcControlConfig;
@@ -1281,7 +1307,7 @@
       window.RcControlConfig.subscribe(refreshBadges);
       let saveTimer;
       window.RcControlConfig.subscribe(({ name }) => {
-        if (!/^(?:toggle-[1-8]|xy-[12])$/.test(name) || window.PerformanceSettings?.applying) return;
+        if (!/^(?:toggle-[1-8]|xy-[12]|pad-(?:[1-9]|1[0-2]))$/.test(name) || window.PerformanceSettings?.applying) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
           window.sendPhoneCommand?.('saveProjectClientState', {
