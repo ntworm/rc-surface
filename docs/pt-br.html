@@ -1956,7 +1956,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       </figure>
 
 <figure class="surface-sheet" id="surface-map-rec" data-surface-plan="rec" role="region" aria-labelledby="surface-label-rec">
-<div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — gravação no Arrangement</span><span data-i18n="lp.map.006">Sem escala</span><span data-i18n="lp.map.007">Proj. planta</span></div>
+<div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement / CLIP</span><span data-i18n="lp.map.006">Sem escala</span><span data-i18n="lp.map.007">Proj. planta</span></div>
 <div class="figwrap" style="margin-top:14px">
 <svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" xmlns="http://www.w3.org/2000/svg" role="img" data-i18n-aria-label="lp.rec.aria" aria-label="Planta de REC: timeline de marcadores com compasso.beat, Zoom, início/fim do Loop, pré-roll, REC/STOP/click e cartões de entradas armadas">
 <g data-diagram-frame="rec">
@@ -2001,7 +2001,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
-<text x="48" y="96" font-size="12" fill="#c0c0c0" >ARRANGEMENT REC</text>
+<g data-rec-destination="arrangement-clip"><rect x="48" y="78" width="136" height="24" fill="#ffa133"/><text x="56" y="94" font-size="10" fill="#141414">ARRANGEMENT</text><rect x="184" y="78" width="70" height="24" fill="#222222" stroke="#444444"/><text x="198" y="94" font-size="10" fill="#c0c0c0">CLIP</text></g>
 <text x="938" y="96" font-size="11" fill="#ffa133" >READY</text>
 <rect x="48" y="108" width="108" height="36" fill="#222222" stroke="#ffa133" />
 <text x="72" y="131" font-size="13" fill="#ffa133" >REC</text>
@@ -2083,6 +2083,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <tr><td class="c1">3</td><td data-i18n="lp.rec.preRoll">PRÉ-ROLL OFF / 1 / 2 / 4</td><td class="c2">4</td><td data-i18n="lp.rec.preRollFlow">OFF começa no marcador. 1/2/4 tocam compassos anteriores com click até Punch In abrir no marcador. Esta preferência do navegador não altera o count-in nativo, somente leitura.</td></tr>
 <tr><td class="c1">4</td><td data-i18n="lp.rec.tracks">Cartões / ARM / SOLO / MUTE</td><td class="c2">1–256</td><td data-i18n="lp.rec.tracksFlow">ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP desarma só as identidades da tentativa. Grupos têm SOLO/MUTE, sem ARM.</td></tr>
 <tr><td class="c1">5</td><td data-i18n="lp.rec.transport">REC / STOP / CLICK</td><td class="c2">3</td><td data-i18n="lp.rec.transportFlow">STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. Estado desconhecido bloqueia gravar; leituras não comprovam captura de áudio nem preservação de takes.</td></tr>
+<tr><td class="c1">6</td><td data-i18n="lp.rec.clip">CLIP / cena da Session</td><td class="c2">1–16 bars</td><td data-i18n="lp.rec.clipFlow">CLIP troca a timeline por grade paginada da Session. Escolha cena vazia em todas as faixas armadas; CFG define 1/2/4/8/16 compassos e quantização nativa Global/Nenhuma/1compasso/1beat. REC observa fila/gravação/playback; STOP age só nos alvos ainda próprios, mantém ARM/transporte global e pode ficar pendente. Sem overdub de clip existente nem navegador de takes/comp.</td></tr>
 </tbody></table></div></figure>
 
       <figure class="surface-sheet" id="surface-map-map" data-surface-plan="map" role="region" aria-labelledby="surface-label-map">

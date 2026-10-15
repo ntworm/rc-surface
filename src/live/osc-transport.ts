@@ -16,7 +16,7 @@ import { TextDecoder, TextEncoder } from 'node:util';
 // (resolved at runtime by the host's module loader) instead of the wrapper.
 import * as osc from 'osc-min';
 import { EventEmitter } from 'node:events';
-import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, REC, REC_LOOP, REC_PREFLIGHT, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
+import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, SESSION_REC, REC, REC_LOOP, REC_PREFLIGHT, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
 import { RecordingTransport } from './recording-transport.js';
 
 if (typeof (globalThis as any).TextEncoder === 'undefined') {
@@ -54,6 +54,7 @@ const GET_ADDRESSES: ReadonlySet<string> = new Set([
   REC.getRecordMode,
   REC_LOOP.getStart, REC_LOOP.getLength,
   ...Object.values(REC_PREFLIGHT),
+  ...Object.values(SESSION_REC),
   CLIP.getLaunchQuantization,
   CLIP.getLaunchMode,
   CLIP.getLegato,
@@ -65,6 +66,7 @@ const PENDING_REPLY_CAP = 8;
 // eight track arm reports on one address; overflow must not impersonate a
 // listener push and postpone listener recovery. Meter still has listeners.
 const REC_POLL_ONLY: ReadonlySet<string> = new Set([
+  ...Object.values(SESSION_REC),
   ...Object.entries(REC_PREFLIGHT).filter(([key]) => !key.startsWith('signature')).map(([, address]) => address),
   REC_LOOP.getStart, REC_LOOP.getLength,
 ]);
@@ -400,6 +402,7 @@ export class OSCTransport extends EventEmitter {
     const address = oscMsg.address;
     const args = oscMsg.args || [];
     this.recording.observe(address, args, now);
+    if (Object.values(SESSION_REC).includes(address)) this.emit('session-recording-observation',{address,args,at:now});
     if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames || address === REC_LOOP.getStart || address === REC_LOOP.getLength || address === GET.tempo) {
       this.emit('recording-observation', { address, args, at: now });
     }
@@ -590,6 +593,11 @@ export class OSCTransport extends EventEmitter {
   /** Press the slot's launch button. No extra argument: Live quantizes. */
   public fireClipSlot(trackIndex: number, slotIndex: number): void {
     this.send(CLIP.fireSlot, [oscInt(trackIndex), oscInt(slotIndex)]);
+  }
+
+  /** Native empty-slot REC; Global omits the per-fire quantization override. */
+  public recordEmptyClipSlot(trackIndex: number, slotIndex: number, beats: number, quantization: 'global' | 0 | 4 | 7): void {
+    this.send(CLIP.fireSlot,[oscInt(trackIndex),oscInt(slotIndex),{type:'float',value:beats},...(quantization==='global'?[]:[oscInt(quantization)])]);
   }
 
   /** Track.stop_all_clips with Live's default (quantized). */

@@ -14,6 +14,7 @@ const writes = {
   recordingAudition:{disarm:true},recordingClick:{enabled:true},recordingMark:{mark:'good'},
   recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
   recordingSeekMarker:{name:'Start',time:0},
+  recordingSessionRecord:{songId:'test',scene:{index:0,id:'scene',name:'Scene'},targets:[{track:{index:0,id:'1',name:'Track'},slotId:'slot'}],bars:4,quantization:'global'},recordingSessionStop:{},
 };
 test('REC commands are in the actual mappings registry and viewer cannot invoke any mutation',async () => {
   assert.equal(COMMAND_SIDE_EFFECTS.getRecordingState,'read');
@@ -25,6 +26,22 @@ test('REC commands are in the actual mappings registry and viewer cannot invoke 
     const noSocket = await dispatchCommand('controller',{cmd,args});
     assert.equal(noSocket.ok,false); assert.match(noSocket.error,/REC:SESSION/,cmd);
   }
+});
+
+test('Session REC dispatch forwards strict request/current context and keeps reads viewer-safe',async t=>{
+  const originals={recordSession:recordingCoordinator.recordSession,stopSession:recordingCoordinator.stopSession,refreshSession:recordingCoordinator.refreshSession},calls=[];
+  for(const method of Object.keys(originals))recordingCoordinator[method]=async(...args)=>{calls.push([method,...args]);return {session:{active:false}};};
+  t.after(()=>Object.assign(recordingCoordinator,originals));const context={clientId:'session',isCurrent:()=>true};
+  for(const role of ['controller','admin']){
+    assert.equal((await dispatchCommand(role,{cmd:'recordingSessionRecord',args:writes.recordingSessionRecord},context)).ok,true);
+    assert.deepEqual(calls.at(-1),['recordSession',writes.recordingSessionRecord,context]);
+  }
+  assert.equal((await dispatchCommand('controller',{cmd:'recordingSessionStop',args:{}},context)).ok,true);assert.deepEqual(calls.at(-1),['stopSession',context]);
+  assert.equal(COMMAND_SIDE_EFFECTS.getSessionRecordingState,'read');
+  assert.equal((await dispatchCommand('viewer',{cmd:'getSessionRecordingState',args:{offset:8}})).ok,true);assert.deepEqual(calls.at(-1),['refreshSession',8]);
+  const before=calls.length;
+  for(const [cmd,args] of [['recordingSessionRecord',{...writes.recordingSessionRecord,preRollBars:1}],['recordingSessionStop',{all:true}],['getSessionRecordingState',{}]])assert.equal((await dispatchCommand('admin',{cmd,args},context)).ok,false);
+  assert.equal(calls.length,before);
 });
 
 test('REC grid dispatch forwards exact cohort and track controls and rejects mixed or extra schemas',async t=>{

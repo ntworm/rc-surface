@@ -360,6 +360,50 @@ Quantização de clip tem enum separado (`0=Global`, `1=None`, `2..14`);
 
 ## Persistência e transporte REC/AUT 2.0
 
+### Gravação em Session vazia
+
+`getSessionRecordingState({offset})` é somente leitura, em janela de oito cenas
+(offset múltiplo de 8). Identidades SDK de Song/track/cena/slot e nomes de clips
+formam a grade; índices fired/playing da track e flags recording/playing do Clip
+observados por OSC definem estado. Não usa ClipSlot `playing_status` em faixa
+normal, nem consulta cada célula no polling. Limites: 256 tracks normais e 4096
+cenas. A posse inclui todas as entradas armadas explicitamente enviadas, não
+apenas a área horizontal visível.
+
+`recordingSessionRecord` é `live-write` controller/admin, objeto exato
+`{songId,scene:{index,id,name},targets:[{track:{index,id,name},slotId}],bars,quantization}`.
+Alvos são não vazios, ordenados, únicos e iguais ao conjunto armado inteiro e
+fresco. Token por Song, identidades únicas, slot vazio no SDK/OSC, armabilidade/
+monitor observados, índices fired/playing ociosos e ausência de gravação são
+verificados antes dos disparos. Compassos: 1/2/4/8/16, convertidos pela fórmula
+fresca para beats. ClipSlot.fire recebe `(trackIndex,slotIndex,record_length)` em
+Global; Nenhuma/1compasso/1beat acrescentam enum Song 0/4/7. Não usa o enum
+separado de propriedade Clip, nem altera a preferência global. MAP Launch Clip
+preserva seu comportamento anterior de dois argumentos.
+
+O slot de operação REC existente serializa Arrangement/Session; STOP prioritário
+cancela confirmação pendente. `recordingSessionStop({})` não envia transporte ou
+record mode global, não altera ARM nem apaga clips. Track.stop_all_clips pode
+afetar toda a faixa: antes de cada envio, fired/playing frescos precisam apontar
+para a cena própria, com o mesmo slot/clip SDK e has_clip concordante. Alvo ainda
+vazio e na fila também pode ser parado. Índices externos/substituições conhecidos
+retiram posse, mesmo se o clip antigo voltar depois. STOP não adota clip novo sem
+identidade. Quantização nativa pode deixar `SESSION_STOP_PENDING`; limite de dois
+segundos para leituras encerra o comando e mantém posse segura para retry explícito,
+sem repetir escritas no polling. Perda de contexto/Set/link retira posse sem replay.
+Disparos multifaixa são sequenciais, com limpeza observada e limitada só dos alvos
+próprios emitidos em falha parcial; OSC não garante ACK transacional nem autoria
+exclusiva.
+
+CFG de CLIP é local à página aberta (padrão 4 compassos/Global), sem novo formato
+persistido. Abrir/trocar modo, selecionar cena ou CFG é passivo. Destino, ARM e
+renomeação travam durante a posse; SOLO/MUTE explícitos continuam disponíveis.
+Não usa pré-roll/Punch In/Arrangement Loop. Overdub de clip existente, navegação
+de takes, audition e comp ficam fora deste comando. Estado observado não comprova
+captura física de áudio/MIDI nem preservação de takes.
+
+### Arrangement, AUT e contratos compartilhados de tracks
+
 AUT aceita FREE de 1–30 segundos inteiros e SYNC de 1–5 compassos. Os padrões
 continuam 10 segundos/2 compassos; loops anteriores de 10 ou 20 segundos seguem
 válidos. Navegador, persistência no host, presets e importação usam a mesma

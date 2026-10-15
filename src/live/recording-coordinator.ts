@@ -7,12 +7,14 @@ import { CLIP, GET, REC_LOOP, REC_PREFLIGHT, REC_PREROLL } from '../osc-tokens.j
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
+import {SessionRecording,type SessionSong} from './session-recording.js';
 
 interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean }
 interface Cue { name: string; time: number; handle: { id: string | number | bigint } }
 interface Song {
   tracks: readonly Track[]; cuePoints: readonly Cue[];
   createCuePoint(time: number): Promise<Cue>; deleteCuePoint(cue: Cue): Promise<void>;
+  scenes?:NonNullable<SessionSong['scenes']>;
 }
 interface TrackRef { index: number; id: string; name: string }
 interface MarkerRef { name: string; time: number }
@@ -65,14 +67,17 @@ export class RecordingCoordinator extends EventEmitter {
   private preRollRequested = false;
   private preRollError: string | null = null;
   private cueGeneration = 0;
+  private readonly session:SessionRecording;
 
   constructor(private readonly osc: OSCTransport, private readonly getSong: () => Song) {
     super();
+    this.session=new SessionRecording(osc,getSong);
     osc.on('recording-observation', this.observe);
     osc.on('link-lost', this.lost);
   }
 
   private readonly lost = () => {
+    this.session.reset();
     this.cueGeneration++;
     this.operation?.abort.abort(Error('REC:CONNECTION'));
     this.operation = null;
@@ -82,11 +87,12 @@ export class RecordingCoordinator extends EventEmitter {
     this.preRollRequested = false;
   };
   public dispose(): void {
-    this.lost(); this.osc.off('recording-observation', this.observe); this.osc.off('link-lost', this.lost);
+    this.lost();this.session.dispose(); this.osc.off('recording-observation', this.observe); this.osc.off('link-lost', this.lost);
   }
   private currentSong(): Song {
     const song = this.getSong();
     if (this.song !== song) {
+      this.session.reset();
       this.cueGeneration++;
       this.song = song; this.selected = null; this.point = null; this.preparedToken = null;
       this.lastAttempt = null; this.observed.clear();
@@ -113,7 +119,8 @@ export class RecordingCoordinator extends EventEmitter {
       captureVerified: false, preflightComplete: false,
       selected: this.selected, point: this.point, preparedToken: this.preparedToken, range: this.range,
       cohort: this.cohort, trackPending: this.trackMutation?.name ?? null,
-      attemptActive: Boolean(this.preRoll || this.punch || this.armedByRecorder.length),
+      attemptActive: Boolean(this.preRoll || this.punch || this.armedByRecorder.length || this.session.active),
+      session:this.session.snapshot(),
       loopRegion: {start: this.value('loopStart'), length: this.value('loopLength')},
       safety: Object.fromEntries(flags.map(key => [key, this.value(key)])),
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
@@ -167,6 +174,7 @@ export class RecordingCoordinator extends EventEmitter {
   private idle(context?: CommandExecutionContext): void {
     this.requireContext(context); this.interruptRead(); if (this.operation || this.trackMutation) fail('BUSY');
     if (this.preRoll) fail('PRE_ROLL_STATE');
+    if(this.session.active)fail('STOP_REQUIRED');
   }
   private interruptRead(): void {
     if (this.operation?.name !== 'read') return;
@@ -229,11 +237,47 @@ export class RecordingCoordinator extends EventEmitter {
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
   }
+  public async refreshSession(offset:unknown) {
+    this.currentSong();this.session.window(offset);
+    if(this.operation || this.trackMutation)return this.snapshot();
+    return this.run('read',undefined,async operation=>{await this.read(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+  }
+  public async recordSession(request:unknown,context?:CommandExecutionContext) {
+    this.idle(context);if(this.punch || this.armedByRecorder.length)fail('STOP_REQUIRED');
+    return this.run('sessionRecord',context,async operation=>{
+      const song=this.currentSong();await this.read(operation);
+      const check=()=>{this.check(operation);if(this.getSong()!==song)fail('IDENTITY');};
+      const preflight=(refs:TrackRef[])=>{
+        check();this.identities(refs);
+        const transport=this.osc.recording.snapshot();
+        if(!transport.recordMode.fresh || transport.recordMode.value!==false)fail('SESSION_CONFLICT');
+        if(this.value('sessionRecord')!==false)fail('SESSION_CONFLICT');
+        for(const ref of refs)if(this.value('arm:'+ref.index)!==true || this.value('canArm:'+ref.index)!==true)fail('TRACK_NOT_ARMED');
+        if(song.tracks.some((_,index)=>this.value('arm:'+index)!==refs.some(ref=>ref.index===index)))fail('OTHER_ARMED');
+      };
+      const prepared=await this.session.record(request,context!,check,operation.abort.signal,preflight);
+      const refs=prepared.owner.targets.map(target=>target.target.track);
+      await this.read(operation,undefined,refs);
+      const numerator=Number(this.value('numerator')),denominator=Number(this.value('denominator'));
+      if(!Number.isInteger(numerator)||numerator<1||![1,2,4,8,16,32].includes(denominator))fail('UNKNOWN');
+      const finalCheck=()=>{preflight(refs);if(this.value('numerator')!==numerator||this.value('denominator')!==denominator)fail('SESSION_CONFLICT');for(const ref of refs)if(![0,1,2].includes(Number(this.value('monitor:'+ref.index)))||this.value('monitor:'+ref.index)===null)fail('UNKNOWN');};
+      finalCheck();
+      await this.session.fire(prepared,prepared.bars*numerator*4/denominator,check,operation.abort.signal,finalCheck);
+    });
+  }
+  public async stopSession(context?:CommandExecutionContext) {
+    this.requireContext(context);
+    if(this.preRoll || this.punch || this.armedByRecorder.length || this.operation && !['read','sessionRecord','stop'].includes(this.operation.name))fail('BUSY');
+    this.trackMutation?.abort.abort(Error('REC:STOPPED'));this.trackMutation=null;
+    this.operation?.abort.abort(Error('REC:STOPPED'));this.operation=null;this.preparedToken=null;
+    return this.run('stop',context,operation=>this.session.stop(()=>this.check(operation),operation.abort.signal));
+  }
   private async run(name: string, context: CommandExecutionContext | undefined, body: (op: Operation) => Promise<void>) {
     if (context) this.requireContext(context);
     if (name !== 'read') this.interruptRead();
     if (this.operation || (this.trackMutation && name !== 'stop')) fail('BUSY');
     if (this.preRoll && !['read','stop','click'].includes(name)) fail('PRE_ROLL_STATE');
+    if(this.session.active && !['read','stop','click'].includes(name))fail('STOP_REQUIRED');
     const operation: Operation = { name, abort: new AbortController(), ...(context ? { context } : {}) };
     this.operation = operation;
     try { this.check(operation); await body(operation); this.check(operation); }
@@ -285,7 +329,7 @@ export class RecordingCoordinator extends EventEmitter {
       this.observed.set(key, { value, at, revision: ++this.revision }); this.emit('observation');
     }
   };
-  private async read(operation: Operation, expected?: LoopExpectation): Promise<void> {
+  private async read(operation: Operation, expected?: LoopExpectation, monitorRefs?:TrackRef[]): Promise<void> {
     this.check(operation);
     const song = this.currentSong();
     if (song.tracks.length > 256) fail('TRACK_LIMIT');
@@ -299,7 +343,7 @@ export class RecordingCoordinator extends EventEmitter {
         packets.push([field === 'solo' ? REC_PREFLIGHT.trackSolo : REC_PREFLIGHT.trackMute,i]); keys.push(field+':'+i);
       }
     }
-    for (const ref of this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
+    for (const ref of monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
     if (this.range?.loop || this.preRollRequested || this.preRoll) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
     if (this.preRollRequested || this.preRoll) { packets.push([GET.tempo]); keys.push('tempo'); }
     const revision = this.revision;
@@ -787,6 +831,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
   public async stop(context?: CommandExecutionContext) {
     this.requireContext(context);
+    if(this.session.active || this.operation?.name==='sessionRecord')return this.stopSession(context);
     if (this.operation?.name === 'stop' && this.stopping) return this.stopping;
     const preRoll = this.preRoll;
     this.trackMutation?.abort.abort(Error('REC:STOPPED'));this.trackMutation=null;

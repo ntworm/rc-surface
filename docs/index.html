@@ -1956,7 +1956,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       </figure>
 
 <figure class="surface-sheet" id="surface-map-rec" data-surface-plan="rec" role="region" aria-labelledby="surface-label-rec">
-<div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement recording</span><span data-i18n="lp.map.006">Scale none</span><span data-i18n="lp.map.007">Proj. plan</span></div>
+<div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement / CLIP</span><span data-i18n="lp.map.006">Scale none</span><span data-i18n="lp.map.007">Proj. plan</span></div>
 <div class="figwrap" style="margin-top:14px">
 <svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" xmlns="http://www.w3.org/2000/svg" role="img" data-i18n-aria-label="lp.rec.aria" aria-label="Plan view of REC: marker timeline with bar.beat labels, Zoom, start/end Loop, pre-roll choices, REC/STOP/click and armed input cards">
 <g data-diagram-frame="rec">
@@ -2001,7 +2001,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
-<text x="48" y="96" font-size="12" fill="#c0c0c0" >ARRANGEMENT REC</text>
+<g data-rec-destination="arrangement-clip"><rect x="48" y="78" width="136" height="24" fill="#ffa133"/><text x="56" y="94" font-size="10" fill="#141414">ARRANGEMENT</text><rect x="184" y="78" width="70" height="24" fill="#222222" stroke="#444444"/><text x="198" y="94" font-size="10" fill="#c0c0c0">CLIP</text></g>
 <text x="938" y="96" font-size="11" fill="#ffa133" >READY</text>
 <rect x="48" y="108" width="108" height="36" fill="#222222" stroke="#ffa133" />
 <text x="72" y="131" font-size="13" fill="#ffa133" >REC</text>
@@ -2083,6 +2083,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <tr><td class="c1">3</td><td data-i18n="lp.rec.preRoll">PRE-ROLL OFF / 1 / 2 / 4</td><td class="c2">4</td><td data-i18n="lp.rec.preRollFlow">OFF starts at the marker. 1/2/4 play earlier bars with click before native Punch In opens at the marker. This browser preference does not set Live’s read-only native count-in.</td></tr>
 <tr><td class="c1">4</td><td data-i18n="lp.rec.tracks">Track cards / ARM / SOLO / MUTE</td><td class="c2">1–256</td><td data-i18n="lp.rec.tracksFlow">ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP disarms only that attempt’s identities. Groups can SOLO/MUTE but cannot ARM.</td></tr>
 <tr><td class="c1">5</td><td data-i18n="lp.rec.transport">REC / STOP / CLICK</td><td class="c2">3</td><td data-i18n="lp.rec.transportFlow">STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. Unknown state blocks recording; readouts do not prove audio capture or take preservation.</td></tr>
+<tr><td class="c1">6</td><td data-i18n="lp.rec.clip">CLIP / Session scene</td><td class="c2">1–16 bars</td><td data-i18n="lp.rec.clipFlow">CLIP replaces the timeline with a paged Session grid. Choose one empty scene across all armed tracks; CFG sets 1/2/4/8/16 bars and native Global/None/1bar/1beat quantization. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending. No existing-clip overdub or take/comp browser.</td></tr>
 </tbody></table></div></figure>
 
       <figure class="surface-sheet" id="surface-map-map" data-surface-plan="map" role="region" aria-labelledby="surface-label-map">

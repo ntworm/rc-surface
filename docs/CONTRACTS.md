@@ -353,6 +353,51 @@ it is observed only and never written by this command.
 
 ## 2.0 persistence and REC/AUT transport
 
+### Empty Session recording
+
+`getSessionRecordingState({offset})` is read-only, with an eight-scene window
+(offset multiple of 8). SDK Song/track/scene/slot identities and clip names form
+the grid; fresh OSC track fired/playing indices and Clip recording/playing flags
+establish status. ClipSlot `playing_status` is not used for ordinary tracks.
+Polling does not query every grid cell. Up to 256 regular tracks and 4096 scenes
+are accepted; ownership includes all explicitly submitted armed inputs, not the
+visible horizontal region.
+
+`recordingSessionRecord` is controller/admin `live-write`, exact
+`{songId,scene:{index,id,name},targets:[{track:{index,id,name},slotId}],bars,quantization}`.
+Targets are nonempty, ordered, unique and equal to the complete fresh armed set.
+The per-Song token, unique identities, empty SDK/OSC slot, fresh armability/monitor,
+idle target fired/playing indices and record-off conditions are checked before
+fires. Bars are 1/2/4/8/16, converted through the fresh meter to beats. Native
+ClipSlot.fire receives `(trackIndex,slotIndex,record_length)` for Global; None/1bar/
+1beat append Song quantization 0/4/7. The separate Clip property enum is not used;
+the global quantization preference is never changed. Existing MAP clip launches
+retain their two-argument behavior.
+
+The existing REC operation slot serializes Arrangement/Session; priority STOP
+cancels pending confirmation. `recordingSessionStop({})` never sends global
+transport or record-mode commands, changes ARM or deletes clips. Track.stop_all_clips
+can affect the entire track: immediately before each request, fresh fired/playing
+indices must still identify the owned scene, with the same SDK slot/clip and
+concordant has_clip. A still-empty queued target may also be stopped. Known
+foreign indices/replacements retire ownership, even if the old clip later returns.
+An unidentified new SDK clip cannot be adopted by STOP. Native quantization can
+leave `SESSION_STOP_PENDING`; two-second read bounds end the command and retain
+safe ownership for an explicit retry, without repeated stop writes in polling.
+Loss of current context, Set or OSC link retires ownership with no reconnect
+replay. Multiple native fires are sequential, with bounded observed cleanup of
+only emitted owned targets on partial failure; OSC has no transactional ACK or
+exclusive authorship guarantee.
+
+CLIP settings are local to the open page (default 4 bars/Global), with no new
+storage format. Opening/changing mode, selecting a scene or CFG is passive.
+Destination, ARM and rename lock during ownership; explicit SOLO/MUTE remain
+available. Pre-roll/Punch In/Arrangement Loop are not used. Existing-clip overdub,
+take browsing, audition and comp selection are outside this command. Observed
+states do not establish physical audio/MIDI capture or take preservation.
+
+### Arrangement, AUT and shared track contracts
+
 AUT accepts integer FREE durations of 1–30 seconds and SYNC lengths of 1–5 bars.
 Defaults remain 10 seconds/2 bars, with existing 10/20-second loops valid. The
 same validation applies to browser settings, host persistence, presets and imports;

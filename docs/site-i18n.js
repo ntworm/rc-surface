@@ -1647,8 +1647,8 @@
       'pt-BR': "AUT seleciona XY1/XY2; os botões AUT separados abrem ajustes sem gravar. SYNC captura 1–5 compassos pelo clock atual do Live tocando; FREE captura 1–30 segundos em passos de um segundo. Reproduzir/Parar são explícitos; o toque assume o loop até soltar. Pontos salvos não retomam após reconectar. São dados de controle, não automação nativa do Arrangement.",
     },
     'lp.rec.title': {
-      en: "REC — Arrangement recording",
-      'pt-BR': "REC — gravação no Arrangement",
+      en: "REC — Arrangement / CLIP",
+      'pt-BR': "REC — Arrangement / CLIP",
     },
     'lp.rec.figure': {
       en: "Fig. 7",
@@ -1694,6 +1694,8 @@
       en: "REC / STOP / CLICK",
       'pt-BR': "REC / STOP / CLICK",
     },
+    'lp.rec.clip':{en:'CLIP / Session scene','pt-BR':'CLIP / cena da Session'},
+    'lp.rec.clipFlow':{en:'CLIP replaces the timeline with a paged Session grid. Choose one empty scene across all armed tracks; CFG sets 1/2/4/8/16 bars and native Global/None/1bar/1beat quantization. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending. No existing-clip overdub or take/comp browser.','pt-BR':'CLIP troca a timeline por grade paginada da Session. Escolha cena vazia em todas as faixas armadas; CFG define 1/2/4/8/16 compassos e quantização nativa Global/Nenhuma/1compasso/1beat. REC observa fila/gravação/playback; STOP age só nos alvos ainda próprios, mantém ARM/transporte global e pode ficar pendente. Sem overdub de clip existente nem navegador de takes/comp.'},
     'lp.rec.transportFlow': {
       en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. Unknown state blocks recording; readouts do not prove audio capture or take preservation.",
       'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. Estado desconhecido bloqueia gravar; leituras não comprovam captura de áudio nem preservação de takes.",

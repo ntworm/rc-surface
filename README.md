@@ -22,7 +22,7 @@ Eight uniform toggles start in Global. Square is the single 0-to-depth pulse wav
 
 CFG waveform, mode and timing use direct buttons. Subdivision opens a compact note-value/rhythm editor for the effective waveform in SYNC; FREE hides it. Static XY hides physics settings while retaining them for a later switch. Toggle values fill the whole width in their mode colour.
 
-Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay; **AUT**, in the PERF header, records independent XY movements in SYNC (1–5 bars) or FREE (1–30 seconds in steps of one second). REC provides markers, Loop, pre-roll and ARM/SOLO/MUTE cards for the armed input set. VID supports up to fifteen pose cards, 3–6 captures per pose, RETAKE/KEEP review and real PALM/FACE mapping inputs.
+Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay; **AUT**, in the PERF header, records independent XY movements in SYNC (1–5 bars) or FREE (1–30 seconds in steps of one second). REC selects **ARRANGEMENT / CLIP**: markers, Loop and pre-roll for Arrangement, or one empty Session scene across every armed input, with native length/quantization in CFG. Both reuse ARM/SOLO/MUTE cards. VID supports up to fifteen pose cards, 3–6 captures per pose, RETAKE/KEEP review and real PALM/FACE mapping inputs.
 
 ## Highlights
 

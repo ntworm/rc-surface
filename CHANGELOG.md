@@ -6,6 +6,7 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local release preparation (unpublished)
 
+- Add ARRANGEMENT/CLIP destinations inside REC. CLIP records a verified empty Session scene across every explicitly armed input, with 1/2/4/8/16 native bars and Global/None/1bar/1beat launch quantization in collapsed CFG. Observe queued/recording/playing states, serialize with Arrangement, and stop only still-owned clips without changing global transport, quantization or arms. Retire stale ownership without reconnect replay; retain bounded pending STOP when native quantization or identity confirmation requires explicit retry. No existing-clip overdub or take/comp browser.
 - Distinguish clearly different local finger bends, including the thumb, with majority-supported joint evidence so one finger cannot disappear in the whole-hand match. Preserve natural curl tolerance, saved descriptors, calibration and recognition/loss timing; hidden or incorrect camera landmarks remain a physical-test limit.
 - Expand AUT to integer FREE durations of 1–30 seconds via a themed slider and SYNC lengths of 1–5 bars. Preserve 10-second/2-bar defaults, old saved durations, bounded buffers and stopped restores across browser, project, preset and snapshot paths.
 - Rename REC tracks inline by double-clicking the name, Enter to confirm and Escape to cancel. Keep polling drafts/focus; validate exact index/id/old name, serialize the SDK name setter and confirm it without arm/solo/mute/transport writes. Block owned recording attempts and preserve priority STOP.

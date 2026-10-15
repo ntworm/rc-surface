@@ -38,7 +38,7 @@ faixa de cima:
 | SNS | Sensores: leitura ao vivo de movimento e orientação |
 | AUD | Microfone e as entradas de análise de áudio |
 | VID | Câmera, rastreio de mãos e poses estáticas aprendidas |
-| REC | Marcadores do Arrangement, Loop, pré-roll e gravação de tracks armadas |
+| REC | Marcadores/Loop/pré-roll do Arrangement ou CLIP vazio da Session |
 
 A faixa de cima também tem o modos **MAP / AUT / CFG**, perto do indicador de BPM, e mais
 **SYNC**, **STAGE** e **CALIBRAR** contextual em SNS/AUD/VID. Veja
@@ -1160,7 +1160,14 @@ No modo D, cada toggle tem **Duração do burst** e ataque próprios, independen
 
 VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até G15 e fica cinza aos quinze cards. O banco tem rolagem escura e cards compactos: captura, reconhecimento e CLR mantêm a área normal de ações/status; avisos de exemplos ou diagnóstico do TEST acrescentam apenas o espaço necessário. **CLR** apaga exemplos preservando o card. O pequeno **×** abaixo de G1/G2/etc. remove aquele card e seus exemplos, cancela sua captura/teste e solta explicitamente sua saída ativa, inclusive Manter sem limite. Outros IDs e destinos nunca mudam de posição. O mapping do ID removido continua disponível no MAP; Adicionar reutiliza o primeiro ID livre, com pose vazia e esse mapping existente. Limpe seus alvos no MAP caso também queira descartar o destino. É possível remover todos os cards e restaurar um banco com IDs intercalados. Cada pose continua exigindo três exemplos e aceita até seis. Slots `sensor.vision.gesture.1` até `.15` seguem as mesmas regras de qualificação, MIDI e perda de tracking. Classificador, guardas de polegar e tempos de captura/reconhecimento não foram reajustados. Aceite físico da câmera continua necessário.
 
-## 16. Arrangement REC
+## 16. REC: Arrangement / CLIP
+
+Escolha **ARRANGEMENT / CLIP** dentro de REC. Abrir a página, trocar o destino,
+selecionar cena ou abrir CFG nunca arma faixa nem inicia playback/gravação.
+A troca de destino fica bloqueada enquanto existe tentativa REC própria. STOP
+segue essa posse. Nomes, ARM MULTI/EXCLUSIVE e SOLO/MUTE são compartilhados.
+
+### Arrangement
 
 Crie os marcadores do Arrangement no Live antes, depois abra **REC** com o
 playback parado:
@@ -1259,6 +1266,47 @@ O fluxo OSC/SDK tem regressões offline; limites de captura do Punch In nativo,
 preferências de count-in/metrônomo, monitoração de áudio, preservação dos takes
 e toque no celular ainda exigem aceitação no seu conjunto com Live.
 
+
+### CLIP: gravar uma cena vazia da Session
+
+1. Arme as entradas nos cards compartilhados. Escolha **CLIP** e selecione
+   explicitamente uma linha de cena. Toda faixa armada precisa ter slot vazio
+   nessa mesma cena. Clips existentes são referência; selecioná-los não dispara.
+2. Abra **CFG** para **1 / 2 / 4 / 8 / 16 compassos** (padrão 4) e quantização
+   nativa: **Global / Nenhuma / 1 compasso / 1 beat** (padrão Global). São escolhas
+   locais desta página, sem persistência em projeto. Global segue o Live; as outras
+   opções valem só nesse disparo e não alteram a preferência global do Live.
+3. Aperte **REC**. O host reconfirma Set, identidades da cena/slots, slots vazios,
+   armabilidade/monitoração e o conjunto armado inteiro, inclusive faixas fora da
+   área rolada. A duração usa a fórmula observada em beats do Live. Clip tocando
+   ou na fila em uma faixa de destino bloqueia a tentativa, assim como gravação
+   do Arrangement ou o botão Session Record ativo.
+4. **NA FILA / REC / PLAY / STOP** são estados observados, sem estimativa pelo
+   tempo decorrido. A captura nativa com duração pode terminar tocando o clip.
+   **STOP** cancela a preparação e solicita parada só das faixas ainda próprias.
+   Mantém ARM e transporte global. Para parar todo o Live, use explicitamente
+   os controles normais de transporte.
+
+A grade mostra até oito cenas por janela, com rolagem interna escura e botões
+anterior/próximo. Rolar não muda o conjunto armado. Pré-roll, marcadores/Loop do
+Arrangement e Punch In ficam ocultos e não são usados em CLIP. ARM e renomeação
+ficam bloqueados durante a tentativa própria; SOLO/MUTE são ações explícitas.
+
+STOP respeita a quantização nativa e pode mostrar **Parada pendente**; confirme
+no Live ou aperte STOP novamente. Observações ausentes ou identidade de clip
+ainda atrasada no SDK não autorizam parar uma faixa às cegas. Uma observação
+fresca de gravação pode vincular o clip criado; depois, STOP explícito conclui.
+Clip externo observado, troca de faixa/cena/slot ou substituição de clip encerra
+a posse daquele alvo sem pará-lo. Perda de sessão/link/Set retira posse, sem
+repetir parada, disparo ou limpeza na reconexão. Sem link, pare no Live.
+
+Os disparos multifaixa são pedidos OSC sequenciais, sem transação atômica no host.
+Falha parcial tenta parar somente os alvos emitidos cuja identidade e posse
+observada ainda estão confirmadas. A superfície não apaga nem sobrescreve clip
+existente. Este primeiro CLIP não tem overdub de clip existente, navegador de
+take lanes, audition ou seleção de comp. Gravação nativa de áudio/MIDI, duração,
+quantização e limites de captura ainda exigem aceite no seu Live; a prova
+automatizada usa mocks SDK/OSC.
 
 ## AUT: loops de movimento dos XY
 

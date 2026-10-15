@@ -37,7 +37,7 @@ the top strip:
 | SNS    | Sensors: live readouts for motion and orientation            |
 | AUD    | Microphone and audio-analysis inputs                         |
 | VID    | Camera, hand tracking, and learned static poses             |
-| REC    | Arrangement markers, Loop, pre-roll and armed track recording |
+| REC    | Arrangement markers/Loop/pre-roll or empty Session CLIP recording |
 
 The top strip also holds the **MAP / AUT / CFG** header modes near the BPM display plus
 **SYNC**, **STAGE**, and contextual **CALIBRATE** on SNS/AUD/VID. See
@@ -1146,7 +1146,14 @@ In mode D, each toggle has its own **Burst length** and attack, independent of t
 
 VID starts with three learned poses. **+ ADD POSE** adds numbered identities up to G15 and turns grey at fifteen cards. The bank has a dark scrollbar and compact cards: capture, recognition and CLR retain the normal action/summary footprint; visible take warnings or TEST diagnostics add only the space they need. **CLR** removes examples while retaining the card. The small **×** below G1/G2/etc. removes that card and its examples, cancels its capture/test, and explicitly releases its held output, including Hold indefinitely. Other IDs and destinations never shift. The removed ID's mapping remains available in MAP; Add reuses the first free numbered ID with an empty pose and that existing mapping. Clear its targets in MAP if you also want to discard the destination. Removing every card and restoring a sparse bank are supported. Each pose still needs three examples and accepts up to six. Slots `sensor.vision.gesture.1` through `.15` share the same qualification, MIDI and tracking-loss rules. The classifier, thumb checks and capture/recognition timing have not been retuned. Physical camera acceptance remains necessary.
 
-## 16. Arrangement REC
+## 16. REC: Arrangement / CLIP
+
+Select **ARRANGEMENT / CLIP** inside REC. Opening the page, changing destination,
+choosing a scene or opening CFG never arms a track or starts playback/recording.
+Destination changes are blocked while a REC attempt is owned. STOP follows its
+owner. Track names, ARM MULTI/EXCLUSIVE and SOLO/MUTE are shared.
+
+### Arrangement
 
 Create the Arrangement markers in Live first, then open **REC** with playback
 stopped:
@@ -1243,6 +1250,47 @@ The OSC and SDK flow has offline regression coverage; native Punch In capture
 boundaries, count-in/metronome preferences, audio monitoring, take preservation
 and mobile touch still require acceptance on your Live setup.
 
+
+### CLIP: record an empty Session scene
+
+1. Arm the inputs with the shared cards. Select **CLIP**, then explicitly choose
+   a scene row. Every armed track must have an empty slot in that same scene.
+   Existing clips are displayed for reference; selecting one does not launch it.
+2. Open **CFG** for **1 / 2 / 4 / 8 / 16 bars** (default 4) and native launch
+   quantization: **Global / None / 1 bar / 1 beat** (default Global). These are
+   page-local choices, not saved project settings. Global follows Live; the other
+   choices override only this launch, without changing Live's global preference.
+3. Press **REC**. The host rechecks the Set, scene/slot identities, emptiness,
+   input armability/monitoring and the complete armed set, including tracks outside
+   the scrolled view. Length uses the current observed meter in Live beats.
+   A playing or queued clip on a target track blocks the attempt. Arrangement
+   recording and an active Session Record button also block it.
+4. **QUEUED / REC / PLAY / STOP** are observed states, not elapsed-time estimates.
+   Native fixed-length capture can finish into clip playback. **STOP** cancels
+   preparation and requests stop only for still-owned target tracks. It keeps
+   ARM and global transport unchanged. To stop the entire Live transport, use
+   its normal transport controls explicitly.
+
+The grid shows up to eight scenes per window, with internal dark scrolling and
+previous/next buttons. Scroll never changes the armed set. Pre-roll, Arrangement
+markers/Loop and Punch In are hidden and unused in CLIP. ARM changes and renaming
+are blocked while the attempt is owned; SOLO/MUTE remain explicit actions.
+
+STOP respects native quantization and may show **Stop pending**; confirm in Live
+or press STOP again. Missing observations or an SDK clip identity still catching
+up cannot authorize a blind track stop. A fresh recording observation can bind
+the created clip; then an explicit STOP can finish. An observed foreign clip,
+changed track/scene/slot or replaced clip relinquishes that target without stopping
+it. Loss of session/link/Set retires ownership with no stop, fire or cleanup replay
+after reconnection. Stop in Live if the link is unavailable.
+
+Multiple fires are sequential OSC requests, not an atomic host transaction.
+A partial failure attempts to stop only emitted targets whose identities and
+observed ownership remain confirmed. The surface never deletes or overwrites
+an existing clip. This first CLIP mode has no overdub of existing clips, take-lane
+browser, audition or comp selection. Native audio/MIDI recording, duration,
+quantization and capture boundaries still require acceptance in your Live setup;
+the automated proof uses SDK/OSC mocks.
 
 ## AUT: XY gesture loops
 

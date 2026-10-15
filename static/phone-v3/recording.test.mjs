@@ -237,6 +237,31 @@ function gridHarness(t) {
   const buttons=index=>node('rec-track-grid').children[index].children[1].children;
   return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=2001;}};
 }
+test('REC Session viewer blocks mutations, reads remain passive, and STOP retires an in-flight Session command',async t=>{
+  const {client,calls}=api(t);client.session(true,'viewer');
+  for(const name of ['recordingSessionRecord','recordingSessionStop'])await assert.rejects(client.command(name,{}),/SESSION/);
+  assert.equal(calls.length,0);const read=client.command('getSessionRecordingState',{offset:0});calls.at(-1).cb({ok:true,result:{session:{active:false}}});await read;
+  client.session(true,'controller');const start=client.command('recordingSessionRecord',{}),retired=assert.rejects(start,/SESSION/),old=calls.at(-1).cb;
+  const stop=client.command('recordingSessionStop');assert.equal(calls.at(-1).cmd,'recordingSessionStop');calls.at(-1).cb({ok:true,result:{session:{active:false}}});await stop;
+  old({ok:true,result:{session:{active:true}}});await retired;assert.equal(client.view().state.session.active,false);
+});
+
+test('REC Session mode and scene selection are passive, include all ten arms, and lock modes/ARM during queued ownership',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();state.tracks.forEach(track=>track.arm=true);
+  state.session={songId:'song',offset:0,totalScenes:1,active:false,scenes:[{index:0,id:'scene',name:'Scene'}],rows:state.tracks.map(track=>({track,ready:true,slots:[{index:0,id:'slot-'+track.id,clip:null,state:'stopped'}]})),owned:[]};
+  await h.seed(state);const before=h.calls.length;h.node('rec-clip-mode').listeners.get('click')();
+  assert.equal(h.calls.length,before+1);assert.equal(h.calls.at(-1).name,'getSessionRecordingState');h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  assert.equal(h.node('rec-arrangement-panel').hidden,true);assert.equal(h.node('rec-start').disabled,true);
+  h.node('rec-session-grid').children[11].listeners.get('click')();assert.equal(h.calls.length,before+1);assert.equal(h.node('rec-start').disabled,false);
+  await h.seed({...state,session:{...state.session,rows:state.session.rows.map(row=>({...row,ready:false}))}});assert.equal(h.node('rec-start').disabled,true,'unknown or non-idle track indices never authorize REC');await h.seed(state);
+  h.node('rec-session-bars').value='4';h.node('rec-session-quantization').value='global';h.node('rec-start').listeners.get('click')();
+  const action=h.calls.at(-1);assert.equal(action.name,'recordingSessionRecord');assert.equal(action.args.targets.length,10);assert.equal(action.args.targets[9].track.id,'20');
+  const owned={...state,attemptActive:true,session:{...state.session,active:true,owned:state.tracks.map(track=>({track,scene:0,state:'queued'}))}};
+  action.cb({ok:true,result:owned});await h.flush();assert.equal(h.node('rec-arrangement-mode').disabled,true);assert.equal(h.node('rec-arm-mode').disabled,true);assert.equal(h.buttons(0)[0].disabled,true);assert.equal(h.buttons(0)[1].disabled,false);
+  assert.equal(h.node('rec-status').textContent,'rec.sessionState.queued');
+  await h.seed({...owned,session:{...owned.session,owned:owned.session.owned.map(target=>({...target,state:'stopped'}))}});assert.equal(h.node('rec-status').textContent,'rec.finishSession');assert.equal(h.node('rec-start').disabled,true);
+  h.node('rec-stop').listeners.get('click')();assert.equal(h.calls.at(-1).name,'recordingSessionStop');h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+});
 test('REC grid observes ten inputs, preserves cards/focus on polling and sends exact visible armed cohort',async t=>{
   const h=gridHarness(t);h.client.session(true,'controller');let state=h.state();await h.seed(state);
   const cards=[...h.node('rec-track-grid').children],arm=h.buttons(0)[0];arm.focused=true;h.node('rec-track-grid').scrollTop=67;

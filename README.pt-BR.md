@@ -22,7 +22,7 @@ Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0
 
 Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compacto de valor da nota/ritmo conforme a onda efetiva em SYNC; FREE oculta esse campo. XY estático esconde os ajustes de física e os preserva para uma troca posterior. Os valores dos toggles preenchem toda a largura com a cor do modo.
 
-Sete páginas: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** é uma sobreposição; **AUT**, no cabeçalho do PERF, grava movimentos independentes dos XY em SYNC (1–5 compassos) ou FREE (1–30 segundos em passos de um segundo). A aba REC oferece marcadores, Loop, pré-roll e cartões ARM/SOLO/MUTE para gravar o conjunto de entradas armadas. VID aceita até quinze cartões de poses, com 3–6 capturas por pose, revisão RETAKE/KEEP e PALM/FACE como entradas reais do MAP.
+Sete páginas: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** é uma sobreposição; **AUT**, no cabeçalho do PERF, grava movimentos independentes dos XY em SYNC (1–5 compassos) ou FREE (1–30 segundos em passos de um segundo). REC seleciona **ARRANGEMENT / CLIP**: marcadores, Loop e pré-roll no Arrangement, ou uma cena vazia da Session em todas as entradas armadas, com duração/quantização nativas no CFG. Ambos reutilizam cartões ARM/SOLO/MUTE. VID aceita até quinze cartões de poses, com 3–6 capturas por pose, revisão RETAKE/KEEP e PALM/FACE como entradas reais do MAP.
 
 ## Destaques
 

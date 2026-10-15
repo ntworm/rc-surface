@@ -101,7 +101,8 @@ export const REC_PREFLIGHT = {
 // AbletonOSC addresses clips and tracks by index. Launch Clip only fires,
 // stops and observes. D11 permits only an explicit Song global quantization
 // write; no clip/track setters or per-launch override. Launches carry no
-// extra argument, which leaves their effective quantization to Live.
+// extra argument, which leaves their effective quantization to Live. REC's
+// empty-slot path separately supplies native record length/quantization.
 
 export const CLIP = {
   fireSlot:                 "/live/clip_slot/fire",
@@ -120,6 +121,12 @@ export const CLIP = {
   // D11: the only Launch Clip property setter, explicit GLOBAL Set action.
   setGlobalQuantization:    "/live/song/set/clip_trigger_quantization",
   getTrackNames:            "/live/song/get/track_names",
+} as const;
+
+export const SESSION_REC = {
+  hasClip:'/live/clip_slot/get/has_clip', triggered:'/live/clip_slot/get/is_triggered',
+  recording:'/live/clip/get/is_recording', playing:'/live/clip/get/is_playing',
+  firedSlot:'/live/track/get/fired_slot_index', playingSlot:'/live/track/get/playing_slot_index',
 } as const;
 
 // ── incoming response addresses ────────────────────────────────────────────
@@ -156,4 +163,5 @@ export type OscAddress =
   | typeof CMD[keyof typeof CMD]
   | typeof CLIP[keyof typeof CLIP]
   | typeof CLIP_RESPONSE[keyof typeof CLIP_RESPONSE]
+  | typeof SESSION_REC[keyof typeof SESSION_REC]
   | typeof RESPONSE[keyof typeof RESPONSE];

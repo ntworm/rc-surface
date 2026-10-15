@@ -42,6 +42,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   getClipTargets: "read",
   getClipLaunchStatus: "read",
   getRecordingState: "read",
+  getSessionRecordingState:"read",
 
   // Live-write side effects (controller, admin)
   transportPlay: "live-write",
@@ -70,6 +71,8 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   recordingPrepare: "live-write",
   recordingStart: "live-write",
   recordingRecord: "live-write",
+  recordingSessionRecord:"live-write",
+  recordingSessionStop:"live-write",
   recordingSeekMarker: "live-write",
   recordingStop: "live-write",
   recordingAudition: "live-write",

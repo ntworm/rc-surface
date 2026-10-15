@@ -587,14 +587,18 @@
   <main id="page-recording" class="page page-recording hidden" data-page="recording">
     <section class="rec-workspace" aria-label="Arrangement REC">
       <header class="rec-heading">
-        <h1 data-i18n="rec.title">ARRANGEMENT REC</h1>
+        <h1 data-i18n="rec.title">REC</h1>
         <span id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">Waiting for Live</span>
       </header>
+      <div class="rec-row rec-destination" role="group" aria-label="Recording destination" data-i18n-aria-label="rec.destination">
+        <button id="rec-arrangement-mode" type="button" aria-pressed="true">ARRANGEMENT</button><button id="rec-clip-mode" type="button" aria-pressed="false">CLIP</button>
+      </div>
       <div class="rec-row rec-main">
         <button id="rec-start" type="button" class="rec-start">REC</button>
         <button id="rec-stop" type="button" class="rec-stop">STOP</button>
         <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
       </div>
+      <div id="rec-arrangement-panel" class="rec-arrangement-panel">
       <section class="rec-marker-strip" aria-label="Arrangement markers" data-i18n-aria-label="rec.locators">
         <header class="rec-row">
           <span data-i18n="rec.locators">Arrangement markers</span>
@@ -621,6 +625,15 @@
         <button id="rec-pre-roll-2" type="button" aria-pressed="false">2</button>
         <button id="rec-pre-roll-4" type="button" aria-pressed="false">4</button>
       </div>
+      </div>
+      <section id="rec-session-panel" class="rec-session-panel" hidden aria-label="Session clips" data-i18n-aria-label="rec.sessionClips">
+        <header class="rec-row"><span data-i18n="rec.scene">SCENE</span><output id="rec-session-target">—</output><button id="rec-session-prev" type="button" data-i18n-aria-label="rec.previousScenes">&lt;</button><button id="rec-session-next" type="button" data-i18n-aria-label="rec.nextScenes">&gt;</button><button id="rec-session-cfg" type="button" aria-expanded="false" aria-controls="rec-session-settings">CFG</button></header>
+        <div id="rec-session-settings" class="rec-row rec-session-settings" hidden>
+          <label><span data-i18n="rec.length">LENGTH</span><select id="rec-session-bars" aria-label="Recording bars" data-i18n-aria-label="rec.length"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="8">8</option><option value="16">16</option></select><span data-i18n="rec.bars">bars</span></label>
+          <label><span data-i18n="rec.quantization">QUANTIZE</span><select id="rec-session-quantization"><option value="global" data-i18n="rec.global">Global</option><option value="none" data-i18n="rec.noQuantization">None</option><option value="bar" data-i18n="rec.oneBar">1 bar</option><option value="beat" data-i18n="rec.oneBeat">1 beat</option></select></label>
+        </div>
+        <div class="rec-session-scroll"><div id="rec-session-grid" class="rec-session-grid"></div></div>
+      </section>
       <div class="rec-row rec-track-heading"><span data-i18n="rec.tracks">TRACKS</span><button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button></div>
       <section id="rec-track-grid" class="rec-track-grid" aria-label="Tracks" data-i18n-aria-label="rec.tracks"></section>
       <details class="rec-help">
