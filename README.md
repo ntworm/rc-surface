@@ -22,6 +22,8 @@ Eight uniform toggles start in Global. Square is the single 0-to-depth pulse wav
 
 CFG waveform, mode and timing use direct buttons. Subdivision opens a compact note-value/rhythm editor for the effective waveform in SYNC; FREE hides it. Static XY hides physics settings while retaining them for a later switch. Toggle values fill the whole width in their mode colour.
 
+Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay; **AUT**, in the PERF header, records independent XY movements in SYNC (1/2/4 bars) or FREE (10/20 seconds). REC provides markers, Loop, pre-roll and ARM/SOLO/MUTE cards for the armed input set. VID supports up to fifteen pose cards, 3–6 captures per pose, RETAKE/KEEP review and real PALM/FACE mapping inputs.
+
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.
@@ -52,7 +54,7 @@ CFG waveform, mode and timing use direct buttons. Subdivision opens a compact no
 - Bidirectional HTTPS/WSS transport on the local network.
 - Modular TypeScript backend with `src/extension.ts` as bootstrap only.
 
-## 1.0 Highlights
+## Performance 2.0
 
 - **Config Mode (CFG):** configure each LFO slot (T1–T8), including Square as a waveform, and choose Static or Physics independently for each XY. Physics has separate friction, bounce and speed. Pad modes, knob sensitivity and fader reset values remain configurable. Open `CFG` in the phone header; hold it to clear overrides. Performance settings use `ableton-rc:v3:control_config` and are included in new projects and presets.
 - **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 15 Hz).
@@ -72,10 +74,7 @@ To use the AbletonOSC features, ensure the **AbletonOSC** extension is running i
 
 ## Candidate status
 
-The source version is 2.0.0. A package you build from this repository is a
-local candidate until the matching v2.0.0 release is published on the Releases
-page. Native Track and measured end-to-end latency remain pending owner
-validation.
+The source version is 2.0.0, in local release preparation. Install the supplied candidate or verify the matching published asset on Releases. Configuration starts fresh; see the installation guide for the breaking upgrade.
 
 ## Quick Start
 
@@ -99,7 +98,7 @@ Detailed setup lives in `docs/INSTALL.md`.
 - `docs/USER-GUIDE.md` - how to use the phone controller (modes, gestures, mobile mapping, snapshots, calibration, Stage mode).
 - `docs/INSTALL.md` - install, certificates, phone connection, troubleshooting.
 - `docs/CUSTOMIZATION.md` - controls, sensors, mappings, audio, vision, UI extension points.
-- `internal/PESQUISA_CELULAR_GESTUAL.md` - research and roadmap evidence for expressive phone control.
+- [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/PESQUISA_CELULAR_GESTUAL.md) - research and roadmap evidence for expressive phone control.
 - `docs/FAQ.md` - common user questions.
 - `docs/PRIVACY.md` - local data flow.
 - `docs/SECURITY.md` - threat model and certificate policy.
@@ -199,7 +198,7 @@ Phone camera and microphone require HTTPS. The extension generates a per-install
 
 Traffic stays on the local network. The supported deployment is a trusted
 studio/home LAN; public tunnels, port forwarding, and public reverse proxies
-are outside the v1.0 support and threat model. Write commands require rotating
+are outside the v2.0 support and threat model. Write commands require rotating
 controller or admin credentials; treat generated QR codes and URLs as secrets.
 
 Private keys are not bundled in `.ablx` packages.

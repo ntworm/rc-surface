@@ -22,6 +22,8 @@ Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0
 
 Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compacto de valor da nota/ritmo conforme a onda efetiva em SYNC; FREE oculta esse campo. XY estático esconde os ajustes de física e os preserva para uma troca posterior. Os valores dos toggles preenchem toda a largura com a cor do modo.
 
+Sete páginas: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** é uma sobreposição; **AUT**, no cabeçalho do PERF, grava movimentos independentes dos XY em SYNC (1/2/4 compassos) ou FREE (10/20 segundos). A aba REC oferece marcadores, Loop, pré-roll e cartões ARM/SOLO/MUTE para gravar o conjunto de entradas armadas. VID aceita até quinze cartões de poses, com 3–6 capturas por pose, revisão RETAKE/KEEP e PALM/FACE como entradas reais do MAP.
+
 ## Destaques
 
 - 12 pads de performance com os modos A/B/C/D.
@@ -53,7 +55,7 @@ Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compa
 - Transporte bidirecional HTTPS/WSS na rede local.
 - Backend modular em TypeScript, com `src/extension.ts` servindo só de bootstrap.
 
-## Novidades da 1.0
+## Performance 2.0
 
 - **Modo Config (CFG):** configure cada slot LFO (T1–T8), incluindo Square como onda, e escolha Estático ou Física de forma independente para cada XY. Cada física tem atrito, quique e velocidade próprios. Modos dos pads, sensibilidade dos knobs e reset dos faders continuam configuráveis. Abra `CFG` no header do celular; segure para limpar os ajustes. As configurações usam `ableton-rc:v3:control_config` e fazem parte dos novos projetos e presets.
 - **Prévia da forma de onda do LFO:** o modal de ajustes do SYNC desenha a forma ativa do LFO (senoide, triangular, rampa para cima, rampa para baixo, quadrada), para você ver a curva que vai mandar para o Live, incluindo a subdivisão travada de 32 tempos e o teto de cada forma (senoide até 4 Hz, quadrada até 15 Hz).
@@ -73,10 +75,7 @@ Para usar os recursos do AbletonOSC, deixe a extensão **AbletonOSC** rodando no
 
 ## Status da versão candidata
 
-A versão do código é 2.0.0. Um pacote gerado a partir deste repositório é uma
-versão candidata local até a release v2.0.0 correspondente ser publicada na página
-de Releases. O Native Track e a latência de ponta a ponta medida continuam
-pendentes de validação pelo responsável.
+A versão do código é 2.0.0, em preparação local. Instale o candidato recebido ou confira o arquivo publicado correspondente em Releases. A configuração começa do zero; veja a instalação para a atualização incompatível.
 
 ## Início rápido
 
@@ -195,7 +194,7 @@ Câmera e microfone no celular exigem HTTPS. A extensão gera um certificado aut
 
 O tráfego fica na rede local. O cenário suportado é uma rede confiável, de estúdio ou de
 casa; túneis públicos, redirecionamento de porta e proxies reversos públicos estão fora do
-suporte e do modelo de ameaças da v1.0. Comandos de escrita exigem credenciais de
+suporte e do modelo de ameaças da v2.0. Comandos de escrita exigem credenciais de
 controlador ou de administração, que mudam a cada início do servidor; trate os QR codes e
 as URLs gerados como senhas.
 

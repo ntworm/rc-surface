@@ -49,4 +49,15 @@ test('committed social card matches package metadata and Open Graph dimensions',
   assert.equal(image.readUInt32BE(16), 1200);
   assert.equal(image.readUInt32BE(20), 630);
   assert.equal(pngTextEntries(image).get('Release'), `v${packageJson.version}`);
+  assert.equal(pngTextEntries(image).get('SurfacePages'),'PERF,MIX,SNP,SNS,AUD,VID,REC');
+  assert.equal(pngTextEntries(image).get('Toggles'),'T1,T2,T3,T4,T5,T6,T7,T8');
+  assert.equal(pngTextEntries(image).get('XYHeaderMode'),'AUT');
+});
+
+test('social-card plan generator draws all seven tabs and eight labeled toggles with AUT on both XY',()=>{
+  const source=fs.readFileSync(generatorPath,'utf8');
+  assert.match(source,/tabs = \["PERF", "MIX", "SNP", "SNS", "AUD", "VID", "REC"\]/);
+  assert.match(source,/rows_per_column = 4/);assert.match(source,/for column in range\(2\):\s*for row in range\(rows_per_column\)/);
+  assert.match(source,/label = f"T\{row \* 2 \+ column \+ 1\}"/);
+  assert.match(source,/draw\.text\(\(xy_x \+ 5, y0 \+ 5\), "AUT"/);
 });

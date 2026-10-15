@@ -9,25 +9,11 @@ your first pad-to-Live mapping working.
 
 If you only want the short version: see the [Quick start](../README.md#quick-start) in the README.
 
-## Upgrading from Ableton-RC-Surface (1.0.0)
+## Upgrading to 2.0.0
 
-The product was previously distributed as "Ableton-RC-Surface". Live derives the
-data folder identity from the manifest's `name` field, so installing the renamed
-`RC-Surface-1.0.0.ablx` creates a fresh data folder at
-`%LOCALAPPDATA%\Ableton\Extensions Data\worm.rc-surface\` (Windows) or
-`~/Library/Application Support/Ableton/Extensions Data/worm.rc-surface/` (macOS).
-Your previous mappings, presets, certificates, locale, autostart, and projects
-stay in `worm.ableton-rc-surface`.
+2.0.0 breaks compatibility with previous projects, presets, mappings and performance settings. Install the supplied package, reload the browser and configure the surface from a fresh state. The host uses `storageDirectory/surface-v2/` for mappings, presets and projects with schema 2. Old files are neither deleted nor automatically imported; do not copy 1.x data into this folder or use the old rename migrator as a 2.0 upgrade.
 
-To move that data into the new folder without overwriting anything, run the
-migrator from the tester kit **before** installing the new `.ablx`:
-
-- Windows: double-click `Migrate-RC-Surface-Data.cmd` (or run `Migrate-RC-Surface-Data.ps1`)
-- macOS: double-click `Migrate RC Surface Data.command`
-
-The script copies every file and skips anything that already exists in the
-destination. It never moves or deletes the source. If the source folder does not
-exist (fresh install), it exits cleanly with a message.
+The extension name remains RC Surface. Certificates and preferences outside performance storage do not migrate your mappings. Fresh browser performance keys also exclude overrides/snapshots from the first 2.0.0 candidate. Version and hash identify the package; follow its supplied verification instructions.
 
 ## 1. Prerequisites
 
@@ -157,7 +143,7 @@ between sessions.
 ## 4. Connect your phone
 
 > [!IMPORTANT]
-> **Single controller policy**: RC Surface 1.0 supports one controller at a time. Control your session from the phone or desktop, never both simultaneously. While multiple browser windows can technically connect on the LAN, simultaneous inputs are not supported and will conflict.
+> **Single controller policy**: RC Surface 2.0 supports one controller at a time. Control your session from the phone or desktop, never both simultaneously. While multiple browser windows can technically connect on the LAN, simultaneous inputs are not supported and will conflict.
 
 Pick one:
 
@@ -261,7 +247,7 @@ where available). The optional Max Audio Sender does not feed these controls.
 
 ## 7. Network boundary
 
-The v1.0 supported deployment is a trusted studio/home LAN with the phone and
+The v2.0 supported deployment is a trusted studio/home LAN with the phone and
 computer on the same network. Do not expose the bridge with port forwarding,
 a public tunnel, or a public reverse proxy. Those deployments are outside the
 tested threat model, even when the public endpoint supplies a trusted

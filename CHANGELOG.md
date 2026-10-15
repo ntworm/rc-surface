@@ -4,17 +4,16 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
-## 2.0.0 — local candidate
+## 2.0.0 — local release preparation (unpublished)
 
 - Add REC track cards with observed ARM/SOLO/MUTE, cumulative ARM MULTI and explicit ARM EXCLUSIVE. Record the verified armed input set, including ten-input workflows; STOP disarms only that attempt's identities. Configure and confirm Punch In automatically for both direct and pre-roll starts, restoring only the owned original setting.
 - Warn when three to six learned-pose captures have clear finger disagreements without a majority; general RETAKE reviews the latest capture and KEEP remains advisory. Preserve recognition evaluation and timing. Add PALM/FACE to the lower MAP strip and phone/panel/admin catalogs, with normalized parameter/note/clip inputs and existing Safe loss handling.
 - Fix pre-roll resuming at Live's previous stopped position despite a successful song-time readback. Establish the native playback start with an exact existing locator or a temporary SDK-owned locator, remove/verify the temporary locator before arming or Play, then start record-off playback before native Punch In. Preserve original locators and block unconfirmed cleanup; STOP stays immediate and SDK waits are bounded.
 - Highlight both XY targets in AUT and add separate 44px configuration buttons above them. Open, close or switch settings without arming or changing a loop; place the menu beside the XY column when space permits, preserving status and access to both buttons.
 - Add browser-local REC pre-roll OFF/1/2/4 bars, using observed meter, record-off playback and native Punch In at the selected marker. Restore owned click at the first observed crossing; priority STOP restores owned temporary state and disarms its track. Guard late starts, changed state and stale ownership. Show bar.beat above each timeline marker with end gutters; native count-in/metronome interaction and capture boundaries still require physical acceptance.
-- Restore the manual track-arm button in REC with observed ARMED/DISARMED state. REC still arms internally; STOP disarms only the track owned by that recording workflow.
 - Use Live's native locator jump when selecting a marker or starting REC, preserving that marker as the next playback start. Setting song position alone could leave Play starting from an older point.
 - Confirm Loop setters with bounded getter reads under one two-second deadline. Send each setter once, retain track/marker/state guards and let STOP cancel pending confirmation; missing confirmation blocks recording.
-- Simplify Arrangement REC to track, start marker and optional Loop/end marker. Add a zoomable marker strip with observed playback position; marker selection seeks, and header Play auditions. REC verifies state, confirms the loop region, arms and records; STOP stops and disarms only the track armed by this workflow. Loop repeats until STOP; Live manages count-in and recorded passages.
+- Arrangement REC uses the exact observed armed input set, start marker and optional Loop/end marker. Marker selection positions native playback; header Play auditions. Loop repeats until STOP. The surface does not set native count-in or guarantee capture/take preservation.
 - Keep passive REC refreshes from discarding valid observations, blocking controls or revoking a prepared attempt on read failure. Current user actions supersede passive reads; late read replies cannot replace their state.
 - Blink the white XY mapping-takeover target while pending, respecting reduced motion. Keep the orange dot as the actual XY position.
 - Keep MAP/AUT/CFG header controls visible. Preserve AUT clock receipt metadata through MAP rendering; recover a stale position listener even when beat/tempo messages keep arriving. Play/pause state now waits for canonical Live observations.
@@ -32,9 +31,9 @@ intermediate release records are intentionally not published.
 - One centred Toggles heading, waveform labels and pad-compatible mode colours; remove the obsolete migration banner.
 - Both XY panels independently select Static/Physics with friction/bounce/speed, independent trails, separate touch/frame clocks and frame-independent friction integration.
 - Breaking persistence: isolated surface-v2 host storage, project/preset schema 2, revised performance payload schema 2 and fresh browser performance keys. No migration of earlier data, including the first candidate's forced overrides/snapshots.
-- Existing recognition, thumb identity, MIDI and safe-loss corrections retained. Physical acceptance pending; no publication or automatic installation. Candidate revisions are distinguished by commit/hash, not a new product version.
+- Existing recognition, thumb identity, MIDI and safe-loss corrections retained. The installed candidate was reported working without observed errors or bugs; this is reported-use acceptance, not an exhaustive hardware/latency matrix. No publication or automatic installation; distinguish candidate revisions by commit/hash.
 
-## [Unreleased]
+### Included from the development cycle
 
 ### Context settings and MIDI safety
 
@@ -111,6 +110,10 @@ intermediate release records are intentionally not published.
 - Empty MAP controls use the three entry cards without duplicate top
   shortcuts. Mapped controls keep shortcuts for additional mappings; Unbind,
   Clear Control and Clear All Mappings share one compact row in both states.
+
+## Historical releases
+
+The records below describe their own versions and evidence, not new 2.0 gates.
 
 ## [1.0.2] — 2026-09-30
 

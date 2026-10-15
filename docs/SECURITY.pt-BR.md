@@ -4,7 +4,8 @@
 
 | Versão | Suportada |
 |--------|-----------|
-| 1.0.x | sim |
+| Candidato 2.0.0 | sim, candidato local |
+| 1.x | histórico; sem compatibilidade de dados 2.0 |
 | 0.7.x e anteriores | não |
 
 ## Como relatar uma vulnerabilidade
@@ -141,7 +142,7 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Não rode o bridge em Wi-Fi público, de visitante ou não confiável.
 - Prefira uso na mesma sala ou na rede do estúdio.
 - Não publique nem repasse URLs de QR, de controlador ou de administração.
-- Não exponha o bridge por túneis públicos, proxies reversos públicos ou redirecionamento de porta no roteador. Esses cenários estão fora do modelo de ameaças da v1.0.
+- Não exponha o bridge por túneis públicos, proxies reversos públicos ou redirecionamento de porta no roteador. Esses cenários estão fora do modelo de ameaças da v2.0.
 - Pare e inicie o servidor para invalidar todos os tokens de sessão já emitidos.
 
 ## Segurança dos comandos

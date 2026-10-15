@@ -10,25 +10,11 @@ pad para o Live funcionando.
 Se você só quer a versão curta, veja o [início rápido](../README.md#quick-start)
 no README.
 
-## Atualizando do Ableton-RC-Surface (1.0.0)
+## Atualizando para 2.0.0
 
-O produto era distribuído como "Ableton-RC-Surface". O Live deriva a identidade
-da pasta de dados a partir do campo `name` do manifest, então instalar o
-`RC-Surface-1.0.0.ablx` renomeado cria uma pasta de dados nova em
-`%LOCALAPPDATA%\Ableton\Extensions Data\worm.rc-surface\` (Windows) ou
-`~/Library/Application Support/Ableton/Extensions Data/worm.rc-surface/` (macOS).
-Seus mapeamentos, presets, certificados, locale, autostart e projetos continuam
-em `worm.ableton-rc-surface`.
+2.0.0 quebra compatibilidade com os projetos, presets, mappings e configurações de performance anteriores. Instale o pacote recebido, recarregue o navegador e configure a superfície do zero. O host usa `storageDirectory/surface-v2/` para mappings, presets e projetos, com schema 2. Arquivos antigos não são apagados nem importados automaticamente; não copie dados 1.x para essa pasta nem use o migrador antigo de renomeação como atualização para 2.0.
 
-Para mover esses dados para a pasta nova sem sobrescrever nada, rode o migrador
-do kit de teste **antes** de instalar o novo `.ablx`:
-
-- Windows: clique duas vezes em `Migrate-RC-Surface-Data.cmd` (ou rode `Migrate-RC-Surface-Data.ps1`)
-- macOS: clique duas vezes em `Migrate RC Surface Data.command`
-
-O script copia cada arquivo e pula o que já existe no destino. Nunca move nem
-apaga a origem. Se a pasta de origem não existir (instalação nova), ele só
-mostra uma mensagem e termina sem erro.
+O nome da extensão continua RC Surface. Certificados e preferências que vivem fora do armazenamento de performance não constituem uma migração dos seus mappings. As chaves novas de performance do navegador também não importam overrides/snapshots do primeiro candidato 2.0.0. A versão e o hash identificam o pacote; siga as instruções entregues com ele.
 
 ## 1. Pré-requisitos
 
@@ -159,7 +145,7 @@ deixou o servidor desligado. A escolha persiste entre sessões.
 ## 4. Conectar o celular
 
 > [!IMPORTANT]
-> **Política de controlador único**: o RC Surface 1.0 suporta um controlador por vez. Opere a performance pelo celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador possam conectar na rede local, entradas simultâneas não são suportadas e entrarão em conflito.
+> **Política de controlador único**: o RC Surface 2.0 suporta um controlador por vez. Opere a performance pelo celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador possam conectar na rede local, entradas simultâneas não são suportadas e entrarão em conflito.
 
 Escolha um caminho:
 
@@ -262,7 +248,7 @@ ou loopback quando disponível). O Max Audio Sender não alimenta esses controle
 
 ## 7. Fronteira de rede
 
-O cenário suportado na v1.0 é uma rede local confiável, de estúdio ou de casa,
+O cenário suportado na v2.0 é uma rede local confiável, de estúdio ou de casa,
 com o celular e o computador na mesma rede. Não exponha o bridge com
 redirecionamento de porta, túnel público ou proxy reverso público. Esses
 cenários estão fora do modelo de ameaças testado, mesmo quando o endpoint

@@ -160,7 +160,7 @@ def render(output_path):
     inner_x, inner_y = panel_x + inner, panel_y + inner
     inner_width, inner_height = panel_width - inner * 2, panel_height - inner * 2
 
-    tabs = ["PERF", "MIX", "SNP", "SNS", "AUD", "VID"]
+    tabs = ["PERF", "MIX", "SNP", "SNS", "AUD", "VID", "REC"]
     font_10 = font(15)
     tab_width, tab_gap = 62, 6
     for index, tab in enumerate(tabs):
@@ -211,16 +211,19 @@ def render(output_path):
         handle_x = xy_x + xy_width - 34 if index == 0 else xy_x + 22
         handle_y = y0 + 20 if index == 0 else y0 + height - 28
         draw.rectangle([handle_x, handle_y, handle_x + 9, handle_y + 9], fill=AMBER)
+        draw.text((xy_x + 5, y0 + 5), "AUT", font=font_9, fill=ASH)
 
     strip_x = xy_x + xy_width + 12
     strip_width = inner_x + inner_width - strip_x
     column_width = (strip_width - 6) // 2
-    bars = [0.42, 0.74, 0.55, 0.86]
+    bars = [0.42, 0.74, 0.55, 0.86, 0.35, 0.65, 0.48, 0.78]
+    rows_per_column = 4
+    toggle_labels = []
     for column in range(2):
-        for row in range(2):
+        for row in range(rows_per_column):
             x0 = strip_x + column * (column_width + 6)
-            y0 = body_y + row * (body_height // 2 + 4)
-            height = body_height // 2 - 8
+            y0 = body_y + row * (body_height // rows_per_column + 2)
+            height = body_height // rows_per_column - 4
             draw.rectangle([x0, y0, x0 + column_width, y0 + height],
                            fill=CELL, outline=HAIR, width=1)
             bar_height = int((height - 8) * bars[row * 2 + column])
@@ -229,6 +232,9 @@ def render(output_path):
                  x0 + column_width - 4, y0 + height - 4],
                 fill=FLUX if column == 0 else PUMPKIN,
             )
+            label = f"T{row * 2 + column + 1}"
+            toggle_labels.append(label)
+            draw.text((x0 + 5, y0 + 4), label, font=font_9, fill=INK)
 
     draw.text((panel_x, panel_y + panel_height + 12),
               "PERF PAGE — PLAN, NOT A SCREENSHOT", font=font_11, fill=CLAY)
@@ -248,6 +254,9 @@ def render(output_path):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     metadata = PngImagePlugin.PngInfo()
     metadata.add_text("Release", release)
+    metadata.add_text("SurfacePages", ",".join(tabs))
+    metadata.add_text("Toggles", ",".join(sorted(toggle_labels)))
+    metadata.add_text("XYHeaderMode", "AUT")
     img.save(output_path, "PNG", optimize=True, pnginfo=metadata)
     print(f"written: {output_path} {output_path.stat().st_size} bytes {img.size} {release}")
 

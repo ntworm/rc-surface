@@ -348,8 +348,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: "v2.0.0 is a local candidate awaiting physical acceptance in Live 12.4.5+ Suite (Beta).",
-      'pt-BR': "v2.0.0 é um candidato local aguardando aceite físico no Live 12.4.5+ Suite (Beta).",
+      en: 'v2.0.0 is in local release preparation. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.',
+      'pt-BR': 'v2.0.0 está em preparação local. Sete páginas, loops XY e banco ampliado de poses; configure a partir do zero.',
     },
     'lp.docs.001': {
       en: 'Reference documents',
@@ -385,8 +385,8 @@
       'pt-BR': "Todo controle destas plantas está listado em <a href=\"#controls\">4.0</a>.",
     },
     'lp.map.001': {
-      en: 'Surface map <span class="tail">— figs. 1 to 7</span>',
-      'pt-BR': 'Mapa da superfície <span class="tail">— figs. 1 a 7</span>',
+      en: "Surface map <span class=\"tail\">— figs. 1 to 8</span>",
+      'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 8</span>",
     },
     'lp.map.004': {
       en: 'Fig. 1',
@@ -421,8 +421,8 @@
       'pt-BR': 'Abas de página',
     },
     'lp.map.012': {
-      en: "PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.",
-      'pt-BR': "PERF, MIX, SNP, SNS, AUD, VID. MAP se sobrepõe à página atual; CFG aparece em PERF e MIX.",
+      en: "PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.",
+      'pt-BR': "PERF, MIX, SNP, SNS, AUD, VID, REC. MAP sobrepõe a página; AUT seleciona loops XY no PERF; CFG configura controles.",
     },
     'lp.map.013': {
       en: 'Pad grid',
@@ -441,8 +441,8 @@
       'pt-BR': "A momentâneo, B hold, C toggle, D burst. Vale para os doze; CFG sobrescreve um pad.",
     },
     'lp.map.018': {
-      en: "Captioned <code>XY 1</code> and <code data-i18n=\"lp.fig.016\">XY 2</code>. Each axis maps on its own.",
-      'pt-BR': "Marcados <code>XY 1</code> e <code data-i18n=\"lp.fig.016\">XY 2</code>. Cada eixo é mapeado separadamente.",
+      en: "Two independent <code>XY 1</code> / <code>XY 2</code> panels: Static or Physics, with friction, bounce, speed and trails. Each axis maps separately.",
+      'pt-BR': "Dois painéis <code>XY 1</code> / <code>XY 2</code> independentes: Estático ou Física, com atrito, quique, velocidade e rastro. Cada eixo é mapeado separadamente.",
     },
     'lp.map.019': {
       en: 'LFOs',
@@ -469,8 +469,8 @@
       'pt-BR': "Painel do Live",
     },
     'lp.map.025': {
-      en: "BPM, transport, TRN, MAP, CFG.",
-      'pt-BR': "BPM, transporte, TRN, MAP, CFG.",
+      en: "BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.",
+      'pt-BR': "BPM, transporte, TRN, MAP, AUT, CFG. AUT é um modo do cabeçalho, não outra página.",
     },
     'lp.map.026': {
       en: "Sync block",
@@ -649,8 +649,8 @@
       'pt-BR': 'Poses aprendidas',
     },
     'lp.map.125': {
-      en: "G1, G2 and G3, three examples each: <code>CAP</code>, <code data-i18n=\"lp.fig.007\">TEST</code>, <code data-i18n=\"lp.fig.008\">DEL LAST</code>, <code data-i18n=\"lp.fig.009\">CLR</code>. Recognition emits a momentary 0→1.",
-      'pt-BR': "G1, G2 e G3, três exemplos cada: <code>CAP</code>, <code data-i18n=\"lp.fig.007\">TESTE</code>, <code data-i18n=\"lp.fig.008\">APAGAR ÚLT</code>, <code data-i18n=\"lp.fig.009\">LIMPAR</code>. O reconhecimento emite um 0→1 momentâneo.",
+      en: "Starts with G1–G3; + ADD POSE grows to fifteen cards. Capture 3–6 examples per pose; X removes a card, CLR keeps it. RETAKE/KEEP review isolated or conflicting captures without changing recognition.",
+      'pt-BR': "Começa com G1–G3; + ADD POSE amplia até quinze cartões. Capture 3–6 exemplos por pose; X remove o cartão, CLR o mantém. RETAKE/KEEP revisam capturas isoladas ou discordantes sem alterar o reconhecimento.",
     },
     'lp.map.126': {
       en: 'Built-in detectors',
@@ -665,20 +665,20 @@
       'pt-BR': 'MAP direto / CLUTCH',
     },
     'lp.map.129': {
-      en: "MAP X/Y/Z follows the hand; CLUTCH X/Y/Z is relative and freezes when the pinch opens.",
-      'pt-BR': "MAP X/Y/Z segue a mão; CLUTCH X/Y/Z é relativo e congela quando a pinça abre.",
+      en: "MAP X/Y/Z, PALM and FACE are continuous mapping inputs. CLUTCH X/Y/Z is relative and freezes when the pinch opens.",
+      'pt-BR': "MAP X/Y/Z, PALM e FACE são entradas contínuas de mapeamento. CLUTCH X/Y/Z é relativo e congela ao abrir o pinch.",
     },
     'lp.map.130': {
-      en: 'Camera diagnostics',
-      'pt-BR': 'Diagnósticos da câmera',
+      en: "Palm mapping inputs",
+      'pt-BR': "Entradas de palma no MAP",
     },
     'lp.map.131': {
-      en: "PALM size and signed FACE stay local to the preview; they are not mapping controls.",
-      'pt-BR': "O tamanho de PALM e o FACE com sinal ficam só na prévia; não são controles mapeáveis.",
+      en: "PALM size and signed FACE are shown raw; MAP uses normalized 0–1 values. FACE is palm/back orientation, not facial tracking. Missing/invalid samples follow Safe loss.",
+      'pt-BR': "PALM e FACE com sinal aparecem em unidades brutas; MAP usa 0–1 normalizado. FACE é orientação palma/dorso, sem rastreamento facial. Amostras ausentes/inválidas seguem Safe loss.",
     },
     'lp.map.137': {
-      en: 'Fig. 7',
-      'pt-BR': 'Fig. 7',
+      en: "Fig. 8",
+      'pt-BR': "Fig. 8",
     },
     'lp.map.138': {
       en: "MAP — armed strip, then target picker",
@@ -846,8 +846,8 @@
       'pt-BR': 'Visão de uma mão',
     },
     'lp.controls.042': {
-      en: "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3",
-      'pt-BR': "<code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; G1–G3 aprendidos",
+      en: "<code>sensor.vision.x/y/z</code>, <code>.palm</code>, <code>.face</code>; Pinch Clutch <code>.pinch_x/y/z</code>; Open / Fist / Pinch / Victory; learned G1–G15",
+      'pt-BR': "<code>sensor.vision.x/y/z</code>, <code>.palm</code>, <code>.face</code>; Pinch Clutch <code>.pinch_x/y/z</code>; Open / Fist / Pinch / Victory; G1–G15 aprendidos",
     },
     'lp.controls.043': {
       en: 'Map picker',
@@ -1098,8 +1098,8 @@
       'pt-BR': 'Visão: mão, poses, clutch',
     },
     'lp.controls.117': {
-      en: "Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs; PALM and FACE remain local camera diagnostics.",
-      'pt-BR': "X/Y/Z da mão é contínuo. Um pinch mantido engata o clutch e soltar congela o valor. G1–G3 e os quatro detectores nativos são saídas intencionais; PALM e FACE continuam diagnósticos locais da câmera.",
+      en: "Hand X/Y/Z, PALM size and FACE palm orientation map continuously. A held pinch engages the clutch; release freezes its axes. G1–G15 and the four built-in detectors provide intentional outputs. Missing/invalid samples follow Safe loss.",
+      'pt-BR': "X/Y/Z da mão, tamanho PALM e orientação da palma FACE são mapeáveis continuamente. Pinch mantido engata o clutch; soltar congela os eixos. G1–G15 e os quatro detectores oferecem saídas intencionais. Amostras ausentes/inválidas seguem Safe loss.",
     },
     'lp.controls.118': {
       en: 'the two tips touch',
@@ -1414,8 +1414,8 @@
       'pt-BR': "DIAGNÓSTICO DA CÂMERA",
     },
     'lp.fig.113': {
-      en: "3 examples each · momentary 0 → 1",
-      'pt-BR': "3 exemplos cada · momentâneo 0 → 1",
+      en: "3 to start · up to 6 · momentary 0 → 1",
+      'pt-BR': "3 para começar · até 6 · momentâneo 0 → 1",
     },
     'lp.fig.114': {
       en: "LIVE CHECK",
@@ -1637,6 +1637,78 @@
     'lp.fig.localDisplay': {
       en: 'LOCAL DISPLAY ONLY',
       'pt-BR': 'SÓ EXIBIÇÃO LOCAL',
+    },
+    'lp.map.autTitle': {
+      en: "AUT · XY gesture loops",
+      'pt-BR': "AUT · loops de movimento XY",
+    },
+    'lp.map.autFlow': {
+      en: "AUT selects XY1/XY2; their separate AUT buttons open settings without recording. SYNC captures 1/2/4 bars from Live’s fresh playing clock; FREE captures 10/20 seconds. Play/Stop are explicit; manual touch overrides a playing loop until release. Saved points never auto-play after reconnect. This loops control data, not native Arrangement automation.",
+      'pt-BR': "AUT seleciona XY1/XY2; os botões AUT separados abrem ajustes sem gravar. SYNC captura 1/2/4 compassos pelo clock atual do Live tocando; FREE captura 10/20 segundos. Reproduzir/Parar são explícitos; o toque assume o loop até soltar. Pontos salvos não retomam após reconectar. São dados de controle, não automação nativa do Arrangement.",
+    },
+    'lp.rec.title': {
+      en: "REC — Arrangement recording",
+      'pt-BR': "REC — gravação no Arrangement",
+    },
+    'lp.rec.figure': {
+      en: "Fig. 7",
+      'pt-BR': "Fig. 7",
+    },
+    'lp.rec.aria': {
+      en: "Plan view of REC: marker timeline with bar.beat labels, Zoom, start/end Loop, pre-roll choices, REC/STOP/click and armed input cards",
+      'pt-BR': "Planta de REC: timeline de marcadores com compasso.beat, Zoom, início/fim do Loop, pré-roll, REC/STOP/click e cartões de entradas armadas",
+    },
+    'lp.rec.timeline': {
+      en: "Markers / bar.beat / Zoom",
+      'pt-BR': "Marcadores / compasso.beat / Zoom",
+    },
+    'lp.rec.timelineFlow': {
+      en: "Create markers in Live. Tap a marker to position native playback, then use header Play to listen. Zoom and scroll preserve musical scale; both end cards have gutters.",
+      'pt-BR': "Crie marcadores no Live. Toque para posicionar o playback nativo e use Play do topo para ouvir. Zoom e rolagem preservam a escala musical; as duas pontas têm margens.",
+    },
+    'lp.rec.range': {
+      en: "Start / end / Loop",
+      'pt-BR': "Início / fim / Loop",
+    },
+    'lp.rec.rangeFlow': {
+      en: "Choose a start marker; optionally enable Loop and choose a later end marker. Live confirms the region before REC. Loop repeats until STOP.",
+      'pt-BR': "Escolha o início; opcionalmente ligue Loop e escolha um fim posterior. O Live confirma a região antes do REC. Loop repete até STOP.",
+    },
+    'lp.rec.preRoll': {
+      en: "PRE-ROLL OFF / 1 / 2 / 4",
+      'pt-BR': "PRÉ-ROLL OFF / 1 / 2 / 4",
+    },
+    'lp.rec.preRollFlow': {
+      en: "OFF starts at the marker. 1/2/4 play earlier bars with click before native Punch In opens at the marker. This browser preference does not set Live’s read-only native count-in.",
+      'pt-BR': "OFF começa no marcador. 1/2/4 tocam compassos anteriores com click até Punch In abrir no marcador. Esta preferência do navegador não altera o count-in nativo, somente leitura.",
+    },
+    'lp.rec.tracks': {
+      en: "Track cards / ARM / SOLO / MUTE",
+      'pt-BR': "Cartões / ARM / SOLO / MUTE",
+    },
+    'lp.rec.tracksFlow': {
+      en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP disarms only that attempt’s identities. Groups can SOLO/MUTE but cannot ARM.",
+      'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP desarma só as identidades da tentativa. Grupos têm SOLO/MUTE, sem ARM.",
+    },
+    'lp.rec.transport': {
+      en: "REC / STOP / CLICK",
+      'pt-BR': "REC / STOP / CLICK",
+    },
+    'lp.rec.transportFlow': {
+      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. Unknown state blocks recording; readouts do not prove audio capture or take preservation.",
+      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. Estado desconhecido bloqueia gravar; leituras não comprovam captura de áudio nem preservação de takes.",
+    },
+    'lp.rec.start': {
+      en: "START",
+      'pt-BR': "INÍCIO",
+    },
+    'lp.rec.end': {
+      en: "END",
+      'pt-BR': "FIM",
+    },
+    'lp.rec.tracksLabel': {
+      en: "TRACKS",
+      'pt-BR': "TRACKS",
     },
   };
 

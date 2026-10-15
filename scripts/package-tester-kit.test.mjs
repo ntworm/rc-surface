@@ -113,7 +113,9 @@ test("tester-kit: stage docs list includes required user-facing files", async ()
     "docs/SECURITY.md",
     "docs/CUSTOMIZATION.md",
     "internal/TESTER-GUIDE.md",
-    "internal/PESQUISA_CELULAR_GESTUAL.md",
+    "docs/COMPATIBILITY.md",
+    "docs/CONTRACTS.md",
+    ".github/release-notes/v2.0.0.md",
   ];
   for (const doc of expected) {
     assert.ok(src.includes(doc), `expected ${doc} in stageDocs`);
@@ -126,7 +128,7 @@ test("tester-kit: stages bilingual operator docs with checksum coverage", async 
   try {
     assert.equal(typeof mod.stageDocumentation, "function");
     await mod.stageDocumentation(repoRoot, stagedDir);
-    for (const name of ["INSTALL", "USER-GUIDE", "FAQ", "PRIVACY", "SECURITY", "CUSTOMIZATION", "AUDIO-AUDIT"]) {
+    for (const name of ["INSTALL", "USER-GUIDE", "FAQ", "PRIVACY", "SECURITY", "CUSTOMIZATION", "AUDIO-AUDIT", "COMPATIBILITY", "CONTRACTS", "THIRD-PARTY-NOTICES"]) {
       for (const suffix of [".md", ".pt-BR.md"]) {
         const rel = `docs/${name}${suffix}`;
         assert.deepEqual(await readFile(join(stagedDir, rel)), await readFile(join(repoRoot, rel)));
@@ -136,6 +138,20 @@ test("tester-kit: stages bilingual operator docs with checksum coverage", async 
   } finally {
     await rm(stagedDir, { recursive: true, force: true });
   }
+});
+
+test('tester-kit: current 2.0 docs stage intact with working links and no historical migration launcher',async()=>{
+  const mod=await import(pathToFileURL(scriptPath).href),stagedDir=await mkdtemp(join(tmpdir(),'tester-kit-v2-'));
+  try {
+    await mod.stageDocumentation(repoRoot,stagedDir);
+    await mod.checkMarkdownLinks(stagedDir);
+    assert.ok(mod.stageDocs.includes('.github/release-notes/v2.0.0.md'));
+    assert.equal(mod.stageDocs.some(file=>/Migrate|PESQUISA_CELULAR|CONTROL-LATENCY-AUDIT/.test(file)),false);
+    const release=await readFile(join(stagedDir,'.github/release-notes/v2.0.0.md'),'utf8');
+    assert.match(release,/surface-v2/);assert.match(release,/## Em português/);assert.match(release,/unpublished/);
+    const links=[...release.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map(match=>match[1]);
+    assert.ok(links.length>=5);assert.ok(links.every(link=>link.startsWith('https://')),'release-body links must work outside the repository/kit path');
+  } finally {await rm(stagedDir,{recursive:true,force:true});}
 });
 
 test("tester-kit: missing required documentation stops packaging", async () => {

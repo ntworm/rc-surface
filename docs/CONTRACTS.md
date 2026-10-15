@@ -7,78 +7,23 @@ so reviewers do not have to spelunk both trees.
 
 ---
 
-## Rhythmic policy (LFO and Stutter)
+## Rhythmic policy (T1–T8 / Square)
 
-The rhythmic shapes are computed in two places that must agree byte-for-byte:
+Eight `toggle-1` through `toggle-8` slots share the pads’ Global A/B/C/D modes unless explicitly overridden. There is no separate button or Stutter bank: Square is the 0-to-depth pulse waveform in any slot, with swing/ratchet in Advanced.
 
-- **Host:** `src/live/transport-clock.ts`
-  — `getLfoSubdivision`, `getLfoMaxHz`, `getStutterTiming`
-- **Phone:** `static/phone-v3/controls.js`
-  — `LFO_SHAPE_MAX_HZ`, `LFO_SUBDIVISIONS`, `STUTTER_SUBDIVISIONS`,
-    `getLfoSubdivision`, `getLfoMaxHz`, `getStutterSubdivisions`,
-    `getStutterTiming`, `advanceStutterPhase`
+Host `src/live/transport-clock.ts` and phone `static/phone-v3/controls.js` preserve `getLfoSubdivision` / `getLfoMaxHz` and pulse-policy parity. Both define `getPulseTiming` / `getPulseSubdivisions`; the phone also advances pulse phase locally. Parity tests protect the boundary.
 
-**Parity test:** `tests/modulator-policy-parity.test.mjs` evaluates the host
-and the browser over every shape, tempo, Auto/free and old pin combination and
-asserts the two implementations agree.
+| Shape | Max Hz |
+| --- | --- |
+| sine | 4 |
+| triangle | 3 |
+| ramp_up | 3 |
+| ramp_down | 3 |
+| square | 15 |
 
-### Shape ceilings (`LFO_SHAPE_MAX_HZ`)
+These are product control-rate limits, not an SDK throughput or latency guarantee. SYNC filters subdivisions by BPM/shape; swing and ratchet account for the shortest half-step. Pins that are too fast slow by octaves. Square FREE stays within 15 Hz including ratchet. CFG does not offer unreachable subdivisions or edit touch-owned rate/depth.
 
-| Shape     | Max Hz |
-| --------- | ------ |
-| sine      | 4      |
-| triangle  | 3      |
-| ramp_up   | 3      |
-| ramp_down | 3      |
-| square    | 12     |
-
-These caps are the contract; a browser-only or host-only change would let
-one side accept a gesture the other rejects, and the user would see a control
-that stopped following the finger with no error surfaced.
-
-Source: `internal/LIVE-WRITE-CEILING-1.0.md`, rule
-`maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`, where
-`teto_efetivo` is the effective write ceiling. The table above is the
-**fallback** for an effective ceiling of about 50 writes/s (the live
-write-ceiling task P04 was still pending as of 2026-09-17). When `teto_efetivo`
-is measured, regenerate the table and update this doc, both source files
-(`src/live/transport-clock.ts:11`, `static/phone-v3/controls.js:17`) and the
-frozen contract test (`tests/contracts-freeze.test.mjs`).
-
-### Sync speeds
-
-`getLfoSubdivision(rate, bpm, pin)` snaps the finger position to the
-divisions that keep the rendered Hz at or below the per-shape cap above,
-across tempos 30–300 BPM and the legacy pins (3, 2/3, 1/8, 1/32).
-
-### Stutter Auto distribution
-
-With `syncMode === "sync"`, `getStutterTiming(rate, beat, bpm, auto)` walks the
-gesture from rate 0 to rate 1 and only emits speeds reachable under the sync
-ceiling. The classic reachable set at 120 BPM is:
-
-| rate | frequency |
-| ---- | --------- |
-| 0    | 2         |
-| 0.4  | 4         |
-| 0.8  | 8         |
-| 1    | 8         |
-
-### Stutter FREE
-
-`auto === false` reads the gesture across the whole bar without a capped dead
-zone; the audible limit is the host's own playback ceiling, not a phone-side
-cap.
-
-### Why two implementations
-
-The browser needs the numbers to render the dial, label and gate, all on the
-critical frame budget. The host needs the same numbers to compute write
-scheduling for the LFO/stutter parameters that go back to Live. Either side
-treating the table as its own is a bug: the dial would draw a position the host
-refuses to honour, and the user would think the controller is broken. The
-parity test is the only thing keeping them honest — treat any drift there as
-a release blocker, not a refactor opportunity.
+The [historical ceiling audit](https://github.com/ntworm/rc-surface/blob/main/internal/LIVE-WRITE-CEILING-1.0.md) describes its 1.0 cycle; it does not establish a new 2.0 candidate measurement.
 
 ---
 
@@ -405,3 +350,13 @@ Song enum: `0=None, 1=8 Bars, 2=4 Bars, 3=2 Bars, 4=1 Bar, 5=1/2,
 6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T, 11=1/16, 12=1/16T, 13=1/32`.
 Clip quantization has a separate enum (`0=Global`, `1=None`, `2..14`);
 it is observed only and never written by this command.
+
+## 2.0 persistence and REC/AUT transport
+
+Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time.
+
+REC submits `tracks` as a nonempty ordered set of `{index,id,name}` refs (up to 256); the backend confirms all identities, armability, ARM and absence of outside ARM. Legacy single-track commands are normalized. ARM MULTI retains other inputs; EXCLUSIVE acts only on explicit ARM and confirms the whole set. SOLO/MUTE use serialized GET confirmation without interrupting pre-roll. Native STOP has priority and disarms only the attempt’s owned identities.
+
+Punch In has baseline/desired/expected and ownership by Song/session/link: ON for pre-roll, OFF for a direct start; restore only while owned without an observed external edit. Pre-roll uses observed meter and an exact existing locator or temporary SDK locator, removed and confirmed before arming/playback. `count_in_duration` is read-only. Session/link/Set loss never replays cleanup. Observed record mode does not prove audio capture or take preservation.
+
+VID exposes up to fifteen pose identities, three to six examples each. Capture warnings are advisory with no new hard veto; Note/Clip/Watchdog retain their existing contracts. PALM/FACE enter as 0–1 controls; FACE is palm/back orientation, not facial tracking. Missing/nonfinite samples emit `lost:true` through Safe loss without inventing a neutral measurement.

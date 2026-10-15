@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.x   | yes |
+| 2.0.0 candidate | yes, local candidate |
+| 1.x | historical; no 2.0 data compatibility |
 | 0.7.x and earlier | no |
 
 ## Reporting a Vulnerability
@@ -137,7 +138,7 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Prefer same-room/studio LAN use.
 - Do not publish or forward QR, controller, or admin URLs.
 - Do not expose the bridge through public tunnels, public reverse proxies, or
-  router port forwarding. Those deployments are outside the v1.0 threat model.
+  router port forwarding. Those deployments are outside the v2.0 threat model.
 - Stop and start the server to invalidate all issued session tokens.
 
 ## Command Safety

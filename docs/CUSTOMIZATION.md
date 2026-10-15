@@ -76,8 +76,7 @@ Canonical groups:
 - `knob-1` through `knob-8`
 - `fader-1` through `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
-- `toggle-1` through `toggle-4`
-- `button-1` through `button-4`
+- `toggle-1` through `toggle-8`
 - `sensor.motion.*`
 - `sensor.orient.*`
 - `sensor.audio.*`
@@ -212,7 +211,7 @@ in the backend before takeover and mapping dispatch.
 ## Set Project Profiles
 
 Mappings and set-specific safety state are stored as schema-versioned
-`.rcsurface` files under the extension storage `projects/` directory. Writes
+`.rcsurface` files under `storageDirectory/surface-v2/projects/` (schema 2). Writes
 are validated and atomic, and the previous file is retained as `.bak` for
 rollback. Import/export commands provide portability between computers.
 
@@ -259,11 +258,7 @@ Runtime vision diagnostics:
 - `sensor.vision.gesture.2`
 - `sensor.vision.gesture.3`
 
-Public vision mapping controls are intentionally narrower: direct `x/y/z`,
-the four opt-in detectors, `rotateVal`, Pinch Clutch `pinch_x/y/z`, and the
-three numbered learned-pose slots. `active`, `palm`, `face`, finger counts,
-individual fingers, handedness, and whole-frame RGB stay diagnostic and must
-not be added to a picker merely because telemetry exists.
+Public vision controls: `x/y/z`, `palm`, `face`, the four opt-in detectors, `rotateVal`, Pinch Clutch `pinch_x/y/z` and `sensor.vision.gesture.1` through `.15`. PALM is apparent size; FACE is palm/back orientation, normalized from −1–1 to 0–1 on the wire. `active`, fingers and RGB stay outside the picker. Missing/nonfinite values must emit `lost:true`, never a new neutral reading. Reuse Safe loss and the existing parameter/note/clip mapper. Capture-consistency warnings are advisory and do not alter recognition.
 
 Do not reintroduce two-hand names from old plans unless the user asks for a new migration.
 

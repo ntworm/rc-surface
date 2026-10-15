@@ -1,8 +1,20 @@
 # Tester Guide
 
-Thank you for testing RC Surface v1.0.2.
+Current local preparation: RC Surface 2.0.0. The older kit sections are dated
+history, including the rename migrator; they are not a 2.0 upgrade procedure.
 
-## Local candidate 2.0.0 — toggles and XY acceptance
+## Local candidate 2.0.0 — current reported acceptance
+
+Gabriel installed source `e930ebe`, package SHA-256 prefix `523b7d93`, and on
+2026-10-15 reported everything working with no observed error or bug. This is
+the scope of the report; do not infer an exhaustive device/OS, latency, take
+preservation or Audio Sender acceptance matrix. Final release preparation must
+attach its own package commit/hash, fresh gates and EN/PT visual review.
+
+The current surface has seven pages including REC, plus MAP overlay and the
+PERF header AUT mode. REC verifies an armed track set, optional Loop and
+pre-roll OFF/1/2/4; Punch In is temporarily configured/restored with ownership.
+VID supports fifteen cards, 3–6 takes each, RETAKE/KEEP and PALM/FACE MAP inputs.
 
 - Install only manually; record the package hash. Do not close the separate recognition/camera acceptance by inference.
 - Eight toggles T1–T8 start in Global. Change shared A/B/C/D, save/reload a project/preset/snapshot, then verify that Global still follows those changes. Test both ordinary LFOs and Square pulses.
@@ -15,7 +27,7 @@ Thank you for testing RC Surface v1.0.2.
 
 The sections below describe historical 1.0.2 kit procedures, not 2.0.0 physical approval.
 
-## Current kit: 1.0.2
+## Historical kit: 1.0.2
 
 Install `RC-Surface-1.0.2.ablx` the same way as 1.0.1 and reload the phone page. The two
 Max for Live devices are the same files as in 1.0.0 and 1.0.1 (Receiver v2.2
@@ -134,7 +146,7 @@ phase when speed changes. Preserve the recorded Set for point-density analysis;
 high-frequency waveform fidelity is NOT approved by the automated tests.
 The accepted Receiver/XY/MIX checks are not being reopened.
 Physical audio/latency recording remains pending; the 8 ms dispatch spacing is
-not an end-to-end measurement. See `internal/CONTROL-LATENCY-AUDIT-2026-09-09.md`.
+not an end-to-end measurement. See [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/CONTROL-LATENCY-AUDIT-2026-09-09.md).
 
 This kit contains the production-equivalent `.ablx` and the docs you need
 to install it, open the panel, connect your phone, and report any issues
@@ -166,7 +178,7 @@ Use the descriptor checks below; physical microphone tests remain required.
 | `docs/SECURITY.md` | Threat model, certificate policy, network behavior |
 | `docs/CUSTOMIZATION.md` | Controls, sensors, mappings, extension points |
 | `internal/TESTER-GUIDE.md` | This file |
-| `internal/PESQUISA_CELULAR_GESTUAL.md` | Research and roadmap evidence |
+| [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/PESQUISA_CELULAR_GESTUAL.md) | Research and roadmap evidence |
 | `Migrate-RC-Surface-Data.cmd` / `.ps1` | Windows data migrator (Ableton-RC-Surface → RC Surface) |
 | `Migrate RC Surface Data.command` | macOS data migrator |
 | `SHA256SUMS.txt` | File hashes for integrity checks |

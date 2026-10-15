@@ -99,7 +99,8 @@ test('detector needles stay radial at every size after Follow is withheld', asyn
 test('desktop VID puts camera commands at the top and prioritizes useful preview area', async ({ page }) => {
   await page.locator('.tab[data-page="video"]').click();
   await expect(page.locator('.vision-studio-head')).toContainText('3 para começar · até 6 · momentâneo 0 → 1');
-  expect((await page.locator('.vision-studio-head').innerText()).match(/momentâneo/g)).toHaveLength(1);
+  // This metadata remains in the DOM when the short-phone layout hides it.
+  expect((await page.locator('.vision-studio-head').textContent()).match(/momentâneo/g)).toHaveLength(1);
   for (const viewport of [{ width: 1000, height: 650 }, { width: 1280, height: 960 },
     { width: 1440, height: 900 }, { width: 1920, height: 1200 }]) {
     await page.setViewportSize(viewport);
@@ -108,13 +109,24 @@ test('desktop VID puts camera commands at the top and prioritizes useful preview
       const g = await page.evaluate(() => {
         const rect = (selector) => document.querySelector(selector).getBoundingClientRect().toJSON();
         return { workspace: rect('.vision-workspace'), commands: rect('.vision-command-bar'),
+          left: rect('.vision-left-column'), available: rect('.vision-camera-sidebar'),
           preview: rect('.vision-camera-stage'), canvas: rect('#vision-canvas'),
+          gap: parseFloat(getComputedStyle(document.querySelector('.vision-workspace')).columnGap),
           fit: getComputedStyle(document.getElementById('vision-canvas')).objectFit };
       });
       expect(g.commands.y - g.workspace.y, 'no dead band above camera controls').toBeLessThan(4);
       expect(g.preview.y - g.commands.bottom, 'preview follows controls').toBeLessThan(16);
-      expect(g.preview.width, 'camera gets at least 58% of the workspace width').toBeGreaterThan(g.workspace.width * 0.58);
-      expect(g.preview.height, 'large enough to see hand details').toBeGreaterThan(g.workspace.height * 0.7);
+      // The current 2:1 desktop grid reserves at least 350px for the pose bank.
+      // A short desktop can be height-limited: its largest contained 4:3 stage
+      // need not occupy a fixed percentage of the whole workspace width.
+      const cameraColumn = Math.min((g.workspace.width - g.gap) * 2 / 3, g.workspace.width - g.gap - 350);
+      expect(Math.abs(g.left.width - cameraColumn), 'camera retains its full allocated column').toBeLessThanOrEqual(1);
+      const maximumWidth = Math.min(g.available.width, g.available.height * 4 / 3);
+      expect(Math.abs(g.preview.width - maximumWidth), 'camera uses the largest contained 4:3 preview').toBeLessThanOrEqual(1);
+      expect(Math.abs(g.preview.height - maximumWidth * 3 / 4), 'preview retains its 4:3 geometry').toBeLessThanOrEqual(1);
+      expect(g.preview.x).toBeGreaterThanOrEqual(g.left.x - 1);
+      expect(g.preview.right).toBeLessThanOrEqual(g.left.right + 1);
+      expect(g.preview.bottom).toBeLessThanOrEqual(g.available.bottom + 1);
       expect(g.fit, 'camera image is contained, never stretched/cropped').toBe('contain');
       for (const button of await page.locator('.vision-gesture-list button').all()) {
         const clipped = await button.evaluate((el) => el.scrollWidth > el.clientWidth);

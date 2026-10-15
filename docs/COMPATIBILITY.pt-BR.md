@@ -1,10 +1,10 @@
 # Compatibilidade — RC Surface
 
-Build `2.0.0`. O que a versão 2.0.0 suporta. A compatibilidade com hardware físico é acompanhada à parte, no gate `physical-hardware` (P09) e em `internal/TESTER-GUIDE.md`.
+Build `2.0.0` em preparação local. Requisitos e evidências do produto; registros 1.0 não são gates novos da versão 2.0.
 
 ## Live
 
-- Ableton Live 12+ com Extensions SDK `1.0.0-beta.0` (instalado a partir de `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtido da Ableton; o tarball não faz parte deste repositório — ver `vendor/README.md`).
+- Ableton Live 12.4.5+ Suite (Beta) com Extensions SDK `1.0.0-beta.0` (instalado a partir de `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtido da Ableton; o tarball não faz parte deste repositório — ver `vendor/README.md`).
 - Padrão de duas tracks: uma track recebe o `RC-Midi-Receiver.amxd` (Receiver v2); a track com a fonte de áudio recebe o `RC-Audio-Sender.amxd` (o helper de áudio em Max, independente). A entrada do Sender precisa estar ativada no Receiver v2 que vai tocar.
 - Veja `docs/INSTALL.pt-BR.md` para o passo a passo completo de instalação.
 
@@ -16,7 +16,7 @@ Build `2.0.0`. O que a versão 2.0.0 suporta. A compatibilidade com hardware fí
 
 ## Node + ferramentas
 
-- Node `v24.19.0` (faixa declarada: `>=24.16.0 <25`). Veja `engines.node` em `package.json`.
+- Node `24.16.x` (faixa declarada: `>=24.16.0 <25`). Veja `engines.node` em `package.json`.
 - npm 11.x para comandos de build e teste.
 - Playwright `1.62.0` acompanha o Chromium `151.0.7922.34` (build Playwright `chromium-1234`) para os testes headless.
 
@@ -28,26 +28,20 @@ Build `2.0.0`. O que a versão 2.0.0 suporta. A compatibilidade com hardware fí
 ## Pacotes de terceiros
 
 - `docs/THIRD-PARTY-NOTICES.md` (inglês) e `docs/THIRD-PARTY-NOTICES.pt-BR.md` (português) listam os componentes efetivamente empacotados no payload ABLX e no bundle do host, com os avisos de licença.
-- `internal/DISTRIBUTION-REVIEW-1.0.md` registra a matriz de dependências e a conclusão explícita de que nenhum componente de terceiros precisa ser relicenciado para a candidata 1.0.
+- [historical 1.0 distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) registra a matriz de dependências e a conclusão explícita de que nenhum componente de terceiros precisa ser relicenciado para a candidata 1.0.
 
-## Testado em campo (aceitação v2) vs não medido
+## Evidência atual e limites
 
-Cenários testados em campo (aceitação v2, registrados em `internal/TESTER-GUIDE.md`):
+O candidato instalado foi relatado como funcionando sem erro ou bug observado. É um relato de uso, não uma certificação exaustiva de cenários ou plataformas. Latência real, captura de áudio e preservação de takes precisam ser conferidas na configuração do usuário.
 
-- Instalação só local, pelas fatias A+B (e R opcional).
-- Roteamento em duas tracks com o par independente `RC-Audio-Sender` e `RC-Midi-Receiver`.
-- Transporte só por WebSocket dentro do Live.
-- Cobertura sintética com Playwright do console do operador e das páginas administrativas.
+Regressões automatizadas usam mocks e navegadores isolados; não equivalem a hardware. A preparação final deve registrar commit/hash do pacote, seus gates atuais e revisão visual EN/PT. A versão continua 2.0.0; este documento não declara publicação. Os registros históricos 1.0 e “Receiver v2” descrevem outros ciclos, não o aceite da versão do produto 2.0.
 
-Não medido nesta entrega (gates permanecem `pending`/`blocked` por contrato):
-
-- Latência de ida e volta (round-trip) em hardware real, na máquina do responsável (gate `physical-hardware`).
-- Distribuição pública via rota SDK (gate `distribution-publication`).
+Dados 1.x não migram: mappings/presets/projetos 2.0 usam `surface-v2` e schema 2. Um Set existente não ganha garantia de preservação de takes a partir dessa separação.
 
 ## Veja também
 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md` — passo a passo de instalação.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md` — avisos de terceiros.
-- `internal/TESTER-GUIDE.md` — cenários de aceitação v2 testados em campo.
-- `internal/DISTRIBUTION-REVIEW-1.0.md` — matriz de dependências e conclusão de distribuição.
-- `internal/RELEASE-GATES-1.0.json` — documento de gates atual.
+- `internal/TESTER-GUIDE.md` — orientação atual com evidência histórica separada.
+- [historical 1.0 distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) — matriz de dependências e conclusão de distribuição.
+- [arquivo de gates 1.0](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json) — somente evidência histórica.

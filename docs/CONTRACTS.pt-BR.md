@@ -7,79 +7,23 @@ revisa não precisar vasculhar as duas árvores de código.
 
 ---
 
-## Política rítmica (LFO e Stutter)
+## Política rítmica (T1–T8 / Square)
 
-As formas rítmicas são calculadas em dois lugares que precisam concordar
-byte a byte:
+Oito slots `toggle-1` até `toggle-8` compartilham os modos Global A/B/C/D dos pads, salvo override explícito. Não há banco separado de botões ou Stutter: Square é a onda de pulso 0–depth em qualquer slot, com swing/ratchet em Avançado.
 
-- **Host:** `src/live/transport-clock.ts`
-  — `getLfoSubdivision`, `getLfoMaxHz`, `getStutterTiming`
-- **Celular:** `static/phone-v3/controls.js`
-  — `LFO_SHAPE_MAX_HZ`, `LFO_SUBDIVISIONS`, `STUTTER_SUBDIVISIONS`,
-    `getLfoSubdivision`, `getLfoMaxHz`, `getStutterSubdivisions`,
-    `getStutterTiming`, `advanceStutterPhase`
+Host `src/live/transport-clock.ts` e celular `static/phone-v3/controls.js` mantêm paridade em `getLfoSubdivision` / `getLfoMaxHz` e na política de pulso. Ambos definem `getPulseTiming` / `getPulseSubdivisions`; o celular também avança a fase de pulso localmente. Os testes de paridade protegem esse limite.
 
-**Teste de paridade:** `tests/modulator-policy-parity.test.mjs` avalia host
-e navegador em todas as combinações de forma, andamento, Auto/free e pin legado,
-e exige que as duas implementações concordem.
+| Forma | Hz máx |
+| --- | --- |
+| sine | 4 |
+| triangle | 3 |
+| ramp_up | 3 |
+| ramp_down | 3 |
+| square | 15 |
 
-### Tetos por forma (`LFO_SHAPE_MAX_HZ`)
+Esses tetos são limites de produto para controle, não uma garantia de throughput ou latência do SDK. Em SYNC, subdivisões são filtradas por BPM/forma; swing e ratchet consideram o menor meio-passo. Pins rápidos demais desaceleram por oitavas. Square FREE respeita até 15 Hz, incluindo ratchet. CFG não oferece subdivisões inviáveis nem edita rate/depth que pertencem ao toque.
 
-| Forma     | Hz máx |
-| --------- | ------ |
-| sine      | 4      |
-| triangle  | 3      |
-| ramp_up   | 3      |
-| ramp_down | 3      |
-| square    | 12     |
-
-Esses tetos são o contrato. Uma mudança feita só no navegador ou só no host
-faria um lado aceitar um gesto que o outro recusa, e o usuário veria o controle
-parar de seguir o dedo sem nenhum erro na tela.
-
-Origem: `internal/LIVE-WRITE-CEILING-1.0.md`, regra
-`maxHz(forma) = floor(teto_efetivo / minPontosPorCiclo(forma))`. A tabela
-acima é o **fallback** para `teto_efetivo ≈ 50 escritas/s` (a task P04 de
-write-ceiling ainda estava pendente em 2026-09-17). Quando `teto_efetivo` for
-medido, gere a tabela de novo e atualize este documento, os dois arquivos-fonte
-(`src/live/transport-clock.ts:11`, `static/phone-v3/controls.js:17`) e o
-teste de contrato congelado (`tests/contracts-freeze.test.mjs`).
-
-### Velocidades de sincronia
-
-`getLfoSubdivision(rate, bpm, pin)` encaixa a posição do dedo nas divisões
-que mantêm o Hz resultante igual ou abaixo do teto de cada forma, em
-andamentos de 30 a 300 BPM e nos pins legados (3, 2/3, 1/8, 1/32).
-
-### Distribuição do Stutter Auto
-
-Com `syncMode === "sync"`, `getStutterTiming(rate, beat, bpm, auto)` percorre
-o gesto de rate 0 a rate 1 e só emite velocidades que cabem no teto do modo
-sync. A 120 BPM, o conjunto clássico é:
-
-| rate | frequência |
-| ---- | ---------- |
-| 0    | 2          |
-| 0.4  | 4          |
-| 0.8  | 8          |
-| 1    | 8          |
-
-### Stutter FREE
-
-`auto === false` lê o gesto em toda a extensão, sem zona morta limitada; o
-limite audível é o teto de reprodução do próprio host, não um corte feito no
-celular.
-
-### Por que duas implementações
-
-O celular precisa dos números para desenhar o dial, o rótulo e o gate dentro
-do tempo de cada frame. O host precisa dos mesmos números para
-agendar a escrita dos parâmetros LFO/Stutter que voltam ao Live. Qualquer
-lado que trate a tabela como só sua é um bug: o mostrador desenharia uma
-posição que o host se recusa a honrar, e o usuário acharia o controlador
-quebrado. O teste de paridade é a única coisa que mantém os dois honestos —
-trate qualquer deriva ali como impeditivo de release, não como oportunidade
-de refatorar.
+A [medição histórica de teto](https://github.com/ntworm/rc-surface/blob/main/internal/LIVE-WRITE-CEILING-1.0.md) descreve seu ciclo 1.0; não prova uma medição nova da candidata 2.0.
 
 ---
 
@@ -413,3 +357,13 @@ Enum Song: `0=None, 1=8 Bars, 2=4 Bars, 3=2 Bars, 4=1 Bar, 5=1/2,
 6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T, 11=1/16, 12=1/16T, 13=1/32`.
 Quantização de clip tem enum separado (`0=Global`, `1=None`, `2..14`);
 é só observada e nunca escrita por este comando.
+
+## Persistência e transporte REC/AUT 2.0
+
+Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido.
+
+REC envia `tracks` como conjunto ordenado não vazio de referências `{index,id,name}` (até 256); o backend confirma todas as identidades, armabilidade, ARM e ausência de ARM externo. Comandos legados de uma faixa são normalizados. ARM MULTI preserva outras entradas; EXCLUSIVE age somente no ARM explícito e confirma o conjunto inteiro. SOLO/MUTE usam confirmação GET serializada sem interromper o pré-roll. STOP nativo tem prioridade e desarma apenas identidades pertencentes à tentativa.
+
+Punch In tem baseline/desired/expected e posse por Song/sessão/conexão: ON no pré-roll, OFF no início direto; restauração somente se ainda próprio e sem edição externa observada. Pré-roll usa compasso observado e locator existente exato ou SDK temporário, removido e confirmado antes de armar/tocar. `count_in_duration` é somente leitura. Perda de sessão/link/Set nunca repete cleanup. Captura de áudio e preservação de takes não são provadas pela observação de record mode.
+
+VID expõe até quinze identidades de pose, três a seis exemplos cada. Avisos de captura são orientativos, sem hard veto novo; Note/Clip/Watchdog mantêm seus contratos existentes. PALM e FACE entram como controles 0–1; FACE vem de orientação palma/dorso, não de rastreamento facial. Ausência/não finito emite `lost:true` e usa Safe loss, sem inventar uma medição neutra.

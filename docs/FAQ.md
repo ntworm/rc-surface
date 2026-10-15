@@ -124,7 +124,7 @@ Library on the MIDI track in Live and retry.
 
 ### How many phones can connect at the same time?
 
-RC Surface 1.0 supports one controller at a time. Control performance either
+RC Surface 2.0 supports one controller at a time. Control performance either
 from the phone or desktop, never both simultaneously. While multiple browser
 windows can open the page on the LAN and receive isolated client IDs, simultaneous
 control from multiple devices is not supported and will cause conflicting control
@@ -177,9 +177,7 @@ See `docs/CUSTOMIZATION.md`.
 
 ### Can I save and share mappings?
 
-Save and load local mapping presets, yes. RC Surface 1.0.x does not include
-export/import of shareable mapping bundles; presets remain local to the
-extension storage.
+Yes. Use local presets and the panel’s project-configuration export/import. Version 2.0 files use schema 2; 1.x data is not imported. Destinations depend on the Set’s tracks/devices and must be reviewed after restore. See the user guide.
 
 ### How do I update to a new version?
 
@@ -188,6 +186,14 @@ and let Live replace the installed extension. Restart Live if it was open
 during the update.
 
 ---
+
+### Is REC a page? What about AUT?
+
+REC is the seventh page: choose markers, optional Loop and pre-roll OFF/1/2/4, arm inputs on the cards and use REC/STOP. Punch In is set temporarily and restored only while still owned by the attempt. AUT is a PERF header mode for XY movement with SYNC/FREE; it does not record native Arrangement automation.
+
+### How many poses and which hand readings can I map?
+
+VID starts with three cards and + ADD POSE grows to fifteen. Each pose needs three examples and accepts six; RETAKE/KEEP review conflicting captures. X removes the card; CLR retains its identity. PALM/FACE join X/Y/Z in the MAP strip. FACE is palm/back orientation, not facial tracking. Missing/invalid samples follow Safe loss.
 
 ## Privacy and security
 
@@ -211,7 +217,7 @@ LAN-reachable port and accepts supported WebSocket commands from browser
 clients that can reach the bridge URL. Run it only on trusted home/studio
 Wi-Fi, and close it when you are done. Do not expose it to public networks
 through tunnels, reverse proxies, or port forwarding; those deployments are
-outside the v1.0 threat model. The full threat model is in `docs/SECURITY.md`.
+outside the v2.0 threat model. The full threat model is in `docs/SECURITY.md`.
 
 ### Do I have to pay? Is there a Pro version?
 

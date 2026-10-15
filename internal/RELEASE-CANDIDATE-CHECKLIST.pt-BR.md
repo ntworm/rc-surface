@@ -1,6 +1,27 @@
 # RC Surface — candidatas de teste
 
-## Candidata 1.0.2 — 2026-09-30
+## Preparação 2.0.0 — 2026-10-15
+
+- Aceite relatado: Gabriel instalou `e930ebe` (SHA-256 iniciado em `523b7d93`)
+  e declarou “tá tudo funcionando... nenhum erro, nenhum bug”. Não há lista
+  exaustiva de cenários/plataformas; não inferir medição de latência, todos os
+  limites de captura/takes ou novo teste de Audio Sender, macOS/iOS.
+- Escopo da versão: sete páginas com REC multi-track e Punch In temporário;
+  AUT de movimentos XY no cabeçalho; T1–T8/Square, modos e física independentes;
+  VID até quinze cartões, avisos RETAKE/KEEP e PALM/FACE no MAP.
+- Dados: `surface-v2`, schema 2, sem importação de 1.x ou dos overrides/snapshots
+  do primeiro candidato 2.0. Não executar o migrador histórico como atualização.
+- Preparação local: documentação/landing EN/PT e notas
+  `.github/release-notes/v2.0.0.md`; versão permanece 2.0.0, sem publicação.
+- Na entrega final, registrar commit e SHA-256 completos do ABLX, hashes/CRC e
+  links do kit, gates frescos e revisão visual EN/PT. Esses resultados pertencem
+  ao novo pacote e serão anexados pela execução final; não reutilizar a contagem
+  de doze gates 1.0 como prova 2.0. Publicação/tag continuam ação separada.
+
+As seções a seguir são registros históricos 1.x e não instruções de migração
+para a versão 2.0.0 nem prova de seus gates atuais.
+
+## Histórico: candidata 1.0.2 — 2026-09-30
 
 - Pacote: `RC-Surface-1.0.2.ablx`, gerado pelo workflow de release a partir da
   tag `v1.0.2`; o SHA256 sai no `SHA256SUMS.txt` da release, junto com os dois

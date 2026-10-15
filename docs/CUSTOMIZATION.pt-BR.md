@@ -77,8 +77,7 @@ Grupos canônicos:
 - `knob-1` a `knob-8`
 - `fader-1` a `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
-- `toggle-1` a `toggle-4`
-- `button-1` a `button-4`
+- `toggle-1` a `toggle-8`
 - `sensor.motion.*`
 - `sensor.orient.*`
 - `sensor.audio.*`
@@ -197,8 +196,8 @@ picos confirmados no backend, antes do takeover e do dispatch de mapeamento.
 ## Perfis de projeto do set
 
 Os mapeamentos e o estado de segurança específico do set são guardados como
-arquivos `.rcsurface` com versão de schema, no diretório `projects/` do
-armazenamento da extensão. As escritas são validadas e atômicas, e o arquivo
+arquivos `.rcsurface` com schema 2 em `storageDirectory/surface-v2/projects/`.
+As escritas são validadas e atômicas, e o arquivo
 anterior é mantido como `.bak` para rollback. Comandos de importação e
 exportação dão portabilidade entre computadores.
 
@@ -246,12 +245,7 @@ Diagnósticos de visão em tempo de execução:
 - `sensor.vision.gesture.2`
 - `sensor.vision.gesture.3`
 
-Os controles públicos de mapeamento de visão são deliberadamente mais
-estreitos: `x/y/z` direto, os quatro detectores opcionais, `rotateVal`, o Pinch
-Clutch `pinch_x/y/z`, e os três slots numerados de pose aprendida. `active`,
-`palm`, `face`, contagem de dedos, dedos individuais, lateralidade da mão e RGB
-do quadro inteiro seguem como diagnóstico e não devem entrar num seletor só
-porque a telemetria existe.
+Controles públicos de visão: `x/y/z`, `palm`, `face`, os quatro detectores opcionais, `rotateVal`, Pinch Clutch `pinch_x/y/z` e `sensor.vision.gesture.1` até `.15`. PALM é tamanho aparente; FACE é orientação palma/dorso, normalizada de −1–1 para 0–1 no wire. `active`, dedos e RGB não entram no picker. Valores ausentes/não finitos devem emitir `lost:true`, nunca uma nova amostra neutra. Reutilize Safe loss e o mapeador de parâmetros/notas/clips. O aviso de consistência é orientativo e não modifica o reconhecimento.
 
 Não reintroduza nomes de duas mãos vindos de planos antigos, a não ser que o
 usuário peça uma migração nova.

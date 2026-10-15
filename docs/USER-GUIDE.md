@@ -6,7 +6,7 @@ soundcheck, and live performance. Read this once before playing a set.
 > **Scope**: the phone client (`/phone-v3/`) is the main surface. The
 > Ableton panel and admin dashboard are covered separately in
 > `docs/CUSTOMIZATION.md`.
-> RC Surface 1.0 supports one controller at a time: control your performance from the phone or desktop, never both simultaneously.
+> RC Surface 2.0 supports one controller at a time: control your performance from the phone or desktop, never both simultaneously.
 
 ---
 
@@ -20,13 +20,13 @@ retain order. Use **Smooth = 0** for no added mapping ramp. Explicit Smooth,
 musical envelopes and safe-loss behavior still apply. Main/Master targets now
 expand as **Main → device → parameter**, like other tracks; Tempo stays direct.
 
-Reload the phone page after updating the extension. Old hosts remain compatible
-through the legacy snapshot path but do not gain the new realtime behavior.
+Reload the phone page after updating the extension. The legacy snapshot wire fallback is not a migration of 1.x projects or settings.
+Version 2.0 uses isolated `surface-v2` host storage and schema 2.
 Physical latency in Live still needs the pending recorded benchmark.
 
 ## 1. Phone layout at a glance
 
-The phone UI is a single page with six tabs. Switch with the buttons on
+The phone UI is a single page with seven tabs. Switch with the buttons on
 the top strip:
 
 | Tab    | What it does                                                 |
@@ -37,8 +37,9 @@ the top strip:
 | SNS    | Sensors: live readouts for motion and orientation            |
 | AUD    | Microphone and audio-analysis inputs                         |
 | VID    | Camera, hand tracking, and learned static poses             |
+| REC    | Arrangement markers, Loop, pre-roll and armed track recording |
 
-The top strip also holds the **MAP** button near the BPM display plus
+The top strip also holds the **MAP / AUT / CFG** header modes near the BPM display plus
 **SYNC**, **STAGE**, and contextual **CALIBRATE** on SNS/AUD/VID. See
 [§ 7 Top-bar controls](#7-top-bar-controls) and
 [§ 8 MAP mode](#8-map-mode---mobile-mapping).
@@ -907,8 +908,8 @@ a changed pitch to remain stable for `70 ms` before sending it.
 
 Open **VID** with the phone in landscape. The camera preview fills the left
 side at the full screen height. Everything you touch sits in the column on the
-right: the camera commands (**Camera**, **CONF**, **REC**), the three
-learned-pose rows, the built-in detectors and the direct signal readouts. On a
+right: the camera commands (**Camera**, **CONF**, **REC**), a scrollable bank of up to fifteen
+learned-pose cards, the built-in detectors and the direct signal readouts. On a
 tablet or desktop the commands sit above the preview and the readouts run
 along the bottom. Tap **Camera** to grant access. The vision system
 is **single-hand** by design: it tracks one hand in front of the phone.

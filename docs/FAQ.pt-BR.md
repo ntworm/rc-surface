@@ -126,7 +126,7 @@ Library na track MIDI no Live e tente de novo.
 
 ### Quantos celulares podem conectar ao mesmo tempo?
 
-O RC Surface 1.0 suporta um controlador por vez. Opere a performance pelo
+O RC Surface 2.0 suporta um controlador por vez. Opere a performance pelo
 celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de
 navegador possam abrir a página na rede local e receber IDs de cliente isolados,
 o controle simultâneo por múltiplos dispositivos não é suportado e causará conflitos
@@ -181,9 +181,7 @@ Veja o [`CUSTOMIZATION.pt-BR.md`](./CUSTOMIZATION.pt-BR.md).
 
 ### Dá para salvar e compartilhar mapeamentos?
 
-Salvar e carregar presets locais de mapeamento, sim. O RC Surface 1.0.x não inclui
-exportação e importação de pacotes de mapeamento compartilháveis; os presets
-ficam locais ao armazenamento da extensão.
+Sim. Use presets locais e exportação/importação de configuração de projeto do painel. Arquivos 2.0 usam schema 2; dados 1.x não são importados. Destinos dependem das tracks/devices do Set e precisam ser conferidos após restaurar. Veja o guia do usuário.
 
 ### Como eu atualizo para uma versão nova?
 
@@ -192,6 +190,14 @@ e deixe o Live substituir a extensão instalada. Reinicie o Live se ele estava
 aberto durante a atualização.
 
 ---
+
+### REC é uma página? E AUT?
+
+REC é a sétima página: escolha marcadores, Loop opcional e pré-roll OFF/1/2/4, arme as entradas nos cartões e use REC/STOP. Punch In é ajustado temporariamente e restaurado somente enquanto a tentativa ainda possui o estado. AUT é um modo no cabeçalho do PERF para movimentos XY, com SYNC/FREE; não grava automação nativa do Arrangement.
+
+### Quantas poses e quais leituras da mão entram no MAP?
+
+VID começa com três cartões e permite + ADD POSE até quinze. Cada pose precisa de três exemplos e aceita seis; RETAKE/KEEP revisam capturas discordantes. X remove o cartão, CLR mantém a identidade. PALM e FACE ficam na faixa MAP com X/Y/Z. FACE é orientação da palma/dorso, não rastreamento facial. Amostras ausentes/inválidas seguem Safe loss.
 
 ## Privacidade e segurança
 
@@ -215,7 +221,7 @@ abre uma porta alcançável pela rede local e aceita os comandos WebSocket
 suportados de clientes de navegador que consigam chegar na URL do bridge. Rode
 só em Wi-Fi confiável, de casa ou do estúdio, e feche quando terminar. Não
 exponha por túneis, proxies reversos ou redirecionamento de porta; esses
-cenários estão fora do modelo de ameaças da v1.0. O modelo de ameaças completo
+cenários estão fora do modelo de ameaças da v2.0. O modelo de ameaças completo
 está no [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md).
 
 ### Preciso pagar? Existe versão Pro?

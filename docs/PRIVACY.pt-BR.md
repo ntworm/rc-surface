@@ -13,6 +13,9 @@ Ele não coleta, transmite nem armazena dados pessoais além da própria máquin
 | Preferências do celular | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |
 | Ajustes da análise de áudio | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |
 
+
+2.0 isola mappings, presets e projetos em `storageDirectory/surface-v2/` com schema 2. Não importa nem apaga dados 1.x. Configurações/loops XY e capturas de poses são dados locais; nenhum frame de câmera vira mídia enviada. PALM/FACE são medidas numéricas de uma mão, não identificação facial.
+
 ## Dados de rede
 
 - Na configuração suportada, a ponte entre o celular e o Live não sai da rede local confiável do usuário.

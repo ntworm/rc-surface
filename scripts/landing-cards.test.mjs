@@ -12,9 +12,9 @@ const svg = (tab) => html.split(`id="surface-map-${tab}"`)[1].match(/<svg[\s\S]*
 
 test('every tab uses the same crisp, accessible diagram treatment', () => {
   assert.match(html, /href="surface-cards.css"/);
-  for (const tab of ['perf', 'mix', 'snp', 'sns', 'aud', 'vid', 'map']) {
+  for (const tab of ['perf', 'mix', 'snp', 'sns', 'aud', 'vid', 'rec', 'map']) {
     assert.match(svg(tab), /class="surface-diagram"/);
-    assert.match(svg(tab), /role="img" aria-label="[^"]+"/);
+    assert.match(svg(tab), /role="img"[^>]*aria-label="[^"]+"/);
     assert.doesNotMatch(svg(tab), /crispEdges/);
   }
 });

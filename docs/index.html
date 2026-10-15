@@ -72,6 +72,9 @@
     "Motion and orientation sensors as mapping sources",
     "Twelve audio descriptors from the phone microphone or an audio interface",
     "Single-hand camera tracking with MediaPipe, working offline",
+    "Fifteen learned-pose cards with advisory capture review and PALM/FACE mapping",
+    "XY gesture loops in AUT: Live-clock SYNC bars or FREE seconds",
+    "Arrangement REC: exact armed inputs, marker Loop and pre-roll OFF/1/2/4",
     "Map any control to a Live parameter or a MIDI note from the phone",
     "Local network only: no app on the phone, no cloud, no telemetry"
    ],
@@ -168,7 +171,7 @@
      "name": "How mature is it?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "v2.0.0 is a local candidate awaiting physical acceptance in Live 12.4.5+ Suite (Beta)."
+      "text": "v2.0.0 is in local release preparation. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state."
      }
     }
    ]
@@ -686,6 +689,7 @@ table.spec tr:first-child th,table.spec tr:first-child td{border-top:1px solid v
 #surface-select-sns:checked ~ .surface-tabs label[for="surface-select-sns"],
 #surface-select-aud:checked ~ .surface-tabs label[for="surface-select-aud"],
 #surface-select-vid:checked ~ .surface-tabs label[for="surface-select-vid"],
+#surface-select-rec:checked ~ .surface-tabs label[for="surface-select-rec"],
 #surface-select-map:checked ~ .surface-tabs label[for="surface-select-map"]{
   color:var(--black);background:var(--amber);border-color:var(--amber);
   position:relative;z-index:1;
@@ -704,6 +708,7 @@ table.spec tr:first-child th,table.spec tr:first-child td{border-top:1px solid v
 #surface-select-sns:checked ~ .surface-deck [data-surface-plan="sns"],
 #surface-select-aud:checked ~ .surface-deck [data-surface-plan="aud"],
 #surface-select-vid:checked ~ .surface-deck [data-surface-plan="vid"],
+#surface-select-rec:checked ~ .surface-deck [data-surface-plan="rec"],
 #surface-select-map:checked ~ .surface-deck [data-surface-plan="map"]{
   visibility:visible;opacity:1;pointer-events:auto;
 }
@@ -1117,7 +1122,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           </div>
         </div>
         <div id="clock">
-          <h3 data-i18n-html="lp.chain.021">2.1 &#183; Clock source</h3>
+          <h3 data-i18n-html="lp.chain.021">2.1 · Clock source</h3>
           <div class="scroll" tabindex="0">
           <table class="data">
             <thead><tr><th data-i18n="lp.chain.008">Mode</th><th data-i18n="lp.chain.009">Needs</th><th data-i18n="lp.chain.010">What you get</th></tr></thead>
@@ -1138,7 +1143,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="map">
     <div class="n">3.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.map.001">Surface map <span class="tail">— figs. 1 to 7</span></h2>
+      <h2 data-i18n-html="lp.map.001">Surface map <span class="tail">— figs. 1 to 8</span></h2>
       <fieldset class="surface-viewer" data-surface-viewer>
         <legend class="visually-hidden" data-i18n="lp.a11y.001">Choose a surface page plan</legend>
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-perf" value="perf" aria-controls="surface-map-perf" checked>
@@ -1147,6 +1152,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-sns" value="sns" aria-controls="surface-map-sns">
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-aud" value="aud" aria-controls="surface-map-aud">
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-vid" value="vid" aria-controls="surface-map-vid">
+        <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-rec" value="rec" aria-controls="surface-map-rec">
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-map" value="map" aria-controls="surface-map-map">
         <div class="surface-tabs">
           <label id="surface-label-perf" for="surface-select-perf">PERF</label>
@@ -1155,6 +1161,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <label id="surface-label-sns" for="surface-select-sns">SNS</label>
           <label id="surface-label-aud" for="surface-select-aud">AUD</label>
           <label id="surface-label-vid" for="surface-select-vid">VID</label>
+          <label id="surface-label-rec" for="surface-select-rec">REC</label>
           <label class="surface-tab-map" id="surface-label-map" for="surface-select-map">MAP</label>
         </div>
         <div class="surface-deck" id="page-plans">
@@ -1175,54 +1182,43 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="24" y="196" width="4" height="48"/>
     <rect x="1092" y="206" width="4" height="28"/>
   </g>
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="40" y="40" width="48" height="22"/>
-    <rect x="92" y="40" width="48" height="22"/>
-    <rect x="144" y="40" width="48" height="22"/>
-    <rect x="196" y="40" width="48" height="22"/>
-    <rect x="248" y="40" width="48" height="22"/>
-    <rect x="300" y="40" width="48" height="22"/>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#141414" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
   </g>
-  <rect x="40" y="40" width="48" height="22" fill="#ffa133" stroke="none"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="50" y="55" fill="#141414">PERF</text>
-    <text x="106" y="55" fill="#c0c0c0">MIX</text>
-    <text x="158" y="55" fill="#c0c0c0">SNP</text>
-    <text x="210" y="55" fill="#c0c0c0">SNS</text>
-    <text x="262" y="55" fill="#c0c0c0">AUD</text>
-    <text x="314" y="55" fill="#c0c0c0">VID</text>
-  </g>
-  <text x="372" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">120.0 BPM</text>
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="452" y="40" width="26" height="22"/>
-    <rect x="482" y="40" width="26" height="22"/>
-    <rect x="512" y="40" width="26" height="22"/>
-    <rect x="546" y="40" width="38" height="22"/>
-    <rect x="590" y="40" width="38" height="22"/>
-    <rect x="634" y="40" width="38" height="22"/>
-  </g>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
-    <text x="459" y="55">&#9198;</text>
-    <text x="490" y="55">&#9654;</text>
-    <text x="519" y="55">&#9197;</text>
-    <text x="552" y="55">TRN</text>
-    <text x="596" y="55">MAP</text>
-    <text x="640" y="55">CFG</text>
-  </g>
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="686" y="40" width="48" height="22"/>
-    <rect x="740" y="40" width="26" height="22"/>
-    <rect x="772" y="40" width="52" height="22"/>
-  </g>
-  <rect x="686" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="692" y="55" fill="#141414">SYNC</text>
-    <text x="748" y="55" fill="#c0c0c0">&#9881;</text>
-    <text x="780" y="55" fill="#c0c0c0">STAGE</text>
-  </g>
-  <text x="878" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c8be50">&#9889; &#8230;</text>
-  <text x="940" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#4a4a4a">OSC: SDK</text>
-  <line x1="40" y1="72" x2="1080" y2="72" stroke="#3a3a3a" stroke-width="1"/>
+  <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
   <g fill="#ffa133" stroke="none">
     <rect x="40" y="22" width="14" height="13"/>
     <rect x="452" y="22" width="14" height="13"/>
@@ -1294,6 +1290,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <line x1="546" y1="222" x2="546" y2="338"/>
     <line x1="425" y1="280" x2="667" y2="280"/>
   </g>
+<g data-aut-xy-controls="independent" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace"><rect x="425" y="100" width="242" height="20" fill="#222222" stroke="#666666" /><text x="514" y="114" font-size="10" fill="#ffa133" >AUT · XY 1</text><rect x="425" y="222" width="242" height="20" fill="#222222" stroke="#666666" /><text x="514" y="236" font-size="10" fill="#ffa133" >AUT · XY 2</text></g>
   <polyline points="470,190 500,160 546,140 610,126" fill="none" stroke="#8a8a6f" stroke-width="1"/>
   <rect x="606" y="122" width="9" height="9" fill="#ffa133" stroke="none"/>
   <polyline points="626,250 580,270 500,300 462,312" fill="none" stroke="#8a8a6f" stroke-width="1"/>
@@ -1371,21 +1368,22 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <text x="1032" y="326" fill="#c0c0c0">4</text>
     <text x="1032" y="344" fill="#6c6c58">EMPTY</text>
   </g>
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.013">Pad grid</td><td class="c2">12</td><td data-i18n="lp.map.014">Four across, three down. Behaviour comes from the pad mode, not the pad.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.015">Pad mode</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentary, B hold, C toggle, D burst. Sets all twelve; CFG overrides one pad.</td></tr>
-              <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Captioned <code>XY 1</code> and <code data-i18n="lp.fig.016">XY 2</code>. Each axis maps on its own.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">L1 to L4. Hz in FREE, note values in SYNC. Ceilings: sine 4 Hz, square 15 Hz. Shape in CFG.</td></tr>
+              <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Two independent <code>XY 1</code> / <code>XY 2</code> panels: Static or Physics, with friction, bounce, speed and trails. Each axis maps separately.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">T1 to T8. Each slot chooses its waveform, including Square, mode and clock in CFG. Hz in FREE, note values in SYNC.</td></tr>
               <tr><td class="c1">7</td><td>PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.023">CAP captures, slots 1 to 4 recall, OFF exits.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
+            <tr><td class="c1">10</td><td data-i18n="lp.map.autTitle">AUT · XY gesture loops</td><td class="c2">2</td><td data-i18n="lp.map.autFlow">AUT selects XY1/XY2; their separate AUT buttons open settings without recording. SYNC captures 1/2/4 bars from Live’s fresh playing clock; FREE captures 10/20 seconds. Play/Stop are explicit; manual touch overrides a playing loop until release. Saved points never auto-play after reconnect. This loops control data, not native Arrangement automation.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1410,54 +1408,43 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
 
   <!-- Header: same proportions and controls as Fig. 1. -->
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="40" y="40" width="48" height="22"/>
-    <rect x="92" y="40" width="48" height="22"/>
-    <rect x="144" y="40" width="48" height="22"/>
-    <rect x="196" y="40" width="48" height="22"/>
-    <rect x="248" y="40" width="48" height="22"/>
-    <rect x="300" y="40" width="48" height="22"/>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#141414" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
   </g>
-  <rect x="92" y="40" width="48" height="22" fill="#ffa133" stroke="none"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="50" y="55" fill="#c0c0c0">PERF</text>
-    <text x="106" y="55" fill="#141414">MIX</text>
-    <text x="158" y="55" fill="#c0c0c0">SNP</text>
-    <text x="210" y="55" fill="#c0c0c0">SNS</text>
-    <text x="262" y="55" fill="#c0c0c0">AUD</text>
-    <text x="314" y="55" fill="#c0c0c0">VID</text>
-  </g>
-  <text x="372" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">120.0 BPM</text>
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="452" y="40" width="26" height="22"/>
-    <rect x="482" y="40" width="26" height="22"/>
-    <rect x="512" y="40" width="26" height="22"/>
-    <rect x="546" y="40" width="38" height="22"/>
-    <rect x="590" y="40" width="38" height="22"/>
-    <rect x="634" y="40" width="38" height="22"/>
-  </g>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c0c0c0">
-    <text x="459" y="55">&#9198;</text>
-    <text x="490" y="55">&#9654;</text>
-    <text x="519" y="55">&#9197;</text>
-    <text x="552" y="55">TRN</text>
-    <text x="596" y="55">MAP</text>
-    <text x="640" y="55">CFG</text>
-  </g>
-  <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
-    <rect x="686" y="40" width="48" height="22"/>
-    <rect x="740" y="40" width="26" height="22"/>
-    <rect x="772" y="40" width="52" height="22"/>
-  </g>
-  <rect x="686" y="40" width="48" height="22" fill="#c8be50" stroke="none"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="692" y="55" fill="#141414">SYNC</text>
-    <text x="748" y="55" fill="#c0c0c0">&#9881;</text>
-    <text x="780" y="55" fill="#c0c0c0">STAGE</text>
-  </g>
-  <text x="878" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c8be50">&#9889; &#8230;</text>
-  <text x="940" y="55" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#444444">OSC: SDK</text>
-  <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333" stroke-width="1"/>
+  <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
   <!-- Shared callouts. -->
   <g fill="#ffa133" stroke="none">
@@ -1506,17 +1493,17 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g data-mix-fader="7"><rect x="892" y="145" width="62" height="220" class="diagram-cell"/><rect x="919" y="164" width="8" height="154" fill="#0d0d0d"/><path d="M906 175h5 M906 209h5 M906 243h5 M906 277h5 M906 311h5" stroke="#494949"/><rect x="920" y="225.7" width="6" height="92.3" fill="#ffd343"/><rect x="910" y="218.7" width="26" height="14" fill="#303030" stroke="#888888"/><line x1="914" y1="225.7" x2="932" y2="225.7" stroke="#ffd343"/><text x="923" y="338" text-anchor="middle" class="diagram-value">0.65</text><text x="923" y="355" text-anchor="middle" class="diagram-meta">fader-7</text></g>
   <g data-mix-knob="8"><rect x="328" y="261" width="82" height="104" class="diagram-cell"/><g transform="translate(369 302)" style="--dial-color:#5ac8fa"><circle r="23" class="dial-face"/><path d="M -19.09 19.09 A 27 27 0 1 1 19.09 19.09" class="dial-track"/><path d="M -19.09 19.09 A 27 27 0 1 1 19.09 19.09" class="dial-value" pathLength="100" stroke-dasharray="36 100"/><line x1="-6.95" y1="-8.96" x2="-12.91" y2="-16.64" class="dial-pointer"/></g><text x="369" y="341" text-anchor="middle" class="diagram-value">0.36</text><text x="369" y="357" text-anchor="middle" class="diagram-meta">knob-8</text></g>
   <g data-mix-fader="8"><rect x="961" y="145" width="62" height="220" class="diagram-cell"/><rect x="988" y="164" width="8" height="154" fill="#0d0d0d"/><path d="M975 175h5 M975 209h5 M975 243h5 M975 277h5 M975 311h5" stroke="#494949"/><rect x="989" y="281.1" width="6" height="36.9" fill="#ffd343"/><rect x="979" y="274.1" width="26" height="14" fill="#303030" stroke="#888888"/><line x1="983" y1="281.1" x2="1001" y2="281.1" stroke="#ffd343"/><text x="992" y="338" text-anchor="middle" class="diagram-value">0.26</text><text x="992" y="355" text-anchor="middle" class="diagram-meta">fader-8</text></g>
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td>Knobs</td><td class="c2">8</td><td data-i18n-html="lp.map.039"><code>knob-1..8</code>, four across by two down. Relative vertical drag.</td></tr>
               <tr><td class="c1">3</td><td>Faders</td><td class="c2">8</td><td data-i18n-html="lp.map.041"><code>fader-1..8</code>, one row. The thumb moves exactly as far as the finger.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1536,16 +1523,41 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <rect x="20" y="20" width="1080" height="400"/><rect x="32" y="32" width="1056" height="376"/>
   </g>
   <g fill="#444444"><rect x="24" y="196" width="4" height="48"/><rect x="1092" y="206" width="4" height="28"/></g>
-  <g stroke="#666666" fill="#2a2a2a">
-    <rect x="40" y="40" width="48" height="22"/><rect x="92" y="40" width="48" height="22"/><rect x="144" y="40" width="48" height="22"/><rect x="196" y="40" width="48" height="22"/><rect x="248" y="40" width="48" height="22"/><rect x="300" y="40" width="48" height="22"/>
-    <rect x="452" y="40" width="26" height="22"/><rect x="482" y="40" width="26" height="22"/><rect x="512" y="40" width="26" height="22"/><rect x="546" y="40" width="38" height="22"/><rect x="590" y="40" width="38" height="22"/>
-    <rect x="642" y="40" width="48" height="22"/><rect x="696" y="40" width="26" height="22"/><rect x="728" y="40" width="52" height="22"/>
-  </g>
-  <rect x="144" y="40" width="48" height="22" fill="#ffa133"/><rect x="642" y="40" width="48" height="22" fill="#c8be50"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11">
-    <text x="50" y="55" fill="#c0c0c0">PERF</text><text x="106" y="55" fill="#c0c0c0">MIX</text><text x="158" y="55" fill="#141414">SNP</text><text x="210" y="55" fill="#c0c0c0">SNS</text><text x="262" y="55" fill="#c0c0c0">AUD</text><text x="314" y="55" fill="#c0c0c0">VID</text>
-    <text x="372" y="55" fill="#8e8e8e">120.0 BPM</text><text x="459" y="55" fill="#c0c0c0">&#9198;</text><text x="490" y="55" fill="#c0c0c0">&#9654;</text><text x="519" y="55" fill="#c0c0c0">&#9197;</text><text x="552" y="55" fill="#c0c0c0">TRN</text><text x="596" y="55" fill="#c0c0c0">MAP</text>
-    <text x="648" y="55" fill="#141414">SYNC</text><text x="704" y="55" fill="#c0c0c0">&#9881;</text><text x="736" y="55" fill="#c0c0c0">STAGE</text><text x="878" y="55" fill="#c8be50">&#9889; &#8230;</text><text x="940" y="55" fill="#444444">OSC: SDK</text>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#141414" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
   </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
@@ -1566,24 +1578,24 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <rect x="490" y="160" width="235" height="34" fill="#301817" stroke="#ff453a"/><circle cx="540" cy="177" r="4" fill="#ff453a"/><text x="610" y="181" text-anchor="middle" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#ff8b83" data-i18n="lp.fig.013">CAPTURE</text>
   <rect x="490" y="200" width="235" height="25" fill="#1c1c1e" stroke="#484848"/><text x="607" y="217" text-anchor="middle" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" fill="#8e8e8e" data-i18n="lp.fig.014">CLEAR SLOTS</text>
   <rect x="490" y="241" width="235" height="38" fill="#151515" stroke="#444444"/><text x="505" y="264" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#ffa133">1.0 s</text><line x1="552" y1="260" x2="708" y2="260" stroke="#666666" stroke-width="3"/><circle cx="580" cy="260" r="6" fill="#ffa133"/>
-  <rect x="490" y="305" width="112" height="38" fill="#1a1a1a" stroke="#666666"/><rect x="613" y="305" width="112" height="38" fill="#bf5af2" stroke="#bf5af2"/><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" text-anchor="middle"><text x="546" y="328" fill="#8e8e8e" data-i18n="lp.fig.038">GRID (1&#8211;8)</text><text x="669" y="328" fill="#ffffff" data-i18n="lp.fig.037">VECTOR XY</text></g>
+  <rect x="490" y="305" width="112" height="38" fill="#1a1a1a" stroke="#666666"/><rect x="613" y="305" width="112" height="38" fill="#bf5af2" stroke="#bf5af2"/><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" text-anchor="middle"><text x="546" y="328" fill="#8e8e8e" data-i18n="lp.fig.038">GRID (1–8)</text><text x="669" y="328" fill="#ffffff" data-i18n="lp.fig.037">VECTOR XY</text></g>
 
   <rect x="775" y="145" width="285" height="220" fill="#0c0c0e" stroke="#666666"/><line x1="917.5" y1="145" x2="917.5" y2="365" stroke="#333333"/><line x1="775" y1="255" x2="1060" y2="255" stroke="#333333"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="12" fill="#c0c0c0"><text x="786" y="164" data-i18n="lp.fig.105">1 TL</text><text x="1026" y="164" data-i18n="lp.fig.106">2 TR</text><text x="786" y="351" data-i18n="lp.fig.107">3 BL</text><text x="1026" y="351" data-i18n="lp.fig.108">4 BR</text></g>
   <g stroke="#bf5af2" stroke-width="1"><line x1="820" y1="185" x2="928" y2="278"/><line x1="1015" y1="185" x2="928" y2="278"/><line x1="820" y1="325" x2="928" y2="278"/><line x1="1015" y1="325" x2="928" y2="278"/></g><circle cx="928" cy="278" r="9" fill="#bf5af2" stroke="#ffffff"/>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.056">Morph slots</td><td class="c2">8</td><td data-i18n="lp.map.057">Whole controller states in a four-by-two grid; recall or morph to one slot.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.058">Performance controls</td><td class="c2">3</td><td data-i18n-html="lp.map.059"><code data-i18n="lp.fig.013">CAPTURE</code>, <code data-i18n="lp.fig.014">CLEAR SLOTS</code>, transition 0.1–5.0 s or synced, and Grid/Vector.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.060">Vector morph pad</td><td class="c2">1</td><td data-i18n="lp.map.061">Blends slots 1 TL, 2 TR, 3 BL and 4 BR at once, weighted by the point.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1601,12 +1613,43 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" shape-rendering="geometricPrecision" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan view of the RC Surface SNS page with six motion channels, three orientation channels, local visibility controls, and a phone axis diagram">
   <g stroke="#8e8e8e" fill="#1a1a1a"><rect x="20" y="20" width="1080" height="400"/><rect x="32" y="32" width="1056" height="376"/></g>
   <g fill="#444444"><rect x="24" y="196" width="4" height="48"/><rect x="1092" y="206" width="4" height="28"/></g>
-  <g stroke="#666666" fill="#2a2a2a">
-    <rect x="40" y="40" width="48" height="22"/><rect x="92" y="40" width="48" height="22"/><rect x="144" y="40" width="48" height="22"/><rect x="196" y="40" width="48" height="22"/><rect x="248" y="40" width="48" height="22"/><rect x="300" y="40" width="48" height="22"/>
-    <rect x="452" y="40" width="26" height="22"/><rect x="482" y="40" width="26" height="22"/><rect x="512" y="40" width="26" height="22"/><rect x="546" y="40" width="38" height="22"/><rect x="590" y="40" width="38" height="22"/><rect x="642" y="40" width="48" height="22"/><rect x="696" y="40" width="26" height="22"/><rect x="728" y="40" width="76" height="22"/><rect x="810" y="40" width="52" height="22"/>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#141414" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="854" y="55" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
   </g>
-  <rect x="196" y="40" width="48" height="22" fill="#ffa133"/><rect x="642" y="40" width="48" height="22" fill="#c8be50"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11"><text x="50" y="55" fill="#c0c0c0">PERF</text><text x="106" y="55" fill="#c0c0c0">MIX</text><text x="158" y="55" fill="#c0c0c0">SNP</text><text x="210" y="55" fill="#141414">SNS</text><text x="262" y="55" fill="#c0c0c0">AUD</text><text x="314" y="55" fill="#c0c0c0">VID</text><text x="372" y="55" fill="#8e8e8e">120.0 BPM</text><text x="459" y="55" fill="#c0c0c0">&#9198;</text><text x="490" y="55" fill="#c0c0c0">&#9654;</text><text x="519" y="55" fill="#c0c0c0">&#9197;</text><text x="552" y="55" fill="#c0c0c0">TRN</text><text x="596" y="55" fill="#c0c0c0">MAP</text><text x="648" y="55" fill="#141414">SYNC</text><text x="704" y="55" fill="#c0c0c0">&#9881;</text><text x="734" y="55" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text><text x="818" y="55" fill="#c0c0c0">STAGE</text><text x="878" y="55" fill="#c8be50">&#9889; &#8230;</text><text x="940" y="55" fill="#444444">OSC: SDK</text></g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
   <g fill="#ffa133"><rect x="40" y="22" width="14" height="13"/><rect x="452" y="22" width="14" height="13"/><rect x="642" y="22" width="14" height="13"/><rect x="40" y="83" width="14" height="13"/><rect x="535" y="83" width="14" height="13"/><rect x="835" y="83" width="14" height="13"/><rect x="432" y="108" width="14" height="13"/></g>
@@ -1635,19 +1678,19 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <rect x="398" y="137" width="14" height="13" fill="#ffa133"/><text x="402" y="148" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414">5</text>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.076">Motion</td><td class="c2" data-i18n="lp.map.161">6 ax</td><td data-i18n-html="lp.map.077"><code>GX GY GZ</code> angular rate, <code>AX AY AZ</code> acceleration, signed around a centre line.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.078">Orientation</td><td class="c2" data-i18n="lp.map.162">3 ax</td><td data-i18n="lp.map.079">Yaw, pitch and roll as numeric angles.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.080">Local view</td><td class="c2">2</td><td data-i18n="lp.map.081">Shows or hides the two banks on this phone only; the sensors keep running.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.082">Axis key</td><td class="c2" data-i18n="lp.map.162">3 ax</td><td data-i18n="lp.map.083">Ties the channel names to the physical phone, so tilting it becomes a readable gesture.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1665,9 +1708,43 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <svg class="surface-diagram" width="1120" height="602" viewBox="0 0 1120 602" shape-rendering="geometricPrecision" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan view of the RC Surface AUD page with microphone input, an RMS reading, a live 2.5-second history with selectable curves, the detector knobs of the selected group, and twelve grouped audio descriptors">
   <g stroke="#8e8e8e" fill="#1a1a1a"><rect x="20" y="20" width="1080" height="556"/><rect x="32" y="32" width="1056" height="532"/></g>
   <g fill="#444444"><rect x="24" y="196" width="4" height="48"/><rect x="1092" y="206" width="4" height="28"/></g>
-  <g stroke="#666666" fill="#2a2a2a"><rect x="40" y="40" width="48" height="22"/><rect x="92" y="40" width="48" height="22"/><rect x="144" y="40" width="48" height="22"/><rect x="196" y="40" width="48" height="22"/><rect x="248" y="40" width="48" height="22"/><rect x="300" y="40" width="48" height="22"/><rect x="452" y="40" width="26" height="22"/><rect x="482" y="40" width="26" height="22"/><rect x="512" y="40" width="26" height="22"/><rect x="546" y="40" width="38" height="22"/><rect x="590" y="40" width="38" height="22"/><rect x="642" y="40" width="48" height="22"/><rect x="696" y="40" width="26" height="22"/><rect x="728" y="40" width="76" height="22"/><rect x="810" y="40" width="52" height="22"/></g>
-  <rect x="248" y="40" width="48" height="22" fill="#ffa133"/><rect x="642" y="40" width="48" height="22" fill="#c8be50"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11"><text x="50" y="55" fill="#c0c0c0">PERF</text><text x="106" y="55" fill="#c0c0c0">MIX</text><text x="158" y="55" fill="#c0c0c0">SNP</text><text x="210" y="55" fill="#c0c0c0">SNS</text><text x="262" y="55" fill="#141414">AUD</text><text x="314" y="55" fill="#c0c0c0">VID</text><text x="372" y="55" fill="#8e8e8e">120.0 BPM</text><text x="459" y="55" fill="#c0c0c0">&#9198;</text><text x="490" y="55" fill="#c0c0c0">&#9654;</text><text x="519" y="55" fill="#c0c0c0">&#9197;</text><text x="552" y="55" fill="#c0c0c0">TRN</text><text x="596" y="55" fill="#c0c0c0">MAP</text><text x="648" y="55" fill="#141414">SYNC</text><text x="704" y="55" fill="#c0c0c0">&#9881;</text><text x="734" y="55" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text><text x="818" y="55" fill="#c0c0c0">STAGE</text><text x="878" y="55" fill="#c8be50">&#9889; &#8230;</text><text x="940" y="55" fill="#444444">OSC: SDK</text></g>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#141414" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="854" y="55" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
+  </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
   <g class="audio-diagram">
@@ -1743,21 +1820,21 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <g data-descriptor="mid"><rect x="728" y="487" width="332" height="24" class="diagram-cell"/><text x="736" y="501" class="diagram-label">MID</text><text x="1050" y="501" text-anchor="end" fill="#5ac8fa" font-size="12">0.18</text><rect x="736" y="506" width="314" height="3" fill="#303030"/><rect x="736" y="506" width="56.5" height="3" fill="#5ac8fa"/></g>
     <g data-descriptor="high"><rect x="728" y="513" width="332" height="24" class="diagram-cell"/><text x="736" y="527" class="diagram-label">HIGH</text><text x="1050" y="527" text-anchor="end" fill="#2184a8" font-size="12">0.09</text><rect x="736" y="532" width="314" height="3" fill="#303030"/><rect x="736" y="532" width="28.3" height="3" fill="#2184a8"/></g>
   </g>
-  <text x="20" y="594" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="594" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.098">Audio input</td><td class="c2">1</td><td data-i18n="lp.map.099">Pick the browser default or a permitted input, then enable capture. It never starts by itself.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.100">Input level</td><td class="c2">1</td><td data-i18n="lp.map.101">Input RMS, normalized 0..1. Not perceived loudness.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.102">Signal history</td><td class="c2">1</td><td data-i18n="lp.map.103">Live 2.5-second history: Amplitude, Attacks, Tone, Texture, Bands or All.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.104">Detector knobs</td><td class="c2">10</td><td data-i18n="lp.map.105">SENS, RELEASE, CURVE, group GAIN and SMOOTH. Note divisions in SYNC, milliseconds in FREE.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.106">Analysis window</td><td class="c2">1</td><td data-i18n-html="lp.map.107">WINDOW x1/x2/x4 trades spectral detail for response time.</td></tr>
               <tr><td class="c1">7</td><td data-i18n="lp.audio.detectors">Built-in audio detectors</td><td class="c2">12</td><td data-i18n="lp.audio.detector-note">Twelve 0..1 mapping sources: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1772,12 +1849,46 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <span data-i18n="lp.map.007">Proj. plan</span>
         </div>
         <div class="figwrap" style="margin-top:14px">
-<svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" shape-rendering="geometricPrecision" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan view of the RC Surface VID page with camera controls and PALM FACE diagnostics, three learned-pose cards, four built-in detectors, direct hand MAP X Y Z, and intentional clutch readouts">
+<svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" shape-rendering="geometricPrecision" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan view of the RC Surface VID page with camera controls, a scrollable learned-pose bank up to fifteen cards, four built-in detectors, direct hand MAP X Y Z, and intentional clutch readouts">
   <g stroke="#8e8e8e" fill="#1a1a1a"><rect x="20" y="20" width="1080" height="400"/><rect x="32" y="32" width="1056" height="376"/></g>
   <g fill="#444444"><rect x="24" y="196" width="4" height="48"/><rect x="1092" y="206" width="4" height="28"/></g>
-  <g stroke="#666666" fill="#2a2a2a"><rect x="40" y="40" width="48" height="22"/><rect x="92" y="40" width="48" height="22"/><rect x="144" y="40" width="48" height="22"/><rect x="196" y="40" width="48" height="22"/><rect x="248" y="40" width="48" height="22"/><rect x="300" y="40" width="48" height="22"/><rect x="452" y="40" width="26" height="22"/><rect x="482" y="40" width="26" height="22"/><rect x="512" y="40" width="26" height="22"/><rect x="546" y="40" width="38" height="22"/><rect x="590" y="40" width="38" height="22"/><rect x="642" y="40" width="48" height="22"/><rect x="696" y="40" width="26" height="22"/><rect x="728" y="40" width="76" height="22"/><rect x="810" y="40" width="52" height="22"/></g>
-  <rect x="300" y="40" width="48" height="22" fill="#ffa133"/><rect x="642" y="40" width="48" height="22" fill="#c8be50"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11"><text x="50" y="55" fill="#c0c0c0">PERF</text><text x="106" y="55" fill="#c0c0c0">MIX</text><text x="158" y="55" fill="#c0c0c0">SNP</text><text x="210" y="55" fill="#c0c0c0">SNS</text><text x="262" y="55" fill="#c0c0c0">AUD</text><text x="314" y="55" fill="#141414">VID</text><text x="372" y="55" fill="#8e8e8e">120.0 BPM</text><text x="459" y="55" fill="#c0c0c0">&#9198;</text><text x="490" y="55" fill="#c0c0c0">&#9654;</text><text x="519" y="55" fill="#c0c0c0">&#9197;</text><text x="552" y="55" fill="#c0c0c0">TRN</text><text x="596" y="55" fill="#c0c0c0">MAP</text><text x="648" y="55" fill="#141414">SYNC</text><text x="704" y="55" fill="#c0c0c0">&#9881;</text><text x="734" y="55" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text><text x="818" y="55" fill="#c0c0c0">STAGE</text><text x="878" y="55" fill="#c8be50">&#9889; &#8230;</text><text x="940" y="55" fill="#444444">OSC: SDK</text></g>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#141414" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="854" y="55" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.001">CALIBRATE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
+  </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
   <g fill="#ffa133"><rect x="40" y="22" width="14" height="13"/><rect x="452" y="22" width="14" height="13"/><rect x="642" y="22" width="14" height="13"/></g>
@@ -1786,50 +1897,197 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <rect x="40" y="86" width="1040" height="304" fill="#222222" stroke="#666666"/><text x="55" y="105" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#c8be50" data-i18n="lp.fig.006">VISION</text><text x="970" y="105" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" fill="#6c6c58" data-i18n="lp.fig.111">hand / intent</text>
 
   <!-- Camera: the whole left side, at the full height. -->
-  <rect x="55" y="115" width="372" height="267" fill="#000000" stroke="#555555"/><line x1="55" y1="133" x2="427" y2="133" stroke="#333333"/><text x="73" y="128" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.017">CAMERA</text><text x="419" y="128" text-anchor="end" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#6c6c58" data-i18n="lp.fig.114">LIVE CHECK</text><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" text-anchor="middle"><text x="241" y="250" font-size="11" fill="#55555c" data-i18n="lp.fig.018">CAMERA OFF</text><text x="241" y="267" font-size="9" fill="#44444b" data-i18n="lp.fig.035">Enable Camera to begin</text></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9"><text x="74" y="370" fill="#8e8e8e">PALM <tspan fill="#65e7ac">0.00</tspan></text><text x="154" y="370" fill="#8e8e8e">FACE <tspan fill="#65e7ac">+0.00</tspan></text><text x="265" y="370" fill="#44444b" data-i18n="lp.fig.112">CAMERA DIAGNOSTICS</text></g>
+  <rect x="55" y="115" width="372" height="267" fill="#000000" stroke="#555555"/><line x1="55" y1="133" x2="427" y2="133" stroke="#333333"/><text x="73" y="128" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.017">CAMERA</text><text x="419" y="128" text-anchor="end" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#6c6c58" data-i18n="lp.fig.114">LIVE CHECK</text><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" text-anchor="middle"><text x="241" y="250" font-size="11" fill="#55555c" data-i18n="lp.fig.018">CAMERA OFF</text><text x="241" y="267" font-size="9" fill="#44444b" data-i18n="lp.fig.035">Enable Camera to begin</text></g>
 
   <!-- Controls column: camera commands, then one row per learned pose. -->
   <g stroke="#555555" fill="#181818"><rect x="440" y="115" width="180" height="26"/><rect x="628" y="115" width="210" height="26"/><rect x="846" y="115" width="219" height="26"/></g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#c0c0c0"><text x="459" y="132" data-i18n="lp.fig.017">CAMERA</text><text x="638" y="132" fill="#6c6c58">CONF</text><text x="676" y="132" data-i18n="lp.fig.031">MEDIUM</text><text x="856" y="132" fill="#6c6c58">REC</text><text x="888" y="132" data-i18n="lp.fig.032">BALANCED</text></g><rect x="582" y="121" width="26" height="14" fill="#333333" stroke="#666666"/><rect x="584" y="123" width="10" height="10" fill="#8e8e8e"/>
-  <rect x="440" y="147" width="625" height="121" fill="#141414" stroke="#555555"/><text x="459" y="161" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" fill="#c0c0c0" data-i18n="lp.fig.019">LEARNED POSES</text><text x="1053" y="161" text-anchor="end" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#6c6c58" data-i18n="lp.fig.113">3 examples each &#183; momentary 0 &#8594; 1</text>
+  <rect x="440" y="147" width="625" height="121" fill="#141414" stroke="#555555"/><text x="459" y="161" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10" fill="#c0c0c0" data-i18n="lp.fig.019">LEARNED POSES</text><text x="914" y="161" text-anchor="end" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#6c6c58" data-i18n="lp.fig.113">3 to start · up to 6 · momentary 0 → 1</text>
   <g stroke="#555555" fill="#1f1f1f"><rect x="452" y="167" width="601" height="29"/><rect x="452" y="200" width="601" height="29"/><rect x="452" y="233" width="601" height="29"/></g>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10"><text x="462" y="180" fill="#ffa133">G1</text><text x="462" y="192" font-size="8" fill="#8e8e8e">0 / 3</text><text x="462" y="213" fill="#ffa133">G2</text><text x="462" y="225" font-size="8" fill="#8e8e8e">0 / 3</text><text x="462" y="246" fill="#ffa133">G3</text><text x="462" y="258" font-size="8" fill="#8e8e8e">0 / 3</text></g>
+  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10"><text x="462" y="180" fill="#ffa133">G1</text><text x="462" y="192" font-size="8" fill="#8e8e8e">0 / 6</text><text x="462" y="213" fill="#ffa133">G2</text><text x="462" y="225" font-size="8" fill="#8e8e8e">0 / 6</text><text x="462" y="246" fill="#ffa133">G3</text><text x="462" y="258" font-size="8" fill="#8e8e8e">0 / 6</text></g>
   <g stroke="#666666"><rect x="510" y="170" width="150" height="23" fill="#10233a" stroke="#0a84ff"/><rect x="666" y="170" width="124" height="23" fill="#302416" stroke="#ffa133"/><rect x="796" y="170" width="124" height="23" fill="#241818"/><rect x="926" y="170" width="121" height="23" fill="#241818"/><rect x="510" y="203" width="150" height="23" fill="#10233a" stroke="#0a84ff"/><rect x="666" y="203" width="124" height="23" fill="#302416" stroke="#ffa133"/><rect x="796" y="203" width="124" height="23" fill="#241818"/><rect x="926" y="203" width="121" height="23" fill="#241818"/><rect x="510" y="236" width="150" height="23" fill="#10233a" stroke="#0a84ff"/><rect x="666" y="236" width="124" height="23" fill="#302416" stroke="#ffa133"/><rect x="796" y="236" width="124" height="23" fill="#241818"/><rect x="926" y="236" width="121" height="23" fill="#241818"/></g>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" text-anchor="middle"><g fill="#7fc1ff"><text x="585" y="185">CAP</text><text x="585" y="218">CAP</text><text x="585" y="251">CAP</text></g><g fill="#ffbd60"><text x="728" y="185" data-i18n="lp.fig.007">TEST</text><text x="728" y="218" data-i18n="lp.fig.007">TEST</text><text x="728" y="251" data-i18n="lp.fig.007">TEST</text></g><g fill="#ff8b8b"><text x="858" y="185" data-i18n="lp.fig.008">DEL LAST</text><text x="986" y="185" data-i18n="lp.fig.009">CLR</text><text x="858" y="218" data-i18n="lp.fig.008">DEL LAST</text><text x="986" y="218" data-i18n="lp.fig.009">CLR</text><text x="858" y="251" data-i18n="lp.fig.008">DEL LAST</text><text x="986" y="251" data-i18n="lp.fig.009">CLR</text></g></g>
 
   <rect x="440" y="274" width="625" height="38" fill="#181818" stroke="#555555"/><text x="459" y="287" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#c0c0c0" data-i18n="lp.fig.020">BUILT-IN DETECTORS</text>
   <g stroke="#666666" fill="#222222"><rect x="452" y="292" width="145" height="15"/><rect x="603" y="292" width="145" height="15"/><rect x="754" y="292" width="145" height="15"/><rect x="905" y="292" width="148" height="15"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="9" fill="#c0c0c0" text-anchor="middle"><text x="524" y="303" data-i18n="lp.fig.021">OPEN</text><text x="675" y="303" data-i18n="lp.fig.022">FIST</text><text x="826" y="303" data-i18n="lp.fig.023">PINCH</text><text x="979" y="303">VICTORY</text></g>
 
+  <rect x="928" y="149" width="122" height="15" fill="#222222" stroke="#666666" /><text x="933" y="160" font-size="8" fill="#ffa133" data-pose-add="15">+ ADD POSE</text><g data-pose-bank="15" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="8" fill="#8e8e8e"><text x="491" y="192">×</text><text x="491" y="225">×</text><text x="491" y="258">×</text><rect x="1056" y="169" width="3" height="91" fill="#333333"/><rect x="1056" y="169" width="3" height="22" fill="#666666"/></g>
   <!-- Direct MAP and CLUTCH readouts under the controls. -->
   <g stroke="#555555" fill="#141416"><rect x="440" y="318" width="625" height="30"/><rect x="440" y="352" width="625" height="30"/></g>
-  <g stroke="#444444" fill="#101012"><rect x="505" y="323" width="178" height="20"/><rect x="690" y="323" width="178" height="20"/><rect x="875" y="323" width="178" height="20"/><rect x="512" y="357" width="120" height="20"/><rect x="638" y="357" width="135" height="20"/><rect x="779" y="357" width="135" height="20"/><rect x="920" y="357" width="133" height="20"/></g>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="10"><text x="459" y="337" fill="#8e8e8e">MAP</text><text x="515" y="337" fill="#65e7ac">X 0.50</text><text x="700" y="337" fill="#65e7ac">Y 0.50</text><text x="885" y="337" fill="#65e7ac">Z 0.00</text><text x="452" y="371" fill="#8e8e8e">CLUTCH</text><text x="522" y="371" fill="#c0c0c0">OFF</text><text x="648" y="371" fill="#65e7ac">X 0.50</text><text x="789" y="371" fill="#65e7ac">Y 0.50</text><text x="930" y="371" fill="#65e7ac">Z 0.50</text></g>
+<g data-direct-map="xyz-palm-face" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+<text x="450" y="337" font-size="9" fill="#8e8e8e" >MAP</text>
+<rect x="500" y="323" width="100" height="20" fill="#141414" stroke="#444444" />
+<text x="504" y="337" font-size="9" fill="#bccabb" >X 0.50</text>
+<rect x="607" y="323" width="100" height="20" fill="#141414" stroke="#444444" />
+<text x="611" y="337" font-size="9" fill="#bccabb" >Y 0.50</text>
+<rect x="714" y="323" width="100" height="20" fill="#141414" stroke="#444444" />
+<text x="718" y="337" font-size="9" fill="#bccabb" >Z 0.00</text>
+<rect x="821" y="323" width="110" height="20" fill="#141414" stroke="#444444" />
+<text x="825" y="337" font-size="9" fill="#bccabb" >PALM 0.28</text>
+<rect x="939" y="323" width="100" height="20" fill="#141414" stroke="#444444" />
+<text x="943" y="337" font-size="9" fill="#bccabb" >FACE -0.60</text>
+<text x="452" y="371" font-size="9" fill="#8e8e8e" >CLUTCH</text>
+<text x="522" y="371" font-size="9" fill="#c0c0c0" >OFF</text>
+<text x="648" y="371" font-size="10" fill="#bccabb" >X 0.50</text>
+<text x="789" y="371" font-size="10" fill="#bccabb" >Y 0.50</text>
+<text x="930" y="371" font-size="10" fill="#bccabb" >Z 0.50</text>
+</g>
 
   <g fill="#ffa133"><rect x="54" y="114" width="14" height="13"/><rect x="439" y="114" width="14" height="13"/><rect x="439" y="146" width="14" height="13"/><rect x="439" y="273" width="14" height="13"/><rect x="439" y="317" width="14" height="13"/><rect x="54" y="356" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="58" y="125">2</text><text x="443" y="125">2</text><text x="443" y="157">3</text><text x="443" y="284">4</text><text x="443" y="328">5</text><text x="58" y="367">6</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
           <table class="data">
             <thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead>
             <tbody>
-              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP overlays the current page; CFG shows on PERF and MIX.</td></tr>
+              <tr><td class="c1">1</td><td data-i18n="lp.map.011">Page tabs</td><td class="c2">7</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID, REC. MAP overlays the current page; AUT selects XY loops in PERF; CFG configures controls.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.122">Camera</td><td class="c2">1</td><td data-i18n="lp.map.123">On/off, confidence, recognition mode, and the live preview.</td></tr>
-              <tr><td class="c1">3</td><td data-i18n="lp.map.124">Learned poses</td><td class="c2">3</td><td data-i18n-html="lp.map.125">G1, G2 and G3, three examples each: <code>CAP</code>, <code data-i18n="lp.fig.007">TEST</code>, <code data-i18n="lp.fig.008">DEL LAST</code>, <code data-i18n="lp.fig.009">CLR</code>. Recognition emits a momentary 0→1.</td></tr>
+              <tr><td class="c1">3</td><td data-i18n="lp.map.124">Learned poses</td><td class="c2">3–15</td><td data-i18n-html="lp.map.125">Starts with G1–G3; + ADD POSE grows to fifteen cards. Capture 3–6 examples per pose; X removes a card, CLR keeps it. RETAKE/KEEP review isolated or conflicting captures without changing recognition.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.126">Built-in detectors</td><td class="c2">4</td><td data-i18n="lp.map.127">Open, Fist, Pinch and Victory, opt-in and untrained. Rotation belongs to Victory.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.128">Direct MAP / CLUTCH</td><td class="c2">2</td><td data-i18n="lp.map.129">MAP X/Y/Z follows the hand; CLUTCH X/Y/Z is relative and freezes when the pinch opens.</td></tr>
-              <tr><td class="c1">6</td><td data-i18n="lp.map.130">Camera diagnostics</td><td class="c2">2</td><td data-i18n="lp.map.131">PALM size and signed FACE stay local to the preview; they are not mapping controls.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.128">Direct MAP / CLUTCH</td><td class="c2">2</td><td data-i18n="lp.map.129">MAP X/Y/Z, PALM and FACE are continuous mapping inputs. CLUTCH X/Y/Z is relative and freezes when the pinch opens.</td></tr>
+              <tr><td class="c1">6</td><td data-i18n="lp.map.130">Palm mapping inputs</td><td class="c2">2</td><td data-i18n="lp.map.131">PALM size and signed FACE are shown raw; MAP uses normalized 0–1 values. FACE is palm/back orientation, not facial tracking. Missing/invalid samples follow Safe loss.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
         </div>
       </figure>
 
+<figure class="surface-sheet" id="surface-map-rec" data-surface-plan="rec" role="region" aria-labelledby="surface-label-rec">
+<div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement recording</span><span data-i18n="lp.map.006">Scale none</span><span data-i18n="lp.map.007">Proj. plan</span></div>
+<div class="figwrap" style="margin-top:14px">
+<svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" xmlns="http://www.w3.org/2000/svg" role="img" data-i18n-aria-label="lp.rec.aria" aria-label="Plan view of REC: marker timeline with bar.beat labels, Zoom, start/end Loop, pre-roll choices, REC/STOP/click and armed input cards">
+<g data-diagram-frame="rec">
+<rect x="20" y="20" width="1080" height="400" fill="#141414" stroke="#8e8e8e" />
+<rect x="32" y="32" width="1056" height="376" fill="#141414" stroke="#8e8e8e" />
+</g>
+<g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#c0c0c0" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#141414" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
+  </g>
+  <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
+<g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+<text x="48" y="96" font-size="12" fill="#c0c0c0" >ARRANGEMENT REC</text>
+<text x="938" y="96" font-size="11" fill="#ffa133" >READY</text>
+<rect x="48" y="108" width="108" height="36" fill="#222222" stroke="#ffa133" />
+<text x="72" y="131" font-size="13" fill="#ffa133" >REC</text>
+<rect x="164" y="108" width="108" height="36" fill="#222222" stroke="#eeeeee" />
+<text x="188" y="131" font-size="13" fill="#eeeeee" >STOP</text>
+<rect x="280" y="108" width="108" height="36" fill="#222222" stroke="#c0c0c0" />
+<text x="304" y="131" font-size="13" fill="#c0c0c0" >CLICK</text>
+<rect x="400" y="108" width="670" height="100" fill="#141414" stroke="#444444" />
+<text x="414" y="125" font-size="9" fill="#8e8e8e" >MARKERS · 9.1</text>
+<text x="936" y="125" font-size="10" fill="#c0c0c0" >ZOOM − / +</text>
+<g data-rec-timeline="musical-scale" data-end-gutters="both"><path d="M448 139H1024M664 136v68" fill="none" stroke="#8e8e8e"/>
+<rect x="416" y="148" width="64" height="45" fill="#222222" stroke="#444444" />
+<text x="425" y="164" font-size="10" fill="#eeeeee" >9.1</text>
+<text x="425" y="181" font-size="9" fill="#8e8e8e" >REC</text>
+<rect x="704" y="148" width="64" height="45" fill="#222222" stroke="#444444" />
+<text x="713" y="164" font-size="10" fill="#eeeeee" >13.1</text>
+<text x="713" y="181" font-size="9" fill="#8e8e8e" >END</text>
+<rect x="992" y="148" width="64" height="45" fill="#222222" stroke="#444444" />
+<text x="1001" y="164" font-size="10" fill="#eeeeee" >17.1</text>
+<text x="1001" y="181" font-size="9" fill="#8e8e8e" >NEXT</text>
+</g>
+<text x="48" y="237" font-size="10" fill="#8e8e8e" data-i18n="lp.rec.start">START</text>
+<rect x="108" y="217" width="180" height="34" fill="#222222" stroke="#666666" />
+<text x="120" y="238" font-size="11" fill="#c0c0c0" >REC · 9.1</text>
+<rect x="300" y="217" width="136" height="34" fill="#222222" stroke="#ffa133" />
+<text x="312" y="238" font-size="11" fill="#ffa133" >LOOP · ON</text>
+<text x="456" y="238" font-size="10" fill="#8e8e8e" data-i18n="lp.rec.end">END</text>
+<rect x="505" y="217" width="180" height="34" fill="#222222" stroke="#666666" />
+<text x="517" y="238" font-size="11" fill="#c0c0c0" >END · 13.1</text>
+<text x="48" y="278" font-size="10" fill="#8e8e8e" >PRE-ROLL</text>
+<rect x="140" y="257" width="59" height="34" fill="#222222" stroke="#444444" />
+<text x="156" y="279" font-size="11" fill="#c0c0c0" >OFF</text>
+<rect x="199" y="257" width="59" height="34" fill="#222222" stroke="#ffa133" />
+<text x="215" y="279" font-size="11" fill="#ffa133" >1</text>
+<rect x="258" y="257" width="59" height="34" fill="#222222" stroke="#444444" />
+<text x="274" y="279" font-size="11" fill="#c0c0c0" >2</text>
+<rect x="317" y="257" width="59" height="34" fill="#222222" stroke="#444444" />
+<text x="333" y="279" font-size="11" fill="#c0c0c0" >4</text>
+<text x="48" y="309" font-size="10" fill="#8e8e8e" data-i18n="lp.rec.tracksLabel">TRACKS</text>
+<text x="794" y="309" font-size="10" fill="#ffa133" >ARM MULTI / EXCLUSIVE</text>
+<rect x="48" y="320" width="246" height="72" fill="#222222" stroke="#444444" />
+<text x="58" y="339" font-size="11" fill="#c0c0c0" >1 · Kick</text>
+<rect x="56" y="348" width="74" height="33" fill="#141414" stroke="#ffa133" data-rec-track-action="arm"/>
+<text x="67" y="369" font-size="10" fill="#ffa133" >ARM</text>
+<rect x="134" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="solo"/>
+<text x="145" y="369" font-size="10" fill="#c0c0c0" >SOLO</text>
+<rect x="212" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
+<text x="223" y="369" font-size="10" fill="#c0c0c0" >MUTE</text>
+<rect x="306" y="320" width="246" height="72" fill="#222222" stroke="#444444" />
+<text x="316" y="339" font-size="11" fill="#c0c0c0" >2 · Snare</text>
+<rect x="314" y="348" width="74" height="33" fill="#141414" stroke="#ffa133" data-rec-track-action="arm"/>
+<text x="325" y="369" font-size="10" fill="#ffa133" >ARM</text>
+<rect x="392" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="solo"/>
+<text x="403" y="369" font-size="10" fill="#c0c0c0" >SOLO</text>
+<rect x="470" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
+<text x="481" y="369" font-size="10" fill="#c0c0c0" >MUTE</text>
+<rect x="564" y="320" width="246" height="72" fill="#222222" stroke="#444444" />
+<text x="574" y="339" font-size="11" fill="#c0c0c0" >3 · Overhead L</text>
+<rect x="572" y="348" width="74" height="33" fill="#141414" stroke="#ffa133" data-rec-track-action="arm"/>
+<text x="583" y="369" font-size="10" fill="#ffa133" >ARM</text>
+<rect x="650" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="solo"/>
+<text x="661" y="369" font-size="10" fill="#c0c0c0" >SOLO</text>
+<rect x="728" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
+<text x="739" y="369" font-size="10" fill="#c0c0c0" >MUTE</text>
+<rect x="822" y="320" width="246" height="72" fill="#222222" stroke="#444444" />
+<text x="832" y="339" font-size="11" fill="#c0c0c0" >4 · Overhead R</text>
+<rect x="830" y="348" width="74" height="33" fill="#141414" stroke="#ffa133" data-rec-track-action="arm"/>
+<text x="841" y="369" font-size="10" fill="#ffa133" >ARM</text>
+<rect x="908" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="solo"/>
+<text x="919" y="369" font-size="10" fill="#c0c0c0" >SOLO</text>
+<rect x="986" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
+<text x="997" y="369" font-size="10" fill="#c0c0c0" >MUTE</text>
+</g>
+<text x="20" y="436" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+</svg></div>
+<div class="scroll" tabindex="0" style="margin-top:16px"><table class="data"><thead><tr><th>N</th><th data-i18n="lp.map.008">Region</th><th data-i18n="lp.map.009">Qty</th><th data-i18n="lp.map.010">What it is</th></tr></thead><tbody>
+<tr><td class="c1">1</td><td data-i18n="lp.rec.timeline">Markers / bar.beat / Zoom</td><td class="c2">1</td><td data-i18n="lp.rec.timelineFlow">Create markers in Live. Tap a marker to position native playback, then use header Play to listen. Zoom and scroll preserve musical scale; both end cards have gutters.</td></tr>
+<tr><td class="c1">2</td><td data-i18n="lp.rec.range">Start / end / Loop</td><td class="c2">1</td><td data-i18n="lp.rec.rangeFlow">Choose a start marker; optionally enable Loop and choose a later end marker. Live confirms the region before REC. Loop repeats until STOP.</td></tr>
+<tr><td class="c1">3</td><td data-i18n="lp.rec.preRoll">PRE-ROLL OFF / 1 / 2 / 4</td><td class="c2">4</td><td data-i18n="lp.rec.preRollFlow">OFF starts at the marker. 1/2/4 play earlier bars with click before native Punch In opens at the marker. This browser preference does not set Live’s read-only native count-in.</td></tr>
+<tr><td class="c1">4</td><td data-i18n="lp.rec.tracks">Track cards / ARM / SOLO / MUTE</td><td class="c2">1–256</td><td data-i18n="lp.rec.tracksFlow">ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP disarms only that attempt’s identities. Groups can SOLO/MUTE but cannot ARM.</td></tr>
+<tr><td class="c1">5</td><td data-i18n="lp.rec.transport">REC / STOP / CLICK</td><td class="c2">3</td><td data-i18n="lp.rec.transportFlow">STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. Unknown state blocks recording; readouts do not prove audio capture or take preservation.</td></tr>
+</tbody></table></div></figure>
+
       <figure class="surface-sheet" id="surface-map-map" data-surface-plan="map" role="region" aria-labelledby="surface-label-map">
         <div class="bar">
-          <span data-i18n="lp.map.137">Fig. 7</span>
+          <span data-i18n="lp.map.137">Fig. 8</span>
           <span class="grow" data-i18n="lp.map.138">MAP — armed strip, then target picker</span>
           <span data-i18n="lp.map.006">Scale none</span>
           <span data-i18n="lp.map.007">Proj. plan</span>
@@ -1838,9 +2096,42 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <svg class="surface-diagram" width="1120" height="442" viewBox="0 0 1120 442" shape-rendering="geometricPrecision" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan diagram of MAP as an overlay on the current RC Surface page, showing the armed strip followed by a right-side hierarchical Track Device Parameter picker">
   <g stroke="#8e8e8e" fill="#1a1a1a"><rect x="20" y="20" width="1080" height="400"/><rect x="32" y="32" width="1056" height="376"/></g>
   <g fill="#444444"><rect x="24" y="196" width="4" height="48"/><rect x="1092" y="206" width="4" height="28"/></g>
-  <g stroke="#666666" fill="#2a2a2a"><rect x="40" y="40" width="48" height="22"/><rect x="92" y="40" width="48" height="22"/><rect x="144" y="40" width="48" height="22"/><rect x="196" y="40" width="48" height="22"/><rect x="248" y="40" width="48" height="22"/><rect x="300" y="40" width="48" height="22"/><rect x="452" y="40" width="26" height="22"/><rect x="482" y="40" width="26" height="22"/><rect x="512" y="40" width="26" height="22"/><rect x="546" y="40" width="38" height="22"/><rect x="590" y="40" width="38" height="22"/><rect x="642" y="40" width="48" height="22"/><rect x="696" y="40" width="26" height="22"/><rect x="728" y="40" width="52" height="22"/></g>
-  <rect x="92" y="40" width="48" height="22" fill="#ffa133"/><rect x="590" y="40" width="38" height="22" fill="#0a84ff"/><rect x="642" y="40" width="48" height="22" fill="#c8be50"/>
-  <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11"><text x="50" y="55" fill="#c0c0c0">PERF</text><text x="106" y="55" fill="#141414">MIX</text><text x="158" y="55" fill="#c0c0c0">SNP</text><text x="210" y="55" fill="#c0c0c0">SNS</text><text x="262" y="55" fill="#c0c0c0">AUD</text><text x="314" y="55" fill="#c0c0c0">VID</text><text x="372" y="55" fill="#8e8e8e">120.0 BPM</text><text x="459" y="55" fill="#c0c0c0">&#9198;</text><text x="490" y="55" fill="#c0c0c0">&#9654;</text><text x="519" y="55" fill="#c0c0c0">&#9197;</text><text x="552" y="55" fill="#c0c0c0">TRN</text><text x="596" y="55" fill="#ffffff">MAP</text><text x="648" y="55" fill="#141414">SYNC</text><text x="704" y="55" fill="#c0c0c0">&#9881;</text><text x="736" y="55" fill="#c0c0c0">STAGE</text><text x="878" y="55" fill="#c8be50">&#9889; &#8230;</text><text x="940" y="55" fill="#444444">OSC: SDK</text></g>
+  <g data-plan-header="seven-pages" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace">
+  <rect x="40" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="perf"/>
+  <text x="44" y="55" font-size="10" fill="#c0c0c0" >PERF</text>
+  <rect x="85" y="40" width="41" height="22" fill="#ffa133" stroke="#666666" data-page-tab="mix"/>
+  <text x="89" y="55" font-size="10" fill="#141414" >MIX</text>
+  <rect x="130" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="snp"/>
+  <text x="134" y="55" font-size="10" fill="#c0c0c0" >SNP</text>
+  <rect x="175" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="sns"/>
+  <text x="179" y="55" font-size="10" fill="#c0c0c0" >SNS</text>
+  <rect x="220" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="aud"/>
+  <text x="224" y="55" font-size="10" fill="#c0c0c0" >AUD</text>
+  <rect x="265" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="vid"/>
+  <text x="269" y="55" font-size="10" fill="#c0c0c0" >VID</text>
+  <rect x="310" y="40" width="41" height="22" fill="#222222" stroke="#666666" data-page-tab="rec"/>
+  <text x="314" y="55" font-size="10" fill="#c0c0c0" >REC</text>
+  <text x="366" y="55" font-size="10" fill="#8e8e8e" >120.0 BPM</text>
+  <rect x="448" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="478" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <rect x="508" y="40" width="26" height="22" fill="#222222" stroke="#666666" />
+  <path d="M456 47v9M456 51l9-5v10zM486 46l9 5-9 5zM524 47v9M524 51l-9-5v10z" fill="#c0c0c0" stroke="#c0c0c0"/>
+  <rect x="540" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="544" y="55" font-size="10" fill="#c0c0c0" >TRN</text>
+  <rect x="582" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="586" y="55" font-size="10" fill="#c0c0c0" >MAP</text>
+  <rect x="624" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="628" y="55" font-size="10" fill="#c0c0c0" data-header-mode="aut">AUT</text>
+  <rect x="666" y="40" width="38" height="22" fill="#222222" stroke="#666666" />
+  <text x="670" y="55" font-size="10" fill="#c0c0c0" >CFG</text>
+  <rect x="710" y="40" width="46" height="22" fill="#c8be50" stroke="#666666" />
+  <text x="714" y="55" font-size="10" fill="#141414" >SYNC</text>
+  <rect x="762" y="40" width="25" height="22" fill="#222222" stroke="#666666" />
+  <text x="766" y="55" font-size="10" fill="#c0c0c0" >⚙</text>
+  <rect x="793" y="40" width="51" height="22" fill="#222222" stroke="#666666" />
+  <text x="797" y="55" font-size="10" fill="#c0c0c0" >STAGE</text>
+  <text x="970" y="55" font-size="10" fill="#8e8e8e" >OSC: LIVE</text>
+  </g>
   <line x1="40" y1="72" x2="1080" y2="72" stroke="#333333"/>
 
   <g fill="#ffa133"><rect x="40" y="22" width="14" height="13"/><rect x="452" y="22" width="14" height="13"/><rect x="642" y="22" width="14" height="13"/></g>
@@ -1877,7 +2168,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <g fill="#ffa133"><rect x="254" y="109" width="14" height="13"/><rect x="679" y="85" width="14" height="13"/><rect x="697" y="137" width="14" height="13"/><rect x="697" y="195" width="14" height="13"/><rect x="927" y="137" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="258" y="120">2</text><text x="683" y="96">3</text><text x="701" y="148">4</text><text x="701" y="206">5</text><text x="931" y="148">6</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW &#8212; DRAWN FOR THIS SHEET &#8212; NOT A SCREENSHOT &#8212; NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -1890,7 +2181,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">4</td><td data-i18n="lp.map.150">Target filter</td><td class="c2">1</td><td data-i18n-html="lp.map.151">Searches target names; <code>Selected in Live</code> narrows to the current track and device.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.152">Hierarchy</td><td class="c2" data-i18n="lp.map.163">3 levels</td><td data-i18n="lp.map.153">Track → Device → Parameter, plus Song/Main/Master and Return groups.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.154">Live selection shortcut</td><td class="c2">1</td><td data-i18n="lp.map.155">Uses Live's selected track and device as a filter; it picks no parameter for you.</td></tr>
-              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, CFG.</td></tr>
+              <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.</td></tr>
             </tbody>
           </table>
@@ -1933,9 +2224,9 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           </thead>
           <tbody>
             <tr><td class="c1">00</td><td data-i18n="lp.controls.010">Performance pads</td><td class="c2">12</td><td>PERF</td><td class="c2">MIDI</td><td data-i18n="lp.controls.011">Clip, scene or a trigger note</td></tr>
-            <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Pad modes A&#8211;D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Pad behaviour; CFG overrides it per pad</td></tr>
+            <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Pad modes A–D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Pad behaviour; CFG overrides it per pad</td></tr>
             <tr><td class="c1">02</td><td>XY pads</td><td class="c2">2</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.016">Two parameters per pad</td></tr>
-            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs L1&#8211;L8</td><td class="c2">8</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Any mapped parameter</td></tr>
+            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs T1–T8</td><td class="c2">8</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Any mapped parameter</td></tr>
             <tr><td class="c1">05</td><td data-i18n="lp.controls.021">PERF UTIL column</td><td class="c2">6</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.023">CAP, slots 1–4, OFF</td></tr>
             <tr><td class="c1">06</td><td>Knobs</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.025">Device parameter</td></tr>
             <tr><td class="c1">07</td><td>Faders</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.027">Track volume</td></tr>
@@ -1945,7 +2236,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tr><td class="c1">0B</td><td data-i18n="lp.map.076">Motion</td><td class="c2" data-i18n="lp.map.161">6 ax</td><td>SNS</td><td class="c2">SDK</td><td data-i18n="lp.controls.036">GX GY GZ, AX AY AZ</td></tr>
             <tr><td class="c1">0C</td><td data-i18n="lp.map.078">Orientation</td><td class="c2" data-i18n="lp.map.162">3 ax</td><td>SNS</td><td class="c2">SDK</td><td data-i18n="lp.controls.038">Yaw, pitch, roll</td></tr>
             <tr><td class="c1">0D</td><td data-i18n="lp.map.098">Audio input</td><td class="c2">1</td><td>AUD</td><td class="c2">SDK</td><td data-i18n="lp.controls.040">RMS, envelope, gate, attack, plus twelve descriptors</td></tr>
-            <tr><td class="c1">0E</td><td data-i18n="lp.controls.041">Single-hand vision</td><td class="c2">1</td><td>VID</td><td class="c2">SDK</td><td data-i18n-html="lp.controls.042"><code>sensor.vision.x</code>, <code>.y</code>, <code>.z</code>; Pinch Clutch <code>sensor.vision.pinch_x</code>, <code>_y</code>, <code>_z</code>; Open / Fist / Pinch / Victory; learned G1–G3</td></tr>
+            <tr><td class="c1">0E</td><td data-i18n="lp.controls.041">Single-hand vision</td><td class="c2">1</td><td>VID</td><td class="c2">SDK</td><td data-i18n-html="lp.controls.042"><code>sensor.vision.x/y/z</code>, <code>.palm</code>, <code>.face</code>; Pinch Clutch <code>.pinch_x/y/z</code>; Open / Fist / Pinch / Victory; learned G1–G15</td></tr>
             <tr><td class="c1">0F</td><td data-i18n="lp.controls.043">Map picker</td><td class="c2" data-i18n="lp.controls.146">3 surfaces</td><td>MAP</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.045">Phone overlay, panel Mapping tab and the admin window</td></tr>
             <tr><td class="c1">10</td><td data-i18n="lp.controls.046">Header live panel</td><td class="c2">7</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.048">BPM, transport, TRN, MAP, CFG</td></tr>
             <tr><td class="c1">11</td><td data-i18n="lp.controls.049">Header sync block</td><td class="c2">4</td><td class="c2" data-i18n="lp.controls.047">header</td><td class="c2">SDK</td><td data-i18n="lp.controls.051">SYNC, settings, STAGE, CALIBRATE</td></tr>
@@ -1999,26 +2290,26 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.074">Pads, LFOs, squares</h3>
-          <p data-i18n-html="lp.controls.075"><code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. LFOs and squares share the clock: locked to Live's beat in SYNC, free-running in FREE.</p>
+          <p data-i18n-html="lp.controls.075"><code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. Each of the eight LFO slots can use Square; choose its own clock in CFG or follow the global SYNC/FREE setting.</p>
         </div>
         <div class="feature-figure">
                     <div class="pf-wrap" data-control-illustration="performance">
-            <div class="pf-axes"><span data-i18n="lp.controls.076">VALUE &#8593;</span><span data-i18n="lp.controls.077">TIME &#8594;</span><span data-i18n="lp.controls.078">TOUCH = &#9660; &#183; UP = &#9651;</span></div>
+            <div class="pf-axes"><span data-i18n="lp.controls.076">VALUE ↑</span><span data-i18n="lp.controls.077">TIME →</span><span data-i18n="lp.controls.078">TOUCH = ▼ · UP = △</span></div>
             <div class="pf">
             <div class="pf-card" data-symbol="release" data-envelope="release">
-              <div class="pf-title" data-i18n="lp.fig.119">A &#183; RELEASE</div>
+              <div class="pf-title" data-i18n="lp.fig.119">A · RELEASE</div>
               <svg class="pf-plot" viewBox="14 36 110 148" role="img" aria-label="release envelope"><g class="ui-line"><line x1="17" y1="178" x2="119" y2="178"/><line x1="17" y1="47" x2="17" y2="178"/><line x1="17" y1="116" x2="119" y2="116" stroke-dasharray="2 4"/></g><path d="M18 178H31C39 161 50 113 68 81H99V178H119" fill="#ffa133" opacity=".08"/><path d="M18 178H31C39 161 50 113 68 81H99V178H119" class="ui-line-hot"/><path d="M27 39h8l-4 7z" class="ui-hot"/><path d="M95 46h8l-4-7z" class="ui-flux"/><line x1="31" y1="47" x2="31" y2="178" class="ui-line" stroke-dasharray="2 3"/><line x1="99" y1="47" x2="99" y2="178" class="ui-line" stroke-dasharray="2 3"/></svg>
               <div class="pf-marks"><span data-i18n="lp.controls.079">touch</span><span>up</span></div>
-              <div class="pf-foot"><b data-i18n="lp.controls.080">drag sets level</b><span data-i18n="lp.controls.081">UP &#8594; immediate zero</span></div>
+              <div class="pf-foot"><b data-i18n="lp.controls.080">drag sets level</b><span data-i18n="lp.controls.081">UP → immediate zero</span></div>
             </div>
             <div class="pf-card" data-symbol="hold" data-envelope="hold">
-              <div class="pf-title" data-i18n="lp.fig.120">B &#183; HOLD</div>
+              <div class="pf-title" data-i18n="lp.fig.120">B · HOLD</div>
               <svg class="pf-plot" viewBox="14 36 110 148" role="img" aria-label="hold envelope"><g class="ui-line"><line x1="17" y1="178" x2="119" y2="178"/><line x1="17" y1="47" x2="17" y2="178"/><line x1="17" y1="126" x2="119" y2="126" stroke-dasharray="2 4"/></g><path d="M18 126H31C42 126 51 111 67 82H119" fill="#ffa133" opacity=".08"/><path d="M18 126H31C42 126 51 111 67 82H119" class="ui-line-hot"/><path d="M27 39h8l-4 7z" class="ui-hot"/><path d="M95 46h8l-4-7z" class="ui-flux"/><line x1="31" y1="47" x2="31" y2="178" class="ui-line" stroke-dasharray="2 3"/><line x1="99" y1="47" x2="99" y2="178" class="ui-line" stroke-dasharray="2 3"/></svg>
               <div class="pf-marks"><span data-i18n="lp.fig.122">SAVED</span><span data-i18n="lp.fig.123">KEEP</span></div>
-              <div class="pf-foot"><b data-i18n="lp.controls.082">drag edits level</b><span data-i18n="lp.controls.083">UP &#8594; hold new value</span></div>
+              <div class="pf-foot"><b data-i18n="lp.controls.082">drag edits level</b><span data-i18n="lp.controls.083">UP → hold new value</span></div>
             </div>
             <div class="pf-card" data-symbol="toggle" data-envelope="toggle">
-              <div class="pf-title" data-i18n="lp.fig.121">C &#183; TOGGLE</div>
+              <div class="pf-title" data-i18n="lp.fig.121">C · TOGGLE</div>
               <svg class="pf-plot" viewBox="14 36 110 148" role="img" aria-label="toggle envelope"><g class="ui-line"><line x1="17" y1="178" x2="119" y2="178"/><line x1="17" y1="47" x2="17" y2="178"/><line x1="17" y1="91" x2="119" y2="91" stroke-dasharray="2 4"/></g><path d="M18 178H35V91H96V178H119" fill="#ffa133" opacity=".08"/><path d="M18 178H35V91H96V178H119" class="ui-line-hot"/><path d="M31 39h8l-4 7zM92 39h8l-4 7z" class="ui-hot"/><line x1="35" y1="47" x2="35" y2="178" class="ui-line" stroke-dasharray="2 3"/><line x1="96" y1="47" x2="96" y2="178" class="ui-line" stroke-dasharray="2 3"/></svg>
               <div class="pf-marks"><span data-i18n="lp.fig.124">TAP ON</span><span data-i18n="lp.fig.125">TAP OFF</span></div>
               <div class="pf-foot"><b data-i18n="lp.controls.084">two-touch latch</b><span data-i18n="lp.controls.085">hold + drag edits ON</span></div>
@@ -2027,7 +2318,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <div class="pf-title">D &#183; BURST</div>
               <div class="pf-spans"><span data-i18n="lp.fig.126">70 ms attack</span><span data-i18n="lp.fig.127">450 ms release</span></div>
               <svg class="pf-plot" viewBox="14 36 110 148" role="img" aria-label="burst envelope"><g class="ui-line"><line x1="17" y1="178" x2="119" y2="178"/><line x1="17" y1="47" x2="17" y2="178"/></g><path d="M18 178H31L45 62C59 66 78 104 108 178H119" fill="#ffa133" opacity=".08"/><path d="M18 178H31L45 62C59 66 78 104 108 178H119" class="ui-line-hot"/><path d="M27 39h8l-4 7z" class="ui-hot"/><line x1="31" y1="47" x2="31" y2="178" class="ui-line" stroke-dasharray="2 3"/><line x1="31" y1="52" x2="45" y2="52" class="ui-line-flux"/><line x1="45" y1="52" x2="108" y2="52" class="ui-line-flux"/></svg>
-              <div class="pf-foot"><b data-i18n="lp.controls.086">one-shot A&#8211;R</b><span data-i18n="lp.controls.087">drag peak .15&#8211;1 &#183; length follows the grid in SYNC</span></div>
+              <div class="pf-foot"><b data-i18n="lp.controls.086">one-shot A–R</b><span data-i18n="lp.controls.087">drag peak .15–1 · length follows the grid in SYNC</span></div>
             </div>
             <div class="pf-card" data-symbol="beat" data-envelope="beat">
               <div class="pf-title">BEAT</div>
@@ -2051,7 +2342,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="gm" data-control-illustration="continuous">
 
             <div class="gm-panel" data-gesture-model="relative-drag" data-applies-to="knob fader">
-              <div class="gm-head"><b data-i18n="lp.fig.128">1 &#183; RELATIVE VERTICAL DRAG</b><span><i data-real-control="knob">KNOB</i> &#183; <i data-real-control="fader">FADER</i></span></div>
+              <div class="gm-head"><b data-i18n="lp.fig.128">1 · RELATIVE VERTICAL DRAG</b><span><i data-real-control="knob">KNOB</i> &#183; <i data-real-control="fader">FADER</i></span></div>
               <p class="gm-claim" data-i18n="lp.controls.092">The touch point is never the value</p>
               <div class="rd">
                 <div class="rd-pair">
@@ -2068,15 +2359,15 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             </div>
 
             <div class="gm-panel" data-gesture-model="physics" data-xy-model="physics-canvas" data-applies-to="xy2">
-              <div class="gm-head"><b data-i18n="lp.fig.129">2 &#183; PHYSICS</b><span>XY 2</span></div>
+              <div class="gm-head"><b data-i18n="lp.fig.129">2 · PHYSICS</b><span>XY 2</span></div>
               <p class="gm-claim" data-i18n="lp.controls.098">Release does not stop it</p>
               <div class="ph">
                 <svg class="ph-track" viewBox="0 0 400 172" role="img" aria-label="A ball with the solid line it has already travelled behind it, and a dotted line ahead showing it running on to the edge of the pad and rebounding"><g stroke="var(--rule2)" stroke-width="1" opacity=".5"><line x1="0" y1="43" x2="400" y2="43"/><line x1="0" y1="86" x2="400" y2="86"/><line x1="0" y1="129" x2="400" y2="129"/><line x1="100" y1="0" x2="100" y2="172"/><line x1="200" y1="0" x2="200" y2="172"/><line x1="300" y1="0" x2="300" y2="172"/></g><path d="M20.0 148.0L206.0 100.7" fill="none" stroke="var(--amber)" stroke-width="2.6" stroke-linecap="round"/><path d="M206.0 100.7L396.0 52.4" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" opacity=".9"/><path d="M396.0 52.4L253.5 16.2" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" opacity=".5"/><line x1="396.0" y1="4" x2="396.0" y2="168" stroke="var(--flux)" stroke-width="3"/><circle cx="206.0" cy="100.7" r="8.5" fill="var(--amber)"/></svg>
-                <div class="ph-keys"><span data-i18n-html="lp.controls.099"><i></i>travelled</span><span data-i18n-html="lp.controls.100"><i class="dot"></i>where it keeps going</span><b data-i18n="lp.controls.101">pad edge &#183; rebounds at &#215;0.75</b></div>
+                <div class="ph-keys"><span data-i18n-html="lp.controls.099"><i></i>travelled</span><span data-i18n-html="lp.controls.100"><i class="dot"></i>where it keeps going</span><b data-i18n="lp.controls.101">pad edge · rebounds at ×0.75</b></div>
               </div>
               <div class="gm-foot">
                 <b data-i18n="lp.fig.130">CONFIGURABLE SPEED</b>
-                <span data-i18n="lp.controls.102">v &#215;= 0.988 each frame &#183; stops under 0.01</span>
+                <span data-i18n="lp.controls.102">v ×= 0.988 each frame · stops under 0.01</span>
               </div>
             </div>
           </div>
@@ -2093,7 +2384,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         </div>
         <div class="feature-figure">
                     <div class="snp-wrap" data-control-illustration="snapshots">
-            <div class="snp-lede" data-i18n="lp.fig.131">STORE A STATE &#183; RETURN OVER TIME &#183; BLEND BETWEEN FOUR STATES</div>
+            <div class="snp-lede" data-i18n="lp.fig.131">STORE A STATE · RETURN OVER TIME · BLEND BETWEEN FOUR STATES</div>
             <div class="snp">
 
               <div class="snp-panel" data-concept="capture-recall">
@@ -2118,7 +2409,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                     <line x1="332" y1="210" x2="332" y2="220" class="ui-line"/>
                   </svg>
                 </div>
-                <p class="snp-foot" data-i18n="lp.controls.105">RECALL = timed interpolation &#183; Free 0.1&#8211;5.0 s or Sync in beats</p>
+                <p class="snp-foot" data-i18n="lp.controls.105">RECALL = timed interpolation · Free 0.1–5.0 s or Sync in beats</p>
               </div>
 
               <div class="snp-panel" data-concept="vector-morph">
@@ -2136,7 +2427,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                     <div class="snp-box"><div class="snp-row"><span>A &#160;.12</span><i class="snp-track"><i class="snp-fill snp-flux" style="width:12%"></i></i></div><div class="snp-row"><span>B &#160;.54</span><i class="snp-track"><i class="snp-fill snp-hot" style="width:54%"></i></i></div><div class="snp-row"><span>C &#160;.08</span><i class="snp-track"><i class="snp-fill snp-flux" style="width:8%"></i></i></div><div class="snp-row"><span>D &#160;.26</span><i class="snp-track"><i class="snp-fill snp-hot" style="width:26%"></i></i></div></div>
                   </div>
                 </div>
-                <p class="snp-foot" data-i18n="lp.controls.106">four corner states &#8594; weighted blend</p>
+                <p class="snp-foot" data-i18n="lp.controls.106">four corner states → weighted blend</p>
               </div>
 
             </div>
@@ -2153,7 +2444,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         </div>
         <div class="feature-figure">
                     <div class="sn-wrap" data-control-illustration="sensors">
-            <div class="sn-lede" data-i18n="lp.fig.138">MOTION SETS A REFERENCE &#183; AUDIO TURNS SOUND INTO STABLE CONTROL</div>
+            <div class="sn-lede" data-i18n="lp.fig.138">MOTION SETS A REFERENCE · AUDIO TURNS SOUND INTO STABLE CONTROL</div>
             <div class="sn">
 
               <div class="sn-panel">
@@ -2184,7 +2475,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                     <div class="sn-legend"><span class="sn-cyan">RMS</span><span class="sn-green">ENV</span></div>
                   </div>
                 </div>
-<div class="sn-dials"><div class="sn-dial" data-audio-setting="sens"><div class="sn-dial-head"><span>SENS</span><b>0.65</b></div><div class="sn-dial-body"><svg class="sn-knob" viewBox="13 24 42 42" role="img" aria-label="SENS knob"><circle cx="34" cy="45" r="19" fill="#202024" stroke="#555"/><path d="M34 45L43 31" class="ui-line-hot"/><path d="M18 51A19 19 0 0 1 47 30" class="ui-line-hot"/></svg><div class="sn-dial-text"><span data-i18n="lp.controls.111">band rise</span><span data-i18n="lp.controls.112">drag &#8593;&#8595;</span></div></div></div><div class="sn-dial" data-audio-setting="release"><div class="sn-dial-head"><span data-i18n="lp.fig.028">RELEASE</span><b>45 ms</b></div><div class="sn-dial-body"><svg class="sn-knob" viewBox="13 24 42 42" role="img" aria-label="RELEASE knob"><circle cx="34" cy="45" r="19" fill="#202024" stroke="#555"/><path d="M34 45L29 29" class="ui-line-hot"/><path d="M18 51A19 19 0 0 1 40 27" class="ui-line-hot"/></svg><div class="sn-dial-text"><span data-i18n="lp.controls.113">pulse tail</span><span>10&#8211;500</span></div></div></div></div>
+<div class="sn-dials"><div class="sn-dial" data-audio-setting="sens"><div class="sn-dial-head"><span>SENS</span><b>0.65</b></div><div class="sn-dial-body"><svg class="sn-knob" viewBox="13 24 42 42" role="img" aria-label="SENS knob"><circle cx="34" cy="45" r="19" fill="#202024" stroke="#555"/><path d="M34 45L43 31" class="ui-line-hot"/><path d="M18 51A19 19 0 0 1 47 30" class="ui-line-hot"/></svg><div class="sn-dial-text"><span data-i18n="lp.controls.111">band rise</span><span data-i18n="lp.controls.112">drag ↑↓</span></div></div></div><div class="sn-dial" data-audio-setting="release"><div class="sn-dial-head"><span data-i18n="lp.fig.028">RELEASE</span><b>45 ms</b></div><div class="sn-dial-body"><svg class="sn-knob" viewBox="13 24 42 42" role="img" aria-label="RELEASE knob"><circle cx="34" cy="45" r="19" fill="#202024" stroke="#555"/><path d="M34 45L29 29" class="ui-line-hot"/><path d="M18 51A19 19 0 0 1 40 27" class="ui-line-hot"/></svg><div class="sn-dial-text"><span data-i18n="lp.controls.113">pulse tail</span><span>10&#8211;500</span></div></div></div></div>
                 <div class="sn-window" data-window-picker="true"><span>WINDOW · 1024 @48k</span><b>x1</b><b class="is-selected">x2</b><b>x4</b></div>
               </div>
 
@@ -2213,7 +2504,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                 <div class="sn-detector" data-descriptor="high" style="--descriptor-color:#2184a8"><div class="sn-read"><span>HIGH</span><b>0.09</b></div><i class="sn-track"><i class="sn-fill" style="width:9%"></i></i></div>
               </section>
             </div>
-            <p class="sn-note" data-i18n="lp.controls.115">cyan = instantaneous RMS &#183; green = smoothed envelope</p>
+            <p class="sn-note" data-i18n="lp.controls.115">cyan = instantaneous RMS · green = smoothed envelope</p>
           </div>
         </div>
       </div>
@@ -2223,19 +2514,19 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.116">Vision: hand, poses, clutch</h3>
-          <p data-i18n="lp.controls.117">Hand X/Y/Z is continuous. A held pinch engages the clutch and releasing it freezes the value. G1–G3 and the four built-in detectors are intentional outputs; PALM and FACE remain local camera diagnostics.</p>
+          <p data-i18n="lp.controls.117">Hand X/Y/Z, PALM size and FACE palm orientation map continuously. A held pinch engages the clutch; release freezes its axes. G1–G15 and the four built-in detectors provide intentional outputs. Missing/invalid samples follow Safe loss.</p>
         </div>
         <div class="feature-figure">
                     <div class="vs-wrap" data-control-illustration="vision">
-            <div class="vs-lede" data-i18n="lp.fig.140">PINCH CLUTCH &#8212; A LOOP YOU CAN LEAVE AND COME BACK TO</div>
+            <div class="vs-lede" data-i18n="lp.fig.140">PINCH CLUTCH — A LOOP YOU CAN LEAVE AND COME BACK TO</div>
             <div class="vs-row">
               <svg class="vs-glyph" viewBox="0 0 72 72" role="img" aria-label="A hand with thumb and index finger touching"><g data-role="pinch-glyph" data-source="openmoji/pinching-hand" transform="translate(0 0)"><path fill="#ffa133" stroke="#ffa133" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m40.235 29.08l-1.489-2.429c-2.534-4.25-9.439-14.641-9.595-14.846c-1.15-1.511-2.63-2.3-4.14-1.15c-1.512 1.14-.413 2.61.462 4.689l6.92 14.492l2.772 5.699l-7.02-5.507a3.4 3.4 0 0 0-.786-.652a2.73 2.73 0 0 0-1.383-.522a3.7 3.7 0 0 0-1.825.055l-9.625 3.05a6 6 0 0 0-1.102.478c-1.396.985-1.847 1.29-1.654 3.173a3.04 3.04 0 0 0 4.152 1.826l8.715-1.976l.373.31l6.992 6.217a52 52 0 0 1-2.065 5.88a2.194 2.194 0 0 1-2.582 1.023a47 47 0 0 0-6.207-1.455a2.2 2.2 0 0 1-.69-.242c-4.095-2.243-8.51-3.408-9.458-2.459c-.945.872-.621 1.33-.145 2.758c.764 2.294 6.597 5.42 7.934 6.935l6.55 5.448s6.402 4.61 10.227 4.589c12.063-.066 18.95-14.75 18.962-18.52c.006-1.642.193-3.625.193-3.625a19 19 0 0 0-.778-3.007l-.011-.005a3 3 0 0 0 .029-.537s-.933-16.319-1.165-20.239a5.3 5.3 0 0 0-.557-2.176a2.464 2.464 0 0 0-2.562-1.498c-1.632.187-2.158 1.876-2.277 3.783l-.566 8.091c-1.384-5.518-4.816-16.401-4.904-16.625a2.78 2.78 0 0 0-3.434-2.053c-1.784.673-2.02 2.69-1.74 4.46l.977 6.687l1.013 7.451"/><g fill="none" stroke="#ffd9a8" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M31.736 42.143c-.87 2.515-1.12 4.347-1.799 5.591a2.19 2.19 0 0 1-2.582 1.023a47 47 0 0 0-6.206-1.455a2.2 2.2 0 0 1-.691-.242c-4.095-2.244-8.51-3.408-9.458-2.46a2.35 2.35 0 0 0-.776 2.965c.764 2.294 7.228 5.214 8.565 6.728l5.849 5.849s6.972 4.916 10.797 4.895C47.498 64.971 54.987 49.242 55 45.472a22 22 0 0 0-.28-3.287a19 19 0 0 0-.777-3.006m-29.439-3.485l-8.51 2.031a3.43 3.43 0 0 1-4.428-2.032c-.194-1.883.462-2.405 1.858-3.39a6 6 0 0 1 1.103-.477l9.624-3.05a3.7 3.7 0 0 1 1.825-.056m5.76 13.423l-7.098-6.372"/><path d="M25.01 28.613a4.33 4.33 0 0 1 2.349.63a3.4 3.4 0 0 1 .787.651l8.33 6.694m-4.039-6.666L25.01 15.208c-.875-2.078-1.511-3.546 0-4.687c1.511-1.15 2.99-.36 4.141 1.15c.156.205 8.55 13.016 11.084 17.267v.01m7.858 2.447c-1.384-5.518-6.075-21.198-6.163-21.423a2.78 2.78 0 0 0-3.434-2.053c-1.784.673-2.02 2.69-1.74 4.46l.977 6.687m9.667-.56c.119-1.906.644-3.596 2.276-3.782a2.464 2.464 0 0 1 2.563 1.497a5.3 5.3 0 0 1 .556 2.177c.233 3.92 1.166 20.239 1.166 20.239a3 3 0 0 1-.03.536M39.675 28.081l3.491 5.513"/></g><circle cx="12.5" cy="41" r="6.5" fill="#ffa133" opacity=".28"/><circle cx="12.5" cy="41" r="3.6" fill="none" stroke="#ffa133" stroke-width="1.3"/><circle cx="12.5" cy="41" r="2" fill="#ffa133"/></g></svg>
               <div class="vs-steps">
-                <div class="vs-step vs-live"><div class="vs-step-t" data-i18n="lp.fig.141">1 &#183; ENGAGE</div><span data-i18n="lp.controls.118">the two tips touch</span><span data-i18n="lp.controls.119">contact rises past .75</span><span data-i18n="lp.controls.120">the clutch takes hold</span></div>
+                <div class="vs-step vs-live"><div class="vs-step-t" data-i18n="lp.fig.141">1 · ENGAGE</div><span data-i18n="lp.controls.118">the two tips touch</span><span data-i18n="lp.controls.119">contact rises past .75</span><span data-i18n="lp.controls.120">the clutch takes hold</span></div>
                 <i class="vs-arrow"></i>
-                <div class="vs-step"><div class="vs-step-t" data-i18n="lp.fig.142">2 &#183; MOVE</div><span data-i18n="lp.controls.121">the hand travels in space</span><span data-i18n="lp.controls.122">X, Y and Z follow it</span><span data-i18n="lp.controls.123">from where you started</span></div>
+                <div class="vs-step"><div class="vs-step-t" data-i18n="lp.fig.142">2 · MOVE</div><span data-i18n="lp.controls.121">the hand travels in space</span><span data-i18n="lp.controls.122">X, Y and Z follow it</span><span data-i18n="lp.controls.123">from where you started</span></div>
                 <i class="vs-arrow"></i>
-                <div class="vs-step"><div class="vs-step-t" data-i18n="lp.fig.143">3 &#183; RELEASE</div><span data-i18n="lp.controls.124">the fingers part</span><span data-i18n="lp.controls.125">contact drops below .55</span><span data-i18n="lp.controls.126">the value stays put</span></div>
+                <div class="vs-step"><div class="vs-step-t" data-i18n="lp.fig.143">3 · RELEASE</div><span data-i18n="lp.controls.124">the fingers part</span><span data-i18n="lp.controls.125">contact drops below .55</span><span data-i18n="lp.controls.126">the value stays put</span></div>
               </div>
               <svg class="vs-glyph" viewBox="0 0 72 72" role="img" aria-label="An open hand with the fingers parted"><g data-role="open-glyph" data-source="openmoji/raised-hand" transform="translate(0 0)"><path fill="#ffa133" d="M30.615 13.738a3.531 3.531 0 1 0-7-.095l-.257 18.998l.022 4.325l.176-12.999a3.531 3.531 0 1 0-7-.095l-.176 13l.053 10.084c.425 8.31 7.752 13.63 16.06 13.205a19.62 19.62 0 0 0 12.728-5.657c2.918-3.09 10.085-11.535 10.085-11.535c1.463-2.158.329-5.494-.8-4.673l-9.876 4.651l-.039-5.4l.039 5.4l-.039-5.4l.04-21.85a3.531 3.531 0 1 0-7-.095l-.094 7l-.186 10.636l.367-22.193a3.531 3.531 0 1 0-7-.094l-.206 24.016"/><path fill="none" stroke="#ffd9a8" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M30.615 13.738a3.531 3.531 0 1 0-7-.095l-.257 18.998l.005.951l.193-9.625a3.531 3.531 0 1 0-7-.095l-.176 13l.053 10.084c.425 8.31 7.752 13.63 16.06 13.205a19.62 19.62 0 0 0 12.728-5.657c2.918-3.09 10.085-11.535 10.085-11.535c1.463-2.158.329-5.494-.8-4.673l-9.876 4.651l-.039-5.4l.039 5.4l-.039-5.4l.04-21.85a3.531 3.531 0 1 0-7-.095l-.094 7l-.186 10.636l.367-22.193a3.531 3.531 0 1 0-7-.094l-.175 20.454"/></g></svg>
             </div>
@@ -2244,7 +2535,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                 <path d="M474 0 L474 30 L126 30 L126 0" fill="none" stroke="var(--flux)" stroke-width="1.5" stroke-dasharray="5 4"/>
                 <path d="M126 0 l-4.5 8 l9 0 z" fill="var(--flux)"/>
               </svg>
-              <span class="vs-loop-text" data-i18n="lp.controls.127">PINCH AGAIN, ANY TIME, ANYWHERE &#8212; IT RESUMES FROM THE SAVED VALUE</span>
+              <span class="vs-loop-text" data-i18n="lp.controls.127">PINCH AGAIN, ANY TIME, ANYWHERE — IT RESUMES FROM THE SAVED VALUE</span>
             </div>
             <div class="vs-foot">
               <div>
@@ -2252,7 +2543,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                 <span data-i18n="lp.controls.129">ARM at .75 · RELEASE below .55 · latched in between</span>
               </div>
               <div class="vs-foot-r">
-                <span data-i18n="lp.controls.130">sensor.vision.pinch_x &#183; _y &#183; _z</span>
+                <span data-i18n="lp.controls.130">sensor.vision.pinch_x · _y · _z</span>
                 <span data-i18n="lp.controls.131">relative, never absolute</span>
               </div>
             </div>
@@ -2269,7 +2560,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         </div>
         <div class="feature-figure">
                     <div class="mp-wrap" data-control-illustration="mapping" data-layout="source-transform-target">
-            <div class="mp-lede" data-i18n="lp.fig.144">ONE SIGNAL PATH &#183; SOURCE DOMAIN &#8594; 0..1 SHAPE &#8594; TARGET DOMAIN</div>
+            <div class="mp-lede" data-i18n="lp.fig.144">ONE SIGNAL PATH · SOURCE DOMAIN → 0..1 SHAPE → TARGET DOMAIN</div>
             <div class="mp-chain">
 
               <div class="mp-panel">
@@ -2287,7 +2578,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <i class="mp-arrow"></i>
 
               <div class="mp-panel mp-desk" data-role="transform-desk">
-                <div class="mp-title mp-title-row"><span data-i18n="lp.fig.148">TRANSFORM DESK</span><em data-i18n="lp.controls.134">INPUT &#8594; OUTPUT</em></div>
+                <div class="mp-title mp-title-row"><span data-i18n="lp.fig.148">TRANSFORM DESK</span><em data-i18n="lp.controls.134">INPUT → OUTPUT</em></div>
                 <div class="mp-desk-cols">
                   <div>
                     <div class="mp-step" data-i18n="lp.fig.149">NORMALIZE</div>
@@ -2305,7 +2596,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                       <circle cx="110.5" cy="50.5" r="4" class="touch-dot"/>
                       <text x="6" y="88" class="ui-micro">IN</text><text x="160" y="33" class="ui-micro">OUT</text>
                     </svg>
-                    <div class="mp-cap" data-i18n="lp.fig.152">LINEAR &#183; EXPONENTIAL &#183; LOGARITHMIC &#183; S-CURVE</div>
+                    <div class="mp-cap" data-i18n="lp.fig.152">LINEAR · EXPONENTIAL · LOGARITHMIC · S-CURVE</div>
                   </div>
                 </div>
               </div>
@@ -2515,7 +2806,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.041">How mature is it?</h4>
-          <p class="lead" data-i18n-html="lp.trouble.042">v1.0.0, smoke-tested in Live 12.4.5+ Suite (Beta) with a physical phone.</p></span></div>
+          <p class="lead" data-i18n-html="lp.trouble.042">v2.0.0 is in local release preparation. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.</p></span></div>
       </div>
     </div>
   </div>

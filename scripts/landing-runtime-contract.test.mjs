@@ -42,18 +42,20 @@ test('landing audio illustration and translations contain no retired tonal contr
 });
 
 test('Fig. 6 matches the focused VID surface and exact detector count', () => {
-  const vid = figure('surface-map-vid', 'surface-map-map');
+  const vid = figure('surface-map-vid', 'surface-map-rec');
   assert.match(vid, /four built-in detectors/i);
   assert.match(vid, /MAP[^<]*(?:X\/Y\/Z|X, Y, and Z)/i);
   assert.match(vid, /CLUTCH[^<]*(?:X\/Y\/Z|X, Y, and Z)/i);
   assert.doesNotMatch(vid, />FINGERS<|AMBIENT|sensor\.vision\.fingers|sensor\.vision\.color/i);
   assert.match(vid, /PALM[^<]*FACE|FACE[^<]*PALM/i);
-  assert.match(vid, /diagnostic/i);
+  assert.match(vid, /normalized 0–1/);
+  assert.match(vid, /not facial tracking/);
+  assert.match(vid, /fifteen cards/);
 });
 
 test('landing no longer presents retired passive vision channels as mappings', () => {
   assert.doesNotMatch(landing, /sensor\.vision\.(?:fingers|color\.[rgb])/i);
-  assert.doesNotMatch(landing, /PALM, FACE[^<]*(?:mappable|mapping targets)/i);
+  assert.match(landing, /PALM[^<]*FACE[^<]*continuous mapping inputs/i);
   assert.doesNotMatch(landing, /five built-in/i);
 });
 
@@ -196,7 +198,7 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   // cells read as decoration rather than as a sequence.
   assert.match(vision, /data-source="openmoji\/pinching-hand"/);
   assert.match(vision, /data-source="openmoji\/raised-hand"/);
-  assert.match(vision, /1 &#183; ENGAGE[\s\S]*2 &#183; MOVE[\s\S]*3 &#183; RELEASE/);
+  assert.match(vision, /1 · ENGAGE[\s\S]*2 · MOVE[\s\S]*3 · RELEASE/);
   assert.match(vision, /contact rises past \.75[\s\S]*contact drops below \.55/);
   // The loop is the point: the value is left somewhere and picked up later.
   assert.match(vision, /PINCH AGAIN[\s\S]*RESUMES FROM THE SAVED VALUE/);
@@ -207,8 +209,8 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   // inventory while crowding the drawing into four competing rhythms, so they
   // now live only where they are actually consulted. Nothing was dropped —
   // assert both homes so a future edit cannot quietly lose them.
-  assert.match(vision, /G1(?:&#8211;|–)G3 and the four built-in detectors/);
-  assert.match(vision, /PALM and FACE remain local camera diagnostics/);
+  assert.match(vision, /G1(?:&#8211;|–)G15 and the four built-in detectors/);
+  assert.match(vision, /PALM size and FACE palm orientation map continuously/);
   const inventory = figure('controls', 'scenarios');
   assert.match(inventory, /Open \/ Fist \/ Pinch \/ Victory/);
   assert.match(inventory, /Pinch Clutch[\s\S]{0,120}pinch_x/);
@@ -234,7 +236,7 @@ test('the section numbering the sheet cross-references stays intact', () => {
     eyebrows.map((tag) => tag.replace(/\D*(\d+\.\d+)\D*/, '$1')),
     ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'],
   );
-  assert.match(landing, /<h3[^>]*>2\.1 &#183; Clock source<\/h3>/);
+  assert.match(landing, /<h3[^>]*>2\.1 · Clock source<\/h3>/);
 
   // Each cross-reference names a number and links to the section carrying it.
   for (const [anchor, shown] of [
@@ -451,7 +453,7 @@ test('every number the sheet states is one the program actually defines', () => 
 
   const physics = fs.readFileSync(path.join(import.meta.dirname,'..','static','phone-v3','xy-engine.js'),'utf8');
   const bounce = one(physics, /bounce: ([\d.]+)/, 'bounce');
-  assert.ok(landing.includes(`&#215;${bounce}`), `rebound must read x${bounce}`);
+  assert.ok(landing.includes(`×${bounce}`), `rebound must read x${bounce}`);
   // The bounce happens at the edge of the pad. There is no "wall" in the product.
   assert.doesNotMatch(landing, /\bwall\b/i, 'the sheet must not invent a "wall"');
 
@@ -469,7 +471,7 @@ test('every number the sheet states is one the program actually defines', () => 
   const morph = phone.match(/morph-time"\s*min="([\d.]+)"\s*max="([\d.]+)"/);
   assert.ok(morph, 'morph-time bounds must be readable');
   assert.ok(
-    landing.includes(`${morph[1]}&#8211;${morph[2]} s`),
+    landing.includes(`${morph[1]}–${morph[2]} s`),
     `recall range must read ${morph[1]}-${morph[2]} s`,
   );
 });
@@ -649,7 +651,7 @@ test('the four 1.0 features stay documented where the long answers live', () => 
     'CFG chapter 9.5 must be between chapter 9 and chapter 10 in USER-GUIDE.pt-BR.md');
   // The README must mention the four 1.0 features
   const readme = fs.readFileSync(path.join(import.meta.dirname, '..', 'README.md'), 'utf8');
-  assert.match(readme, /## 1\.0 Highlights/, 'README.md must include the 1.0 Highlights section');
+  assert.match(readme, /## Performance 2\.0/, 'README.md must retain current performance documentation');
   assert.match(readme, /Config Mode \(CFG\)/, 'README.md must mention Config Mode (CFG)');
   assert.match(readme, /LFO waveform preview/, 'README.md must mention the LFO waveform preview');
   assert.match(readme, /Desktop keyboard control/, 'README.md must mention desktop keyboard control');

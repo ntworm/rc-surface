@@ -4,6 +4,20 @@ This folder contains maintainer references, validation records and tester
 guidance. Public documentation lives in `docs/`; historical records here
 describe their dated state, not necessarily the current product.
 
+## Current preparation — 2.0.0 (2026-10-15)
+
+Source candidate `e930ebe` (package SHA-256 prefix `523b7d93`) was installed by
+Gabriel, who reported everything working without an observed error or bug.
+This is the reported-use acceptance, not a new exhaustive platform, latency,
+audio-capture or companion-device test matrix. The release remains unpublished.
+Use the current 2.0 notes and the top of the candidate checklist; record the
+final package commit/hash and fresh verification with that delivery. The
+1.0 gate records below and elsewhere remain historical evidence.
+
+The current kit carries public EN/PT guides and 2.0 release notes. Historical
+rename migrators and research/audit archives remain repository references;
+they are not the upgrade path to isolated `surface-v2` data/schema 2.
+
 ## Canonical Docs
 
 Read these first:
@@ -18,7 +32,7 @@ Read these first:
 - `docs/AUDIO-AUDIT.md` / `docs/AUDIO-AUDIT.pt-BR.md` - owner-operated browser audio checks; not proof of latency or Native Track acceptance.
 - `docs/PRIVACY.md` - data flow and third-party runtime notes.
 - `docs/SECURITY.md` - threat model and certificate policy.
-- `internal/PESQUISA_CELULAR_GESTUAL.md` - evidence and roadmap for expressive gestural control.
+- [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/PESQUISA_CELULAR_GESTUAL.md) - evidence and roadmap for expressive gestural control.
 - `CHANGELOG.md` - consolidated release notes.
 
 Do not casually rewrite canonical docs. Update them only when behavior, workflow, or architecture changes.
@@ -43,8 +57,7 @@ Canonical control namespaces:
 - `knob-1` through `knob-8`
 - `fader-1` through `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
-- `toggle-1` through `toggle-4`
-- `button-1` through `button-4`
+- `toggle-1` through `toggle-8` (T1–T8; Square is a waveform)
 - `sensor.motion.*`
 - `sensor.orient.*`
 - `sensor.audio.rms`

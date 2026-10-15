@@ -8,10 +8,13 @@ It does not collect, transmit, or store personal data beyond the user's own mach
 | Data | Where | Lifetime |
 |------|-------|----------|
 | Self-signed TLS certificate + private key | Ableton `storageDirectory/certs/` | Until user deletes storage or cert expires/regenerates |
-| Control mappings | Ableton storage | Persistent across sessions |
-| Mapping presets | Ableton storage | Until deleted |
+| Control mappings | Ableton storage `surface-v2/` | Persistent across sessions |
+| Mapping presets/projects | Ableton storage `surface-v2/` | Until deleted |
 | Phone preferences | Phone browser storage | Until browser data is cleared |
 | Audio analysis settings | Phone browser storage | Until browser data is cleared |
+
+
+2.0 isolates mappings, presets and projects in `storageDirectory/surface-v2/` with schema 2. It neither imports nor deletes 1.x data. XY settings/loops and learned-pose captures are local data; camera frames are not uploaded media. PALM/FACE are numeric measurements of one hand, not facial identification.
 
 ## Network Data
 

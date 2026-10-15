@@ -121,12 +121,13 @@ test.describe('RC Surface UI & E2E Suite', () => {
 
   // ── SCENARIO 1: Status bar and navigation rendered ──────────────────────────
   test('page load renders top status bar and navigation tabs', async ({ page }) => {
-    await expect(page).toHaveTitle(/ableton-rc/i);
+    await expect(page).toHaveTitle('RC Surface 2.0');
     await expect(page.locator('header.topbar')).toBeVisible();
 
     const tabs = page.locator('.tabs .tab');
-    const tabCount = await tabs.count();
-    expect(tabCount).toBeGreaterThanOrEqual(2);
+    await expect(tabs).toHaveText(['PERF', 'MIX', 'SNP', 'SNS', 'AUD', 'VID', 'REC']);
+    expect(await tabs.evaluateAll(elements => elements.map(element => element.dataset.page)))
+      .toEqual(['performance', 'mixer', 'snapshots', 'sensors', 'audio', 'video', 'recording']);
 
     // Status element must exist in DOM (may be empty before WS connects)
     await expect(page.locator('#status')).toBeAttached();
@@ -525,7 +526,9 @@ test.describe('RC Surface UI & E2E Suite', () => {
       '.vision-camera-toggle',
       '#vision-confidence',
       '#vision-recognition-preset',
-      '.vision-gesture-slot',
+      '.vision-command-bar',
+      '.vision-pose-grid',
+      '.vision-detector-section',
       '.vision-signal-strip',
     ];
 
@@ -539,6 +542,35 @@ test.describe('RC Surface UI & E2E Suite', () => {
           await measurePageFit(page, '.page-video', requiredSelectors),
           `VID ${viewport.width}x${viewport.height}${stageMode ? ' stage' : ''}`,
         );
+        const bank = page.locator('.vision-pose-grid');
+        await expect(bank).toHaveCSS('overflow-y', 'auto');
+        expect(await bank.evaluate(el => el.scrollHeight - el.clientHeight), 'pose bank scrolls internally')
+          .toBeGreaterThan(1);
+        await expect(bank.locator('.vision-gesture-slot')).toHaveCount(3);
+        for (const card of await bank.locator('.vision-gesture-slot').all()) {
+          // A short bank need not show an entire card at once. Every name and
+          // action must be reachable, fully inside the bank, without page scroll.
+          for (const target of [card.locator('header > span'), ...await card.locator('button:visible').all()]) {
+            await target.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
+            const geometry = await target.evaluate(el => {
+              const rect = el.getBoundingClientRect().toJSON();
+              const bank = el.closest('.vision-pose-grid');
+              const page = el.closest('.page-video');
+              return { rect, bank: bank.getBoundingClientRect().toJSON(), bankScroll: bank.scrollTop,
+                pageScroll: page.scrollTop, windowScroll: window.scrollY,
+                clippedText: el.scrollWidth > el.clientWidth };
+            });
+            expect(geometry.rect.top).toBeGreaterThanOrEqual(geometry.bank.top - 1);
+            expect(geometry.rect.bottom).toBeLessThanOrEqual(geometry.bank.bottom + 1);
+            expect(geometry.rect.left).toBeGreaterThanOrEqual(geometry.bank.left - 1);
+            expect(geometry.rect.right).toBeLessThanOrEqual(geometry.bank.right + 1);
+            expect(geometry.pageScroll).toBe(0);
+            expect(geometry.windowScroll).toBe(0);
+            expect(geometry.clippedText).toBe(false);
+          }
+        }
+        expect(await bank.evaluate(el => el.scrollTop), 'last card is reached by internal scroll').toBeGreaterThan(0);
+        expectPageFit(await measurePageFit(page, '.page-video', requiredSelectors), 'VID after bank scroll');
       }
     }
   });

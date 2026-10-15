@@ -53,6 +53,9 @@ const META = {
       'Motion and orientation sensors as mapping sources',
       'Twelve audio descriptors from the phone microphone or an audio interface',
       'Single-hand camera tracking with MediaPipe, working offline',
+      'Fifteen learned-pose cards with advisory capture review and PALM/FACE mapping',
+      'XY gesture loops in AUT: Live-clock SYNC bars or FREE seconds',
+      'Arrangement REC: exact armed inputs, marker Loop and pre-roll OFF/1/2/4',
       'Map any control to a Live parameter or a MIDI note from the phone',
       'Local network only: no app on the phone, no cloud, no telemetry',
     ],
@@ -74,6 +77,9 @@ const META = {
       'Sensores de movimento e orientação como fontes de mapeamento',
       'Doze descritores de áudio do microfone do celular ou de uma interface de áudio',
       'Rastreio de uma mão pela câmera com MediaPipe, funcionando offline',
+      'Quinze cartões de poses com revisão de capturas e PALM/FACE no MAP',
+      'Loops de movimento XY em AUT: compassos SYNC pelo Live ou segundos FREE',
+      'REC no Arrangement: entradas armadas exatas, Loop e pré-roll OFF/1/2/4',
       'Mapeie qualquer controle para um parâmetro do Live ou uma nota MIDI pelo celular',
       'Só rede local: nenhum app no celular, sem nuvem, sem telemetria',
     ],
@@ -299,9 +305,9 @@ function llmsFull() {
     '# RC Surface — full documentation (English)',
     '',
     '> RC Surface is a free, source-available Ableton Live 12.4.5+ Suite extension that turns a phone',
-    '> browser into a wireless controller: pads, XY pads, knobs, faders, LFOs, squares, snapshots,',
-    '> motion sensors, twelve audio descriptors and single-hand camera tracking, mapped to Live',
-    '> parameters or MIDI notes over the local network. No app on the phone.',
+    '> browser into a wireless controller: pads, independent XY, T1–T8/Square, snapshots, AUT loops,',
+    '> Arrangement REC, sensors, twelve audio descriptors and fifteen learned-pose cards, mapped',
+    '> to Live parameters, MIDI notes or clips over the local network. No app on the phone.',
     '',
     `Version ${version}. Landing page: ${SITE} (Portuguese: ${SITE}${PT_FILE}).`,
     `Source and releases: ${REPO}. Licence: PolyForm Noncommercial 1.0.0.`,
@@ -336,7 +342,8 @@ export function buildSite() {
   const source = fs.readFileSync(path.join(docs, 'index.html'), 'utf8');
   // The FAQ in the English block is read from what the English catalog puts
   // on screen, not from the markup's fallback text.
-  const en = replaceSeo(source, seoBlock('en', translateHtml(source, catalog, 'en')));
+  const translatedEn = translateHtml(source, catalog, 'en');
+  const en = replaceSeo(translatedEn, seoBlock('en', translatedEn));
 
   let pt = translateHtml(en, catalog, 'pt-BR');
   pt = replaceSeo(pt, seoBlock('pt-BR', pt));

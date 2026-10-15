@@ -6,7 +6,7 @@ montagem, passagem de som e apresentação. Leia uma vez antes de tocar um set.
 > **Escopo**: o cliente do celular (`/phone-v3/`) é a superfície principal. O
 > painel do Ableton e o painel administrativo estão cobertos à parte, no
 > [`CUSTOMIZATION.pt-BR.md`](./CUSTOMIZATION.pt-BR.md).
-> O RC Surface 1.0 suporta um controlador por vez: opere a performance pelo celular ou desktop, nunca ambos simultaneamente.
+> O RC Surface 2.0 suporta um controlador por vez: opere a performance pelo celular ou desktop, nunca ambos simultaneamente.
 
 ---
 
@@ -27,7 +27,7 @@ A latência física no Live ainda depende do benchmark gravado que ficou pendent
 
 ## 1. A tela do celular de relance
 
-A interface do celular é uma página só, com seis abas. Troque pelos botões da
+A interface do celular é uma página só, com sete abas. Troque pelos botões da
 faixa de cima:
 
 | Aba | O que faz |
@@ -38,8 +38,9 @@ faixa de cima:
 | SNS | Sensores: leitura ao vivo de movimento e orientação |
 | AUD | Microfone e as entradas de análise de áudio |
 | VID | Câmera, rastreio de mãos e poses estáticas aprendidas |
+| REC | Marcadores do Arrangement, Loop, pré-roll e gravação de tracks armadas |
 
-A faixa de cima também tem o botão **MAP**, perto do indicador de BPM, e mais
+A faixa de cima também tem o modos **MAP / AUT / CFG**, perto do indicador de BPM, e mais
 **SYNC**, **STAGE** e **CALIBRAR** contextual em SNS/AUD/VID. Veja
 [§ 7 Controles da barra superior](#7-controles-da-barra-superior) e
 [§ 8 Modo MAP](#8-modo-map--mapeamento-pelo-celular).
@@ -912,8 +913,8 @@ enviá-la.
 
 Abra a **VID** com o celular na horizontal. A prévia da câmera ocupa o lado
 esquerdo na altura toda da tela. Tudo o que você toca fica na coluna da
-direita: os comandos da câmera (**Câmera**, **CONF**, **REC**), as três linhas
-de pose aprendida, os detectores integrados e as leituras de sinal direto. Num
+direita: os comandos da câmera (**Câmera**, **CONF**, **REC**), o banco rolável
+de até quinze poses, os detectores integrados e as leituras de sinal direto. Num
 tablet ou desktop os comandos ficam acima da prévia e as leituras ficam
 embaixo, na largura toda. Toque em **Câmera** para liberar o acesso. O sistema de visão é
 de **uma mão só**, por decisão de projeto: ele rastreia uma mão na frente do
@@ -1007,7 +1008,7 @@ câmera, microfone ou pedido de permissões. CONF/REC e CALIBRATE permanecem.
 
 ### Poses estáticas aprendidas
 
-Cada um dos três slots aprendidos guarda uma forma de mão estática:
+Cada slot aprendido guarda uma forma de mão estática; o banco começa com três slots e aceita até quinze:
 
 1. Segure a forma de mão desejada e toque **CAPTURAR POSE** três vezes,
    variando um pouco a dobra dos dedos ou o ângulo da palma entre os exemplos.
