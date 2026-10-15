@@ -64,6 +64,7 @@ function loadFader({ bipolar = false } = {}) {
   };
   context.window = context;
   vm.runInNewContext(engineSource, context, { filename: engineFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
   timeouts.forEach((callback) => callback());
   return {

@@ -56,44 +56,20 @@
     return `${morphDurationSec.toFixed(1)}s`;
   }
 
-  function getLfoStates() {
-    return window.lfoStates || (typeof lfoStates !== 'undefined' ? lfoStates : null);
-  }
-
-  function getStutterStates() {
-    return window.stutterStates || (typeof stutterStates !== 'undefined' ? stutterStates : null);
-  }
-
   function cloneControlStates() {
     const states = JSON.parse(JSON.stringify(window.currentControlStates || {}));
-    const lfos = getLfoStates();
-    if (lfos && typeof lfos.entries === 'function') {
-      for (const [name, state] of lfos.entries()) {
-        states[name] = state.active ? 1.0 : 0.0;
-      }
+    for (const [name, state] of window.modulatorStates || []) {
+      states[name] = state.active ? 1 : 0;
+      for (const key of ['rate','depth','count']) states[`${name}.${key}`] = state[key];
     }
-    const stutters = getStutterStates();
-    if (stutters && typeof stutters.entries === 'function') {
-      for (const [name, state] of stutters.entries()) {
-        states[name] = state.pressed ? 1.0 : 0.0;
-        if (typeof state.depth === 'number' && Number.isFinite(state.depth)) {
-          states[`${name}.depth`] = state.depth;
-        }
-        if (typeof state.rate === 'number' && Number.isFinite(state.rate)) {
-          states[`${name}.rate`] = state.rate;
-        }
-        if (typeof state.count === 'number' && Number.isFinite(state.count)) {
-          states[`${name}.count`] = state.count;
-        }
-      }
-    }
+    if (window.PerformanceSettings) states.__performance = window.PerformanceSettings.capture();
     return states;
   }
 
   function loadSnapshots() {
     try {
       if (typeof localStorage === 'undefined') return;
-      const saved = localStorage.getItem('ableton-rc:snapshots');
+      const saved = localStorage.getItem('ableton-rc:v2:snapshots');
       if (!saved) return;
       const parsed = JSON.parse(saved);
       snapshots = Array.isArray(parsed) && parsed.length === SNAPSHOT_COUNT ? parsed : emptySnapshots();
@@ -105,7 +81,7 @@
   function saveSnapshots() {
     try {
       if (typeof localStorage === 'undefined') return;
-      localStorage.setItem('ableton-rc:snapshots', JSON.stringify(snapshots));
+      localStorage.setItem('ableton-rc:v2:snapshots', JSON.stringify(snapshots));
     } catch {}
   }
 
@@ -133,7 +109,7 @@
       updateSnapshotButton(btn, Number(btn.dataset.perfSnapshotSlot) - 1);
     });
     if (typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
-      window.dispatchEvent(new Event('ableton-rc:snapshots-updated'));
+      window.dispatchEvent(new Event('ableton-rc:v2:snapshots-updated'));
     }
   }
 
@@ -181,7 +157,7 @@
   }
 
   function isModulatorGateKey(key) {
-    return /^toggle-\d+$/.test(key) || /^button-\d+$/.test(key);
+    return /^toggle-[1-8]$/.test(key);
   }
 
   function resolveMorphValue(key, startVal, targetVal, progress) {
@@ -204,73 +180,24 @@
     return Number.isFinite(value) ? clamp(value, 0, 1) : fallback;
   }
 
-  function collectSnapshotModulatorNames(targetState, prefix) {
-    const names = new Set();
-    const pattern = prefix === 'toggle'
-      ? /^(toggle-\d+)(?:\.(?:rate|depth))?$/
-      : /^(button-\d+)(?:\.(?:rate|depth|count))?$/;
-    for (const key of Object.keys(targetState)) {
-      const match = key.match(pattern);
-      if (match) names.add(match[1]);
-    }
-    return names;
-  }
-
   function emitSnapshotMorphModulatorTargets(targetState, durationMs) {
     const morphMs = Math.max(0, Math.round(Number(durationMs) || 0));
-    const lfos = getLfoStates();
-    const stutters = getStutterStates();
-    const sendLfo = window.sendLfoState || (typeof sendLfoState !== 'undefined' ? sendLfoState : null);
-    const sendStutter = window.sendStutterState || (typeof sendStutterState !== 'undefined' ? sendStutterState : null);
-
-    if (lfos && typeof sendLfo === 'function') {
-      for (const name of collectSnapshotModulatorNames(targetState, 'toggle')) {
-        const state = lfos.get(name);
-        if (!state) continue;
-        const active = Object.prototype.hasOwnProperty.call(targetState, name)
-          ? Number(targetState[name]) > 0.5
-          : !!state.active;
-        sendLfo(name, {
-          active,
-          rate: getSnapshotNumber(targetState, `${name}.rate`, state.rate),
-          depth: getSnapshotNumber(targetState, `${name}.depth`, state.depth),
-        }, { morphMs });
-      }
-    }
-
-    if (stutters && typeof sendStutter === 'function') {
-      for (const name of collectSnapshotModulatorNames(targetState, 'button')) {
-        const state = stutters.get(name);
-        if (!state) continue;
-        const pressed = Object.prototype.hasOwnProperty.call(targetState, name)
-          ? Number(targetState[name]) > 0.5
-          : !!state.pressed;
-        const payload = { pressed };
-        if (Object.prototype.hasOwnProperty.call(targetState, `${name}.rate`)) {
-          const r = Number(targetState[`${name}.rate`]);
-          if (Number.isFinite(r)) payload.rate = clamp(r, 0, 1);
-        } else if (state.rate !== undefined && Number.isFinite(Number(state.rate))) {
-          payload.rate = state.rate;
-        }
-        if (Object.prototype.hasOwnProperty.call(targetState, `${name}.count`)) {
-          const c = Number(targetState[`${name}.count`]);
-          if (Number.isFinite(c)) payload.count = c;
-        } else if (state.count !== undefined && Number.isFinite(Number(state.count))) {
-          payload.count = state.count;
-        }
-        if (Object.prototype.hasOwnProperty.call(targetState, `${name}.depth`)) {
-          const d = Number(targetState[`${name}.depth`]);
-          if (Number.isFinite(d)) payload.depth = clamp(d, 0, 1);
-        } else if (state.depth !== undefined && Number.isFinite(Number(state.depth))) {
-          payload.depth = state.depth;
-        }
-        sendStutter(name, payload, { morphMs });
-      }
+    for (const [name, state] of window.modulatorStates || []) {
+      if (![name, `${name}.rate`, `${name}.depth`, `${name}.count`].some(key => Object.hasOwn(targetState, key))) continue;
+      window.sendModulatorState?.(name, {
+        ...state,
+        active: Object.hasOwn(targetState, name) ? Number(targetState[name]) > .5 : state.active,
+        rate: getSnapshotNumber(targetState, `${name}.rate`, state.rate),
+        depth: getSnapshotNumber(targetState, `${name}.depth`, state.depth),
+        count: getSnapshotNumber(targetState, `${name}.count`, state.count),
+      }, {morphMs});
     }
   }
 
   function startLinearMorph(targetState, durationSec = 1.0, onComplete) {
     cancelMorph();
+    // Waveform/mode are categorical: apply before any gate or host morph.
+    window.PerformanceSettings?.apply(targetState?.__performance, true);
     const durationMs = Math.max(50, (Number(durationSec) || 1.0) * 1000);
     emitSnapshotMorphModulatorTargets(targetState, durationMs);
     const startState = cloneControlStates();
@@ -287,6 +214,7 @@
 
       const applyStep = () => {
         for (const key of keys) {
+          if (key === '__performance') continue;
           const startVal = Number(startState[key]) || 0;
           const targetVal = Object.prototype.hasOwnProperty.call(targetState, key)
             ? Number(targetState[key])

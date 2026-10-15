@@ -408,7 +408,7 @@ test('Connect control groups render expanded controls as sensor cells with corre
   assert.equal(byGroup.get('HANDS')?.dataset.count, '14');
   assert.equal(byGroup.get('PADS')?.dataset.count, '12');
   assert.equal(byGroup.get('XY PADS')?.dataset.count, '4');
-  assert.equal(byGroup.get('STUTTERS')?.dataset.count, '4');
+  assert.equal(byGroup.get('LFOs')?.dataset.count, '8');
   assert.equal(byGroup.has('RIB' + 'BONS'), false);
   assert.equal(byGroup.get('KNOBS')?.dataset.count, '8');
   assert.equal(byGroup.get('FADERS')?.dataset.count, '8');

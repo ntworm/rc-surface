@@ -230,14 +230,14 @@ test("CPU budget: 4 modulators at 4ms tick stays under 4ms per tick (avg)", asyn
   try {
     // 4 separate params + 4 mappings to keep them isolated
     setupMappedParam("toggle-4");
-    setupMappedParam("button-1");
-    setupMappedParam("button-2");
-    setupMappedParam("button-3");
+    setupMappedParam("toggle-5");
+    setupMappedParam("toggle-6");
+    setupMappedParam("toggle-7");
 
     upd("toggle-4", { kind: "lfo", active: true, rate: 0.5, depth: 0.8, shape: "sine", syncMode: "free" });
-    upd("button-1", { kind: "stutter", active: true, rate: 0.6, depth: 0.8, shape: "square", syncMode: "free" });
-    upd("button-2", { kind: "stutter", active: true, rate: 0.7, depth: 0.8, shape: "triangle", syncMode: "free" });
-    upd("button-3", { kind: "lfo", active: true, rate: 0.9, depth: 0.8, shape: "sine", syncMode: "free" });
+    upd("toggle-5", { kind: "stutter", active: true, rate: 0.6, depth: 0.8, shape: "square", syncMode: "free" });
+    upd("toggle-6", { kind: "stutter", active: true, rate: 0.7, depth: 0.8, shape: "triangle", syncMode: "free" });
+    upd("toggle-7", { kind: "lfo", active: true, rate: 0.9, depth: 0.8, shape: "sine", syncMode: "free" });
 
     // Warm up
     for (let t = 0; t < 200; t += 4) {

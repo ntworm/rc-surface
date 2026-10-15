@@ -30,8 +30,8 @@ function upd(id, p) { return updateHostModulator('client-stut', { name: id, ...p
 test('stutter suppresses identical gate values between edges (not an SDK backlog test)', async () => {
   const clock = installFakeClock(0);
   try {
-    const { writes } = setupMappedParam('button-1');
-    upd('button-1', { kind: 'stutter', active: true, rate: 0.6, depth: 0.8, syncMode: 'free' });
+    const { writes } = setupMappedParam('toggle-5');
+    upd('toggle-5', { kind: 'stutter', active: true, rate: 0.6, depth: 0.8, syncMode: 'free' });
     for (let i = 0; i < 125; i++) { clock.advance(4); await tickHostModulators(clock.get()); }
     assert.ok(writes.length < 50, 'expected coalesced writes (<50) but got ' + writes.length);
     assert.ok(writes.length > 0, 'no writes at all');
@@ -41,8 +41,8 @@ test('stutter suppresses identical gate values between edges (not an SDK backlog
 test('stutter gate-open value equals state.depth (depth scaling)', async () => {
   const clock = installFakeClock(0);
   try {
-    const { writes } = setupMappedParam('button-10');
-    upd('button-10', { kind: 'stutter', active: true, rate: 0.05, depth: 0.5, syncMode: 'free' });
+    const { writes } = setupMappedParam('toggle-6');
+    upd('toggle-6', { kind: 'stutter', active: true, rate: 0.05, depth: 0.5, syncMode: 'free' });
     clock.advance(4); await tickHostModulators(clock.get());
     const gateOpenWritten = writes.find((w) => w.value > 0);
     assert.ok(gateOpenWritten !== undefined, 'no gate-open write found');
@@ -53,9 +53,9 @@ test('stutter gate-open value equals state.depth (depth scaling)', async () => {
 test('updateHostModulator parses depth field for stutter', async () => {
   const clock = installFakeClock(0);
   try {
-    setupMappedParam('button-20');
-    upd('button-20', { kind: 'stutter', active: true, rate: 0.3, depth: 0.75, syncMode: 'free' });
-    const key = 'client-stut::button-20';
+    setupMappedParam('toggle-7');
+    upd('toggle-7', { kind: 'stutter', active: true, rate: 0.3, depth: 0.75, syncMode: 'free' });
+    const key = 'client-stut::toggle-7';
     const state = hostModulators.get(key);
     assert.ok(state !== undefined, 'modulator state not found');
     assert.ok(Math.abs((state.depth ?? -1) - 0.75) < 0.001, 'expected depth=0.75, got ' + state.depth);
@@ -76,7 +76,7 @@ function slowSdk(target = {}) {
   } };
   setExtensionContext({ application: { song: { tempo: 120, tracks: [{ devices: [{ parameters: [param] }] }] } } });
   const binding = { type: 'device_param', trackIndex: 0, deviceIndex: 0, paramIndex: 0, ...target };
-  controlMappings.set('button-1', [binding]);
+  controlMappings.set('toggle-5', [binding]);
   return { writes, releases, binding, maxInFlight: () => maxInFlight,
     async close() { teardown(); releases.forEach(release => release()); await drainMicrotasks(); } };
 }
@@ -85,7 +85,7 @@ test('stutter analog depth keeps only newest value while SDK is busy', async () 
   const sdk = slowSdk();
   try {
     for (const value of [0.1, 0.2, 0.4, 0.7, 0.9]) {
-      void applyMapping('slow-stutter', 'button-1', value); await drainMicrotasks();
+      void applyMapping('slow-stutter', 'toggle-5', value); await drainMicrotasks();
     }
     assert.deepEqual(sdk.writes, [0.1]);
     sdk.releases[0](); await drainMicrotasks();
@@ -99,13 +99,13 @@ test('host stutter OFF supersedes every unsent pulse even with explicit smoothin
     const sdk = slowSdk({ smooth });
     const clock = installFakeClock(1000);
     try {
-      upd('button-1', { kind: 'stutter', active: true, rate: 1, depth: 0.8, syncMode: 'free' });
+      upd('toggle-5', { kind: 'stutter', active: true, rate: 1, depth: 0.8, syncMode: 'free' });
       stopHostModulatorLoop();
       for (const ms of [0, 40, 40, 40, 40, 40]) {
         clock.advance(ms); void tickHostModulators(clock.get()); await drainMicrotasks();
       }
       assert.deepEqual(sdk.writes, [0.8]);
-      upd('button-1', { kind: 'stutter', active: false }); await drainMicrotasks();
+      upd('toggle-5', { kind: 'stutter', active: false }); await drainMicrotasks();
       assert.equal(hostModulators.size, 0);
       sdk.releases[0](); await drainMicrotasks();
       assert.deepEqual(sdk.writes, [0.8, 0], 'OFF must be next, not an old gate or a smoothing tail');
@@ -121,7 +121,7 @@ test('LFO and stutter bound to same parameter share one SDK writer', async () =>
   controlMappings.set('toggle-1', [sdk.binding]);
   try {
     void applyMapping('shared-modulator', 'toggle-1', 0.2); await drainMicrotasks();
-    void applyMapping('shared-modulator', 'button-1', 0.9); await drainMicrotasks();
+    void applyMapping('shared-modulator', 'toggle-5', 0.9); await drainMicrotasks();
     assert.deepEqual(sdk.writes, [0.2], 'stutter must not start a second writer beside LFO');
     sdk.releases[0](); await drainMicrotasks();
     assert.deepEqual(sdk.writes, [0.2, 0.9]);
@@ -133,7 +133,7 @@ test('explicit toggle mappings still retain every switch edge', async () => {
   const sdk = slowSdk({ mode: 'toggle' });
   try {
     for (const value of [1, 0, 1, 0, 1]) {
-      void applyMapping('event-stutter', 'button-1', value); await drainMicrotasks();
+      void applyMapping('event-stutter', 'toggle-5', value); await drainMicrotasks();
     }
     assert.deepEqual(sdk.writes, [1]);
     sdk.releases[0](); await drainMicrotasks();

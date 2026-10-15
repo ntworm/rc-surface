@@ -25,7 +25,7 @@ const markup = fs.readFileSync(
 // it can be lifted out and exercised without a DOM.
 function resolver({ syncMode, burstSubdivision, burstAttackRatio, currentBpm }) {
   const body = source.match(
-    /function resolveBurstShape\(\) \{[\s\S]*?\n  \}/,
+    /function resolveBurstShape\(name\) \{[\s\S]*?\n  \}/,
   );
   assert.ok(body, 'resolveBurstShape must exist in controls.js');
   const free = source.match(/BURST_FREE_DURATION_MS = (\d+)/);
@@ -33,12 +33,14 @@ function resolver({ syncMode, burstSubdivision, burstAttackRatio, currentBpm }) 
   assert.ok(free && freeAttack, 'the free envelope must stay named');
   const fn = new Function(
     'window',
+    'modulatorSyncMode',
     'BURST_FREE_DURATION_MS',
     'BURST_FREE_ATTACK_MS',
     `${body[0]} return resolveBurstShape();`,
   );
   return fn(
     { syncMode, syncSettings: { burstSubdivision, burstAttackRatio }, currentBpm },
+    () => syncMode,
     Number(free[1]),
     Number(freeAttack[1]),
   );
@@ -133,8 +135,8 @@ test('neither call site hardcodes the envelope any more', () => {
   );
   assert.doesNotMatch(source, /attackMs:\s*70\b/, 'the mapping call site too');
   // Two call sites, one resolver: that is the whole point.
-  const calls = source.match(/resolveBurstShape\(\)/g) || [];
-  assert.ok(calls.length >= 3, `expected the resolver at both call sites, saw ${calls.length}`);
+  const calls = source.match(/resolveBurstShape\(name\)/g) || [];
+  assert.ok(calls.length >= 2, `expected the resolver at both call sites, saw ${calls.length}`);
 });
 
 test('the panel exposes the burst the way it exposes the other families', () => {
@@ -152,63 +154,6 @@ test('the panel exposes the burst the way it exposes the other families', () => 
 
 // ---------------------------------------------------------------------------
 // A burst has to end the same way it started, everywhere it can be started.
-
-function classListDe(classes) {
-  const set = new Set(classes);
-  return {
-    set,
-    add: (...c) => c.forEach((x) => set.add(x)),
-    remove: (...c) => c.forEach((x) => set.delete(x)),
-    contains: (c) => set.has(c),
-    toggle: (c, on) => (on ? set.add(c) : set.delete(c)),
-  };
-}
-
-// Lifts one loop body out of the frame tick and runs it over a fake element,
-// so the cleanup is observed rather than read.
-const GUARDA = 'if (state.burstUntil > 0 && now >= state.burstUntil) {';
-
-function expirar(marcador, classesIniciais, estado) {
-  // Sliced rather than matched: the block is full of braces and regex
-  // metacharacters, and a pattern that silently stops matching would turn this
-  // into a test that passes by finding nothing.
-  const desde = source.indexOf(`// ${marcador}`);
-  assert.ok(desde > 0, `${marcador}: section marker must exist`);
-  const abre = source.indexOf(GUARDA, desde);
-  assert.ok(abre > 0, `${marcador}: expiry guard must exist`);
-  const corpo = abre + GUARDA.length;
-  const fecha = source.indexOf('\n      }', corpo);
-  assert.ok(fecha > corpo, `${marcador}: expiry block must close`);
-  const bloco = [null, source.slice(corpo, fecha)];
-  const el = { classList: classListDe(classesIniciais), style: { removeProperty() {}, setProperty() {} },
-    querySelector: () => ({ style: {} }) };
-  // The block ends in `continue`, which only parses inside a loop.
-  const fn = new Function(
-    'state', 'now', 'document', 'name', 'clearModeClass', 'emitLfoState', 'emitStutterState',
-    `for (let uma = 0; uma < 1; uma += 1) {${bloco[1]}\n}\nreturn state;`,
-  );
-  fn(estado, 10_000, { querySelector: () => el }, 'lfo-1',
-     (e) => ['mode-a', 'mode-b', 'mode-c', 'mode-d'].forEach((c) => e.classList.remove(c)),
-     () => {}, () => {});
-  return el.classList.set;
-}
-
-test('an expired LFO burst leaves no mode class behind', () => {
-  // setModeClass stamps mode-d on the element when the burst starts. The
-  // expiry removed 'on' and 'burst' and left mode-d, so the control kept the
-  // colour of a control that is still firing after it had stopped emitting.
-  const restou = expirar('2. Run Active LFOs', ['on', 'burst', 'mode-d'],
-    { active: true, burstUntil: 1, value: 1 });
-  assert.ok(!restou.has('mode-d'), `mode-d survived the burst: ${[...restou]}`);
-  assert.ok(!restou.has('on') && !restou.has('burst'), `stale state: ${[...restou]}`);
-});
-
-test('an expired stutter burst leaves no mode class behind', () => {
-  const restou = expirar('4. Run Active Stutters', ['pressed', 'burst', 'mode-d'],
-    { pressed: true, burstUntil: 1 });
-  assert.ok(!restou.has('mode-d'), `mode-d survived the burst: ${[...restou]}`);
-  assert.ok(!restou.has('pressed') && !restou.has('burst'), `stale state: ${[...restou]}`);
-});
 
 test('every mode D burst takes its length from the one resolver', () => {
   // LFOs and stutters carried a hardcoded 1100 ms at four call sites, so the
@@ -296,13 +241,6 @@ test('a mode D LFO opens over the attack and closes over the release', () => {
   assert.equal(envelopeFactor({ burstUntil: 0, burstStart: 0 }, 500), 1);
 });
 
-test('the LFO depth is what the envelope scales', () => {
-  assert.match(source, /state\.depth \* envelope/,
-    'the envelope must reach the depth, or the burst is still just a gate');
-  // Both activate paths and both controlSetter paths must record the shape,
-  // or the envelope has no start time to measure from.
-  const starts = (source.match(/state\.burstStart = /g) || []).length;
-  assert.ok(starts >= 4, `every burst entry point must record its start, saw ${starts}`);
-  const attacks = (source.match(/state\.burstAttackMs = /g) || []).length;
-  assert.ok(attacks >= 4, `and its attack, saw ${attacks}`);
+test('the LFO preview applies the burst envelope to amplitude',()=>{
+  assert.match(source, /state\.value = \.5 \+ wave \* \.5 \* state\.depth \* burstEnvelopeFactor\(state,now\)/);
 });

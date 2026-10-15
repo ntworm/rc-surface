@@ -10,7 +10,7 @@ import { relinkClipLaunchTarget, validateClipLaunchTarget } from "./clip-launch.
 import { visionLossPolicy } from './vision-loss.js';
 
 export const PROJECT_CONFIG_FORMAT = "ableton-rc-surface-project";
-export const PROJECT_CONFIG_VERSION = 1;
+export const PROJECT_CONFIG_VERSION = 2;
 
 export interface SemanticTargetSignature {
   targetType?: string | undefined;
@@ -77,6 +77,41 @@ export interface RelinkReport {
 
 function isRecord(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+// Version 2 uses one eight-slot model. Earlier configurations are incompatible.
+export function validatePerformanceSettings(value: unknown): Record<string, any> {
+  if (!isRecord(value) || value.version !== 1 || !isRecord(value.slots)) {
+    throw new Error('Unsupported modulator configuration');
+  }
+  const ranges: Record<string, [number, number]> = {
+    rate: [0, 1], depth: [0, 1], count: [0, 1], subdivision: [0, 32],
+    swing: [0, .66], phaseOffset: [-4, 4],
+  };
+  const shapes = new Set(['sine', 'triangle', 'ramp_up', 'ramp_down', 'square', 'stutter']);
+  for (const [name, entry] of Object.entries(value.slots)) {
+    if (!/^toggle-[1-8]$/.test(name) || !isRecord(entry)) throw new Error('Invalid modulator slot');
+    for (const [key, item] of Object.entries(entry)) {
+      const range = ranges[key];
+      const valid = range ? typeof item === 'number' && Number.isFinite(item) && item >= range[0] && item <= range[1]
+        : key === 'shape' ? shapes.has(String(item))
+          : key === 'mode' ? ['A', 'B', 'C', 'D'].includes(String(item))
+            : key === 'syncMode' && ['sync', 'free'].includes(String(item));
+      if (!valid) throw new Error(`Invalid modulator ${key}`);
+    }
+  }
+  if (value.xy !== undefined) {
+    if (!isRecord(value.xy)) throw new Error('Invalid XY configuration');
+    for (const [name, entry] of Object.entries(value.xy)) {
+      if (!/^xy-[12]$/.test(name) || !isRecord(entry)
+        || !['static', 'physics'].includes(entry.behavior)) throw new Error('Invalid XY behavior');
+      for (const [key, range] of Object.entries({ friction: [.002, .05], bounce: [0, .95], speed: [.1, 4] })) {
+        const item = entry[key];
+        if (typeof item !== 'number' || !Number.isFinite(item) || item < range[0]! || item > range[1]!) throw new Error(`Invalid XY ${key}`);
+      }
+    }
+  }
+  return value;
 }
 
 function persistentId(value: any): string | undefined {
@@ -295,25 +330,7 @@ export function migrateLegacyClientMappings(raw: unknown): LegacyMappingMigratio
 }
 
 export function validateProjectConfig(value: unknown): ProjectConfig {
-  let candidate = value as any;
-  if (candidate?.format === PROJECT_CONFIG_FORMAT && candidate.version === 0
-      && candidate.project && candidate.mappings && typeof candidate.mappings === "object") {
-    candidate = {
-      ...candidate,
-      version: PROJECT_CONFIG_VERSION,
-      preferences: { globalTakeover: "scale", migratedFromVersion: 0, ...(candidate.preferences ?? {}) },
-    };
-  }
-  if (isRecord(candidate?.mappings)) {
-    const migration = migrateLegacyClientMappings(candidate.mappings);
-    if (migration.migrated > 0) {
-      candidate = {
-        ...candidate,
-        mappings: migration.mappings,
-        preferences: { ...(candidate.preferences ?? {}), legacyClientMappingsMigrated: true },
-      };
-    }
-  }
+  const candidate = value as any;
   const config = candidate as Partial<ProjectConfig> | null;
   if (!config || config.format !== PROJECT_CONFIG_FORMAT || config.version !== PROJECT_CONFIG_VERSION
       || !isRecord(config.project) || typeof config.project.fingerprint !== "string"
@@ -327,6 +344,7 @@ export function validateProjectConfig(value: unknown): ProjectConfig {
     throw new Error("Invalid .rcsurface project configuration");
   }
   for (const [control, targets] of Object.entries(config.mappings)) {
+    if (/^button-/.test(control) || LEGACY_CLIENT_KEY.test(control)) throw new Error("Incompatible pre-v2 modulator mapping");
     if (!control || control.length > 256) throw new Error("Invalid .rcsurface control name");
     if (!Array.isArray(targets) || targets.some((target) => !target || typeof target.type !== "string")) {
       throw new Error("Invalid .rcsurface mappings payload");
@@ -345,6 +363,7 @@ export function validateProjectConfig(value: unknown): ProjectConfig {
       }
     }
   }
+  if (Object.hasOwn(config.preferences, 'performance')) validatePerformanceSettings(config.preferences.performance);
   if (Object.hasOwn(config.preferences, 'visionLoss') && config.preferences.visionLoss == null) throw new Error('Invalid vision loss policy');
   return {...config, preferences: {...config.preferences, visionLoss: visionLossPolicy(config.preferences.visionLoss, true)}} as ProjectConfig;
 }

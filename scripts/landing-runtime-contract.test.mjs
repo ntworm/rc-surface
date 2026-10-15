@@ -153,7 +153,7 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   assert.match(continuous, /data-real-control="knob"/);
   assert.match(continuous, /data-real-control="fader"/);
   assert.match(continuous, /relative vertical drag/i);
-  assert.match(continuous, /15-POINT TRAIL/i);
+  assert.match(continuous, /CONFIGURABLE SPEED/i);
   // The claims that make each model worth a panel at all.
   // Case-insensitive: the claims are sentence case in the markup and uppercased
   // by CSS, so the source stays readable text rather than shouted content.
@@ -330,10 +330,10 @@ test('the continuous panel quotes the real constants from controls.js', () => {
   // start). Match either `const` or `let` and accept any numeric literal.
   const fader = controls.match(/function makeFader[\s\S]{0,900}?(?:const|let) rangePx = (\d+);/);
   assert.ok(fader, 'fader rangePx must be readable from controls.js');
-  const bounce = controls.match(/const bounce = ([\d.]+);/);
+  const physics = fs.readFileSync(path.join(import.meta.dirname,'..','static','phone-v3','xy-engine.js'),'utf8');
+  const bounce = physics.match(/bounce: ([\d.]+)/);
   assert.ok(bounce, 'bounce must be readable from controls.js');
-  const trail = controls.match(/if \(trail\.length > (\d+)\) trail\.shift\(\);/);
-  assert.ok(trail, 'trail cap must be readable from controls.js');
+  assert.match(physics, /speed: 1/);
 
   assert.ok(
     figure.includes(`KNOB ${knob[2]}`) && figure.includes(`MACRO KNOB ${knob[1]}`),
@@ -341,13 +341,7 @@ test('the continuous panel quotes the real constants from controls.js', () => {
   );
   assert.ok(figure.includes(`FADER ${fader[1]}`), `drawing must state fader ${fader[1]}`);
   assert.ok(figure.includes(bounce[1]), `drawing must state the ${bounce[1]} rebound`);
-  // Stated once, in the footer. It used to be asserted twice, which forced the
-  // same number into a caption that no longer depicts discrete samples: the
-  // travelled path is drawn as one continuous line now.
-  assert.ok(
-    figure.includes(`${trail[1]}-POINT TRAIL`),
-    `drawing must state the ${trail[1]}-sample trail`,
-  );
+  assert.ok(figure.includes('SPEED'), 'physics caption must describe configurable speed');
 });
 
 test('control illustrations are HTML, with only real geometry left in SVG', () => {
@@ -455,7 +449,8 @@ test('every number the sheet states is one the program actually defines', () => 
     `burst release must read ${Number(dur) - Number(attack)} ms`,
   );
 
-  const bounce = one(controls, /const bounce = ([\d.]+);/, 'bounce');
+  const physics = fs.readFileSync(path.join(import.meta.dirname,'..','static','phone-v3','xy-engine.js'),'utf8');
+  const bounce = one(physics, /bounce: ([\d.]+)/, 'bounce');
   assert.ok(landing.includes(`&#215;${bounce}`), `rebound must read x${bounce}`);
   // The bounce happens at the edge of the pad. There is no "wall" in the product.
   assert.doesNotMatch(landing, /\bwall\b/i, 'the sheet must not invent a "wall"');

@@ -79,8 +79,8 @@ function loadControls({ snapshots = null } = {}) {
   const controlsSource = fs.readFileSync(controlsFile, 'utf8');
 
   const pads = makeScalarElements('pad', 'pad', 12);
-  const toggles = makeScalarElements('toggle', 'toggle', 4);
-  const buttons = makeScalarElements('button', 'button', 4);
+  const toggles = makeScalarElements('toggle', 'toggle', 8);
+  const buttons = toggles.slice(4);
 
   const xy1 = makeElement({ dataset: { name: 'xy-1' }, classes: ['xy-pad'] });
   xy1.children.set('.xy-dot', makeElement());
@@ -108,7 +108,7 @@ function loadControls({ snapshots = null } = {}) {
   ]);
   const store = new Map();
   if (snapshots) {
-    store.set('ableton-rc:snapshots', JSON.stringify(snapshots));
+    store.set('ableton-rc:v2:snapshots', JSON.stringify(snapshots));
   }
 
   let rafCallback = null;
@@ -175,6 +175,9 @@ function loadControls({ snapshots = null } = {}) {
 
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   vm.runInNewContext(snapshotsSource, context, { filename: snapshotsFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname,'control-config.js'),'utf8'),context);
+  for(let i=5;i<=8;i++) context.RcControlConfig.set(`toggle-${i}`,{shape:'stutter'});
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
   return {
@@ -195,7 +198,7 @@ function loadControls({ snapshots = null } = {}) {
       if (cb) cb(at);
     },
     storedSnapshots() {
-      return JSON.parse(store.get('ableton-rc:snapshots') || '[]');
+      return JSON.parse(store.get('ableton-rc:v2:snapshots') || '[]');
     },
   };
 }
@@ -227,7 +230,7 @@ test('PERF OFF resets performance gestures without resetting mixer controls', ()
 
   assert.ok(app.emitted.some((event) => event.name === 'pad-1' && event.value === 0));
   assert.ok(app.modulatorStates.some((event) => event.name === 'toggle-1' && event.active === false));
-  assert.ok(app.modulatorStates.some((event) => event.name === 'button-1' && event.active === false));
+  assert.ok(app.modulatorStates.some((event) => event.name === 'toggle-5' && event.active === false));
   assert.ok(app.emitted.some((event) => event.name === 'xy-1' && event.x === 0.5 && event.y === 0.5));
   assert.ok(app.emitted.some((event) => event.name === 'xy-2' && event.x === 0.5 && event.y === 0.5));
   assert.equal(app.emitted.some((event) => event.name === 'knob-1'), false);
@@ -255,9 +258,9 @@ test('PERF capture and recall correctly stores LFO/stutter active state and rate
   app.context.window.controlSetters['toggle-1.depth'](0.65);
 
   // Configure Stutter 1 active, rate=0.45, count=0.75
-  app.context.window.controlSetters['button-1'](1.0);
-  app.context.window.controlSetters['button-1.rate'](0.45);
-  app.context.window.controlSetters['button-1.count'](0.75);
+  app.context.window.controlSetters['toggle-5'](1.0);
+  app.context.window.controlSetters['toggle-5.rate'](0.45);
+  app.context.window.controlSetters['toggle-5.count'](0.75);
 
   // Capture Snapshot on Slot 1
   app.click(app.captureButton);
@@ -271,13 +274,13 @@ test('PERF capture and recall correctly stores LFO/stutter active state and rate
   assert.equal(stored[0]['toggle-1.rate'], 0.85);
   assert.equal(stored[0]['toggle-1.depth'], 0.65);
 
-  assert.equal(stored[0]['button-1'], 1.0);
-  assert.equal(stored[0]['button-1.rate'], 0.45);
-  assert.equal(stored[0]['button-1.count'], 0.75);
+  assert.equal(stored[0]['toggle-5'], 1.0);
+  assert.equal(stored[0]['toggle-5.rate'], 0.45);
+  assert.equal(stored[0]['toggle-5.count'], 0.75);
 
   // Deactivate them
   app.context.window.controlSetters['toggle-1'](0.0);
-  app.context.window.controlSetters['button-1'](0.0);
+  app.context.window.controlSetters['toggle-5'](0.0);
 
   // Recall slot 1
   app.click(app.perfSlots[0]);
@@ -285,7 +288,7 @@ test('PERF capture and recall correctly stores LFO/stutter active state and rate
 
   // Verify they are restored and reactivated through host-side modulator state.
   const toggleState = app.modulatorStates.findLast(e => e.name === 'toggle-1');
-  const buttonState = app.modulatorStates.findLast(e => e.name === 'button-1');
+  const buttonState = app.modulatorStates.findLast(e => e.name === 'toggle-5');
 
   // Since we morph from 0.0 to 1.0, they should activate (cross 0.5)
   assert.equal(toggleState.active, true);
@@ -298,8 +301,8 @@ test('PERF capture and recall correctly stores LFO/stutter active state and rate
   // Verify rate and depth morphed/restored values
   assert.equal(app.context.window.currentControlStates['toggle-1.rate'], 0.85);
   assert.equal(app.context.window.currentControlStates['toggle-1.depth'], 0.65);
-  assert.equal(app.context.window.currentControlStates['button-1.rate'], 0.45);
-  assert.equal(app.context.window.currentControlStates['button-1.count'], 0.75);
+  assert.equal(app.context.window.currentControlStates['toggle-5.rate'], 0.45);
+  assert.equal(app.context.window.currentControlStates['toggle-5.count'], 0.75);
 });
 
 test('PERF recall sends an active LFO morph target before local visual tween', () => {
@@ -342,12 +345,12 @@ test('PERF recall suppresses per-frame LFO host state while local visual tween r
   app.click(app.perfSlots[0]);
   app.tick(100);
 
-  const lfoStates = app.modulatorStates.filter(e => e.name === 'toggle-1');
-  assert.equal(lfoStates.length, 1);
-  assert.equal(lfoStates[0].active, true);
-  assert.equal(lfoStates[0].rate, 0.9);
-  assert.equal(lfoStates[0].depth, 0.7);
-  assert.equal(lfoStates[0].morphMs, 1000);
+  const modulatorStates = app.modulatorStates.filter(e => e.name === 'toggle-1');
+  assert.equal(modulatorStates.length, 1);
+  assert.equal(modulatorStates[0].active, true);
+  assert.equal(modulatorStates[0].rate, 0.9);
+  assert.equal(modulatorStates[0].depth, 0.7);
+  assert.equal(modulatorStates[0].morphMs, 1000);
 });
 
 test('PERF recall sends one host-side LFO morph target and suppresses frame spam', () => {
@@ -419,7 +422,7 @@ test('PERF Mode D snapshot recall triggers burst decays for pads/LFOs/stutters',
 
   // Recall LFO-1, Stutter-1, Pad-1 as active
   app.context.window.controlSetters['toggle-1'](1.0);
-  app.context.window.controlSetters['button-1'](1.0);
+  app.context.window.controlSetters['toggle-5'](1.0);
   app.context.window.controlSetters['pad-1'](0.8);
 
   // Execute initial physics frame (now = 100ms)
@@ -431,5 +434,5 @@ test('PERF Mode D snapshot recall triggers burst decays for pads/LFOs/stutters',
   // Assert they auto-deactivated and sent value 0.0 to Ableton
   assert.ok(app.emitted.some(e => e.name === 'pad-1' && e.value === 0));
   assert.ok(app.modulatorStates.some(e => e.name === 'toggle-1' && e.active === false));
-  assert.ok(app.modulatorStates.some(e => e.name === 'button-1' && e.active === false));
+  assert.ok(app.modulatorStates.some(e => e.name === 'toggle-5' && e.active === false));
 });

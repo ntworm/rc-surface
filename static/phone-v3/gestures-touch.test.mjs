@@ -125,6 +125,7 @@ function loadEngineAndApp() {
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
   vm.runInNewContext(snapshotsSource, windowContext, { filename: snapshotsFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname,'xy-engine.js'),'utf8'),windowContext);
   vm.runInNewContext(controlsSource, windowContext, { filename: controlsFile });
   
   return windowContext;

@@ -2,6 +2,19 @@
 
 Thank you for testing RC Surface v1.0.2.
 
+## Local 2.0.0 candidate acceptance
+
+Configure this candidate from scratch: old mappings, presets, project profiles and performance browser keys are intentionally incompatible. The prior recognition candidate remains a separate physical acceptance anchor.
+
+- Manually install RC-Surface-2.0.0.ablx only when selected by the operator; verify SHA256SUMS.txt.
+- In CFG, exercise eight LFOs, eight Stutters, 1+7, 7+1 and a mixed layout. All controls are L1–L8 with identical interaction. Check independent shape, mode, FREE/SYNC, subdivisions, phase, depth, swing and ratchet.
+- Exercise both XY panels as Static/Static, Physics/Static, Static/Physics and Physics/Physics. Use different friction, bounce and speed. Static switch/OFF must stop motion; opening CFG must not send values.
+- Save/reload a new preset, project profile and snapshot; verify target identity and configuration, including XY settings. Old import formats must fail clearly.
+- Re-run the existing recognition/thumb, MIDI bytes, loss/return and prolonged camera checklist below. These remain physical acceptance, not automated proof.
+- Browser geometry/real phone acceptance is pending. No automatic browser/camera/Live operation was used for this candidate.
+
+The sections below describe previous acceptance procedures and historical 1.0.2 kit details; they do not claim 2.0.0 physical approval.
+
 ## Current kit: 1.0.2
 
 Install `RC-Surface-1.0.2.ablx` the same way as 1.0.1 and reload the phone page. The two

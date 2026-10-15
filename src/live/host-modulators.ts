@@ -170,8 +170,8 @@ function hostModulatorKey(clientId: string, name: string): string {
 }
 
 function isHostModulatorName(kind: HostModulatorKind, name: string): boolean {
-  if (kind === "lfo") return /^toggle-\d+$/.test(name);
-  return /^button-\d+$/.test(name);
+  // Slot identity is independent of waveform.
+  return (kind === "lfo" || kind === "stutter") && /^toggle-[1-8]$/.test(name);
 }
 
 export function startHostModulatorLoop(): void {
@@ -310,7 +310,12 @@ export function updateHostModulator(clientId: string, payload: Record<string, an
 
   const key = hostModulatorKey(clientId, name);
   const active = !!payload["active"];
-  const existing = hostModulators.get(key);
+  let existing = hostModulators.get(key);
+  if (existing && existing.kind !== kind) {
+    hostModulators.delete(key);
+    void applyHostGeneratedControl(clientId, name, 0, Date.now(), true);
+    existing = undefined;
+  }
   const morphMs = clampMorphMs(payload["morphMs"]);
   const morphStart = Date.now();
   if (existing) {

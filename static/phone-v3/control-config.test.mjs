@@ -118,7 +118,7 @@ test('persistence: set writes JSON to storage', () => {
 
 test('persistence: load restores overrides from storage', () => {
   const storage = makeStorage({
-    'ableton-rc:control_config': JSON.stringify({
+    'ableton-rc:v2:control_config': JSON.stringify({
       'pad-1': { mode: 'D' },
       'toggle-1': { shape: 'square' },
     }),
@@ -129,7 +129,7 @@ test('persistence: load restores overrides from storage', () => {
 });
 
 test('persistence: corrupted JSON yields an empty store without throwing', () => {
-  const storage = makeStorage({ 'ableton-rc:control_config': '{not valid json' });
+  const storage = makeStorage({ 'ableton-rc:v2:control_config': '{not valid json' });
   const cc = create({ storage, clock: () => 3 });
   assert.equal(cc.size(), 0);
   assert.equal(cc.get('pad-1', 'mode', 'A'), 'A');

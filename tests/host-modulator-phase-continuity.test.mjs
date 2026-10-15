@@ -13,7 +13,7 @@ function setup(t, kind = 'lfo') {
   let now = 0;
   Date.now = () => now;
   setExtensionContext({ application: { song: { tempo: 120, tracks: [] } } });
-  const name = kind === 'lfo' ? 'toggle-1' : 'button-1';
+  const name = kind === 'lfo' ? 'toggle-1' : 'toggle-5';
   const update = payload => {
     updateHostModulator('phase-test', { kind, name, active: true, depth: 1, syncMode: 'free', ...payload });
     stopHostModulatorLoop();
@@ -93,10 +93,10 @@ test('HOST accepts dotted and triplet pins only for LFO', async t => {
     app.update({ syncMode: 'sync', syncSubdivisionBeats: subdivision });
     assert.equal(app.state().syncSubdivisionBeats, subdivision);
   }
-  updateHostModulator('phase-test', { kind: 'stutter', name: 'button-1', active: true,
+  updateHostModulator('phase-test', { kind: 'stutter', name: 'toggle-5', active: true,
     syncMode: 'sync', syncSubdivisionBeats: 0.75 });
   stopHostModulatorLoop();
-  assert.equal(hostModulators.get('phase-test::button-1').syncSubdivisionBeats, undefined);
+  assert.equal(hostModulators.get('phase-test::toggle-5').syncSubdivisionBeats, undefined);
 });
 
 test('SDK clock LFO pin changes settle between ticks and seeks restore song alignment', async t => {

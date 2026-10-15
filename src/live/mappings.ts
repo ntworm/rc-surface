@@ -47,6 +47,7 @@ import {
   rollbackProjectConfigFile,
   saveProjectConfigFile,
   validateProjectConfig,
+  validatePerformanceSettings,
   isSupportedMappingMode,
   type ProjectConfig,
   type RelinkReport,
@@ -265,6 +266,12 @@ export function getProjectConfigStatus() {
 export function setMappingsFilePath(p: string | null) { mappingsFilePath = p; }
 export function setPresetsDirPath(p: string | null) { presetsDirPath = p; }
 
+function broadcastProjectPreferences(): void {
+  for (const client of trackedClients.values()) if (!client.isAdmin && client.ws.readyState === 1) {
+    try { client.ws.send(JSON.stringify({type: 'project_preferences', preferences: currentProjectPreferences})); } catch { /* disconnected */ }
+  }
+}
+
 /**
  * Wire the mapping/preset paths into the Live-provided storage directory.
  * Safe to call with a null/undefined storageDir (warnings + no-op).
@@ -285,7 +292,7 @@ export async function configureMappingStorage(
     currentProjectReport = emptyRelinkReport();
     return;
   }
-  const cleanStorageDir = stripWslDrivePrefix(storageDir);
+  const cleanStorageDir = path.join(stripWslDrivePrefix(storageDir), "surface-v2");
   setMappingsFilePath(path.join(cleanStorageDir, "mappings.json"));
   const presets = path.join(cleanStorageDir, "presets");
   setPresetsDirPath(presets);
@@ -1395,7 +1402,7 @@ export async function applyMapping(clientId: string, controlName: string, value:
       };
       // Attack envelopes are momentary for takeover/loss, but a parameter
       // still needs bounded single-flight writes, not a discrete-event FIFO.
-      // toggle-N/button-N are LFO/stutter output levels, not activation edges.
+      // Modulator slots carry output levels rather than activation edges.
       // Stutter pulses driving analog parameters must not replay a FIFO tail.
       // Boolean destinations and explicit event modes still preserve FIFO.
       const isModulatorOutput = /^(?:toggle|button)-\d+$/.test(controlName);
@@ -2632,6 +2639,7 @@ export const commands: Record<string, CommandSpec> = {
     description: "Persist set-specific camera, gesture, page and safety preferences.",
     handler: async (args) => runMappingMutation(async () => {
       const incoming = args['preferences'];
+      if (incoming && Object.hasOwn(incoming, 'performance')) validatePerformanceSettings(incoming.performance);
       if (incoming && Object.hasOwn(incoming, 'visionLoss')) {
         if (incoming.visionLoss == null) throw new Error('Invalid vision loss policy');
         visionLossPolicy(incoming.visionLoss);
@@ -2655,9 +2663,7 @@ export const commands: Record<string, CommandSpec> = {
       }
       visionLossWatchdog.refresh();
       const status = getProjectConfigStatus();
-      for (const client of trackedClients.values()) if (!client.isAdmin && client.ws.readyState === 1) {
-        try { client.ws.send(JSON.stringify({type: 'project_preferences', preferences: status.preferences})); } catch { /* disconnected */ }
-      }
+      broadcastProjectPreferences();
       return status;
     }),
   },
@@ -2711,6 +2717,7 @@ export const commands: Record<string, CommandSpec> = {
         throw error;
       }
       safeInputRegistry.clear();
+      broadcastProjectPreferences();
       return getProjectConfigStatus();
     }),
   },
@@ -2763,6 +2770,7 @@ export const commands: Record<string, CommandSpec> = {
       currentProjectPreferences = { ...config.preferences };
       visionLossWatchdog.reset();
       currentProjectExtras = { camera: config.camera, gestures: config.gestures, pages: config.pages };
+      broadcastProjectPreferences();
       return getProjectConfigStatus();
     }),
   },
@@ -2829,7 +2837,11 @@ export const commands: Record<string, CommandSpec> = {
       const obj: Record<string, MappingTarget[]> = {};
       for (const [k, v] of controlMappings.entries()) obj[k] = v;
 
-      const staged = await stageTextFile(filePath, JSON.stringify(obj, null, 2));
+      const saved = {
+        format: 'rc-surface-preset', version: 2, mappings: obj,
+        performance: validatePerformanceSettings(args["performance"] ?? currentProjectPreferences.performance ?? {version: 1, slots: {}}),
+      };
+      const staged = await stageTextFile(filePath, JSON.stringify(saved, null, 2));
       await staged.commit();
       currentPresetName = cleanName;
       return { success: true, name: cleanName };
@@ -2847,12 +2859,21 @@ export const commands: Record<string, CommandSpec> = {
       const filePath = path.join(presetsDirPath, `${cleanName}.json`);
 
       const raw = await fs.readFile(filePath, "utf-8");
-      const obj = JSON.parse(raw) as Record<string, MappingTarget | MappingTarget[]>;
+      const parsed = JSON.parse(raw);
+      const envelope = parsed?.format === 'rc-surface-preset';
+      if (!envelope || parsed.version !== 2 || !parsed.mappings || typeof parsed.mappings !== 'object' || Array.isArray(parsed.mappings)) {
+        throw new Error('Unsupported preset format');
+      }
+      const performance = validatePerformanceSettings(parsed.performance);
+      const obj = parsed.mappings;
       const nextMappings = new Map<string, MappingTarget[]>();
       for (const [k, v] of Object.entries(migrateLegacyClientMappings(obj).mappings)) {
         nextMappings.set(k, prepareClipLaunchTargets(k, Array.isArray(v) ? v : [v]));
       }
-      await saveMappings(nextMappings);
+      const previousPreferences = currentProjectPreferences;
+      if (performance) currentProjectPreferences = { ...currentProjectPreferences, performance };
+      try { await saveMappings(nextMappings); }
+      catch (error) { currentProjectPreferences = previousPreferences; throw error; }
       controlMappings.clear();
       await cancelPendingMappingWrites();
       safeInputRegistry.clear();
@@ -2870,6 +2891,7 @@ export const commands: Record<string, CommandSpec> = {
       for (const [k, v] of nextMappings) controlMappings.set(k, v);
       currentPresetName = cleanName;
 
+      broadcastProjectPreferences();
       return { success: true, name: cleanName, mappingsCount: controlMappings.size };
     })
   },

@@ -174,10 +174,8 @@ const allControlsGrouped = {
     "xy-1.x", "xy-1.y", "xy-2.x", "xy-2.y"
   ],
   LFOs: [
-    "toggle-1", "toggle-2", "toggle-3", "toggle-4"
-  ],
-  Buttons: [
-    "button-1", "button-2", "button-3", "button-4"
+    "toggle-1", "toggle-2", "toggle-3", "toggle-4",
+    "toggle-5", "toggle-6", "toggle-7", "toggle-8"
   ]
 };
 window.allControlsGrouped = allControlsGrouped;
@@ -194,13 +192,8 @@ function getControlDisplayName(ctrl) {
   }
   if (ctrl.startsWith("toggle-")) {
     const num = parseInt(ctrl.slice(7));
-    if (num <= 4) return `L${num} (LFO)`;
+    if (num <= 8) return `L${num} (LFO / Stutter)`;
     return `LFO ${num}`;
-  }
-  if (ctrl.startsWith("button-")) {
-    const num = parseInt(ctrl.slice(7));
-    if (num <= 4) return `S${num} (Stutter)`;
-    return `Button ${num}`;
   }
   if (ctrl.startsWith("xy-")) {
     const parts = ctrl.split(".");
@@ -490,8 +483,7 @@ function controlCellName(key, fallbackName) {
   if (key.startsWith("pad-")) return `PAD ${key.slice(4)}`;
   if (key.startsWith("knob-")) return `KNOB ${key.slice(5)}`;
   if (key.startsWith("fader-")) return `FADER ${key.slice(6)}`;
-  if (key.startsWith("toggle-")) return `L${key.slice(7)} LFO`;
-  if (key.startsWith("button-")) return `S${key.slice(7)} STUTTER`;
+  if (key.startsWith("toggle-")) return `L${key.slice(7)}`;
   if (key.startsWith("xy-")) {
     const [pad, axis = ""] = key.split(".");
     return `XY ${pad.slice(3)} ${axis.toUpperCase()}`;
@@ -671,8 +663,7 @@ function buildCtrlGroups() {
     { id: "AUDIO", label: "AUDIO", keys: audioKeys },
     { id: "PADS", label: "PADS", keys: allControlsGrouped.Pads || [] },
     { id: "XY PADS", label: "XY PADS", keys: allControlsGrouped["XY Pads"] || [] },
-    { id: "LFOs", label: "LFOs", keys: allControlsGrouped.LFOs || [] },
-    { id: "STUTTERS", label: "STUTTERS", keys: allControlsGrouped.Buttons || [] },
+    { id: "LFOs", label: "LFO 1–8", keys: allControlsGrouped.LFOs || [] },
     { id: "KNOBS", label: "KNOBS", keys: allControlsGrouped.Knobs || [] },
     { id: "FADERS", label: "FADERS", keys: allControlsGrouped.Faders || [] },
   ];
@@ -684,14 +675,14 @@ function buildCtrlGroups() {
 
     const wrap = document.createElement("div");
     wrap.className = "ctrl-group";
-    wrap.dataset.group = group.label;
+    wrap.dataset.group = group.id;
     wrap.dataset.count = String(group.keys.length);
     // A2: family accent applied as a CSS var so the color tab, pulse
     // ring, signal bar, and active counter all derive from the same
     // source without per-element inline style. Guarded for FakeElement
     // test stubs that don't implement HTMLElement.style.
     if (wrap.style && typeof wrap.style.setProperty === 'function') {
-      wrap.style.setProperty("--group-accent", GROUP_ACCENTS[group.label] || "var(--accent)");
+      wrap.style.setProperty("--group-accent", GROUP_ACCENTS[group.id] || "var(--accent)");
     }
 
     const header = document.createElement("button");

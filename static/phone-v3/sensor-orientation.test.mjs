@@ -149,7 +149,7 @@ test('Performance controls are queued into state.controls and do not send an imm
   const context = loadApp();
   const socket = completeHandshake(context);
 
-  context.window.onControl({ name: 'button-1', value: 1 });
+  context.window.onControl({ name: 'toggle-5', value: 1 });
 
   // Performance controls are no longer sent as an immediate `type: 'control'`
   // message: they are written to state.controls and dispatched by the 33ms
@@ -163,8 +163,8 @@ test('Performance controls are queued into state.controls and do not send an imm
 
   // The value must still be staged in state.controls for the next snapshot.
   const state = context.window.__abletonRc.state;
-  const staged = state.controls.find((c) => c.name === 'button-1');
-  assert.ok(staged, 'expected button-1 in state.controls');
+  const staged = state.controls.find((c) => c.name === 'toggle-5');
+  assert.ok(staged, 'expected toggle-5 in state.controls');
   assert.equal(staged.value, 1);
 });
 
@@ -174,7 +174,7 @@ test('Modulator state sends an immediate host-modulator message after handshake'
 
   context.window.onModulatorState({
     kind: 'stutter',
-    name: 'button-1',
+    name: 'toggle-5',
     active: true,
     rate: 1,
     count: 1,
@@ -188,7 +188,7 @@ test('Modulator state sends an immediate host-modulator message after handshake'
     ts: socket.sent.at(-1).ts,
     modulator: {
       kind: 'stutter',
-      name: 'button-1',
+      name: 'toggle-5',
       active: true,
       rate: 1,
       count: 1,
@@ -210,7 +210,7 @@ test('LFO and Stutter Auto clear survives actual modulator WebSocket serializati
   assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
   context.onModulatorState(config);
   assert.equal(Object.hasOwn(socket.sent.at(-1).modulator, 'syncSubdivisionBeats'), false);
-  context.onModulatorState({ ...config, kind: 'stutter', name: 'button-1', syncSubdivisionBeats: null });
+  context.onModulatorState({ ...config, kind: 'stutter', name: 'toggle-5', syncSubdivisionBeats: null });
   assert.equal(socket.sent.at(-1).modulator.syncSubdivisionBeats, null);
 });
 

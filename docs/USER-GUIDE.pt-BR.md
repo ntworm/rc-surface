@@ -56,9 +56,7 @@ O seletor de modo fica na coluna do meio da aba PERF:
 └───┴───┴───┴───┘
 ```
 
-O modo escolhido vale para **os 12 pads** (`pad-1`..`pad-12`), **os 4 LFOs**
-(`toggle-1`..`toggle-4`, rotulados `L1`..`L4`) e **os 4 stutters**
-(`button-1`..`button-4`, rotulados `S1`..`S4`). O modo é compartilhado: você
+O modo escolhido vale para **os 12 pads** (`pad-1`..`pad-12`), **os oito slots LFO** (`toggle-1`..`toggle-8`, `L1`..`L8`). O modo é compartilhado: você
 escolhe uma vez e todos os controles seguem a mesma regra.
 
 ### Modo A — Momentâneo (padrão)
@@ -125,132 +123,54 @@ ficar muda.
 
 ---
 
-## 3. LFOs (L1 / L2 / L3 / L4)
+## 3. Oito LFOs configuráveis (L1–L8)
 
-Os quatro LFOs ficam na coluna da direita da aba PERF, sob o título `LFOS`.
-Cada LFO é um oscilador de baixa frequência contínuo, que emite valores entre
-`0.5 - depth/2` e `0.5 + depth/2`, com centro em `0.5`.
-FREE oferece ajuste contínuo de **0,1 Hz até o teto da forma escolhida**.
-Tetos medidos de fallback: **senoide 4 Hz; triângulo 3 Hz; rampas crescente e
-decrescente 3 Hz; quadrada 12 Hz**. São limites provisórios de fallback, baseados
-na regra do teto de escrita (~50 escritas/s); os tetos definitivos e a fidelidade
-no Live ainda dependem do teste na bancada física (A1 / write-ceiling P04).
-Abra **⚙ ao lado de SYNC → Config de LFO → Forma de onda**.
-A forma só define o limite de velocidade; ela não escolhe uma taxa automaticamente.
-A forma global se aplica por padrão a L1–L4, mas **a configuração CFG por controle tem precedência**: abra **CFG** no header e toque no LFO (L1–L4), ou clique com o botão direito no desktop, para definir uma forma que prevalece sobre o LFO CONFIG global daquela instância (ver 9.5). Trocar a forma mantém a fase, mas pode mudar o valor instantâneo.
+Todos os oito controles usam o mesmo padrão, `toggle-1` até `toggle-8`, e a
+mesma interação. Uma configuração nova começa com oito LFOs senoides. Abra
+**CFG**, depois qualquer L1–L8, e escolha **Senoide, Triangular, Rampa acima,
+Rampa abaixo, Quadrada ou Stutter**. Qualquer combinação funciona, inclusive
+oito Stutters. Cada slot tem modo A/B/C/D, FREE/SYNC, subdivisão ou Auto,
+fase, velocidade e amplitude próprios. Stutter também oferece swing e ratchet
+1–4. Global herda o ajuste compartilhado pertinente; Auto solta explicitamente
+a subdivisão daquele slot. Trocar entre LFO e Stutter desliga o slot; toque
+novamente para iniciar a nova onda. Os outros continuam funcionando.
 
-Mudar a velocidade preserva a fase em FREE e SYNC, inclusive ao trocar subdivisão.
-Morphs de velocidade em FREE integram a aceleração. SYNC Auto usa divisões retas,
-tercinas (T) e pontuadas (D) dentro do teto da forma no BPM atual. A 120 BPM (2 beats por segundo):
-- Subdivisão 1/8 solicita 4 Hz. Em senoide (4 Hz) ou quadrada (12 Hz), 1/8 é permitido.
-- Em triângulo ou rampa (teto de 3 Hz), 1/8 ultrapassa 3 Hz; portanto, 1/8 e subdivisões
-  mais rápidas (1/16, 1/32, 1/64) ficam desabilitadas na grade e bloqueadas para
-  mouse, toque e teclado.
-- Uma seleção prévia acima do teto permanece como intenção do usuário, e o mostrador
-  exibe explicitamente a taxa solicitada versus efetiva (por ex., 1/8 → 1/4).
-  O runtime limita (clamp) a emissão ao teto da forma sem alterar silenciosamente
-  a subdivisão salva.
-Deep Sync mostra a divisão pedida/efetiva; Auto libera a divisão fixada anterior. Tudo usa o navegador e a extensão
-existente, **sem nenhum device Max adicional**.
+Arrasto vertical ajusta amplitude; horizontal ajusta velocidade. Shift dá ajuste
+horizontal fino no desktop. A é momentâneo; B segura depois do arrasto, mas
+toque simples ou soltar abaixo de amplitude 0,02 desliga; C alterna; D executa
+o envelope de burst configurado. Esses modos valem igualmente nos oito slots.
+Barra e velocidade na tela mostram intenção local, não entrega confirmada no Live.
 
-Compatibilidade: rates normalizados salvos não mudam; snapshots FREE antigos
-podem tocar mais rápido e SYNC Auto pode escolher outra divisão após mudar a
-forma/faixa. Divisões fixadas são mantidas, com o limite aplicado na reprodução.
-Amplitude e alvos não mudam. Stutter SYNC também aplica agora seu teto efetivo;
-divisões/ratchets rápidos antigos ou combinações com swing podem ficar mais
-lentos. Teste em uma cópia do Set.
+As ondas contínuas variam de `0.5 - depth/2` até `0.5 + depth/2`. FREE vai de
+0,1 Hz até o teto da onda: **senoide 4 Hz; triangular e rampas 3 Hz; quadrada
+12 Hz**. Tetos provisórios; fidelidade física no Live continua pendente. SYNC
+mantém subdivisões retas, pontuadas (D) e tercinadas (T), de oito semibreves às
+subdivisões rápidas existentes, limitadas pelo teto da onda. 1/4 significa um
+beat; 1/8, meio beat. Divisões acima do teto tocam mais lentas por oitavas.
+Alterar velocidade preserva fase; Play/seek realinha à posição da música.
+Transporte parado usa o relógio interno existente; Stop não é OFF do modulador.
+Trocar FREE/SYNC não garante preservar a velocidade.
 
-Com SYNC selecionado, o LFO ativo continua andando quando o Live para e volta
-à posição musical ao dar Play/retomar/mover o transporte. Depois de gestos de
-velocidade, a fase depende da sequência desses gestos até o próximo alinhamento.
-Stop não é OFF do LFO.
-O clock interno ignora a posição do transporte. Uma subdivisão fixada em Deep
-Sync também é usada durante a pausa, com o mesmo teto da forma.
-Alternar SYNC/FREE não garante preservar frequência nem uma transição de fase
-sem salto.
+## 4. Onda Stutter
 
-### Controles de cada LFO
+Stutter alterna o valor mapeado entre zero e amplitude; não grava nem repete
+áudio sozinho. Selecione-o no CFG de qualquer slot. FREE vai de 1–15 Hz;
+ratchet aumenta o mínimo. SYNC usa subdivisões retas, swing e ratchet,
+respeitando o teto efetivo de 15 Hz inclusive no menor intervalo. Arrasto
+horizontal solta só a subdivisão daquele slot; vertical preserva a escolha.
+A tela pode perder pulsos rápidos e não repete frames perdidos.
 
-- **Arrasto vertical** → define a **profundidade** (quantidade de modulação,
-  `0..1`). Começa em `0.5`. A faixa de arrasto é 150 px.
-- **Arrasto horizontal** → define a **taxa** (velocidade da modulação). FREE é
-  contínuo; SYNC escolhe divisões rítmicas. No desktop, segure **Shift** durante o
-  arrasto para ajuste fino com um quarto da sensibilidade normal de velocidade.
-- O LFO segue emitindo a fase continuamente enquanto o botão está **ativo**. O
-  jeito de ficar ativo e inativo segue o modo de pad escolhido (A/B/C/D) —
-  veja [§ 2](#2-modos-de-pad-a--b--c--d).
-- Retorno visual: a barra dentro do LFO acende quando ele está ativo. Um brilho
-  na borda de baixo reflete a profundidade atual; um brilho na borda da direita
-  reflete a taxa atual. O controle mostra só a velocidade: Hz em FREE; duração musical em SYNC.
-  Por exemplo, 1/4 = um tempo por ciclo, 1/8 = meio tempo; T = tercina, D = pontuada.
-  Os botões de subdivisão do painel usam essas mesmas unidades musicais;
-  os valores internos salvos em beats não mudaram.
+Escritas contínuas retêm o valor mais recente ainda não enviado. OFF substitui
+pulsos pendentes por zero e ignora suavização; escrita já em curso no SDK não
+pode ser cancelada. Ordem de eventos/MIDI e regras de perda segura permanecem.
 
-### Uso típico
-
-- Mapeie um LFO no cutoff de um filtro, no feedback de um delay, ou na posição
-  de uma wavetable. Toque **MAP** no celular, ou use o editor de mapeamento do
-  painel, para ligar qualquer parâmetro do Live a um controle `toggle-N`.
-
----
-
-## 4. Stutters (S1 / S2 / S3 / S4)
-
-Os quatro stutters ficam ao lado dos LFOs na PERF. Geram um gate no parâmetro
-mapeado, alternando entre zero e **profundidade/amplitude**. Não gravam nem
-repetem áudio por conta própria; o resultado sonoro depende do alvo.
-
-### Dois eixos, um botão
-
-- **Arrasto vertical para cima** → aumenta a **amplitude** (`0..1`, inicial `0.5`).
-- **Arrasto horizontal para a direita** → aumenta a **velocidade** (`0..1`,
-  inicial `0.1`). FREE deriva a frequência desse valor; SYNC escolhe subdivisões.
-- Os eixos agora são iguais aos do LFO. O `count`/ratchet antigo continua
-  legível e restaurável, mas não é controlado pelo arrasto horizontal.
-- A faixa de arrasto nos dois eixos é 150 px.
-- O botão segue o modo de pad escolhido (A/B/C/D) para ativar, com uma exceção
-  importante — veja abaixo.
-
-### Comportamento do modo B nos stutters
-
-No modo B:
-
-- **Toque, sem mover** → o stutter desliga.
-- **Soltar com amplitude abaixo de `0.02`** → o stutter desliga.
-- **Arrastar a velocidade com amplitude acima desse limiar** → o stutter
-  continua rodando, mesmo na velocidade mínima.
-
-Snapshots incluem amplitude; snapshots antigos sem esse campo mantêm o valor atual.
-
-### Velocidade com visual enxuto
-
-S1–S4 mostram somente a velocidade embaixo do identificador: **Hz em FREE**,
-**duração musical em SYNC**. 1/4 = um tempo por ciclo; 1/8 = meio tempo; T = tercina,
-D = pontuada. A divisão considera ratchet e limite efetivos. Com swing, ela
-descreve o ritmo médio; os intervalos alternados são intencionalmente desiguais.
-Sem AMP %, listras, barra de amplitude ou rótulos extras no botão.
-A amplitude continua no gesto vertical; removemos somente sua indicação adicional.
-
-FREE percorre 1–15 Hz continuamente (ratchet antigo eleva o mínimo), sem uma
-faixa final presa no teto. SYNC Auto distribui somente divisões alcançáveis pelo
-gesto. Os ajustes desativam divisões-base que excederiam 15 Hz conforme BPM,
-swing e o maior ratchet salvo entre S1–S4. A 120 BPM, sem swing/ratchet, 1/16
-equivale a 8 Hz; 1/128 exigiria 64 Hz e fica indisponível. Divisões fixadas antigas
-acima do teto ainda desaceleram por oitavas, com divisão pedida → efetiva nos ajustes.
-Arrastar na horizontal libera a divisão fixada compartilhada e volta ao Auto; arrastar
-só na vertical mantém a divisão escolhida. Velocidades normalizadas salvas podem
-voltar com uma velocidade diferente da r11.
-
-O brilho segue o gate local em todas as velocidades, sem visual fixo acima de
-5 Hz e sem animação substituta mais lenta. Uma tela lenta pode perder pulsos;
-pulsos perdidos nunca são repetidos depois. A leitura descreve o gerador, não a
-entrega medida no Live. O menor meio-pulso previsto com swing/ratchet continua
-em pelo menos 1/30 s; a frequência média pode ser menor que 15 Hz.
-
-Para alvos contínuos, só o valor não enviado mais recente fica pendente. OFF
-substitui os pulsos pendentes por zero, sem suavização; uma escrita que já saiu
-para o SDK não pode ser cancelada. Mapeamentos explícitos de toggle e MIDI preservam
-a ordem dos eventos.
+**Quebra de formato:** 2.0.0 usa novas chaves de performance no navegador,
+armazenamento do host em `surface-v2/`, projeto schema 2 e envelope de preset 2.
+Formatos anteriores são rejeitados, sem aliases nem migração. Projetos e presets
+novos incluem configuração de performance; snapshots do navegador incluem ondas
+e ajustes XY. Recall aplica escolhas categóricas antes do morph numérico.
+Vector morph mistura valores numéricos usando a configuração categórica atual.
+Configure este candidato do zero; dados antigos continuam no disco.
 
 ---
 
@@ -268,28 +188,20 @@ set sem sair da superfície de performance.
 
 ---
 
-## 6. XY pads
+## 6. Painéis XY
 
-Dois pads na coluna do meio da aba PERF.
+XY1 e XY2 têm controles idênticos. Abra CFG no painel desejado e escolha
+Estático ou Física. Estático fica onde você solta. Física continua em movimento
+e ricocheteia; atrito (0,002–0,05), ricochete (0–0,95) e velocidade (0,1–4×)
+são independentes em cada painel. Ambos começam Estáticos; qualquer combinação
+é possível. Velocidade escala o movimento livre; atrito controla a desaceleração.
+Trocar para Estático interrompe o movimento residual. Consultar CFG não emite valor.
 
-### XY 1 — controle direto
-
-Toque em qualquer lugar do pad. O ponto pula para a posição do seu dedo.
-Valores:
-
-- `xy-1.x` — posição horizontal, `0..1` (esquerda → direita)
-- `xy-1.y` — posição vertical, `0..1` (cima → baixo)
-
-Use para crossfades, campo estéreo, controle de dois parâmetros.
-
-### XY 2 — joystick com física
-
-O ponto tem inércia. Dê um peteleco e ele desliza. Ele ricocheteia com força de
-mola quando você solta perto da borda.
-
-- `xy-2.x` e `xy-2.y` seguem os mesmos eixos do XY 1.
-- O ajuste fino fica no painel (constantes de física). Melhor para performance
-  expressiva, com caráter de gesto.
+Cada eixo é mapeado separadamente como `xy-1.x/y` ou `xy-2.x/y`. Setters de
+posição e OFF interrompem o movimento; OFF centraliza os dois. Configuração
+segue nos novos projetos, presets e snapshots de performance. `xy-N.friction`,
+`.bounce` e `.speed` também são setters numéricos locais; os mappings para
+destinos do Live continuam sendo os eixos X/Y.
 
 ---
 
@@ -662,70 +574,19 @@ pelo celular.
 
 ## 9.5 Modo Config (CFG)
 
-O Modo Config permite que controles de performance guardem seus próprios
-overrides individuais (modos, formas, alcances, valores de reset, física). O
-botão **CFG** fica no header do celular, ao lado de **MAP**. Abra-o
-uma vez para mudar o comportamento de um controle; feche-o para voltar
-à execução normal. As configurações persistem por controle no próprio
-navegador do celular, não no Live.
+Toque em CFG e no controle (ou clique direito no desktop). Os oito LFOs oferecem
+os mesmos ajustes de onda/modo/ritmo; Stutter acrescenta swing e ratchet.
+Os dois XY oferecem Estático/Física, atrito, ricochete e velocidade. Pads mantêm
+A/B/C/D; knobs, alcance do gesto; faders, valor de reset. Reset remove o override
+daquele controle; segurar CFG lista overrides e oferece Limpar todos. Esc ou toque
+fora fecha o menu.
 
-### O que dá para mudar por controle
-
-- **Pads** — escolha o modo A (momentâneo), B (hold), C (toggle) ou D
-  (burst). Substitui o modo global dos pads sem precisar trocar de aba.
-- **Knobs** — defina a amplitude do gesto (quantos pixels de arrasto
-  correspondem a varrer o valor de 0 a 1). Amplitude grande é melhor
-  em telas pequenas; amplitude pequena dá controle mais fino no painel
-  de mapeamento do desktop.
-- **Faders** — escolha um valor de reset. Quando você dá um toque duplo no
-  fader, o valor salta para esse valor de reset em vez de ir a zero. Útil
-  para pan, sends e macros onde existe um ponto de partida conhecido.
-- **LFO (toggle 1 a 4)** — escolha a forma de onda (senoide, triangular,
-  rampa ↑, rampa ↓, quadrada). O modal SYNC continua mostrando a
-  prévia ao vivo; a forma escolhida aqui sobrescreve a forma global
-  só para aquele toggle.
-- **Stutter (button 1 a 4)** — escolha o modo A (momentâneo), B (hold),
-  C (toggle) ou D (burst). Troque o modo do botão de stutter sem
-  sair da página. (Subdivisão contínua, swing e deslocamento de fase
-  ficam nas configurações globais do Deep Sync, acessíveis pelo ⚙ ao lado de SYNC).
-- **XY pads** — em `xy-1`, deixe o padrão. Em `xy-2`, ajuste
-  **Atrito** e **Quique**; o pad se comporta como um pequeno joystick com
-  física que volta ao centro quando você solta.
-
-### Como abrir o CFG
-
-1. Toque em **CFG** no header do celular. O corpo da página ganha a
-   classe `config-mode`; cada controle mostra uma pequena etiqueta
-   resumindo o override atual (letra do modo, ícone da forma de onda,
-   fração da subdivisão).
-2. Toque (ou clique com o botão direito, no desktop) em qualquer
-   controle para abrir o menu por instância. O menu lista só as
-   chaves que se aplicam àquele controle.
-3. Use a ação **Mapear para…** para vincular o valor daquele controle a
-   um parâmetro do Live sem sair do celular. Se o MAP já estiver aberto,
-   o CFG fecha o MAP antes de abrir o menu.
-4. Toque em **CFG** de novo, pressione **Esc**, ou toque fora de um
-   menu aberto para fechar. O modo Stage também fecha o CFG para
-   manter o palco limpo.
-
-### Limpando os overrides
-
-- **Um controle só** — abra o menu por instância e toque em
-  **Restaurar padrão**. O override some; o controle volta ao padrão
-  global.
-- **Todos os controles** — pressione e segure o botão **CFG** por
-  cerca de meio segundo. Aparece um popover listando cada controle
-  com override. Toque em **Limpar toda a config de controles** para confirmar.
-  O popover usa o mesmo menu dentro da página, sem alerta do
-  navegador.
-
-### Onde os dados ficam
-
-Os overrides ficam em `localStorage` sob a chave
-`ableton-rc:control_config`. Limpar os dados do navegador do celular
-apaga os overrides; limpar os dados do site pelo host do Live não
-apaga. Não há ida e volta com o Set do Live: os overrides ficam no
-celular e seguem aquele celular, não o Set.
+Overrides do navegador usam `ableton-rc:v2:control_config`. Ajustes de LFO/XY
+também são guardados na preferência de performance dos projetos e presets novos.
+A configuração salva resolve padrões Global nos valores atuais; ao carregar,
+cada slot recebe ajustes explícitos. Snapshot inclui configurações e valores atuais. Isso não salva o Set do Live.
+Overrides de pad/knob/fader continuam locais ao celular. Chaves e formatos de
+performance anteriores não são carregados.
 
 ---
 
@@ -1220,8 +1081,7 @@ pad-1 .. pad-12
 knob-1 .. knob-8
 fader-1 .. fader-8
 xy-1.x, xy-1.y, xy-2.x, xy-2.y
-toggle-1 .. toggle-4    (LFOs)
-button-1 .. button-4    (stutters)
+toggle-1 .. toggle-8    (LFOs)
 sensor.motion.{ax,ay,az,gx,gy,gz}
 sensor.orient.{alpha,beta,gamma}
 sensor.audio.{rms,envelope,gate,attack}

@@ -165,6 +165,7 @@ function createVectorEnvironment() {
 
   vm.runInNewContext(engineSource, context, { filename: 'mode-engine.js' });
   vm.runInNewContext(snapshotsSource, context, { filename: 'modules/snapshots.js' });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: 'controls.js' });
 
   // Setup 4 snapshot corners for interpolation:

@@ -1,7 +1,7 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v1.0.2](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.0.0](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
@@ -16,11 +16,13 @@ RC Surface is a source-available Ableton Live extension that turns a phone brows
 
 The host side is built on the Ableton Extensions SDK. The phone side is plain browser JavaScript: no native app, no bundler, no install on the phone.
 
+**2.0.0 breaks compatibility:** previous project profiles, presets, mappings and browser performance settings are not imported. Configure this version from a fresh state. Existing files are not deleted. This is a local candidate, not a published release.
+
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.
-- Two XY pads: one standard/direct (`xy-1`) and one physics joystick (`xy-2`).
-- 4 LFO toggles (`toggle-1`..`toggle-4`), 4 stutter buttons (`button-1`..`button-4`), and performance utility controls (CAP, OFF, 4 snapshot slots).
+- Two identical XY panels, each independently configurable as Static or Physics (friction, bounce and speed).
+- Eight configurable LFO slots (`toggle-1`..`toggle-8`), each with Stutter among its waveforms, and performance utility controls (CAP, OFF, 4 snapshot slots).
 - Phone sensors: motion, orientation, audio, and optional camera hand tracking
   via bundled MediaPipe Hands (no CDN).
 - Single-hand vision tracking by design.
@@ -48,7 +50,7 @@ The host side is built on the Ableton Extensions SDK. The phone side is plain br
 
 ## 1.0 Highlights
 
-- **Config Mode (CFG):** per-instance overrides for performance controls: pad modes (A/B/C/D), stutter modes (A/B/C/D), LFO waveform shapes, knob drag ranges, fader double-tap reset values, and XY 2 physics (friction, bounce). Open `CFG` from the phone header (long-press `CFG` to clear all overrides) or right-click a control on the desktop mapping panel to open a per-instance menu. Settings persist per control in `localStorage` under `ableton-rc:control_config`.
+- **Config Mode (CFG):** configure each LFO slot (L1–L8), including Stutter as a waveform, and choose Static or Physics independently for each XY. Physics has separate friction, bounce and speed. Pad modes, knob sensitivity and fader reset values remain configurable. Open `CFG` in the phone header; hold it to clear overrides. Performance settings use `ableton-rc:v2:control_config` and are included in new projects and presets.
 - **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 12 Hz).
 - **Desktop keyboard control:** every continuous control (knob, fader, XY pad, toggle, stutter) accepts keyboard nudges while the phone client has focus, so the desktop mapping panel and the phone UI share the same gesture model.
 - **K-weighted loudness:** the AUD tab reports ITU-R BS.1770 K-weighted momentary, short-term and integrated loudness, alongside the existing twelve descriptors.
@@ -66,8 +68,8 @@ To use the AbletonOSC features, ensure the **AbletonOSC** extension is running i
 
 ## Candidate status
 
-The source version is 1.0.2. A package you build from this repository is a
-local candidate until the matching v1.0.2 release is published on the Releases
+The source version is 2.0.0. A package you build from this repository is a
+local candidate until the matching v2.0.0 release is published on the Releases
 page. Native Track and measured end-to-end latency remain pending owner
 validation.
 
@@ -170,8 +172,7 @@ Common groups:
 - `knob-1` through `knob-8`
 - `fader-1` through `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
-- `toggle-1` through `toggle-4`
-- `button-1` through `button-4`
+- `toggle-1` through `toggle-8`
 - `sensor.motion.*`
 - `sensor.orient.*`
 - `sensor.audio.rms`

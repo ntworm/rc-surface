@@ -107,7 +107,7 @@
 
   <!--
     Page: Performance
-    Layout optimized for thumbs: Left column 12 pads, center XY controls, right column LFOs, stutters, and utilities.
+    Layout optimized for thumbs: Left column 12 pads, center XY controls, right column eight configurable LFO/Stutter slots and utilities.
   -->
   <main class="page page-performance" data-page="performance">
     <section class="col col-pads">
@@ -140,10 +140,10 @@
         </div>
         <div class="xy-readout" data-readout="xy-1">0.50 / 0.50</div>
       </div>
-      <div class="xy-block physics">
-        <div class="xy-pad-physics" id="xy-physics-pad" data-name="xy-2">
-          <span class="xy-label" data-i18n="perf.xy2">XY 2 (Physics)</span>
-          <canvas id="xy-physics-canvas"></canvas>
+      <div class="xy-block">
+        <div class="xy-pad" data-name="xy-2">
+          <span class="xy-label" data-i18n="perf.xy2">XY 2</span>
+          <div class="xy-dot"></div>
         </div>
         <div class="xy-readout" data-readout="xy-2">0.50 / 0.50</div>
       </div>
@@ -160,29 +160,29 @@
     <section class="col col-right-perf">
       <div class="right-perf-section">
         <div class="grid-right-perf">
-          <!-- LFOs Column -->
+          <!-- Modulator slots 1–4 -->
           <div class="perf-sub-col">
             <header class="section-head">
-              <span class="section-title" data-i18n="perf.lfos">LFOS</span>
+              <span class="section-title" data-i18n="perf.lfos">LFO 1–4</span>
             </header>
-            <div class="grid-toggles-perf">
-              <div class="toggle" data-name="toggle-1"><span class="num">L1</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-2"><span class="num">L2</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-3"><span class="num">L3</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
-              <div class="toggle" data-name="toggle-4"><span class="num">L4</span><div class="mod-val-bar"></div><span class="lfo-rate-readout"></span></div>
+            <div class="grid-modulators-perf">
+              <div class="toggle" data-name="toggle-1"><span class="num">L1</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-2"><span class="num">L2</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-3"><span class="num">L3</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-4"><span class="num">L4</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
             </div>
           </div>
           
-          <!-- Stutters Column -->
+          <!-- Modulator slots 5–8 -->
           <div class="perf-sub-col">
             <header class="section-head">
-              <span class="section-title" data-i18n="perf.stut">STUT</span>
+              <span class="section-title" data-i18n="perf.modulators2">LFO 5–8</span>
             </header>
-            <div class="grid-buttons-perf">
-              <div class="button" data-name="button-1"><span class="num">S1</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
-              <div class="button" data-name="button-2"><span class="num">S2</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
-              <div class="button" data-name="button-3"><span class="num">S3</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
-              <div class="button" data-name="button-4"><span class="num">S4</span><div class="mod-val-bar"></div><span class="stutter-rate-readout"></span></div>
+            <div class="grid-modulators-perf">
+              <div class="toggle" data-name="toggle-5"><span class="num">L5</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-6"><span class="num">L6</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-7"><span class="num">L7</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
+              <div class="toggle" data-name="toggle-8"><span class="num">L8</span><div class="mod-val-bar"></div><span class="modulator-rate-readout"></span></div>
             </div>
           </div>
           
@@ -882,6 +882,7 @@
   <script src="modules/playhead.js"></script>
   <script src="modules/snapshots.js"></script>
   <script src="control-config.js"></script>
+  <script src="xy-engine.js"></script>
   <script src="controls.js"></script>
   <script src="modules/session.js"></script>
   <script src="modules/wake-lock.js"></script>

@@ -104,7 +104,7 @@ function dispatch(el, type, init) {
   return prevented;
 }
 
-test('all eight continuous-control factories share the captured Pointer Events contract', () => {
+test('all six continuous-control factories share the captured Pointer Events contract', () => {
   const source = fs.readFileSync(controlsFile, 'utf8');
 
   assert.match(source, /function bindPointerGesture\(/);
@@ -116,7 +116,7 @@ test('all eight continuous-control factories share the captured Pointer Events c
   assert.match(source, /setPointerCapture\(e\.pointerId\)/);
 
   const bindings = source.match(/bindPointerGesture\((?:el|vPad),/g) || [];
-  assert.equal(bindings.length, 8, 'exactly the eight continuous controls must use the pointer binder');
+  assert.equal(bindings.length, 6, 'exactly the six continuous controls must use the pointer binder');
   assert.equal((source.match(/addEventListener\('touchstart'/g) || []).length, 1,
     'only the unrelated sync-mode long press may retain touchstart');
 });
@@ -150,7 +150,7 @@ test('two different controls keep independent pointerIds and ignore hover or non
 
 test('every migrated control keeps touch-action none so phone gestures stay owned by the surface', () => {
   const css = fs.readFileSync(styleFile, 'utf8');
-  const selectors = ['pad', 'toggle', 'button', 'xy-pad-physics', 'xy-pad', 'knob', 'fader', 'xy-pad-vector'];
+  const selectors = ['pad', 'toggle', 'xy-pad', 'knob', 'fader', 'xy-pad-vector'];
 
   for (const selector of selectors) {
     const block = css.match(new RegExp(`\\.${selector}\\s*\\{[^}]*\\}`, 's'));

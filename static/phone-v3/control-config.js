@@ -8,7 +8,7 @@
 // tests can use an in-memory storage and freeze time. In production the module
 // reads `window.localStorage` and `Date.now()` via the default factory.
 //
-// Persistence key: `ableton-rc:control_config`
+// Persistence key: `ableton-rc:v2:control_config`
 // Wire shape: { [controlName]: { mode?, shape?, subdivision?, swing?, friction?,
 //   bounce?, resetValue?, knobRange? } }
 //
@@ -25,10 +25,10 @@
 }(typeof globalThis !== "undefined" ? globalThis : (typeof self !== "undefined" ? self : this), function () {
   "use strict";
 
-  const STORAGE_KEY = "ableton-rc:control_config";
+  const STORAGE_KEY = "ableton-rc:v2:control_config";
 
   const VALID_MODES = new Set(["A", "B", "C", "D"]);
-  const VALID_SHAPES = new Set(["sine", "triangle", "ramp_up", "ramp_down", "square"]);
+  const VALID_SHAPES = new Set(["sine", "triangle", "ramp_up", "ramp_down", "square", "stutter"]);
   const VALID_KEYS = new Set([
     "mode",
     "shape",
@@ -39,6 +39,12 @@
     "bounce",
     "resetValue",
     "knobRange",
+    "syncMode",
+    "rate",
+    "depth",
+    "count",
+    "behavior",
+    "speed",
   ]);
   const NUMERIC_RANGES = {
     friction: [0.002, 0.05],
@@ -46,8 +52,12 @@
     knobRange: [100, 400],
     resetValue: [0, 1],
     swing: [0, 0.66],
-    phaseOffset: [0, 4],
-    subdivision: [0.03125, 32],
+    phaseOffset: [-4, 4],
+    subdivision: [0, 32], // 0 = explicit Auto; absence inherits the global pin.
+    rate: [0, 1],
+    depth: [0, 1],
+    count: [0, 1],
+    speed: [.1, 4],
   };
 
   function clamp(value, min, max) {
@@ -69,6 +79,10 @@
       } else if (key === "shape") {
         if (typeof value !== "string" || !VALID_SHAPES.has(value)) continue;
         out.shape = value;
+      } else if (key === "syncMode") {
+        if (value === "sync" || value === "free") out.syncMode = value;
+      } else if (key === "behavior") {
+        if (value === "static" || value === "physics") out.behavior = value;
       } else if (typeof value === "number" && Number.isFinite(value)) {
         const range = NUMERIC_RANGES[key];
         if (!range) continue;
@@ -97,6 +111,10 @@
       } else if (key === "shape") {
         if (typeof raw !== "string" || !VALID_SHAPES.has(raw)) continue;
         setFields.shape = raw;
+      } else if (key === "syncMode") {
+        if (raw === "sync" || raw === "free") setFields.syncMode = raw;
+      } else if (key === "behavior") {
+        if (raw === "static" || raw === "physics") setFields.behavior = raw;
       } else if (typeof raw === "number" && Number.isFinite(raw)) {
         const range = NUMERIC_RANGES[key];
         if (!range) continue;
@@ -193,13 +211,13 @@
         if (had) {
           delete store[name];
           save(store);
-          emit(name, validated.set, undefined);
+          emit(name, patch, undefined);
         }
         return;
       }
       store[name] = current;
       save(store);
-      emit(name, validated.set, current);
+      emit(name, patch, current);
     }
 
     function clear(name) {

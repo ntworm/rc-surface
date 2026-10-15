@@ -348,12 +348,12 @@ test("host LFO motor applies to Live before publishing admin panel updates", asy
 
 test("host stutter motor generates mapped pulses from modulator state", async () => {
   resetState();
-  const applied = setupMappedParam("button-1");
+  const applied = setupMappedParam("toggle-5");
 
   try {
     updateHostModulator("client-1", {
       kind: "stutter",
-      name: "button-1",
+      name: "toggle-5",
       active: true,
       rate: 1,
       count: 1,
@@ -372,12 +372,12 @@ test("host stutter motor generates mapped pulses from modulator state", async ()
 
 test("clearing a client stops host modulators and sends a final zero", async () => {
   resetState();
-  const applied = setupMappedParam("button-1");
+  const applied = setupMappedParam("toggle-5");
 
   try {
     updateHostModulator("client-1", {
       kind: "stutter",
-      name: "button-1",
+      name: "toggle-5",
       active: true,
       rate: 1,
       count: 1,

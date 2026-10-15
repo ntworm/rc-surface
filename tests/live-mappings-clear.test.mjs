@@ -115,8 +115,8 @@ test("clearMappings persists an empty mapping set before resetting derived state
 
 test("clearMappings leaves mappings.json intact when the project profile write fails", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "rcsurface-clear-project-fail-"));
-  const mappingFile = path.join(dir, "mappings.json");
-  const projectsPath = path.join(dir, "projects");
+  const mappingFile = path.join(dir, "surface-v2", "mappings.json");
+  const projectsPath = path.join(dir, "surface-v2", "projects");
   const originalMappings = { "fader-1": [{ type: "tempo" }] };
   resetMappingState();
   await configureMappingStorage(dir);
@@ -142,7 +142,7 @@ test("clearMappings leaves mappings.json intact when the project profile write f
 
 test("failed project import preserves safe-input diagnostics", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "rcsurface-import-safe-fail-"));
-  const projectsPath = path.join(dir, "projects");
+  const projectsPath = path.join(dir, "surface-v2", "projects");
   resetMappingState();
   setExtensionContext({ application: { song: fakeSong() } });
 

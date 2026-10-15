@@ -92,11 +92,11 @@ test("a 4 Hz LFO at full depth retains at least90 percent of generator samples",
 
 test("a stutter gate writes on its edges, not on every tick", async () => {
   resetState();
-  const applied = setupParam("button-1");
+  const applied = setupParam("toggle-5");
   try {
     updateHostModulator("client-1", {
       kind: "stutter",
-      name: "button-1",
+      name: "toggle-5",
       active: true,
       rate: 0, // free mode floor = 1 Hz base
       count: 0, // ratchet 1
@@ -173,11 +173,11 @@ test("the first value after activation always reaches Live", async () => {
 
 test("deactivation is written even though it repeats the resting value", async () => {
   resetState();
-  const applied = setupParam("button-1");
+  const applied = setupParam("toggle-5");
   try {
     updateHostModulator("client-1", {
       kind: "stutter",
-      name: "button-1",
+      name: "toggle-5",
       active: true,
       rate: 0,
       count: 0,
@@ -186,7 +186,7 @@ test("deactivation is written even though it repeats the resting value", async (
     await tickHostModulators(TICK_MS);
     applied.length = 0;
 
-    updateHostModulator("client-1", { kind: "stutter", name: "button-1", active: false });
+    updateHostModulator("client-1", { kind: "stutter", name: "toggle-5", active: false });
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     assert.ok(applied.includes(0), "turning a modulator off must always reach Live");

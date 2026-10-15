@@ -47,22 +47,24 @@
   window.currentControlStates = window.currentControlStates || {};
 
   function bindPointerGesture(target, getActivePointerId, handlers) {
-    target.addEventListener('pointerdown', (e) => {
+    const down = (e) => {
       if (e.button !== 0 || getActivePointerId() !== null) return;
       e.preventDefault();
       target.setPointerCapture(e.pointerId);
       handlers.start(e);
-    });
-    target.addEventListener('pointermove', (e) => {
+    };
+    const move = (e) => {
       if (e.pointerId !== getActivePointerId()) return;
       e.preventDefault();
       handlers.move(e);
-    });
+    };
     const finish = (e) => {
       if (e.pointerId !== getActivePointerId()) return;
       e.preventDefault();
       handlers.end(e.pointerId);
     };
+    target.addEventListener('pointerdown', down);
+    target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', finish);
     target.addEventListener('pointercancel', finish);
   }
@@ -104,36 +106,24 @@
   }
 
 
-  // XY pad physics defaults. The contract tests assert these literals; CFG
-  // overrides (see perInstancePhysics) only apply when a control-name entry
-  // exists in RcControlConfig. xy-1 stays on the documented defaults so the
-  // existing physics test stays green; xy-2 reads from RcControlConfig first.
-  const friction = 0.012;
-  const bounce = 0.75;
-  function perInstancePhysics(name) {
-    if (window.RcControlConfig && name === 'xy-2') {
-      const ov = {
-        friction: window.RcControlConfig.get(name, 'friction', undefined),
-        bounce: window.RcControlConfig.get(name, 'bounce', undefined),
-      };
-      if (ov.friction !== undefined) return { friction: ov.friction, bounce: ov.bounce !== undefined ? ov.bounce : bounce };
-      if (ov.bounce !== undefined) return { friction, bounce: ov.bounce };
-      return { friction, bounce };
-    }
-    return { friction, bounce };
+  function xySettings(name) {
+    const defaults = window.RcXYEngine.defaults;
+    return Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key,
+      window.RcControlConfig?.get(name, key, value) ?? value]));
   }
+  const xyStates = new Map();
 
   function perInstanceSyncSubdivision(name) {
     if (window.RcControlConfig) {
       const pinned = window.RcControlConfig.get(name, 'subdivision', null);
-      if (pinned !== null && pinned !== undefined) return pinned;
+      if (pinned !== null && pinned !== undefined) return pinned === 0 ? null : pinned;
     }
     return window.syncSettings.lfoSubdivisionPinned ? window.syncSettings.lfoSubdivision : null;
   }
   function perInstanceStutterSubdivision(name) {
     if (window.RcControlConfig) {
       const pinned = window.RcControlConfig.get(name, 'subdivision', null);
-      if (pinned !== null && pinned !== undefined) return pinned;
+      if (pinned !== null && pinned !== undefined) return pinned === 0 ? null : pinned;
     }
     return window.syncSettings.stutterSubdivisionPinned ? window.syncSettings.stutterSubdivision : null;
   }
@@ -152,9 +142,22 @@
     return window.syncSettings.stutterPhaseOffset;
   }
 
+  function modulatorSyncMode(name) {
+    return window.RcControlConfig?.get(name, 'syncMode', window.syncMode) ?? window.syncMode;
+  }
+  function modulatorShape(name) {
+    const fallback = window.syncSettings.lfoShape;
+    return window.RcControlConfig?.get(name, 'shape', fallback) ?? fallback;
+  }
+  function lfoPhaseOffset(name) {
+    return window.RcControlConfig?.get(name, 'phaseOffset', window.syncSettings.lfoPhaseOffset)
+      ?? window.syncSettings.lfoPhaseOffset;
+  }
+  window.getModulatorShape = modulatorShape;
+
   function setPadMode(mode) {
     if (mode === padMode) return;
-    try { localStorage.setItem('ableton-rc:pad_mode', mode); } catch {}
+    try { localStorage.setItem('ableton-rc:v2:pad_mode', mode); } catch {}
     cancelMorph();
     padMode = mode;
     document.body.dataset.padMode = mode;
@@ -182,39 +185,11 @@
       el.style.removeProperty('--pad-fill-color');
     });
 
-    // Reset LFOs
-    for (const [name, state] of lfoStates.entries()) {
-      state.active = false;
-      state.value = 0;
-      state.burstUntil = 0;
-      state.pendingToggleOff = false;
-      state.moved = false;
-      const el = document.querySelector(`.toggle[data-name="${name}"]`);
-      if (el) {
-        el.classList.remove('on', 'burst');
-        clearModeClass(el);
-        const fill = el.querySelector('.mod-val-bar');
-        if (fill) fill.style.height = '0%';
-      }
-      emitLfoState(name, state);
-    }
-
-    // Reset Stutters
-    for (const [name, state] of stutterStates.entries()) {
-      state.pressed = false;
-      state.burstUntil = 0;
-      state.pendingToggleOff = false;
-      state.moved = false;
-      const el = document.querySelector(`.button[data-name="${name}"]`);
-      if (el) {
-        el.classList.remove('pressed', 'burst');
-        clearModeClass(el);
-        el.style.removeProperty('background-color');
-        el.style.removeProperty('--stut-pulse');
-        el.style.removeProperty('--stut-glow-size');
-        el.style.removeProperty('--stut-scale');
-      }
-      emitStutterState(name, state);
+    for (const [name, state] of modulatorStates) {
+      state.active = false; state.value = 0; state.burstUntil = 0;
+      state.pendingToggleOff = false; state.moved = false;
+      renderModulator(state);
+      emitModulatorState(name, state);
     }
 
     window.dispatchEvent(new CustomEvent('ableton-rc:pad-mode-change', {
@@ -432,12 +407,11 @@
   const activeScalarBursts = new Map();
 
   // ---- LFO Modulators ----
-  const lfoStates = new Map(); // name -> { active, depth, rate, phase }
-  window.lfoStates = lfoStates;
+  const modulatorStates = new Map();
+  window.modulatorStates = modulatorStates;
   let modulatorEmitBatchDepth = 0;
   let modulatorEmitSuppressDepth = 0;
-  const pendingLfoStateEmits = new Set();
-  const pendingStutterStateEmits = new Set();
+  const pendingModulatorStateEmits = new Set();
 
   window.resolveBurstShape = () => resolveBurstShape();
   window.syncSettings = {
@@ -458,7 +432,7 @@
     burstAttackRatio: 0.135
   };
 
-  const savedSyncSettings = localStorage.getItem('ableton-rc:sync_settings');
+  const savedSyncSettings = localStorage.getItem('ableton-rc:v2:sync_settings');
   if (savedSyncSettings) {
     try {
       Object.assign(window.syncSettings, JSON.parse(savedSyncSettings));
@@ -471,8 +445,8 @@
   const BURST_FREE_DURATION_MS = 520;
   const BURST_FREE_ATTACK_MS = 70;
 
-  function resolveBurstShape() {
-    if (window.syncMode !== 'sync') {
+  function resolveBurstShape(name) {
+    if (modulatorSyncMode(name) !== 'sync') {
       return { durationMs: BURST_FREE_DURATION_MS, attackMs: BURST_FREE_ATTACK_MS };
     }
     const beats = Number(window.syncSettings.burstSubdivision);
@@ -539,14 +513,14 @@
       ? perInstanceSyncSubdivision(state.name)
       : (window.syncSettings?.lfoSubdivisionPinned ? window.syncSettings.lfoSubdivision : undefined);
     const subdiv = getLfoSubdivision(state.rate, bpm, pinned, shape);
-    const frequency = window.syncMode === 'sync' ? bps / subdiv : 0.1 + state.rate * (getLfoMaxHz(shape) - 0.1);
+    const frequency = modulatorSyncMode(state.name) === 'sync' ? bps / subdiv : 0.1 + state.rate * (getLfoMaxHz(shape) - 0.1);
     const elapsed = Math.max(0, now - (state.phaseTime ?? now)) / 1000;
     if (!state.active) {
       state.syncAnchor = undefined;
-    } else if (window.syncMode === 'sync' && window.playheadActive && window.syncSettings.clockSource !== 'free') {
+    } else if (modulatorSyncMode(state.name) === 'sync' && window.playheadActive && window.syncSettings.clockSource !== 'free') {
       const playheadMs = (window.playheadBaseTimeMs || 0) + (Date.now() - (window.playheadStartTime ?? Date.now()));
       const beat = playheadMs / 1000 * bps;
-      const offset = window.syncSettings.lfoPhaseOffset || 0;
+      const offset = lfoPhaseOffset(state.name) || 0;
       const source = window.syncSettings.clockSource;
       const anchor = state.syncAnchor;
       const expected = elapsed * bps;
@@ -573,7 +547,7 @@
 
   function settleLfoPhases() {
     const now = performance.now();
-    for (const state of lfoStates.values()) advanceLfoPhase(state, now);
+    for (const state of modulatorStates.values()) if (state.kind === 'lfo') advanceLfoPhase(state, now);
   }
 
   // Internal durations are quarter-note beats; labels are fractions of a whole
@@ -589,6 +563,9 @@
     }
     return String(Number((beats / 4).toFixed(4)));
   }
+  window.getModulatorRhythms = name => (modulatorShape(name) === 'stutter'
+    ? [4, 2, ...STUTTER_SUBDIVISIONS] : LFO_SUBDIVISIONS)
+    .map(value => ({ label: formatMusicalRate(value), value }));
 
   /**
    * The burst window a modulator is inside, for the host that generates its
@@ -603,49 +580,31 @@
     };
   }
 
-  function sendLfoState(name, state, extra) {
-    if (!state.name) state.name = name;
-    advanceLfoPhase(state);
-    window.onModulatorState && window.onModulatorState({
-      kind: 'lfo',
-      name,
-      active: !!state.active,
-      rate: state.rate,
-      depth: state.depth,
-      syncMode: window.syncMode,
-      clockSource: window.syncSettings.clockSource,
-      syncSubdivisionBeats: perInstanceSyncSubdivision(name),
-      phaseOffsetBeats: window.syncSettings.lfoPhaseOffset,
-      shape: window.RcControlConfig ? (window.RcControlConfig.get(name, 'shape', window.syncSettings.lfoShape)) : window.syncSettings.lfoShape,
-      ...burstWindow(state),
-      ...(extra || {}),
-    });
-  }
-  window.sendLfoState = sendLfoState;
-
-  // P03 (rc-surface-modulator-ux-fixes-2026-09-18): when CFG mode edits an
-  // active LFO's shape (or any other field that touches what the host needs
-  // to redraw), push the new state immediately so Ableton Live receives the
-  // new waveform without waiting for the user to re-touch the control. The
-  // animate() loop already picks up the new shape locally; this bridge keeps
-  // the host side in sync.
-  // RcControlConfig notifies with one event object ({ name, patch, next });
-  // the first version of this bridge expected (name, patch) and therefore
-  // returned early on every change.
   function onControlConfigPatch(event) {
-    const name = event && typeof event === 'object' ? event.name : undefined;
-    const patch = event && typeof event === 'object' ? event.patch : undefined;
-    if (typeof name !== 'string' || !patch || typeof patch !== 'object') return;
-    const keys = Object.keys(patch);
-    if (keys.some((k) => k === 'shape' || k === 'subdivision')) {
-      renderLfoSettings();
+    const name = event?.name;
+    const state = modulatorStates.get(name);
+    if (!state) return;
+    const nextKind = modulatorShape(name) === 'stutter' ? 'stutter' : 'lfo';
+    if (state.kind !== nextKind) {
+      state.active = false;
+      emitModulatorState(name, state); // release the old engine before changing type
+      state.kind = nextKind;
+      state.phase = nextKind === 'lfo' ? -Math.PI / 2 : 0;
+      state.phaseTime = performance.now();
+      state.phaseFrequency = undefined;
+      state.syncAnchor = undefined;
+      state.burstUntil = 0;
     }
-    // Only react to keys that change the modulator payload. `mode` and
-    // unrelated CFG fields do not require re-sending a running LFO.
-    if (!keys.some((k) => k === 'shape' || k === 'subdivision' || k === 'swing' || k === 'phaseOffset')) return;
-    const state = lfoStates.get(name);
-    if (!state || !state.active) return;
-    sendLfoState(name, state);
+    const keys = event.patch ? Object.keys(event.patch) : ['shape','subdivision','phaseOffset','swing','syncMode','rate','depth','count'];
+    for (const key of ['rate', 'depth', 'count']) {
+      if (!keys.includes(key)) continue;
+      const value = window.RcControlConfig?.get(name, key, undefined);
+      state[key] = value ?? (key === 'count' ? 0 : .5);
+      window.currentControlStates[`${name}.${key}`] = state[key];
+    }
+    renderModulator(state);
+    if (keys.some(key => ['shape','subdivision'].includes(key))) renderLfoSettings();
+    if (state.active && !applyingPerformanceSettings) emitModulatorState(name, state);
   }
   // control-config.js must already be loaded (index.html orders it before
   // this file). If a host page loads it later, subscribe once the DOM is
@@ -675,13 +634,13 @@
     const ratchet = [1, 2, 3, 4][Math.floor(clamp(count, 0, 1) * 3.99)] ?? 1;
     const tempo = window.currentBpm;
     const bps = (Number.isFinite(tempo) && tempo > 0 ? tempo : 120) / 60;
-    const pinned = window.syncSettings.stutterSubdivisionPinned ? window.syncSettings.stutterSubdivision : undefined;
-    const swing = clamp(window.syncSettings.stutterSwing, 0, .66);
+    const pinned = perInstanceStutterSubdivision(state.name);
+    const swing = clamp(perInstanceStutterSwing(state.name), 0, .66);
     const safeRate = Number.isFinite(rate) ? clamp(rate, 0, 1) : 0;
     const allowed = getStutterSubdivisions(bps, ratchet, swing);
     let subdivision = pinned !== undefined && Number.isFinite(pinned) && pinned > 0
       ? pinned : allowed[Math.floor(safeRate * (allowed.length - .01))];
-    const sync = window.syncMode === 'sync';
+    const sync = modulatorSyncMode(state.name) === 'sync';
     if (sync) while (bps * ratchet / subdivision / (1 - swing) > 15) subdivision *= 2;
     const frequency = sync ? bps * ratchet / subdivision : ratchet + safeRate * (15 - ratchet);
     return { subdivision, ratchet, frequency, bps, swing };
@@ -689,7 +648,7 @@
 
   function advanceStutterPhase(state, now = performance.now()) {
     const timing = getStutterTiming(state);
-    if (!state.pressed) {
+    if (!state.active) {
       state.phase = 0; state.phaseTime = now; state.phaseFrequency = timing.frequency;
       return false;
     }
@@ -697,9 +656,9 @@
     state.phase = ((state.phase || 0) + elapsed * (state.phaseFrequency ?? timing.frequency) * 2 * Math.PI) % (2 * Math.PI);
     state.phaseTime = now;
     state.phaseFrequency = timing.frequency;
-    if (window.syncMode === 'sync' && window.playheadActive && window.syncSettings.clockSource !== 'free') {
+    if (modulatorSyncMode(state.name) === 'sync' && window.playheadActive && window.syncSettings.clockSource !== 'free') {
       const beats = ((window.playheadBaseTimeMs + Date.now() - window.playheadStartTime) / 1000) * timing.bps;
-      const offset = window.syncSettings.stutterPhaseOffset;
+      const offset = perInstanceStutterPhaseOffset(state.name);
       const cycle = 2 * timing.subdivision;
       const time = ((beats + offset) % cycle + cycle) % cycle;
       const split = timing.subdivision * (1 + timing.swing);
@@ -710,39 +669,26 @@
     return state.phase < Math.PI;
   }
 
-  function sendStutterState(name, state, extra) {
-    advanceStutterPhase(state);
-    const payload = {
-      kind: 'stutter',
-      name,
-      active: !!state.pressed,
-      syncMode: window.syncMode,
-      clockSource: window.syncSettings.clockSource,
-      syncSubdivisionBeats: perInstanceStutterSubdivision(name),
-      phaseOffsetBeats: perInstanceStutterPhaseOffset(name),
-      swing: perInstanceStutterSwing(name),
-      ...burstWindow(state),
-      ...(extra || {}),
-    };
-    if (state.rate !== undefined) payload.rate = state.rate;
-    if (state.depth !== undefined) payload.depth = state.depth;
-    if (state.count !== undefined) payload.count = state.count;
-    window.onModulatorState && window.onModulatorState(payload);
+  function sendModulatorState(name, state, extra) {
+    const stutter = state.kind === 'stutter';
+    if (stutter) advanceStutterPhase(state); else advanceLfoPhase(state);
+    window.onModulatorState?.({
+      kind: state.kind, name, active: !!state.active,
+      rate: state.rate, depth: state.depth, count: state.count,
+      syncMode: modulatorSyncMode(name), clockSource: window.syncSettings.clockSource,
+      syncSubdivisionBeats: stutter ? perInstanceStutterSubdivision(name) : perInstanceSyncSubdivision(name),
+      phaseOffsetBeats: stutter ? perInstanceStutterPhaseOffset(name) : lfoPhaseOffset(name),
+      ...stutter ? {swing: perInstanceStutterSwing(name)} : {shape: modulatorShape(name)},
+      ...burstWindow(state), ...(extra || {}),
+    });
   }
-  window.sendStutterState = sendStutterState;
-
+  window.sendModulatorState = sendModulatorState;
   function flushPendingModulatorStateEmits() {
-    const lfoNames = Array.from(pendingLfoStateEmits);
-    const stutterNames = Array.from(pendingStutterStateEmits);
-    pendingLfoStateEmits.clear();
-    pendingStutterStateEmits.clear();
-    for (const name of lfoNames) {
-      const state = lfoStates.get(name);
-      if (state) sendLfoState(name, state);
-    }
-    for (const name of stutterNames) {
-      const state = stutterStates.get(name);
-      if (state) sendStutterState(name, state);
+    const names = Array.from(pendingModulatorStateEmits);
+    pendingModulatorStateEmits.clear();
+    for (const name of names) {
+      const state = modulatorStates.get(name);
+      if (state) sendModulatorState(name, state);
     }
   }
 
@@ -792,771 +738,223 @@
     requestAnimationFrame(flushCoalescedModulatorEmits);
   }
 
-  function emitLfoState(name, state) {
+  function emitModulatorState(name, state) {
     window.currentControlStates[name] = state.active ? 1 : 0;
     if (modulatorEmitSuppressDepth > 0) return;
-    if (modulatorEmitBatchDepth > 0) {
-      pendingLfoStateEmits.add(name);
-      return;
-    }
-    // This emit carries the current state, so a queued frame would only
-    // repeat it.
-    pendingLfoStateEmits.delete(name);
-    sendLfoState(name, state);
+    if (modulatorEmitBatchDepth > 0) { pendingModulatorStateEmits.add(name); return; }
+    pendingModulatorStateEmits.delete(name);
+    sendModulatorState(name, state);
   }
-
-  function emitLfoStateCoalesced(name, state) {
+  function emitModulatorStateCoalesced(name, state) {
     window.currentControlStates[name] = state.active ? 1 : 0;
     if (modulatorEmitSuppressDepth > 0) return;
-    pendingLfoStateEmits.add(name);
-    // Inside an explicit batch the batch owner does the flushing.
-    if (modulatorEmitBatchDepth > 0) return;
-    scheduleModulatorEmitFlush();
+    pendingModulatorStateEmits.add(name);
+    if (modulatorEmitBatchDepth === 0) scheduleModulatorEmitFlush();
   }
-
-  function emitStutterState(name, state) {
-    window.currentControlStates[name] = state.pressed ? 1 : 0;
-    if (modulatorEmitSuppressDepth > 0) return;
-    if (modulatorEmitBatchDepth > 0) {
-      pendingStutterStateEmits.add(name);
-      return;
-    }
-    pendingStutterStateEmits.delete(name);
-    sendStutterState(name, state);
-  }
-
-  function emitStutterStateCoalesced(name, state) {
-    window.currentControlStates[name] = state.pressed ? 1 : 0;
-    if (modulatorEmitSuppressDepth > 0) return;
-    pendingStutterStateEmits.add(name);
-    if (modulatorEmitBatchDepth > 0) return;
-    scheduleModulatorEmitFlush();
-  }
-
   function emitAllModulatorStates() {
-    for (const [name, state] of lfoStates.entries()) emitLfoState(name, state);
-    for (const [name, state] of stutterStates.entries()) emitStutterState(name, state);
+    for (const [name, state] of modulatorStates) emitModulatorState(name, state);
   }
 
-  function makeLfoToggle(el) {
-    const name = el.dataset.name;
-    const fill = el.querySelector('.mod-val-bar');
-
-    lfoStates.set(name, {
-      name,
-      active: false,
-      depth: 0.5,
-      rate: 0.5,
-      phase: -Math.PI / 2,
-      value: 0,
-      burstUntil: 0,
-      pendingToggleOff: false,
-      moved: false,
-    });
-    window.currentControlStates[`${name}.depth`] = 0.5;
-    window.currentControlStates[`${name}.rate`] = 0.5;
-
-    let activeId = null;
-    let gestureMode = null;
-    let startX = 0;
-    let startY = 0;
-    let startDepth = 0.5;
-    let lastRateX = 0;
-
-    function renderState() {
-      const state = lfoStates.get(name);
-      el.classList.toggle('on', state.active);
-      el.classList.toggle('burst', state.active && state.burstUntil > 0);
-      setModeClass(el, state.active, name);
-      // Limpa feedback de drag em qualquer estado (sem gesto ativo).
-      el.style.removeProperty('--lfo-drag-y');
-      el.style.removeProperty('--lfo-drag-x');
-    }
-
-    function armGesture(t, state) {
-      activeId = t.pointerId;
-      gestureMode = modeFor(name);
-      startX = t.clientX;
-      startY = t.clientY;
-      startDepth = state.depth;
-      lastRateX = t.clientX;
-      state.moved = false;
-    }
-
-    function activate(state, burstMs) {
-      const wasActive = state.active;
-      state.active = true;
-      state.pendingToggleOff = false;
-      const agora = performance.now();
-      if (!wasActive || burstMs) {
-        state.phase = -Math.PI / 2;
-        state.phaseTime = agora;
-        state.syncAnchor = undefined;
-        state.phaseFrequency = undefined;
-      }
-      state.burstStart = burstMs ? agora : 0;
-      state.burstAttackMs = burstMs ? resolveBurstShape().attackMs : 0;
-      state.burstUntil = burstMs ? agora + burstMs : 0;
-      renderState();
-      emitLfoState(name, state);
-    }
-
-    function deactivate(state) {
-      state.active = false;
-      state.value = 0;
-      state.burstUntil = 0;
-      state.pendingToggleOff = false;
+  function renderModulator(state) {
+    const el = document.querySelector(`.toggle[data-name="${state.name}"]`);
+    if (!el) return;
+    el.dataset.waveform = modulatorShape(state.name);
+    el.classList.toggle('on', state.active);
+    el.classList.toggle('burst', state.active && state.burstUntil > 0);
+    setModeClass(el, state.active, state.name);
+    if (!state.active) {
+      const fill = el.querySelector('.mod-val-bar');
       if (fill) fill.style.height = '0%';
-      renderState();
-      emitLfoState(name, state);
+      for (const key of ['background-color','--stut-pulse','--stut-glow-size','--stut-scale']) el.style.removeProperty(key);
     }
-
-    function start(t) {
-      if (activeId !== null) return;
-      const state = lfoStates.get(name);
-      armGesture(t, state);
-
-      if (modeFor(name) === 'B') {
-        activate(state, 0);
-        return;
-      }
-
-      if (modeFor(name) === 'C') {
-        if (state.active) {
-          state.pendingToggleOff = true;
-          renderState();
-        } else {
-          activate(state, 0);
-        }
-        return;
-      }
-
-      if (modeFor(name) === 'D') {
-        activate(state, resolveBurstShape().durationMs);
-        return;
-      }
-
-      activate(state, 0);
-    }
-
-    function move(t) {
-      if (activeId === null) return;
-      const state = lfoStates.get(name);
-      if (!state.active) return;
-
-      const dy = startY - t.clientY;
-      const dx = t.clientX - startX;
-      if (Math.abs(dy) > 4 || Math.abs(dx) > 4) {
-        state.moved = true;
-        state.pendingToggleOff = false;
-      }
-      state.depth = clamp(startDepth + dy / 150, 0, 1);
-      const now = performance.now();
-      advanceLfoPhase(state, now);
-      state.rate = clamp(state.rate + (t.clientX - lastRateX) / (t.shiftKey ? 600 : 150), 0, 1);
-      lastRateX = t.clientX;
-      advanceLfoPhase(state, now);
-      window.currentControlStates[`${name}.depth`] = state.depth;
-      window.currentControlStates[`${name}.rate`] = state.rate;
-
-      // Feedback visual: glow separado por eixo (CSS usa --lfo-drag-y/x)
-      el.style.setProperty('--lfo-drag-y', state.depth.toFixed(3));
-      el.style.setProperty('--lfo-drag-x', state.rate.toFixed(3));
-      emitLfoStateCoalesced(name, state);
-
-      // Mode B: estado final decidido no end() via depth. Move nao desativa
-      // durante o gesto - usuario pode explorar valores baixos sem perder
-      // o hold.
-    }
-
-    function end(pointerId) {
-      if (activeId === null || pointerId !== activeId) return;
-      activeId = null;
-
-      const state = lfoStates.get(name);
-      const mode = gestureMode || modeFor(name);
-      gestureMode = null;
-      if (mode === 'A') {
-        deactivate(state);
-      } else if (mode === 'C' && state.pendingToggleOff && !state.moved) {
-        deactivate(state);
-      } else if (mode === 'B' && state.depth < 0.02) {
-        // Mode B: se ao soltar a depth ficou abaixo do threshold minimo,
-        // cancela o hold. Permite explorar valores ~0.02 sem desativar
-        // acidentalmente (zona morta).
-        deactivate(state);
-      }
-      // Limpa feedback visual.
-      el.style.removeProperty('--lfo-drag-y');
-      el.style.removeProperty('--lfo-drag-x');
-    }
-
-    bindPointerGesture(el, () => activeId, { start, move, end });
-
-    window.controlSetters = window.controlSetters || {};
-    window.controlSetters[name] = (v) => {
-      const state = lfoStates.get(name);
-      if (state) {
-        if (!state.active && v > 0.5) {
-          state.phaseTime = performance.now();
-          state.syncAnchor = undefined;
-          state.phaseFrequency = undefined;
-        }
-        state.active = v > 0.5;
-        if (state.active && modeFor(name) === 'D') {
-          if (!state.burstUntil) {
-            const forma = resolveBurstShape();
-            state.burstStart = performance.now();
-            state.burstAttackMs = forma.attackMs;
-            state.burstUntil = state.burstStart + forma.durationMs;
-          }
-        } else {
-          state.burstUntil = 0;
-        }
-        state.pendingToggleOff = false;
-        renderState();
-        if (!state.active) {
-          state.value = 0;
-          if (fill) fill.style.height = '0%';
-        }
-        emitLfoState(name, state);
-      }
-    };
-    window.controlSetters[`${name}.rate`] = (v) => {
-      const state = lfoStates.get(name);
-      if (state && typeof v === 'number' && Number.isFinite(v)) {
-        const now = performance.now();
-        advanceLfoPhase(state, now);
-        state.rate = clamp(v, 0, 1);
-        advanceLfoPhase(state, now);
-        window.currentControlStates[`${name}.rate`] = state.rate;
-        emitLfoState(name, state);
-      }
-    };
-    window.controlSetters[`${name}.depth`] = (v) => {
-      const state = lfoStates.get(name);
-      if (state) {
-        state.depth = v;
-        window.currentControlStates[`${name}.depth`] = v;
-        emitLfoState(name, state);
-      }
-    };
   }
-
-  // ---- Stutter Rolls (Momentary) ----
-  const stutterStates = new Map(); // name -> { pressed, rate, depth, count, burstUntil }
-  window.stutterStates = stutterStates;
-
-  function releaseStutterSubdivisionPin() {
-    // Settings are shared by S1-S4. Rebase every control to its effective speed
-    // before returning to Auto, so editing one does not jump the other three.
-    const timings = Array.from(stutterStates, ([name, state]) => [name, state, getStutterTiming(state)]);
-    for (const [, state] of timings) advanceStutterPhase(state);
-    window.syncSettings.stutterSubdivisionPinned = false;
-    for (const [name, state, timing] of timings) {
-      const allowed = getStutterSubdivisions(timing.bps, timing.ratchet, timing.swing);
-      let index = 0;
-      for (let i = 1; i < allowed.length; i++) {
-        if (Math.abs(allowed[i] - timing.subdivision) < Math.abs(allowed[index] - timing.subdivision)) index = i;
-      }
-      state.rate = (index + .5) / allowed.length;
-      window.currentControlStates[`${name}.rate`] = state.rate;
-      emitStutterState(name, state);
-    }
-    localStorage.setItem('ableton-rc:sync_settings', JSON.stringify(window.syncSettings));
-  }
-
-  function makeStutterButton(el) {
+  function makeModulator(el) {
     const name = el.dataset.name;
-
-    stutterStates.set(name, {
-      pressed: false,
-      rate: 0.1,
-      depth: 0.5,
-      count: 0,
-      burstUntil: 0,
-      pendingToggleOff: false,
-      moved: false,
-    });
-    window.currentControlStates[`${name}.rate`] = 0.1;
-    window.currentControlStates[`${name}.depth`] = 0.5;
-    window.currentControlStates[`${name}.count`] = 0;
-
-    // P04 (rc-surface-modulator-quality-2026-09-16): depth bar inside the
-    // momentary gate. The bar shows the gate's depth *now* (intent), it does
-    // not latch — it goes back to 0% when the gate releases, mirroring how
-    // the gate's own state (`pressed`) is reset. May be null in headless test
-    // environments where the markup is stripped; guards below are no-ops in
-    // that case.
-    const bar = el.querySelector('.mod-val-bar');
-    function paintBar(depth) {
-      if (!bar) return;
-      bar.style.height = `${Math.max(0, Math.min(1, depth)) * 100}%`;
+    const kind = modulatorShape(name) === 'stutter' ? 'stutter' : 'lfo';
+    const config = (key, fallback) => window.RcControlConfig?.get(name, key, fallback) ?? fallback;
+    const state = { name, kind, active: false, rate: config('rate', .5), depth: config('depth', .5),
+      count: config('count', 0), phase: kind === 'lfo' ? -Math.PI/2 : 0,
+      value: 0, burstUntil: 0, pendingToggleOff: false, moved: false };
+    modulatorStates.set(name, state);
+    for (const key of ['rate','depth','count']) window.currentControlStates[`${name}.${key}`] = state[key];
+    let activeId = null, gestureMode = null, startX = 0, startY = 0, startDepth = .5, lastX = 0;
+    const advance = now => state.kind === 'lfo' ? advanceLfoPhase(state, now) : advanceStutterPhase(state, now);
+    const clearDrag = () => {
+      for (const key of ['--lfo-drag-y','--lfo-drag-x','--stut-drag-y','--stut-drag-x']) el.style.removeProperty(key);
+    };
+    function deactivate() {
+      state.active = false; state.value = 0; state.burstUntil = 0; state.pendingToggleOff = false;
+      renderModulator(state); emitModulatorState(name, state);
     }
-
-    let activeId = null;
-    let gestureMode = null;
-    let startX = 0;
-    let startY = 0;
-    let startRate = 0.1;
-    let startDepth = 0.5;
-
-    function renderState(pressed) {
-      el.classList.toggle('pressed', pressed);
-      const state = stutterStates.get(name);
-      el.classList.toggle('burst', !!state && state.pressed && state.burstUntil > 0);
-      setModeClass(el, pressed, name);
-      if (!pressed) {
-        el.style.removeProperty('background-color');
-        el.style.removeProperty('--stut-pulse');
-        el.style.removeProperty('--stut-glow-size');
-        el.style.removeProperty('--stut-scale');
+    function activate(burst = false) {
+      if (!state.active || burst) {
+        state.phase = state.kind === 'lfo' ? -Math.PI/2 : 0;
+        state.phaseTime = performance.now(); state.phaseFrequency = undefined; state.syncAnchor = undefined;
       }
-      // Limpa feedback de drag em qualquer estado (sem gesto ativo).
-      el.style.removeProperty('--stut-drag-y');
-      el.style.removeProperty('--stut-drag-x');
+      state.active = true; state.pendingToggleOff = false;
+      state.burstStart = burst ? performance.now() : 0;
+      const shape = resolveBurstShape(name);
+      state.burstAttackMs = burst ? shape.attackMs : 0;
+      state.burstUntil = burst ? state.burstStart + shape.durationMs : 0;
+      renderModulator(state); emitModulatorState(name, state);
     }
-
-    function armGesture(t, state) {
-      activeId = t.pointerId;
-      gestureMode = modeFor(name);
-      startX = t.clientX;
-      startY = t.clientY;
-      startRate = state.rate;
-      startDepth = state.depth ?? 0.5;
-      state.moved = false;
-    }
-
-    function activate(state, burstMs) {
-      state.pressed = true;
-      state.pendingToggleOff = false;
-      const agora = performance.now();
-      state.burstStart = burstMs ? agora : 0;
-      state.burstAttackMs = burstMs ? resolveBurstShape().attackMs : 0;
-      state.burstUntil = burstMs ? agora + burstMs : 0;
-      renderState(true);
-      emitStutterState(name, state);
-    }
-
-    function deactivate(state) {
-      state.pressed = false;
-      state.burstUntil = 0;
-      state.pendingToggleOff = false;
-      renderState(false);
-      emitStutterState(name, state);
-    }
-
     function start(t) {
       if (activeId !== null) return;
-      const state = stutterStates.get(name);
-      armGesture(t, state);
-
-      if (modeFor(name) === 'B') {
-        activate(state, 0);
-        return;
-      }
-
-      if (modeFor(name) === 'C') {
-        if (state.pressed) {
-          state.pendingToggleOff = true;
-          renderState(true);
-        } else {
-          activate(state, 0);
-        }
-        return;
-      }
-
-      if (modeFor(name) === 'D') {
-        activate(state, resolveBurstShape().durationMs);
-        return;
-      }
-
-      activate(state, 0);
+      activeId = t.pointerId; gestureMode = modeFor(name);
+      startX = lastX = t.clientX; startY = t.clientY; startDepth = state.depth; state.moved = false;
+      if (gestureMode === 'C' && state.active) state.pendingToggleOff = true;
+      else activate(gestureMode === 'D');
     }
-
     function move(t) {
-      if (activeId === null) return;
-      const state = stutterStates.get(name);
-      const dy = startY - t.clientY;
-      const dx = t.clientX - startX;
-      if (Math.abs(dy) > 4 || Math.abs(dx) > 4) {
-        state.moved = true;
-        state.pendingToggleOff = false;
+      if (activeId === null || !state.active) return;
+      const dx = t.clientX - startX, dy = startY - t.clientY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) { state.moved = true; state.pendingToggleOff = false; }
+      advance(performance.now());
+      if (state.kind === 'stutter' && Math.abs(dx) > 4 && modulatorSyncMode(name) === 'sync'
+        && perInstanceStutterSubdivision(name) !== null) {
+        const timing = getStutterTiming(state);
+        const allowed = getStutterSubdivisions(timing.bps, timing.ratchet, timing.swing);
+        let index = 0;
+        for (let i = 1; i < allowed.length; i++) {
+          if (Math.abs(allowed[i] - timing.subdivision) < Math.abs(allowed[index] - timing.subdivision)) index = i;
+        }
+        state.rate = (index + .5) / allowed.length;
+        window.RcControlConfig?.set(name, {subdivision: 0});
       }
-      // Axes match LFO convention:
-      // vertical = amplitude, horizontal = speed. Legacy count remains
-      // independently restorable by its setter/snapshots, not this gesture.
-      if (Math.abs(dx) > 4 && window.syncMode === 'sync' && window.syncSettings.stutterSubdivisionPinned) {
-        releaseStutterSubdivisionPin();
-        startRate = state.rate;
-      }
-      advanceStutterPhase(state);
-      state.depth = clamp(startDepth + dy / 150, 0, 1);
-      state.rate = clamp(startRate + dx / 150, 0, 1);
+      state.rate = clamp(state.rate + (t.clientX - lastX) / (t.shiftKey ? 600 : 150), 0, 1);
+      state.depth = clamp(startDepth + dy / 150, 0, 1); lastX = t.clientX;
+      advance(performance.now());
       window.currentControlStates[`${name}.rate`] = state.rate;
       window.currentControlStates[`${name}.depth`] = state.depth;
-
-      el.style.setProperty('--stut-drag-y', state.depth.toFixed(3));
-      el.style.setProperty('--stut-drag-x', state.rate.toFixed(3));
-      paintBar(state.depth);
-      emitStutterStateCoalesced(name, state);
-
-      // Mode B: estado final decidido no end() via depth. Move nao desativa
-      // durante o gesto - usuario pode explorar valores baixos sem perder
-      // o hold.
+      const prefix = state.kind === 'stutter' ? '--stut' : '--lfo';
+      el.style.setProperty(prefix+'-drag-y', state.depth.toFixed(3));
+      el.style.setProperty(prefix+'-drag-x', state.rate.toFixed(3));
+      const fill = el.querySelector('.mod-val-bar');
+      if (fill) fill.style.height = `${state.depth * 100}%`;
+      emitModulatorStateCoalesced(name, state);
     }
-
     function end(pointerId) {
-      if (activeId === null || pointerId !== activeId) return;
+      if (pointerId !== activeId) return;
       activeId = null;
-
-      const state = stutterStates.get(name);
-      const mode = gestureMode || modeFor(name);
-      gestureMode = null;
-      if (mode === 'A') {
-        deactivate(state);
-      } else if (mode === 'C' && state.pendingToggleOff && !state.moved) {
-        deactivate(state);
-      } else if (mode === 'B' && state.depth < 0.02) {
-        // Match LFO hold: release at minimum amplitude disarms. Changing
-        // horizontal speed must not silently cancel a nonzero amplitude.
-        deactivate(state);
-      } else if (mode === 'B' && !state.moved) {
-        // Mode B tap puro (sem mexer em nenhum eixo): libera o hold
-        // mesmo com amplitude acima do threshold.
-        deactivate(state);
-      }
-      // Limpa feedback visual.
-      el.style.removeProperty('--stut-drag-y');
-      el.style.removeProperty('--stut-drag-x');
-      paintBar(0);
+      const mode = gestureMode || modeFor(name); gestureMode = null;
+      if (mode === 'A' || (mode === 'C' && state.pendingToggleOff && !state.moved)
+        || (mode === 'B' && (state.depth < .02 || !state.moved))) deactivate();
+      clearDrag();
+      if (state.moved) window.RcControlConfig?.set(name, {rate: state.rate, depth: state.depth});
     }
-
-    bindPointerGesture(el, () => activeId, { start, move, end });
-
+    bindPointerGesture(el, () => activeId, {start, move, end});
     window.controlSetters = window.controlSetters || {};
-    window.controlSetters[name] = (v) => {
-      const state = stutterStates.get(name);
-      if (state) {
-        state.pressed = v > 0.5;
-        if (state.pressed && modeFor(name) === 'D') {
-          if (!state.burstUntil) {
-            const forma = resolveBurstShape();
-            state.burstStart = performance.now();
-            state.burstAttackMs = forma.attackMs;
-            state.burstUntil = state.burstStart + forma.durationMs;
-          }
-        } else {
-          state.burstUntil = 0;
-        }
-        state.pendingToggleOff = false;
-        renderState(state.pressed);
-        emitStutterState(name, state);
+    window.controlSetters[name] = value => {
+      if (value > .5) {
+        if (!state.active) activate(modeFor(name) === 'D');
+        else { renderModulator(state); emitModulatorState(name, state); }
       }
+      else deactivate();
     };
-    window.controlSetters[`${name}.rate`] = (v) => {
-      const state = stutterStates.get(name);
-      if (state) {
-        advanceStutterPhase(state);
-        state.rate = v;
-        window.currentControlStates[`${name}.rate`] = v;
-        emitStutterState(name, state);
+    for (const key of ['rate','depth','count']) window.controlSetters[`${name}.${key}`] = value => {
+      if (!Number.isFinite(value)) return;
+      advance(performance.now()); state[key] = clamp(value, 0, 1); advance(performance.now());
+      window.currentControlStates[`${name}.${key}`] = state[key];
+      if (key === 'depth') {
+        const fill = el.querySelector('.mod-val-bar');
+        if (fill) fill.style.height = `${state.depth * 100}%`;
       }
+      emitModulatorState(name, state);
     };
-    window.controlSetters[`${name}.depth`] = (v) => {
-      if (!Number.isFinite(v)) return;
-      const state = stutterStates.get(name);
-      if (state) {
-        state.depth = clamp(v, 0, 1);
-        window.currentControlStates[`${name}.depth`] = state.depth;
-        paintBar(state.depth);
-        emitStutterState(name, state);
-      }
-    };
-    window.controlSetters[`${name}.count`] = (v) => {
-      const state = stutterStates.get(name);
-      if (state) {
-        state.count = v;
-        window.currentControlStates[`${name}.count`] = v;
-        emitStutterState(name, state);
-      }
-    };
+    renderModulator(state);
   }
 
-  // ---- XY Physics Pad ----
-  function setupXYPhysics(el) {
-    const name = el.dataset.name;
-    const canvas = el.querySelector('#xy-physics-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    let activeId = null;
-    let width = 0, height = 0;
-
-    // Ball physics properties
-    const radius = 9;
-    let x = 0;
-    let y = 0;
-    let vx = 0;
-    let vy = 0;
-    let lastTouchX = 0;
-    let lastTouchY = 0;
-    let lastTouchTime = 0;
-    let isDragging = false;
-    const trail = [];
-
-    function resize() {
-      const rect = el.getBoundingClientRect();
-      // Keep old proportional positions
-      const px = width > 0 ? x / width : 0.5;
-      const py = height > 0 ? y / height : 0.5;
-
-      width = rect.width;
-      height = rect.height;
-      canvas.width = width;
-      canvas.height = height;
-
-      x = px * width;
-      y = py * height;
-    }
-
-    window.addEventListener('resize', resize);
-    setTimeout(resize, 100);
-
-    function emitValue() {
-      // Calculate normalized 0..1 coordinates
-      const valX = clamp((x - radius) / (width - 2 * radius), 0, 1);
-      const valY = clamp((y - radius) / (height - 2 * radius), 0, 1);
-      
-      const readout = document.querySelector(`[data-readout="${name}"]`);
-      if (readout) readout.textContent = `${valX.toFixed(2)} / ${valY.toFixed(2)}`;
-
-      window.onControl && window.onControl({ name, x: valX, y: valY });
-    }
-
-    function start(t) {
-      if (activeId !== null) return;
-      activeId = t.pointerId;
-      isDragging = true;
-      vx = 0;
-      vy = 0;
-      trail.length = 0;
-
-      const rect = canvas.getBoundingClientRect();
-      x = clamp(t.clientX - rect.left, radius, width - radius);
-      y = clamp(t.clientY - rect.top, radius, height - radius);
-      lastTouchX = x;
-      lastTouchY = y;
-      lastTouchTime = performance.now();
-      emitValue();
-    }
-
-    function move(t) {
-      if (activeId === null) return;
-      const rect = canvas.getBoundingClientRect();
-      const currX = clamp(t.clientX - rect.left, radius, width - radius);
-      const currY = clamp(t.clientY - rect.top, radius, height - radius);
-      const now = performance.now();
-      const dt = Math.max(1, now - lastTouchTime);
-
-      // Track drag velocity
-      vx = (currX - lastTouchX) / (dt / 16.6);
-      vy = (currY - lastTouchY) / (dt / 16.6);
-
-      x = currX;
-      y = currY;
-      lastTouchX = x;
-      lastTouchY = y;
-      lastTouchTime = now;
-      emitValue();
-    }
-
-    function end(pointerId) {
-      if (activeId === null || pointerId !== activeId) return;
-      activeId = null;
-      isDragging = false;
-    }
-
-    bindPointerGesture(el, () => activeId, { start, move, end });
-
-    // Physics + Render Animation Loop
-    function animate() {
-      requestAnimationFrame(animate);
-
-      if (width === 0 || height === 0) {
-        resize();
-        if (width === 0 || height === 0) return;
+  let applyingPerformanceSettings = false;
+  let lastHostPerformanceSettings;
+  window.PerformanceSettings = {
+    get applying() { return applyingPerformanceSettings; },
+    capture() {
+      const slots = {};
+      for (const [name, state] of modulatorStates) {
+        slots[name] = {
+          shape: modulatorShape(name), mode: modeFor(name), syncMode: modulatorSyncMode(name),
+          subdivision: (state.kind === 'lfo' ? perInstanceSyncSubdivision(name) : perInstanceStutterSubdivision(name)) ?? 0,
+          phaseOffset: state.kind === 'lfo' ? lfoPhaseOffset(name) : perInstanceStutterPhaseOffset(name),
+          swing: perInstanceStutterSwing(name), rate: state.rate, depth: state.depth, count: state.count ?? 0,
+        };
       }
-
-      if (!isDragging) {
-
-        // Physics update. Per-instance overrides only apply to XY2; the legacy
-        // XY pad keeps its documented defaults so existing tests stay green.
-        const physics = perInstancePhysics(name);
-        const friction = physics.friction !== undefined ? physics.friction : 0.012;
-        const bounce = physics.bounce !== undefined ? physics.bounce : 0.75;
-        // Below this the puck is treated as stopped. It has to be the same
-        // number in free flight and at a wall: when the wall used a coarser
-        // one, a corner hit both axes at once and the puck stuck there.
-        const STOP_BELOW = 0.01;
-        vx *= (1 - friction);
-        vy *= (1 - friction);
-        if (Math.abs(vx) < STOP_BELOW) vx = 0;
-        if (Math.abs(vy) < STOP_BELOW) vy = 0;
-
-        x += vx;
-        y += vy;
-
-        // Bouncing logic
-        let bounced = false;
-        if (x < radius) {
-          x = radius;
-          vx = -vx * bounce;
-          if (Math.abs(vx) < STOP_BELOW) vx = 0;
-          bounced = true;
-        } else if (x > width - radius) {
-          x = width - radius;
-          vx = -vx * bounce;
-          if (Math.abs(vx) < STOP_BELOW) vx = 0;
-          bounced = true;
+      return { version: 1, slots, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
+    },
+    apply(value, preserveValues = false) {
+      if (value?.version !== 1 || !value.slots || typeof value.slots !== 'object') return;
+      applyingPerformanceSettings = true;
+      try {
+        for (const name of modulatorStates.keys()) {
+          const entry = value.slots[name];
+          if (entry !== undefined && (!entry || typeof entry !== 'object')) continue;
+          const fields = ['shape','mode','syncMode','subdivision','phaseOffset','swing', ...preserveValues ? [] : ['rate','depth','count']];
+          const patch = Object.fromEntries(fields.map(key => [key, entry?.[key] ?? null]));
+          window.RcControlConfig?.set(name, patch);
         }
-
-        if (y < radius) {
-          y = radius;
-          vy = -vy * bounce;
-          if (Math.abs(vy) < STOP_BELOW) vy = 0;
-          bounced = true;
-        } else if (y > height - radius) {
-          y = height - radius;
-          vy = -vy * bounce;
-          if (Math.abs(vy) < STOP_BELOW) vy = 0;
-          bounced = true;
+        for (const name of xyStates.keys()) {
+          const entry = value.xy?.[name] || window.RcXYEngine.defaults;
+          window.RcControlConfig?.set(name, entry);
         }
+      } finally { applyingPerformanceSettings = false; }
+    },
+    applyHost(value) {
+      if (!value) return;
+      const signature = JSON.stringify(value);
+      if (signature === lastHostPerformanceSettings) return;
+      lastHostPerformanceSettings = signature;
+      this.apply(value);
+    },
+  };
 
-        if (bounced && (Math.abs(vx) > 0.5 || Math.abs(vy) > 0.5)) {
-        }
-
-        if (vx !== 0 || vy !== 0) {
-          emitValue();
-        }
-      }
-
-      // Add trail point
-      trail.push({ x, y });
-      if (trail.length > 15) trail.shift();
-
-      // Render
-      ctx.clearRect(0, 0, width, height);
-
-      // Render grid lines
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
-        const lx = (width / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(lx, 0);
-        ctx.lineTo(lx, height);
-        ctx.stroke();
-
-        const ly = (height / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, ly);
-        ctx.lineTo(width, ly);
-        ctx.stroke();
-      }
-
-      // Draw trail
-      if (trail.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(trail[0].x, trail[0].y);
-        for (let i = 1; i < trail.length; i++) {
-          ctx.lineTo(trail[i].x, trail[i].y);
-        }
-        ctx.strokeStyle = 'rgba(255, 159, 10, 0.25)';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-      }
-
-      // Draw ball glow
-      const glow = ctx.createRadialGradient(x, y, 1, x, y, radius * 2);
-      glow.addColorStop(0, '#ff9f0a');
-      glow.addColorStop(0.3, 'rgba(255, 159, 10, 0.8)');
-      glow.addColorStop(1, 'rgba(255, 159, 10, 0)');
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
-      ctx.fillStyle = glow;
-      ctx.fill();
-
-      // Draw ball core
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff9f0a';
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    window.controlSetters = window.controlSetters || {};
-    window.controlSetters[name + '.x'] = (v) => {
-      x = radius + v * (width - 2 * radius);
-      emitValue();
-    };
-    window.controlSetters[name + '.y'] = (v) => {
-      y = radius + v * (height - 2 * radius);
-      emitValue();
-    };
-
-    animate();
-  }
-
-  // ---- XY pad 1 (Standard) ----
+  // Both XY panels use the same state, pointer and rendering path.
   function makeXYPad(el) {
     const name = el.dataset.name;
     const dot = el.querySelector('.xy-dot');
     const readout = document.querySelector(`[data-readout="${name}"]`);
+    const engine = window.RcXYEngine;
+    const state = engine.create(); xyStates.set(name, state);
     let activeId = null;
-    let x = 0.5, y = 0.5;
-    const update = () => {
-      dot.style.left = `${x * 100}%`;
-      dot.style.top = `${y * 100}%`;
-      if (readout) {
-        readout.textContent = `${x.toFixed(2)} / ${y.toFixed(2)}`;
-      }
-    };
-    function set(t) {
-      const r = el.getBoundingClientRect();
-      x = clamp((t.clientX - r.left) / r.width, 0, 1);
-      y = clamp((t.clientY - r.top) / r.height, 0, 1);
-      window.onControl && window.onControl({ name, x, y });
-      update();
+    function render() {
+      el.dataset.behavior = xySettings(name).behavior;
+      if (dot) { dot.style.left = `${state.x * 100}%`; dot.style.top = `${state.y * 100}%`; }
+      if (readout) readout.textContent = `${state.x.toFixed(2)} / ${state.y.toFixed(2)}`;
+    }
+    function emit() {
+      window.currentControlStates[name+'.x'] = state.x;
+      window.currentControlStates[name+'.y'] = state.y;
+      render();
+      window.onControl?.({ name, x: state.x, y: state.y });
+    }
+    function move(t) {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      engine.move(state, (t.clientX - rect.left) / rect.width, (t.clientY - rect.top) / rect.height, performance.now());
+      emit();
     }
     bindPointerGesture(el, () => activeId, {
-      start(e) {
-        activeId = e.pointerId;
-        set(e);
-      },
-      move: set,
+      start(t) { activeId = t.pointerId; state.dragging = true; move(t); engine.stop(state); },
+      move,
       end(pointerId) {
-        if (pointerId === activeId) activeId = null;
+        if (pointerId !== activeId) return;
+        activeId = null; state.dragging = false; state.time = performance.now();
+        if (xySettings(name).behavior !== 'physics') engine.stop(state);
       },
     });
-
+    window.RcControlConfig?.subscribe(event => {
+      if (event.name !== name) return;
+      if (xySettings(name).behavior !== 'physics') engine.stop(state);
+      render();
+    });
     window.controlSetters = window.controlSetters || {};
-    window.controlSetters[name + '.x'] = (v) => {
-      x = v;
-      update();
-      window.onControl && window.onControl({ name, x, y });
+    for (const axis of ['x','y']) window.controlSetters[name+'.'+axis] = value => {
+      if (!Number.isFinite(value)) return;
+      engine.stop(state); state[axis] = clamp(value, 0, 1); emit();
     };
-    window.controlSetters[name + '.y'] = (v) => {
-      y = v;
-      update();
-      window.onControl && window.onControl({ name, x, y });
+    for (const key of ['friction','bounce','speed']) window.controlSetters[name+'.'+key] = value => {
+      if (Number.isFinite(value)) window.RcControlConfig?.set(name, {[key]: value});
     };
-
-    update();
+    state.render = render; state.emit = emit;
+    render();
   }
 
   // Scalar controls keep the same pointer/setter path for keyboard input.
@@ -1846,12 +1244,12 @@
     // Paint the actual local gate on each frame, including fast subdivisions.
     // Never substitute a slower animation or replay pulses missed by the display.
     const hz = state.phaseFrequency;
-    el.dataset.pulseView = state.pressed ? 'pulse' : 'off';
-    if (state.pressed) {
+    el.dataset.pulseView = state.active ? 'pulse' : 'off';
+    if (state.active) {
       el.style.backgroundColor = gate ? 'rgba(255,159,10,0.82)' : 'rgba(255,159,10,0.10)';
       el.style.setProperty('--stut-glow-size', gate ? '12px' : '7px');
     }
-    const rate = el.querySelector('.stutter-rate-readout');
+    const rate = el.querySelector('.modulator-rate-readout');
     if (rate) {
       const timing = getStutterTiming(state);
       rate.textContent = window.syncMode === 'sync'
@@ -1863,9 +1261,9 @@
     const grid = document.getElementById('stutter-rate-grid');
     const readout = document.getElementById('stutter-effective-rate');
     if (!grid || !readout) return;
-    // The menu is shared. Account for the most demanding legacy ratchet among
+    // The menu is shared. Account for the most demanding active ratchet among
     // all four controls; do not offer a base division that one silently clips.
-    const count = Math.max(0, ...Array.from(stutterStates.values(), state => state.count));
+    const count = Math.max(0, ...Array.from(modulatorStates.values()).filter(state => state.kind === 'stutter').map(state => state.count));
     const timing = getStutterTiming({ rate: 1, count });
     const allowed = getStutterSubdivisions(timing.bps, timing.ratchet, timing.swing);
     // Shared menu: per-control subdivision pins live in RcControlConfig; the
@@ -1952,6 +1350,10 @@
       renderLfoSettings();
     }
 
+    for (const [name, state] of xyStates) {
+      if (window.RcXYEngine.tick(state, xySettings(name), now)) state.emit();
+    }
+
     // 1. Run scalar bursts (mode D pads)
     for (const [name, burst] of activeScalarBursts.entries()) {
       const event = Modes.tickBurstGesture(burst.state, { now });
@@ -1961,92 +1363,37 @@
       }
     }
 
-    // 2. Run Active LFOs
-    for (const [name, state] of lfoStates.entries()) {
-      if (!state.name) state.name = name;
+    // 2. Run all eight configurable modulators.
+    for (const [name, state] of modulatorStates) {
       const el = document.querySelector(`.toggle[data-name="${name}"]`);
-      const readout = el?.querySelector('.lfo-rate-readout');
-      if (readout && performanceVisible) {
-        const shape = window.RcControlConfig
-          ? window.RcControlConfig.get(name, 'shape', window.syncSettings?.lfoShape || 'sine')
-          : (window.syncSettings?.lfoShape || 'sine');
-        readout.textContent = window.syncMode === 'sync'
-          ? formatMusicalRate(getLfoSubdivision(state.rate, window.currentBpm,
-            perInstanceSyncSubdivision(name), shape))
-          : `${(0.1 + state.rate * (getLfoMaxHz(shape) - 0.1)).toFixed(2)} Hz`;
-      }
-      if (!state.active) continue;
-      if (state.burstUntil > 0 && now >= state.burstUntil) {
-        state.active = false;
-        state.value = 0;
-        state.burstUntil = 0;
-        const el = document.querySelector(`.toggle[data-name="${name}"]`);
-        if (el) {
-          el.classList.remove('on', 'burst');
-          // setModeClass stamped mode-d when the burst started; without this
-          // the control keeps the colour of one that is still firing.
-          clearModeClass(el);
-          const fill = el.querySelector('.mod-val-bar');
-          if (fill) fill.style.height = '0%';
-        }
-        emitLfoState(name, state);
-        continue;
-      }
-
-      const lfoPhaseRad = advanceLfoPhase(state, now);
-
-      // P03 (rc-surface-modulator-ux-fixes-2026-09-18): read per-control shape
-      // override (CF mode) so the waveform updates live without a manual
-      // touch/drag re-arm. Falls back to the global syncSettings.lfoShape
-      // when no override exists, matching sendLfoState's payload semantics.
-      const lfoShape = window.RcControlConfig
-        ? window.RcControlConfig.get(name, 'shape', window.syncSettings.lfoShape)
-        : window.syncSettings.lfoShape;
-      const wave = computeLfoWaveValue(lfoShape, lfoPhaseRad);
-      // In mode D the depth opens over the attack and closes over the release,
-      // instead of switching on whole for the length of the burst.
-      const envelope = burstEnvelopeFactor(state, now);
-      const lfoVal = 0.5 + wave * 0.5 * state.depth * envelope;
-      state.value = lfoVal;
-
-      if (performanceVisible) {
-        const el = document.querySelector(`.toggle[data-name="${name}"]`);
-        if (el) {
-          const fill = el.querySelector('.mod-val-bar');
-          if (fill) fill.style.height = `${lfoVal * 100}%`;
-
-        }
-      }
-    }
-
-    // 4. Run Active Stutters
-    for (const [name, state] of stutterStates.entries()) {
-      if (!state.pressed) {
-        advanceStutterPhase(state, now);
-        const el = document.querySelector(`.button[data-name="${name}"]`);
-        if (el) renderStutterFeedback(el, state, false);
-        continue;
+      const stutter = state.kind === 'stutter';
+      const readout = el?.querySelector('.modulator-rate-readout');
+      if (readout && performanceVisible && !stutter) {
+        const shape = modulatorShape(name);
+        readout.textContent = modulatorSyncMode(name) === 'sync'
+          ? formatMusicalRate(getLfoSubdivision(state.rate, window.currentBpm, perInstanceSyncSubdivision(name), shape))
+          : `${(0.1 + state.rate * (getLfoMaxHz(shape) - .1)).toFixed(2)} Hz`;
       }
       if (state.burstUntil > 0 && now >= state.burstUntil) {
-        state.pressed = false;
-        state.burstUntil = 0;
-        const el = document.querySelector(`.button[data-name="${name}"]`);
-        if (el) {
-          el.classList.remove('pressed', 'burst');
-          clearModeClass(el);
-          el.style.removeProperty('background-color');
-          el.style.removeProperty('--stut-pulse');
-          el.style.removeProperty('--stut-glow-size');
-          el.style.removeProperty('--stut-scale');
+        state.active = false; state.value = 0; state.burstUntil = 0;
+        renderModulator(state); emitModulatorState(name, state);
+      }
+      if (!state.active) {
+        if (stutter) {
+          advanceStutterPhase(state,now);
+          if (el && performanceVisible) renderStutterFeedback(el,state,false);
         }
-        emitStutterState(name, state);
         continue;
       }
-
-      const gate = advanceStutterPhase(state, now);
-      if (performanceVisible) {
-        const el = document.querySelector(`.button[data-name="${name}"]`);
-        if (el) renderStutterFeedback(el, state, gate);
+      if (stutter) {
+        const gate = advanceStutterPhase(state, now);
+        if (el && performanceVisible) renderStutterFeedback(el,state,gate);
+      } else {
+        const phase = advanceLfoPhase(state,now);
+        const wave = computeLfoWaveValue(modulatorShape(name),phase);
+        state.value = .5 + wave * .5 * state.depth * burstEnvelopeFactor(state,now);
+        const fill = el?.querySelector('.mod-val-bar');
+        if (fill && performanceVisible) fill.style.height = `${state.value * 100}%`;
       }
     }
 
@@ -2141,8 +1488,7 @@
     if (activeScalarBursts) activeScalarBursts.clear();
 
     for (let i = 1; i <= 12; i++) resetScalarControl(`pad-${i}`);
-    for (let i = 1; i <= 4; i++) resetScalarControl(`toggle-${i}`);
-    for (let i = 1; i <= 4; i++) resetScalarControl(`button-${i}`);
+    for (let i = 1; i <= 8; i++) resetScalarControl(`toggle-${i}`);
     resetXYControl('xy-1');
     resetXYControl('xy-2');
   }
@@ -2250,7 +1596,7 @@
       const keys = new Set();
       [currentSnaps[0], currentSnaps[1], currentSnaps[2], currentSnaps[3]].forEach(snap => {
         if (snap) {
-          Object.keys(snap).forEach(k => keys.add(k));
+          Object.keys(snap).filter(k => typeof snap[k] === 'number').forEach(k => keys.add(k));
         }
       });
       
@@ -2356,7 +1702,7 @@
       draw();
     };
 
-    window.addEventListener('ableton-rc:snapshots-updated', draw);
+    window.addEventListener('ableton-rc:v2:snapshots-updated', draw);
     window.addEventListener('ableton-rc:morph-mode-change', cancelVectorRaf);
   }
 
@@ -2680,7 +2026,7 @@
     if (stutterPhaseInput) resetInput(stutterPhaseInput, stutterPhaseVal, 0.0, 'stutterPhaseOffset');
 
     function saveSyncSettings() {
-      localStorage.setItem('ableton-rc:sync_settings', JSON.stringify(window.syncSettings));
+      localStorage.setItem('ableton-rc:v2:sync_settings', JSON.stringify(window.syncSettings));
     }
 
     function updateGridActiveState(parent, activeValue) {
@@ -2754,11 +2100,7 @@
     document.querySelectorAll('.xy-pad').forEach(makeXYPad);
 
     // LFO & Stutters
-    document.querySelectorAll('.toggle').forEach(makeLfoToggle);
-    document.querySelectorAll('.button').forEach(makeStutterButton);
-
-    // Physics XY Canvas
-    document.querySelectorAll('.xy-pad-physics').forEach(setupXYPhysics);
+    document.querySelectorAll('.toggle').forEach(makeModulator);
 
     // Start the background animation loop for physics + modulators
     globalPhysicsLoop();
@@ -2768,7 +2110,7 @@
   // bootstrap so the first paint reflects the saved mode (no flash of
   // the default mode A).
   try {
-    const savedMode = localStorage.getItem('ableton-rc:pad_mode');
+    const savedMode = localStorage.getItem('ableton-rc:v2:pad_mode');
     if (savedMode && ['A', 'B', 'C', 'D'].includes(savedMode)) {
       padMode = savedMode;
       if (typeof document !== 'undefined' && document.body) {
@@ -2793,6 +2135,7 @@
   // window; the Live side already dropped the value, so we just need to
   // refresh the visual state. Toggles/latched (B/C) keep their value.
   window.resetTransientControls = () => {
+    for (const state of xyStates.values()) window.RcXYEngine.stop(state);
     const mode = padMode;
     if (mode !== 'A' && mode !== 'D') return;
     for (const [name, burst] of activeScalarBursts.entries()) {
@@ -2804,7 +2147,7 @@
       el.style.removeProperty('--pad-fill-alpha');
       el.style.removeProperty('--pad-fill-color');
     });
-    document.querySelectorAll('.toggle, .button').forEach((el) => {
+    document.querySelectorAll('.toggle').forEach((el) => {
       el.classList.remove('active');
       el.style.removeProperty('--pad-fill-alpha');
       el.style.removeProperty('--pad-fill-color');

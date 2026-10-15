@@ -184,8 +184,6 @@
     if (fader) return `Fader ${fader[1]}`;
     const lfo = raw.match(/^toggle-(\d+)$/);
     if (lfo) return `LFO ${lfo[1]}`;
-    const stutter = raw.match(/^button-(\d+)$/);
-    if (stutter) return `Stutter ${stutter[1]}`;
     return raw.replace(/^sensor\./, '').replace(/\./g, ' ');
   }
 
@@ -536,7 +534,7 @@
   async function saveMobileMappingPreset(name) {
     const clean = String(name || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
     if (!clean) return;
-    const response = await command('savePreset', { name: clean });
+    const response = await command('savePreset', { name: clean, performance: window.PerformanceSettings?.capture() });
     if (response.ok) await loadMobileMappingData();
     else setStatus(response.error || T('map.presetSaveFailed', 'Could not save preset'), 'error');
   }

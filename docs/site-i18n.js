@@ -348,8 +348,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: "v1.0.0, smoke-tested in Live 12.4.5+ Suite (Beta) with a physical phone.",
-      'pt-BR': "v1.0.0, testado no Live 12.4.5+ Suite (Beta) com um celular de verdade.",
+      en: "v2.0.0 is a local candidate awaiting physical acceptance in Live 12.4.5+ Suite (Beta).",
+      'pt-BR': "v2.0.0 é um candidato local aguardando aceite físico no Live 12.4.5+ Suite (Beta).",
     },
     'lp.docs.001': {
       en: 'Reference documents',
@@ -441,24 +441,24 @@
       'pt-BR': "A momentâneo, B hold, C toggle, D burst. Vale para os doze; CFG sobrescreve um pad.",
     },
     'lp.map.018': {
-      en: "Captioned <code>XY 1</code> and <code data-i18n=\"lp.fig.016\">XY 2 (Physics)</code>. Each axis maps on its own.",
-      'pt-BR': "Marcados <code>XY 1</code> e <code data-i18n=\"lp.fig.016\">XY 2 (Física)</code>. Cada eixo é mapeado separadamente.",
+      en: "Captioned <code>XY 1</code> and <code data-i18n=\"lp.fig.016\">XY 2</code>. Each axis maps on its own.",
+      'pt-BR': "Marcados <code>XY 1</code> e <code data-i18n=\"lp.fig.016\">XY 2</code>. Cada eixo é mapeado separadamente.",
     },
     'lp.map.019': {
       en: 'LFOs',
       'pt-BR': 'LFOs',
     },
     'lp.map.020': {
-      en: "L1 to L4. Hz in FREE, note values in SYNC. Ceilings: sine 4 Hz, square 12 Hz. Shape in CFG.",
-      'pt-BR': "L1 a L4. Hz em FREE, figuras em SYNC. Tetos: senoide 4 Hz, quadrada 12 Hz. Forma no CFG.",
+      en: "L1 to L8. Each slot chooses its waveform, including Stutter, mode and clock in CFG. Hz in FREE, note values in SYNC.",
+      'pt-BR': "L1 a L8. Cada slot escolhe onda, incluindo Stutter, modo e clock no CFG. Hz em FREE, figuras em SYNC.",
     },
     'lp.map.021': {
       en: 'Stutters',
       'pt-BR': 'Stutters',
     },
     'lp.map.022': {
-      en: "S1 to S4. Horizontal speed, vertical amplitude. Up to 15 Hz including ratchet.",
-      'pt-BR': "S1 a S4. Horizontal é velocidade, vertical é amplitude. Até 15 Hz, ratchet incluso.",
+      en: "Stutter is a waveform available in any of the eight LFO slots.",
+      'pt-BR': "Stutter é uma onda disponível em qualquer um dos oito slots LFO.",
     },
     'lp.map.023': {
       en: "CAP captures, slots 1 to 4 recall, OFF exits.",
@@ -782,16 +782,16 @@
       'pt-BR': 'Dois parâmetros por pad',
     },
     'lp.controls.017': {
-      en: 'LFOs L1–L4',
-      'pt-BR': 'LFOs L1–L4',
+      en: 'LFOs L1–L8',
+      'pt-BR': 'LFOs L1–L8',
     },
     'lp.controls.018': {
       en: "Any mapped parameter",
       'pt-BR': "Qualquer parâmetro mapeado",
     },
     'lp.controls.019': {
-      en: 'Stutters S1–S4',
-      'pt-BR': 'Stutters S1–S4',
+      en: 'Stutter waveform',
+      'pt-BR': 'Onda Stutter',
     },
     'lp.controls.021': {
       en: 'PERF UTIL column',
@@ -894,8 +894,8 @@
       'pt-BR': "Abre o seletor de mapeamento sobre a página atual.",
     },
     'lp.controls.148': {
-      en: "Per-control settings: pad mode, LFO shape, stutter mode, XY 2 physics. PERF and MIX only.",
-      'pt-BR': "Ajustes por controle: modo do pad, forma do LFO, modo do stutter, física do XY 2. Só PERF e MIX.",
+      en: "Per-control settings: pad mode, eight LFO/Stutter slots, Static/Physics on either XY. PERF and MIX only.",
+      'pt-BR': "Ajustes por controle: pads, oito slots LFO/Stutter, Estático/Física nos dois XY. Só PERF e MIX.",
     },
     'lp.controls.059': {
       en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">2.1</a>.",
@@ -942,8 +942,8 @@
       'pt-BR': 'Pads, LFOs, stutters',
     },
     'lp.controls.075': {
-      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. LFOs and stutters share the clock: locked to Live's beat in SYNC, free-running in FREE.",
-      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. LFOs e stutters usam o mesmo clock: travado no beat do Live em SYNC, livre em FREE.",
+      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. Each of the eight LFO slots can use Stutter; choose its own clock in CFG or follow the global SYNC/FREE setting.",
+      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Stutter; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.",
     },
     'lp.controls.076': {
       en: 'VALUE ↑',
@@ -1002,8 +1002,8 @@
       'pt-BR': 'XY, knobs, faders',
     },
     'lp.controls.091': {
-      en: "XY 2 coasts and rebounds after release; XY 1 stays where you leave it. Knobs and faders track the finger from the current value and never jump to the touch point.",
-      'pt-BR': "O XY 2 continua e quica depois que você solta; o XY 1 fica onde ficou. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.",
+      en: "Each XY panel independently selects Static or Physics, with its own friction, bounce and speed. Knobs and faders track the finger from the current value and never jump to the touch point.",
+      'pt-BR': "Cada XY escolhe Estático ou Física, com atrito, ricochete e velocidade próprios. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.",
     },
     'lp.controls.092': {
       en: 'The touch point is never the value',
@@ -1282,8 +1282,8 @@
       'pt-BR': "SELECIONADO NO LIVE",
     },
     'lp.fig.016': {
-      en: "XY 2 (Physics)",
-      'pt-BR': "XY 2 (Física)",
+      en: "XY 2",
+      'pt-BR': "XY 2",
     },
     'lp.fig.017': {
       en: "CAMERA",
@@ -1482,8 +1482,8 @@
       'pt-BR': "2 · FÍSICA",
     },
     'lp.fig.130': {
-      en: "15-POINT TRAIL",
-      'pt-BR': "RASTRO DE 15 PONTOS",
+      en: "CONFIGURABLE SPEED",
+      'pt-BR': "VELOCIDADE CONFIGURÁVEL",
     },
     'lp.fig.131': {
       en: "STORE A STATE · RETURN OVER TIME · BLEND BETWEEN FOUR STATES",

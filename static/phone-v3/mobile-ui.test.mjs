@@ -411,8 +411,8 @@ test('performance mode states color rings without replacing family fill feedback
   const modeSelectors = [
     '.toggle.on',
     '.toggle.burst',
-    '.button.pressed',
-    '.button.burst',
+    '.toggle[data-waveform="stutter"].on',
+    '.toggle[data-waveform="stutter"].burst',
   ];
 
   for (const selector of modeSelectors) {
@@ -700,13 +700,13 @@ test('controls.js loads and updates window.syncSettings, and integrates with LFO
   const controls = read('controls.js');
   assert.match(controls, /setupSyncSettingsUI/);
   assert.match(controls, /window\.syncSettings\s*=/);
-  assert.match(controls, /'ableton-rc:sync_settings'/);
+  assert.match(controls, /'ableton-rc:v2:sync_settings'/);
   assert.match(controls, /clockSource:\s*window\.syncSettings\.clockSource/);
-  assert.match(controls, /syncSubdivisionBeats:\s*(?:window\.syncSettings\.lfoSubdivision|perInstanceSyncSubdivision)/);
-  assert.match(controls, /phaseOffsetBeats:\s*(?:window\.syncSettings\.lfoPhaseOffset|perInstanceStutterPhaseOffset)/);
-  assert.match(controls, /shape:\s*(?:window\.syncSettings\.lfoShape|window\.RcControlConfig.*?lfoShape)/);
-  assert.match(controls, /syncSubdivisionBeats:\s*(?:window\.syncSettings\.stutterSubdivision|perInstanceStutterSubdivision)/);
-  assert.match(controls, /phaseOffsetBeats:\s*(?:window\.syncSettings\.stutterPhaseOffset|perInstanceStutterPhaseOffset)/);
+  assert.match(controls, /syncSubdivisionBeats:[^\n]*perInstanceSyncSubdivision/);
+  assert.match(controls, /phaseOffsetBeats:[^\n]*lfoPhaseOffset/);
+  assert.match(controls, /shape:\s*modulatorShape/);
+  assert.match(controls, /syncSubdivisionBeats:[^\n]*perInstanceStutterSubdivision/);
+  assert.match(controls, /phaseOffsetBeats:[^\n]*perInstanceStutterPhaseOffset/);
   assert.match(controls, /swing:\s*(?:window\.syncSettings\.stutterSwing|perInstanceStutterSwing)/);
 });
 
@@ -722,7 +722,7 @@ test('controls.js renders local LFO feedback with the selected shape', () => {
   // control override first and the global syncSettings.lfoShape as fallback.
   // Either form is acceptable: the legacy global read or the new per-control
   // read through RcControlConfig.get(name, 'shape', ...).
-  assert.match(controls, /computeLfoWaveValue\((?:window\.syncSettings\.lfoShape|\blfoShape\b),\s*lfoPhaseRad\)/);
+  assert.match(controls, /computeLfoWaveValue\(modulatorShape\(name\),phase\)/);
   assert.doesNotMatch(controls, /0\.5\s*\+\s*Math\.sin\(state\.phase\)\s*\*\s*0\.5\s*\*\s*state\.depth/);
 });
 

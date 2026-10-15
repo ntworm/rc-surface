@@ -105,7 +105,7 @@ function setupStutterParam() {
       },
     },
   });
-  controlMappings.set("button-1", [
+  controlMappings.set("toggle-5", [
     { type: "device_param", trackIndex: 0, deviceIndex: 0, paramIndex: 0 },
   ]);
   return { param, applied };
@@ -257,7 +257,7 @@ test("fake phone: stutter at high rate generates regular on/off pulses", async (
   try {
     updateHostModulator("client-1", {
       kind: "stutter",
-      name: "button-1",
+      name: "toggle-5",
       active: true,
       rate: 1, // effective FREE ceiling = 15 Hz including ratchet
       count: 0, // ratchet 1

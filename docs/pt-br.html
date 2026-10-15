@@ -48,7 +48,7 @@
    "applicationSubCategory": "Ableton Live extension",
    "operatingSystem": "Windows 10/11, macOS; phone: iOS 15.4+ Safari, Android Chromium",
    "softwareRequirements": "Ableton Live 12.4.5+ Suite with Extensions SDK support",
-   "softwareVersion": "1.0.2",
+   "softwareVersion": "2.0.0",
    "downloadUrl": "https://github.com/ntworm/rc-surface/releases/latest",
    "license": "https://polyformproject.org/licenses/noncommercial/1.0.0/",
    "isAccessibleForFree": true,
@@ -65,9 +65,9 @@
    "screenshot": "https://ntworm.github.io/rc-surface/og-image.png",
    "featureList": [
     "Doze pads de performance com quatro modos (momentâneo, hold, toggle, burst)",
-    "Dois XY pads, um deles com física",
+    "Dois XY pads, cada um com física opcional independente",
     "Oito knobs e oito faders para o mixer",
-    "Quatro LFOs e quatro stutters travados no andamento do Live",
+    "Oito slots LFO/Stutter e dois painéis XY configuráveis",
     "Oito snapshots com morph por tempo e morph vetorial",
     "Sensores de movimento e orientação como fontes de mapeamento",
     "Doze descritores de áudio do microfone do celular ou de uma interface de áudio",
@@ -168,7 +168,7 @@
      "name": "Qual o estágio do projeto?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "v1.0.0, testado no Live 12.4.5+ Suite (Beta) com um celular de verdade."
+      "text": "v2.0.0 é um candidato local aguardando aceite físico no Live 12.4.5+ Suite (Beta)."
      }
     }
    ]
@@ -1049,7 +1049,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="stick">
     <header class="mast">
       <span data-i18n-html="lp.top.001"><b>RC Surface</b></span>
-      <span>v<b>1.0.2</b></span>
+      <span>v<b>2.0.0</b></span>
       <span class="grow"></span>
       <span class="lang-select" role="group" aria-label="Language"><button type="button" class="lang-btn" data-set-locale="en">EN</button><button type="button" class="lang-btn" data-set-locale="pt-BR">PT</button></span>
     </header>
@@ -1100,7 +1100,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 └────────────────────┬─────────────────────┘  │
 <span class="ann" data-i18n="lp.chain.003">     SALTO 1  ▼  HTTPS · CA LOCAL · WSS     </span><span class="ret">  │</span>
 ┌─<span class="hot"> NODE 1 </span>─────────────────────────────────┐<span class="ret">  │</span>
-│ RC SURFACE SERVER                 v1.0.2 │<span class="ret">  │</span>
+│ RC SURFACE SERVER                 v2.0.0 │<span class="ret">  │</span>
 │ SMOOTH · CURVE EVAL · MORPH · SNAPSHOT   │<span class="ret">  │</span>
 └────────────────────┬─────────────────────┘<span class="ret">  │</span>
 <span class="ann" data-i18n="lp.chain.004">     SALTO 2  ▼  EXTENSIONS SDK · LOCAL     </span><span class="ret">  │</span>
@@ -1250,8 +1250,8 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">
     <text x="59" y="94">PADS</text>
     <text x="444" y="94"></text>
-    <text x="694" y="94">LFOS</text>
-    <text x="839" y="94">STUT</text>
+    <text x="694" y="94">LFO 1–4</text>
+    <text x="839" y="94">LFO 5–8</text>
     <text x="984" y="94">UTIL</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
@@ -1302,7 +1302,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#8e8e8e">
     <text x="431" y="210">XY 1</text>
     <text x="580" y="210">0.50 / 0.50</text>
-    <text x="431" y="332" data-i18n="lp.fig.016">XY 2 (Física)</text>
+    <text x="431" y="332" data-i18n="lp.fig.016">XY 2</text>
     <text x="580" y="332">0.50 / 0.50</text>
   </g>
   <rect x="425" y="343" width="14" height="13" fill="#ffa133" stroke="none"/>
@@ -1346,10 +1346,10 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <rect x="820" y="100" width="67" height="142" fill="#e47b1a" stroke="none"/>
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="16">
-    <text x="842" y="180" fill="#141414">S1</text>
-    <text x="914" y="180" fill="#c0c0c0">S2</text>
-    <text x="842" y="328" fill="#c0c0c0">S3</text>
-    <text x="914" y="328" fill="#c0c0c0">S4</text>
+    <text x="842" y="180" fill="#141414">L5</text>
+    <text x="914" y="180" fill="#c0c0c0">L6</text>
+    <text x="842" y="328" fill="#c0c0c0">L7</text>
+    <text x="914" y="328" fill="#c0c0c0">L8</text>
   </g>
   <g stroke="#666666" stroke-width="1" fill="#2a2a2a">
     <rect x="965" y="100" width="55" height="92"/>
@@ -1382,9 +1382,8 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">1</td><td data-i18n="lp.map.011">Abas de página</td><td class="c2">6</td><td data-i18n="lp.map.012">PERF, MIX, SNP, SNS, AUD, VID. MAP se sobrepõe à página atual; CFG aparece em PERF e MIX.</td></tr>
               <tr><td class="c1">2</td><td data-i18n="lp.map.013">Grade de pads</td><td class="c2">12</td><td data-i18n="lp.map.014">Quatro por linha, três linhas. O comportamento vem do modo, não do pad.</td></tr>
               <tr><td class="c1">3</td><td data-i18n="lp.map.015">Modo do pad</td><td class="c2">4</td><td data-i18n="lp.map.016">A momentâneo, B hold, C toggle, D burst. Vale para os doze; CFG sobrescreve um pad.</td></tr>
-              <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Marcados <code>XY 1</code> e <code data-i18n="lp.fig.016">XY 2 (Física)</code>. Cada eixo é mapeado separadamente.</td></tr>
-              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">4</td><td data-i18n="lp.map.020">L1 a L4. Hz em FREE, figuras em SYNC. Tetos: senoide 4 Hz, quadrada 12 Hz. Forma no CFG.</td></tr>
-              <tr><td class="c1">6</td><td data-i18n="lp.map.021">Stutters</td><td class="c2">4</td><td data-i18n="lp.map.022">S1 a S4. Horizontal é velocidade, vertical é amplitude. Até 15 Hz, ratchet incluso.</td></tr>
+              <tr><td class="c1">4</td><td>XY pads</td><td class="c2">2</td><td data-i18n-html="lp.map.018">Marcados <code>XY 1</code> e <code data-i18n="lp.fig.016">XY 2</code>. Cada eixo é mapeado separadamente.</td></tr>
+              <tr><td class="c1">5</td><td data-i18n="lp.map.019">LFOs</td><td class="c2">8</td><td data-i18n="lp.map.020">L1 a L8. Cada slot escolhe onda, incluindo Stutter, modo e clock no CFG. Hz em FREE, figuras em SYNC.</td></tr>
               <tr><td class="c1">7</td><td>PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.023">CAP captura, os slots 1 a 4 recuperam, OFF sai.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Painel do Live</td><td class="c2">7</td><td data-i18n="lp.map.025">BPM, transporte, TRN, MAP, CFG.</td></tr>
               <tr><td class="c1">9</td><td data-i18n="lp.map.026">Bloco de sync</td><td class="c2">4</td><td data-i18n="lp.map.027">SYNC, ajustes, STAGE; CALIBRAR em SNS/AUD/VID.</td></tr>
@@ -1937,8 +1936,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
             <tr><td class="c1">00</td><td data-i18n="lp.controls.010">Pads de performance</td><td class="c2">12</td><td>PERF</td><td class="c2">MIDI</td><td data-i18n="lp.controls.011">Clip, cena ou nota de trigger</td></tr>
             <tr><td class="c1">01</td><td data-i18n="lp.controls.012">Modos de pad A–D</td><td class="c2">4</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.014">Comportamento do pad; CFG sobrescreve por pad</td></tr>
             <tr><td class="c1">02</td><td>XY pads</td><td class="c2">2</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.016">Dois parâmetros por pad</td></tr>
-            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs L1–L4</td><td class="c2">4</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Qualquer parâmetro mapeado</td></tr>
-            <tr><td class="c1">04</td><td data-i18n="lp.controls.019">Stutters S1–S4</td><td class="c2">4</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Qualquer parâmetro mapeado</td></tr>
+            <tr><td class="c1">03</td><td data-i18n="lp.controls.017">LFOs L1–L8</td><td class="c2">8</td><td>PERF</td><td class="c2">SDK</td><td data-i18n="lp.controls.018">Qualquer parâmetro mapeado</td></tr>
             <tr><td class="c1">05</td><td data-i18n="lp.controls.021">Coluna PERF UTIL</td><td class="c2">6</td><td>PERF</td><td class="c2" data-i18n="lp.controls.004">local</td><td data-i18n="lp.controls.023">CAP, slots 1–4, OFF</td></tr>
             <tr><td class="c1">06</td><td>Knobs</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.025">Parâmetro de device</td></tr>
             <tr><td class="c1">07</td><td>Faders</td><td class="c2">8</td><td>MIX</td><td class="c2">SDK</td><td data-i18n="lp.controls.027">Volume da track</td></tr>
@@ -1966,7 +1964,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4>MAP</h4><p data-i18n="lp.controls.058">Abre o seletor de mapeamento sobre a página atual.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
-          <h4>CFG</h4><p data-i18n="lp.controls.148">Ajustes por controle: modo do pad, forma do LFO, modo do stutter, física do XY 2. Só PERF e MIX.</p></span></div>
+          <h4>CFG</h4><p data-i18n="lp.controls.148">Ajustes por controle: pads, oito slots LFO/Stutter, Estático/Física nos dois XY. Só PERF e MIX.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-wave"/></svg></span><span class="bd">
           <h4>SYNC</h4><p data-i18n-html="lp.controls.059">Alterna <b>SYNC</b> / <b>FREE</b>. Segure para abrir os Ajustes de Deep Sync, <a href="#clock">2.1</a>.</p></span></div>
@@ -2002,7 +2000,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.074">Pads, LFOs, stutters</h3>
-          <p data-i18n-html="lp.controls.075"><code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. LFOs e stutters usam o mesmo clock: travado no beat do Live em SYNC, livre em FREE.</p>
+          <p data-i18n-html="lp.controls.075"><code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Stutter; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.</p>
         </div>
         <div class="feature-figure">
                     <div class="pf-wrap" data-control-illustration="performance">
@@ -2048,7 +2046,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="feature">
         <div class="feature-copy">
           <h3 data-i18n="lp.controls.090">XY, knobs, faders</h3>
-          <p data-i18n="lp.controls.091">O XY 2 continua e quica depois que você solta; o XY 1 fica onde ficou. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.</p>
+          <p data-i18n="lp.controls.091">Cada XY escolhe Estático ou Física, com atrito, ricochete e velocidade próprios. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.</p>
         </div>
         <div class="feature-figure">
           <div class="gm" data-control-illustration="continuous">
@@ -2078,7 +2076,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
                 <div class="ph-keys"><span data-i18n-html="lp.controls.099"><i></i>percorrido</span><span data-i18n-html="lp.controls.100"><i class="dot"></i>para onde ele segue</span><b data-i18n="lp.controls.101">borda do pad · ricocheteia a ×0.75</b></div>
               </div>
               <div class="gm-foot">
-                <b data-i18n="lp.fig.130">RASTRO DE 15 PONTOS</b>
+                <b data-i18n="lp.fig.130">VELOCIDADE CONFIGURÁVEL</b>
                 <span data-i18n="lp.controls.102">v ×= 0.988 a cada frame · para abaixo de 0.01</span>
               </div>
             </div>
@@ -2518,7 +2516,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.041">Qual o estágio do projeto?</h4>
-          <p class="lead" data-i18n-html="lp.trouble.042">v1.0.0, testado no Live 12.4.5+ Suite (Beta) com um celular de verdade.</p></span></div>
+          <p class="lead" data-i18n-html="lp.trouble.042">v2.0.0 é um candidato local aguardando aceite físico no Live 12.4.5+ Suite (Beta).</p></span></div>
       </div>
     </div>
   </div>

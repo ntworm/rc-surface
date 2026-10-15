@@ -57,7 +57,7 @@ function run(context, name) {
 
 function activateLfo(context, name) {
   // Same shape controls.js gives a running LFO; only `active` matters here.
-  context.lfoStates.set(name, { name, active: true, depth: 0.5, rate: 0.5, phase: 0, lastTs: 0 });
+  context.modulatorStates.set(name, { name, kind:'lfo', active: true, depth: 0.5, rate: 0.5, phase: 0, lastTs: 0 });
 }
 
 test('index.html loads control-config.js before controls.js', () => {

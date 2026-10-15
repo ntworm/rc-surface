@@ -183,7 +183,7 @@ function loadHarness() {
   const lfo = makeElement('div', { name: 'toggle-1' });
   lfo.classList.add('toggle');
   const lfoReadout = makeElement('span');
-  lfoReadout.classList.add('lfo-rate-readout');
+  lfoReadout.classList.add('modulator-rate-readout');
   lfo.children.push(lfoReadout);
 
   const elementsById = {
@@ -244,6 +244,7 @@ function loadHarness() {
 
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   vm.runInNewContext(controlConfigSource, context, { filename: controlConfigFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
   return {
@@ -439,7 +440,7 @@ test('P01-7: local per-control shape override in RcControlConfig takes precedenc
   h.tick(32);
 
   // Send state or tick toggle-1
-  h.context.sendLfoState('toggle-1', h.context.lfoStates.get('toggle-1'));
+  h.context.sendModulatorState('toggle-1', h.context.modulatorStates.get('toggle-1'));
   const lastState = h.modulatorStates.at(-1);
   assert.equal(lastState.shape, 'triangle', 'Emitted state must use local shape override');
 

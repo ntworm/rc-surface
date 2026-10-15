@@ -28,7 +28,7 @@ test('preset save waits for mapping mutations and stores the committed mapping s
     await Promise.all([mutation, save]);
   }
   try {
-    assert.ok(JSON.parse(await fs.readFile(path.join(dir, 'serial.json'), 'utf8'))['knob-8']);
+    assert.ok(JSON.parse(await fs.readFile(path.join(dir, 'serial.json'), 'utf8')).mappings['knob-8']);
   } finally {
     setPresetsDirPath(null);
     controlMappings.clear();

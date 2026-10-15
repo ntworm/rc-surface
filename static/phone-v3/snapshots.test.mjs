@@ -82,7 +82,7 @@ test('RCSurface.snapshots loads, captures, and persists 8 snapshot slots', () =>
   assert.deepEqual(snaps.getSnapshots()[0], { 'pad-1': 0.8 });
 
   // Persistence check in localStorage
-  const saved = env.store.get('ableton-rc:snapshots');
+  const saved = env.store.get('ableton-rc:v2:snapshots');
   assert.ok(saved, 'Snapshots must be saved to localStorage');
   const parsed = JSON.parse(saved);
   assert.equal(parsed.length, 8);
@@ -234,6 +234,7 @@ function loadFullEnvironment() {
 
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   vm.runInNewContext(snapshotsSource, context, { filename: snapshotsFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
   return {
@@ -302,8 +303,8 @@ test('Vector Pad Interpolation with 4 snapshots without ReferenceError', () => {
 test('stutter depth, rate, count captured including zero and recalled without 0.5 fallback', () => {
   const stutters = new Map();
   for (let i = 1; i <= 4; i++) {
-    stutters.set(`button-${i}`, {
-      pressed: false,
+    stutters.set(`toggle-${i+4}`, {
+      active: false,
       rate: 0,
       depth: 0,
       count: 0,
@@ -313,8 +314,8 @@ test('stutter depth, rate, count captured including zero and recalled without 0.
   const env = loadModule({
     window: {
       currentControlStates: {},
-      stutterStates: stutters,
-      sendStutterState(name, state, extra) {
+      modulatorStates: stutters,
+      sendModulatorState(name, state, extra) {
         emittedStutters.push({ name, ...state, ...extra });
       },
     },
@@ -328,42 +329,42 @@ test('stutter depth, rate, count captured including zero and recalled without 0.
 
   const captured = snaps.getSnapshots()[0];
   assert.ok(captured, 'Snapshot slot 0 must be captured');
-  assert.equal(captured['button-1.depth'], 0, 'S1 depth=0 must be captured');
-  assert.equal(captured['button-1.rate'], 0, 'S1 rate=0 must be captured');
-  assert.equal(captured['button-1.count'], 0, 'S1 count=0 must be captured');
-  assert.equal(captured['button-1'], 0, 'S1 pressed=0 must be captured');
+  assert.equal(captured['toggle-5.depth'], 0, 'S1 depth=0 must be captured');
+  assert.equal(captured['toggle-5.rate'], 0, 'S1 rate=0 must be captured');
+  assert.equal(captured['toggle-5.count'], 0, 'S1 count=0 must be captured');
+  assert.equal(captured['toggle-5'], 0, 'S1 pressed=0 must be captured');
 
   // Change current states to non-zero values
   for (let i = 1; i <= 4; i++) {
-    const s = stutters.get(`button-${i}`);
-    s.pressed = true;
+    const s = stutters.get(`toggle-${i+4}`);
+    s.active = true;
     s.depth = 0.8;
     s.rate = 0.5;
-    s.count = 3;
+    s.count = .5;
   }
 
   // Recall slot 0
   emittedStutters.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const recalledS1 = emittedStutters.find((e) => e.name === 'button-1');
-  assert.ok(recalledS1, 'Recall must emit stutter target for button-1');
+  const recalledS1 = emittedStutters.find((e) => e.name === 'toggle-5');
+  assert.ok(recalledS1, 'Recall must emit stutter target for toggle-5');
   assert.equal(recalledS1.depth, 0, 'Recalled depth must remain 0, not fallback to 0.5');
   assert.equal(recalledS1.rate, 0, 'Recalled rate must remain 0');
   assert.equal(recalledS1.count, 0, 'Recalled count must remain 0');
-  assert.equal(recalledS1.pressed, false, 'Recalled pressed must be false');
+  assert.equal(recalledS1.active, false, 'Recalled pressed must be false');
 });
 
 test('stutter non-zero finite values are captured and restored correctly', () => {
   const stutters = new Map([
-    ['button-1', { pressed: true, depth: 0.72, rate: 0.44, count: 5 }],
+    ['toggle-5', { active: true, depth: 0.72, rate: 0.44, count: .75 }],
   ]);
   const emittedStutters = [];
   const env = loadModule({
     window: {
       currentControlStates: {},
-      stutterStates: stutters,
-      sendStutterState(name, state, extra) {
+      modulatorStates: stutters,
+      sendModulatorState(name, state, extra) {
         emittedStutters.push({ name, ...state, ...extra });
       },
     },
@@ -375,35 +376,35 @@ test('stutter non-zero finite values are captured and restored correctly', () =>
   snaps.handleSnapshotSlot(0);
 
   const captured = snaps.getSnapshots()[0];
-  assert.equal(captured['button-1.depth'], 0.72);
-  assert.equal(captured['button-1.rate'], 0.44);
-  assert.equal(captured['button-1.count'], 5);
+  assert.equal(captured['toggle-5.depth'], 0.72);
+  assert.equal(captured['toggle-5.rate'], 0.44);
+  assert.equal(captured['toggle-5.count'], .75);
 
-  stutters.get('button-1').depth = 0.1;
-  stutters.get('button-1').rate = 0.2;
-  stutters.get('button-1').count = 1;
+  stutters.get('toggle-5').depth = 0.1;
+  stutters.get('toggle-5').rate = 0.2;
+  stutters.get('toggle-5').count = 1;
 
   emittedStutters.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const emitted = emittedStutters.find((e) => e.name === 'button-1');
+  const emitted = emittedStutters.find((e) => e.name === 'toggle-5');
   assert.ok(emitted);
   assert.equal(emitted.depth, 0.72);
   assert.equal(emitted.rate, 0.44);
-  assert.equal(emitted.count, 5);
+  assert.equal(emitted.count, .75);
 });
 
 test('legacy snapshot without depth/rate/count preserves current values and never injects 0.5 fallback', () => {
   const stutters = new Map([
-    ['button-1', { pressed: false, depth: 0.25, rate: 0.15, count: 2 }],
-    ['button-2', { pressed: false }],
+    ['toggle-5', { active: false, depth: 0.25, rate: 0.15, count: .5 }],
+    ['toggle-6', { active: false }],
   ]);
   const emittedStutters = [];
   const env = loadModule({
     window: {
       currentControlStates: {},
-      stutterStates: stutters,
-      sendStutterState(name, state, extra) {
+      modulatorStates: stutters,
+      sendModulatorState(name, state, extra) {
         emittedStutters.push({ name, ...state, ...extra });
       },
     },
@@ -411,21 +412,21 @@ test('legacy snapshot without depth/rate/count preserves current values and neve
   const snaps = env.window.RCSurface.snapshots;
   snaps.loadSnapshots();
 
-  // Legacy snapshot containing only pressed state for button-1 and button-2
-  const legacySnap = { 'button-1': 1.0, 'button-2': 0.0 };
+  // Legacy snapshot containing only pressed state for toggle-5 and toggle-6
+  const legacySnap = { 'toggle-5': 1.0, 'toggle-6': 0.0 };
   snaps.getSnapshots()[0] = legacySnap;
 
   emittedStutters.length = 0;
   snaps.handleSnapshotSlot(0);
 
-  const emitted1 = emittedStutters.find((e) => e.name === 'button-1');
-  assert.ok(emitted1, 'Recall must emit for button-1');
-  assert.equal(emitted1.pressed, true, 'Pressed state should be true');
-  assert.equal(stutters.get('button-1').depth, 0.25, 'Current stutter depth must be preserved');
-  assert.notEqual(emitted1.depth, 0.5, 'Must never inject fallback 0.5 for button-1');
+  const emitted1 = emittedStutters.find((e) => e.name === 'toggle-5');
+  assert.ok(emitted1, 'Recall must emit for toggle-5');
+  assert.equal(emitted1.active, true, 'Pressed state should be true');
+  assert.equal(stutters.get('toggle-5').depth, 0.25, 'Current stutter depth must be preserved');
+  assert.notEqual(emitted1.depth, 0.5, 'Must never inject fallback 0.5 for toggle-5');
 
-  const emitted2 = emittedStutters.find((e) => e.name === 'button-2');
-  assert.ok(emitted2, 'Recall must emit for button-2');
-  assert.equal(emitted2.pressed, false, 'Pressed state should be false');
+  const emitted2 = emittedStutters.find((e) => e.name === 'toggle-6');
+  assert.ok(emitted2, 'Recall must emit for toggle-6');
+  assert.equal(emitted2.active, false, 'Pressed state should be false');
   assert.equal(emitted2.depth, undefined, 'Must not inject fallback 0.5 when depth is absent from both snapshot and state');
 });

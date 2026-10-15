@@ -46,9 +46,9 @@ const META = {
     imageAlt: 'RC Surface — phone-based controller surface for Ableton Live. Source-available under PolyForm Noncommercial 1.0.0.',
     features: [
       'Twelve performance pads with four modes (momentary, hold, toggle, burst)',
-      'Two XY pads, one with physics',
+      'Two XY pads, each with optional independent physics',
       'Eight knobs and eight faders for the mixer',
-      'Four LFOs and four stutters locked to the Live tempo',
+      'Eight configurable LFO/Stutter slots and two configurable XY panels',
       'Eight snapshots with timed and vector morph',
       'Motion and orientation sensors as mapping sources',
       'Twelve audio descriptors from the phone microphone or an audio interface',
@@ -67,9 +67,9 @@ const META = {
     imageAlt: 'RC Surface — superfície de controle no celular para o Ableton Live. Código-fonte disponível sob a PolyForm Noncommercial 1.0.0.',
     features: [
       'Doze pads de performance com quatro modos (momentâneo, hold, toggle, burst)',
-      'Dois XY pads, um deles com física',
+      'Dois XY pads, cada um com física opcional independente',
       'Oito knobs e oito faders para o mixer',
-      'Quatro LFOs e quatro stutters travados no andamento do Live',
+      'Oito slots LFO/Stutter e dois painéis XY configuráveis',
       'Oito snapshots com morph por tempo e morph vetorial',
       'Sensores de movimento e orientação como fontes de mapeamento',
       'Doze descritores de áudio do microfone do celular ou de uma interface de áudio',

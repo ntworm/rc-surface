@@ -30,7 +30,7 @@ function browser() {
   vm.createContext(ctx);
   vm.runInContext([
     table('LFO_SHAPE_MAX_HZ'), table('LFO_SUBDIVISIONS'), table('STUTTER_SUBDIVISIONS'),
-    ...['clamp', 'getLfoMaxHz', 'getLfoSubdivision', 'getStutterSubdivisions', 'getStutterTiming', 'advanceStutterPhase'].map(declaration),
+    ...['perInstanceStutterSubdivision','perInstanceStutterSwing','perInstanceStutterPhaseOffset','modulatorSyncMode','clamp', 'getLfoMaxHz', 'getLfoSubdivision', 'getStutterSubdivisions', 'getStutterTiming', 'advanceStutterPhase'].map(declaration),
   ].join('\n'), ctx);
   return ctx;
 }
@@ -96,7 +96,7 @@ test('Stutter preview follows real beat/swing gates at 30/60FPS, pause resumes l
     ctx.window.playheadBaseTimeMs = 37.23 * 500;
     Object.assign(ctx.window.syncSettings, { clockSource: 'osc', stutterSwing: .33,
       stutterSubdivisionPinned: true, stutterSubdivision: .03125, stutterPhaseOffset: .125 });
-    const state = { pressed: true, rate: 1, depth: .37, count: .6 };
+    const state = { active: true, rate: 1, depth: .37, count: .6 };
     const timing = getStutterTiming(1, .6, 120, true, .03125, .33);
     for (let now = 0; now <= 1000; now += stepMs) {
       ctx.Date = { now: () => 100000 + now };
@@ -108,7 +108,7 @@ test('Stutter preview follows real beat/swing gates at 30/60FPS, pause resumes l
     ctx.advanceStutterPhase(state, time + 10);
     assert.ok(Math.abs((state.phase - before + 2 * Math.PI) % (2 * Math.PI)
       - timing.frequency * .01 * 2 * Math.PI) < 1e-9);
-    state.pressed = false;
+    state.active = false;
     assert.equal(ctx.advanceStutterPhase(state, time + 20), false);
     assert.equal(state.phase, 0);
   }

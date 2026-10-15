@@ -1,0 +1,262 @@
+// Copyright © 2026 Gabriel Worm
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import vm from 'node:vm';
+
+function makeElement(dataset = {}) {
+  const listeners = {};
+  const classes = new Set();
+  return {
+    dataset,
+    listeners,
+    style: {
+      values: new Map(),
+      setProperty(name, value) { this.values.set(name, value); },
+      removeProperty(name) { this.values.delete(name); },
+      getPropertyValue(name) { return this.values.get(name) || ''; },
+      get backgroundColor() { return this.values.get('backgroundColor') || ''; },
+      set backgroundColor(value) { this.values.set('backgroundColor', value); },
+    },
+    classList: {
+      add(...names) { names.forEach((name) => classes.add(name)); },
+      remove(...names) { names.forEach((name) => classes.delete(name)); },
+      toggle(name, force) {
+        const enabled = typeof force === 'boolean' ? force : !classes.has(name);
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+        return enabled;
+      },
+      contains(name) { return classes.has(name); },
+    },
+    addEventListener(type, cb) { listeners[type] = cb; },
+    removeEventListener(type, cb) { if (listeners[type] === cb) delete listeners[type]; },
+    setPointerCapture() {},
+    setAttribute() {},
+    querySelector() { return null; },
+    getBoundingClientRect: () => ({ top: 0, left: 0, width: 100, height: 100 }),
+    clientHeight: 100,
+  };
+}
+
+function loadControls(stutterName = 'toggle-5', { snapshots = true, syncPanel = false, stutterBar = null, saved = {}, withXY = false } = {}) {
+  const engineFile = path.join(import.meta.dirname, 'mode-engine.js');
+  const controlsFile = path.join(import.meta.dirname, 'controls.js');
+  const engineSource = fs.readFileSync(engineFile, 'utf8');
+  const controlsSource = fs.readFileSync(controlsFile, 'utf8');
+
+  const stutter = makeElement({ name: stutterName });
+  // P04 (rc-surface-modulator-quality-2026-09-16): inject an optional
+  // .mod-val-bar child on the stutter gate so makeStutterButton can capture
+  // it via el.querySelector('.mod-val-bar'). The override must land BEFORE
+  // controls.js runs, otherwise the closure already bound `bar` to null.
+  if (stutterBar) {
+    stutter.querySelector = (selector) => (selector === '.mod-val-bar' ? stutterBar : null);
+  }
+  const lfo = makeElement({ name: 'toggle-1' });
+  const lfos = [lfo, ...[2,3,4].map(i => makeElement({name: `toggle-${i}`}))];
+  const stutters = [stutter, ...[2,3,4].map(i => makeElement({name: `toggle-${i+4}`}))];
+  const all = [...lfos, ...stutters];
+  lfos.forEach(el => el.classList.add('toggle'));
+  stutters.forEach(el => el.classList.add('toggle'));
+  const storage = new Map(Object.entries(saved));
+  const xy = [1,2].map(i => makeElement({name:`xy-${i}`}));
+  xy.forEach(el => {el.querySelector=selector=>selector==='.xy-dot'?{style:{}}:null;});
+  const overlay = makeElement();
+  const rateReadout = makeElement();
+  const modeButtons = ['A', 'B', 'C', 'D'].map((mode) => makeElement({ padModeSet: mode }));
+  let rafCallbacks = [];
+  let now = 0;
+  const emitted = [];
+  const modulatorStates = [];
+
+  const context = {
+    window: null,
+    document: {
+      body: { dataset: {} },
+      getElementById: id => syncPanel && id === 'sync-settings-overlay' ? overlay
+        : syncPanel && id === 'lfo-effective-rate' ? rateReadout : null,
+      querySelector(selector) {
+        const xyEl=xy.find(el=>selector===`.xy-pad[data-name="${el.dataset.name}"]`);
+        if(xyEl)return xyEl;
+        if (selector === `.button[data-name="${stutterName}"]`) return stutter;
+        if (selector === '.toggle[data-name="toggle-1"]') return lfo;
+        return null;
+      },
+      querySelectorAll(selector) {
+        if (selector === '.xy-pad') return withXY ? xy : [];
+        if (selector === '[data-pad-mode-set]') return modeButtons;
+        if (selector === '.toggle') return all;
+        if (selector === '.button') return all.filter(el => el.classList.contains('button'));
+        return [];
+      },
+      addEventListener() {},
+    },
+    navigator: { vibrate: () => {} },
+    performance: { now: () => now },
+    Date: { now: () => 100000 + now },
+    requestAnimationFrame(cb) { rafCallbacks.push(cb); },
+    cancelAnimationFrame() {},
+    addEventListener() {},
+    dispatchEvent() {},
+    Event: class { constructor(type) { this.type = type; } },
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+    setTimeout() {},
+    setInterval() {},
+    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
+    onControl(ctrl) { emitted.push(ctrl); },
+    onModulatorState(state) { modulatorStates.push(state); },
+  };
+  context.window = context;
+
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'control-config.js'), 'utf8'), context);
+  vm.runInNewContext(engineSource, context, { filename: engineFile });
+  if (snapshots) vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'modules/snapshots.js'), 'utf8'), context);
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
+  vm.runInNewContext(controlsSource, context, { filename: controlsFile });
+
+  return {
+    context,
+    all,
+    xy,
+    storage,
+    stutter,
+    lfo,
+    rateReadout,
+    modeButtons,
+    emitted,
+    modulatorStates,
+    setTime(at) { now = at; },
+    tick(at) {
+      now = at;
+      const callbacks = rafCallbacks; rafCallbacks = [];
+      callbacks.forEach(cb => cb());
+    },
+  };
+}
+
+function pointer(pointerId, clientY) {
+  return { pointerId, clientX: 50, clientY, button: 0, preventDefault() {} };
+}
+
+const names = Array.from({length:8}, (_,i)=>`toggle-${i+1}`);
+for (let n = 0; n <= 8; n++) {
+  test(`phone runs ${n} LFOs / ${8-n} Stutters through the real CFG store`, () => {
+    const app = loadControls(); const ctx = app.context;
+    names.forEach((name, i) => ctx.RcControlConfig.set(name, {shape: i < n ? 'triangle' : 'stutter'}));
+    names.forEach(name => ctx.controlSetters[name](1));
+    assert.equal([...ctx.modulatorStates.values()].filter(v=>v.kind==='lfo').length,n);
+    assert.equal(ctx.modulatorStates.size,8);
+    names.forEach((name, i) => assert.equal(app.modulatorStates.findLast(v => v.name === name)?.kind, i < n ? 'lfo' : 'stutter'));
+    assert.equal(new Set(app.modulatorStates.filter(v => v.active).map(v => v.name)).size, 8);
+  });
+}
+test('slot switch stops old gate, preserves rate/depth/count, and clear restores legacy kind', () => {
+  const app=loadControls(); const ctx=app.context;
+  ctx.controlSetters['toggle-1.rate'](.73); ctx.controlSetters['toggle-1.depth'](.42);
+  ctx.controlSetters['toggle-1.count'](.66); ctx.controlSetters['toggle-1'](1);
+  ctx.RcControlConfig.set('toggle-1', {shape:'stutter'});
+  assert.equal(app.modulatorStates.at(-1).kind, 'lfo'); assert.equal(app.modulatorStates.at(-1).active, false);
+  const state=ctx.modulatorStates.get('toggle-1');
+  assert.equal(state.active,false); assert.equal(state.rate,.73); assert.equal(state.depth,.42); assert.equal(state.count,.66);
+  assert.equal(ctx.currentControlStates['toggle-1'],0);
+  ctx.RcControlConfig.clear('toggle-1');
+  assert.equal(ctx.modulatorStates.get('toggle-1').kind,'lfo');
+  app.lfo.listeners.pointerdown(pointer(1,100));
+  assert.equal(app.modulatorStates.at(-1).kind,'lfo'); assert.equal(app.modulatorStates.at(-1).active,true);
+});
+test('independent subdivision/swing/phase/sync/ratchet reach both host and preview', () => {
+  const app=loadControls(); const ctx=app.context;
+  ctx.RcControlConfig.set('toggle-1',{shape:'stutter',syncMode:'sync',subdivision:1,swing:.3,phaseOffset:-.5,count:1});
+  ctx.RcControlConfig.set('toggle-5',{shape:'square',syncMode:'free',subdivision:3,phaseOffset:1.25,rate:.5});
+  ctx.controlSetters['toggle-1'](1); ctx.controlSetters['toggle-5'](1);
+  const stut=app.modulatorStates.findLast(v=>v.name==='toggle-1'); const lfo=app.modulatorStates.findLast(v=>v.name==='toggle-5');
+  assert.equal(stut.swing,.3); assert.equal(stut.count,1); assert.equal(stut.phaseOffsetBeats,-.5); assert.equal(stut.syncSubdivisionBeats,1);
+  assert.equal(lfo.shape,'square'); assert.equal(lfo.syncMode,'free'); assert.equal(lfo.phaseOffsetBeats,1.25);
+  app.tick(20); assert.equal(ctx.modulatorStates.get('toggle-5').phaseFrequency,6.05);
+  ctx.RcControlConfig.set('toggle-1',{subdivision:0});
+  assert.equal(app.modulatorStates.at(-1).syncSubdivisionBeats,null);
+});
+test('old browser modulation keys are ignored; fresh state has eight sine LFOs', () => {
+  const saved={'ableton-rc:control_config':JSON.stringify({'button-1':{shape:'square'}}),
+    'ableton-rc:sync_settings':JSON.stringify({lfoShape:'square'})};
+  const ctx=loadControls('toggle-5',{saved}).context;
+  assert.equal(ctx.modulatorStates.size,8);
+  for (const state of ctx.modulatorStates.values()) assert.equal(state.kind,'lfo');
+  assert.equal(ctx.getModulatorShape('toggle-5'),'sine');
+});
+test('new snapshots restore categorical configuration before morphing slot values', () => {
+  const app=loadControls();const ctx=app.context; const sn=ctx.RCSurface.snapshots;
+  ctx.RcControlConfig.set('toggle-5',{shape:'triangle',syncMode:'free',mode:'C'});
+  ctx.controlSetters['toggle-5.depth'](.61);ctx.controlSetters['toggle-5'](1);
+  sn.setSnapshotCaptureMode(true);sn.handleSnapshotSlot(0);
+  assert.equal(sn.getSnapshots()[0].__performance.slots['toggle-5'].shape,'triangle');
+  ctx.RcControlConfig.set('toggle-5',{shape:'stutter'});assert.equal(ctx.modulatorStates.get('toggle-5').kind,'stutter');
+  sn.handleSnapshotSlot(0);app.tick(1000);
+  assert.equal(ctx.modulatorStates.get('toggle-5').kind,'lfo');assert.equal(ctx.modulatorStates.get('toggle-5').depth,.61);
+  const msg=app.modulatorStates.findLast(v=>v.name==='toggle-5' && v.morphMs);
+  assert.equal(msg.kind,'lfo');assert.equal(msg.depth,.61);assert.equal(msg.active,true);
+});
+test('clearing a phase override updates a running motor immediately',()=>{
+  const app=loadControls();const ctx=app.context;
+  ctx.RcControlConfig.set('toggle-1',{phaseOffset:2,shape:'triangle'});ctx.controlSetters['toggle-1'](1);
+  ctx.RcControlConfig.set('toggle-1',{phaseOffset:null});
+  assert.equal(app.modulatorStates.at(-1).phaseOffsetBeats,0);
+});
+
+for(const shape of ['sine','stutter']) test(`mode D ${shape} expires without stale mode color or active gate`,()=>{
+ const app=loadControls();const ctx=app.context;
+ ctx.RcControlConfig.set('toggle-1',{shape,mode:'D',syncMode:'free'});
+ ctx.controlSetters['toggle-1'](1);app.tick(521);
+ assert.equal(ctx.modulatorStates.get('toggle-1').active,false);
+ assert.equal(app.lfo.classList.contains('mode-d'),false);
+ assert.equal(app.modulatorStates.at(-1).active,false);
+});
+
+for(const first of ['static','physics']) for(const second of ['static','physics']) {
+ test(`two real XY handlers support ${first}/${second} independently`,()=>{
+  const app=loadControls('toggle-5',{withXY:true});const ctx=app.context;
+  ctx.RcControlConfig.set('xy-1',{behavior:first,friction:.005,speed:.5});
+  ctx.RcControlConfig.set('xy-2',{behavior:second,friction:.04,speed:2});
+  assert.equal(app.emitted.length,0,'opening/editing CFG must not emit position');
+  app.xy.forEach((el,i)=>el.listeners.pointerdown({...pointer(i+1,50),clientX:20}));
+  app.setTime(17);
+  app.xy.forEach((el,i)=>el.listeners.pointermove({...pointer(i+1,50),clientX:30}));
+  app.xy.forEach((el,i)=>el.listeners.pointerup({...pointer(i+1,50),clientX:30}));
+  app.emitted.length=0;app.tick(34);
+  for(const [index,behavior] of [[1,first],[2,second]]){
+   const event=app.emitted.findLast(v=>v.name===`xy-${index}`);
+   assert.equal(!!event,behavior==='physics');
+  }
+  const saved=ctx.PerformanceSettings.capture();
+  assert.equal(saved.xy['xy-1'].speed,.5);assert.equal(saved.xy['xy-2'].speed,2);
+  ctx.RcControlConfig.set('xy-1',{behavior:'static'});ctx.PerformanceSettings.apply(saved);
+  assert.equal(ctx.RcControlConfig.get('xy-1','behavior'),first);
+  ctx.controlSetters['xy-1.speed'](3);assert.equal(ctx.RcControlConfig.get('xy-1','speed'),3);
+  assert.equal(ctx.RcControlConfig.get('xy-2','speed'),2);
+ });
+}
+
+for (const shape of ['sine', 'stutter']) test(`released ${shape} drag persists rate/depth for reload without changing slot kind`, () => {
+  const app = loadControls(); const ctx = app.context;
+  ctx.RcControlConfig.set('toggle-1', {shape, mode:'B', rate:.2, depth:.3});
+  app.lfo.listeners.pointerdown({...pointer(1, 50), clientX:30});
+  app.lfo.listeners.pointermove({...pointer(1, 20), clientX:60});
+  app.lfo.listeners.pointerup(pointer(1,20));
+  const expected = ctx.PerformanceSettings.capture().slots['toggle-1'];
+  const restored = loadControls('toggle-5', {saved:Object.fromEntries(app.storage)}).context;
+  assert.equal(restored.modulatorStates.get('toggle-1').rate, expected.rate);
+  assert.equal(restored.modulatorStates.get('toggle-1').depth, expected.depth);
+  assert.equal(restored.modulatorStates.get('toggle-1').kind, shape === 'stutter' ? 'stutter' : 'lfo');
+  assert.equal(restored.modulatorStates.get('toggle-1').active, false);
+});
+test('clearing slot overrides resets rate/depth/count together with categorical settings', () => {
+  const ctx=loadControls().context;
+  ctx.RcControlConfig.set('toggle-8', {shape:'stutter',rate:.9,depth:.8,count:1});
+  ctx.RcControlConfig.clear('toggle-8');
+  const state=ctx.modulatorStates.get('toggle-8');
+  assert.equal(state.kind,'lfo');
+  assert.equal(state.rate,.5); assert.equal(state.depth,.5); assert.equal(state.count,0);
+});

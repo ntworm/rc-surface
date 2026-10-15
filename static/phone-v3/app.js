@@ -635,8 +635,7 @@
     if (!modulator || typeof modulator !== 'object') return false;
     if (modulator.kind !== 'lfo' && modulator.kind !== 'stutter') return false;
     if (typeof modulator.name !== 'string') return false;
-    if (modulator.kind === 'lfo' && !/^toggle-\d+$/.test(modulator.name)) return false;
-    if (modulator.kind === 'stutter' && !/^button-\d+$/.test(modulator.name)) return false;
+    if (!/^toggle-[1-8]$/.test(modulator.name)) return false;
     return true;
   }
 
@@ -1123,17 +1122,21 @@
         { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
       ];
     });
-    cfg.register(/^xy-2$/, (name) => {
-      const friction = window.RcControlConfig.get(name, 'friction', 0.012);
-      const bounce = window.RcControlConfig.get(name, 'bounce', 0.75);
+    cfg.register(/^xy-[12]$/, name => {
+      const cc = window.RcControlConfig;
+      const tr = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
       return [
-        { slider: { label: 'Friction', min: 0.002, max: 0.05, step: 0.001, get: () => friction, set: (v) => window.RcControlConfig.set(name, { friction: v }), format: (v) => v.toFixed(3) } },
-        { slider: { label: 'Bounce', min: 0, max: 0.95, step: 0.05, get: () => bounce, set: (v) => window.RcControlConfig.set(name, { bounce: v }), format: (v) => v.toFixed(2) } },
-      ];
-    });
-    cfg.register(/^xy-1$/, (name) => {
-      return [
-        { info: { text: 'Standard XY pad (no physics overrides).' } },
+        {segment: {label: tr('cfg.xyBehavior','Behavior'), options: [
+          {label: tr('cfg.xyStatic','Static'), value:'static'},
+          {label: tr('cfg.xyPhysics','Physics'), value:'physics'}],
+          get: () => cc.get(name,'behavior','static'), set: value => cc.set(name,{behavior:value})}},
+        ...[['friction', 'cfg.frictionLabel', 'Friction', .002, .05, .001, .012],
+          ['bounce','cfg.bounceLabel','Bounce',0,.95,.05,.75],
+          ['speed','cfg.xySpeed','Speed',.1,4,.1,1]].map(([key,label,fallback,min,max,step,initial]) => ({slider: {
+            label: tr(label,fallback), min,max,step, get: () => cc.get(name,key,initial),
+            set: value => cc.set(name,{[key]:value}), format: value => value.toFixed(3),
+          }})),
+        {action: {label:tr('cfg.resetToDefault','Reset to default'), run:()=>cc.clear(name)}},
       ];
     });
     // PERF builders (mode / shape / stutter).
@@ -1150,39 +1153,45 @@
         { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
       ];
     });
-    cfg.register(/^toggle-\d+$/, (name) => {
-      const shape = window.RcControlConfig.get(name, 'shape', 'Global');
-      return [
-        { info: { text: 'Per-instance LFO shape override.' } },
-        { segment: { label: 'LFO shape override', options: [
-          { label: 'Global', value: 'Global' },
-          { label: 'sine', value: 'sine' },
-          { label: 'triangle', value: 'triangle' },
-          { label: 'ramp_up', value: 'ramp_up' },
-          { label: 'ramp_down', value: 'ramp_down' },
-          { label: 'square', value: 'square' },
-        ], get: () => shape, set: (v) => window.RcControlConfig.set(name, v === 'Global' ? { shape: null } : { shape: v }) } },
-        { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
+    cfg.register(/^toggle-[1-8]$/, (name) => {
+      const cc = window.RcControlConfig;
+      const tr = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
+      const shape = window.getModulatorShape?.(name) || 'sine';
+      const stutter = shape === 'stutter';
+      const state = window.modulatorStates?.get(name);
+      const segment = (key, label, options) => ({ segment: { label, options,
+        get: () => cc.get(name, key, key === 'count' ? state?.count ?? 0 : 'Global'),
+        set: v => cc.set(name, { [key]: v === 'Global' ? null : v }),
+      } });
+      const slider = (key, label, min, max, step, fallback) => ({ slider: {
+        label, min, max, step, get: () => ['rate', 'depth'].includes(key) ? state?.[key] ?? fallback : cc.get(name, key, fallback),
+        set: v => cc.set(name, { [key]: v }), format: v => v.toFixed(2),
+      } });
+      const global = { label: tr('cfg.global', 'Global'), value: 'Global' };
+      const rows = [
+        segment('shape', tr('cfg.waveform', 'Waveform'), [global,
+          ...['sine', 'triangle', 'ramp_up', 'ramp_down', 'square', 'stutter'].map(value => ({
+            label: tr({ sine: 'sync.sine', triangle: 'sync.triangle', ramp_up: 'sync.rampUp',
+              ramp_down: 'sync.rampDn', square: 'sync.square', stutter: 'cfg.stutter' }[value], value), value,
+          })),
+        ]),
+        segment('mode', tr('cfg.mode', 'Mode'), [global, ...['A', 'B', 'C', 'D'].map(value => ({ label: value, value }))]),
+        segment('syncMode', tr('cfg.clock', 'Timing'), [global, { label: 'SYNC', value: 'sync' }, { label: 'FREE', value: 'free' }]),
+        { grid: { label: tr('cfg.division', 'Subdivision'), options: [global,
+          { label: tr('sync.auto', 'Auto'), value: 0 }, ...(window.getModulatorRhythms?.(name) || [])],
+          get: () => cc.get(name, 'subdivision', 'Global'), set: v => cc.set(name, { subdivision: v === 'Global' ? null : v }),
+        } },
+        slider('rate', tr('cfg.rate', 'Rate'), 0, 1, .01, state?.rate ?? .5),
+        slider('depth', tr('cfg.depth', 'Depth'), 0, 1, .01, state?.depth ?? .5),
+        slider('phaseOffset', tr('cfg.phase', 'Phase (beats)'), -4, 4, .125,
+          stutter ? window.syncSettings.stutterPhaseOffset : window.syncSettings.lfoPhaseOffset),
       ];
-    });
-    cfg.register(/^(?:button|stut)-\d+$/, (name) => {
-      // P03 (rc-surface-cfg-pad-stutter-polish-2026-09-18): stutter CFG popover
-      // no longer exposes continuous subdivision / swing / phase faders — the
-      // operator only needs a clean mode override (Global / A / B / C / D)
-      // and a clear action. Continuous rhythm shaping lives in the global
-      // stutter settings, not per-control.
-      const mode = window.RcControlConfig.get(name, 'mode', 'Global');
-      return [
-        { info: { text: 'Per-instance stutter mode override.' } },
-        { segment: { label: 'Mode override', options: [
-          { label: 'Global', value: 'Global' },
-          { label: 'A', value: 'A' },
-          { label: 'B', value: 'B' },
-          { label: 'C', value: 'C' },
-          { label: 'D', value: 'D' },
-        ], get: () => mode, set: (v) => window.RcControlConfig.set(name, v === 'Global' ? { mode: null } : { mode: v }) } },
-        { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
-      ];
+      if (stutter) rows.push(
+        slider('swing', tr('sync.swing', 'Swing'), 0, .66, .01, window.syncSettings.stutterSwing),
+        segment('count', tr('cfg.ratchet', 'Ratchet'), [1, 2, 3, 4].map((n, i) => ({ label: String(n), value: i / 3 }))),
+      );
+      rows.push({ action: { label: tr('cfg.resetModulator', 'Restore shared defaults'), danger: false, run: () => cc.clear(name) } });
+      return rows;
     });
     cfg.attach();
 
@@ -1239,6 +1248,16 @@
 
     if (window.RcControlConfig && typeof window.RcControlConfig.subscribe === 'function') {
       window.RcControlConfig.subscribe(refreshBadges);
+      let saveTimer;
+      window.RcControlConfig.subscribe(({ name }) => {
+        if (!/^(?:toggle-[1-8]|xy-[12])$/.test(name) || window.PerformanceSettings?.applying) return;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          window.sendPhoneCommand?.('saveProjectClientState', {
+            preferences: { performance: window.PerformanceSettings.capture() },
+          });
+        }, 250);
+      });
     }
     refreshBadges();
 
@@ -2021,6 +2040,7 @@
 
     window.applyProjectClientState = (clientState) => {
       if (!clientState) return;
+      window.PerformanceSettings?.applyHost(clientState.preferences?.performance);
       try { visionLoss = window.RcPageSettings?.policy(clientState.preferences?.visionLoss, true); } catch { /* retain valid host state */ }
       const restoredGestureOptions = {
         ...(clientState.preferences?.visionGestureOptions || visionSafetyConfig?.gestureOptions || {}),
@@ -2940,6 +2960,7 @@
       }
       if (msg.type === 'project_preferences') {
         window.VisionSettings?.applyHost(msg.preferences);
+        window.PerformanceSettings?.applyHost(msg.preferences?.performance);
       } else if (msg.type === 'vision_loss_state') {
         window.VisionSettings?.feedback(msg);
       } else if (msg.type === 'control_sync') {

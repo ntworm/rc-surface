@@ -35,7 +35,7 @@ test("mapping persistence writes and restores a versioned per-set .rcsurface pro
     controlMappings.set("knob-1", [{ type: "device_param", trackIndex: 0, deviceIndex: 0, paramIndex: 0 }]);
     await saveMappings();
 
-    const projects = await fs.readdir(path.join(dir, "projects"));
+    const projects = await fs.readdir(path.join(dir, "surface-v2", "projects"));
     assert.equal(projects.filter((name) => name.endsWith(".rcsurface")).length, 1);
 
     controlMappings.clear();

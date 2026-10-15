@@ -4,6 +4,13 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
+## 2.0.0 — local candidate
+
+- Eight uniform configurable LFO slots; Stutter is a waveform in any slot, with independent CFG and one state/gesture model.
+- Both XY panels independently select Static/Physics with friction, bounce and speed; shared engine and persistence.
+- Breaking persistence: isolated surface-v2 storage, project/preset schema 2 and new browser performance keys. No import/migration of earlier data.
+- Existing recognition, thumb identity, MIDI and safe-loss corrections retained. Physical acceptance pending; no publication or installation.
+
 ## [Unreleased]
 
 ### Context settings and MIDI safety

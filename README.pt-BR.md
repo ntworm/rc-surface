@@ -1,7 +1,7 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v1.0.2](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.0.0](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
@@ -16,11 +16,13 @@ O RC Surface é uma extensão para o Ableton Live, com código-fonte disponível
 
 O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do celular é JavaScript de navegador puro: nenhum app nativo, nenhum bundler, nada para instalar no celular.
 
+**2.0.0 quebra compatibilidade:** projetos, presets, mappings e configurações de performance anteriores não são importados. Configure esta versão do zero. Arquivos existentes não são apagados. Candidato local; não é release publicada.
+
 ## Destaques
 
 - 12 pads de performance com os modos A/B/C/D.
-- Dois XY pads: um padrão, de controle direto (`xy-1`), e um joystick com física (`xy-2`).
-- 4 LFOs (`toggle-1`..`toggle-4`), 4 botões de stutter (`button-1`..`button-4`) e atalhos de performance (CAP, OFF, 4 slots de snapshot).
+- Dois XY pads (`xy-1`, `xy-2`), cada um configurável como estático ou com física própria.
+- Oito slots LFO (`toggle-1`..`toggle-8`), cada um com Stutter entre suas ondas e atalhos de performance (CAP, OFF, 4 slots de snapshot).
 - Sensores do celular: movimento, orientação, áudio e rastreio de mãos opcional pela câmera,
   com o MediaPipe Hands embutido (sem CDN).
 - Visão de uma mão só, por decisão de projeto.
@@ -49,7 +51,7 @@ O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do ce
 
 ## Novidades da 1.0
 
-- **Modo Config (CFG):** ajustes por controle para os controles de performance: modos dos pads (A/B/C/D), modos dos stutters (A/B/C/D), forma de onda dos LFOs, alcance do arrasto dos knobs, valor de reset dos faders no toque duplo e física do XY 2 (atrito, quique). Abra o `CFG` no header do celular (segure o `CFG` para limpar todos os ajustes) ou clique com o botão direito num controle, no painel de mapeamento do desktop, para abrir o menu daquele controle. Os ajustes ficam salvos por controle no `localStorage`, na chave `ableton-rc:control_config`.
+- **Modo Config (CFG):** configure cada slot LFO (L1–L8), incluindo Stutter como onda, e escolha Estático ou Física de forma independente para cada XY. Cada física tem atrito, quique e velocidade próprios. Modos dos pads, sensibilidade dos knobs e reset dos faders continuam configuráveis. Abra `CFG` no header do celular; segure para limpar os ajustes. As configurações usam `ableton-rc:v2:control_config` e fazem parte dos novos projetos e presets.
 - **Prévia da forma de onda do LFO:** o modal de ajustes do SYNC desenha a forma ativa do LFO (senoide, triangular, rampa para cima, rampa para baixo, quadrada), para você ver a curva que vai mandar para o Live, incluindo a subdivisão travada de 32 tempos e o teto de cada forma (senoide até 4 Hz, quadrada até 12 Hz).
 - **Controle pelo teclado no desktop:** todo controle contínuo (knob, fader, XY pad, toggle, stutter) aceita ajustes pelo teclado quando o cliente está em foco, então o painel de mapeamento do desktop e a interface do celular usam o mesmo modelo de gesto.
 - **Loudness ponderado K:** a aba AUD mostra loudness momentâneo, de curto prazo e integrado com ponderação K (ITU-R BS.1770), ao lado dos doze descritores.
@@ -67,8 +69,8 @@ Para usar os recursos do AbletonOSC, deixe a extensão **AbletonOSC** rodando no
 
 ## Status da versão candidata
 
-A versão do código é 1.0.2. Um pacote gerado a partir deste repositório é uma
-versão candidata local até a release v1.0.2 correspondente ser publicada na página
+A versão do código é 2.0.0. Um pacote gerado a partir deste repositório é uma
+versão candidata local até a release v2.0.0 correspondente ser publicada na página
 de Releases. O Native Track e a latência de ponta a ponta medida continuam
 pendentes de validação pelo responsável.
 
@@ -166,8 +168,7 @@ Grupos principais:
 - `knob-1` a `knob-8`
 - `fader-1` a `fader-8`
 - `xy-1.x`, `xy-1.y`, `xy-2.x`, `xy-2.y`
-- `toggle-1` a `toggle-4`
-- `button-1` a `button-4`
+- `toggle-1` a `toggle-8`
 - `sensor.motion.*`
 - `sensor.orient.*`
 - `sensor.audio.rms`

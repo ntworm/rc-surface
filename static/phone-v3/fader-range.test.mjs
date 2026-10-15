@@ -110,6 +110,7 @@ function loadFader(trackHeight) {
   context.faderRenderers = [];
 
   vm.runInNewContext(engineSource, context, { filename: engineFile });
+  vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
   return {

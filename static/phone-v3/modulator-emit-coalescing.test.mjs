@@ -63,8 +63,8 @@ function loadControls() {
       getElementById: getMockElement,
       querySelector: (sel) => getMockElement(sel),
       querySelectorAll: (sel) => {
-        if (sel === '.toggle') return [getMockElement('toggle-1')];
-        if (sel === '.button') return [getMockElement('button-1')];
+        if (sel === '.toggle') return [getMockElement('toggle-1'),getMockElement('toggle-5')];
+        if (sel === '.button') return [getMockElement('toggle-5')];
         return [];
       },
     },
@@ -108,6 +108,8 @@ function loadControls() {
   vm.runInNewContext(read('../shared/audio-descriptor-catalog.js'), context);
   vm.runInNewContext(read('app.js'), context, { filename: 'app.js' });
   vm.runInNewContext(read('modules/snapshots.js'), context, { filename: 'snapshots.js' });
+  vm.runInNewContext(read('control-config.js'), context);
+  context.RcControlConfig.set('toggle-5',{shape:'stutter'});
   vm.runInNewContext(read('controls.js'), context, { filename: 'controls.js' });
 
   const emitted = [];
@@ -146,7 +148,7 @@ test('an LFO drag emits one modulator frame per animation frame, not per pointer
   assert.equal(emitted.length, 1, 'ten pointermoves must coalesce into one emit');
   assert.equal(emitted[0].name, 'toggle-1');
   // The coalesced frame carries the newest value, not the first one.
-  const state = context.window.lfoStates.get('toggle-1');
+  const state = context.window.modulatorStates.get('toggle-1');
   assert.equal(emitted[0].depth, state.depth);
   assert.equal(emitted[0].rate, state.rate);
   assert.ok(state.depth > 0, 'the drag must have moved depth');
@@ -155,18 +157,18 @@ test('an LFO drag emits one modulator frame per animation frame, not per pointer
 test('a stutter drag coalesces the same way', () => {
   const { context, emitted } = loadControls();
 
-  context.__fire('button-1', 'pointerdown', pointer(1, 100, 100));
+  context.__fire('toggle-5', 'pointerdown', pointer(1, 100, 100));
   context.__flushFrame();
   emitted.length = 0;
 
   for (let i = 1; i <= 8; i++) {
-    context.__fire('button-1', 'pointermove', pointer(1, 100 + i * 2, 100 - i));
+    context.__fire('toggle-5', 'pointermove', pointer(1, 100 + i * 2, 100 - i));
   }
   assert.equal(emitted.length, 0);
 
   context.__flushFrame();
   assert.equal(emitted.length, 1, 'eight pointermoves must coalesce into one emit');
-  assert.equal(emitted[0].name, 'button-1');
+  assert.equal(emitted[0].name, 'toggle-5');
 });
 
 test('the gate transition at the end of a gesture is emitted immediately', () => {
