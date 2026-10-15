@@ -1137,27 +1137,39 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 
 ## 16. Arrangement REC
 
-Open **REC**, refresh the observed state, choose an armable track and arm it
-explicitly. Other armed tracks are listed; this first workflow requires only
-the selected track armed. Choose the return point by bar/beat or Arrangement
-marker. **PREPARE** verifies the observed conditions and seeks that point while
-stopped. **REC** checks again and starts one attempt. **STOP** cancels pending
-preparation and immediately requests playback stop and record mode off.
+Create the Arrangement markers in Live first, then open **REC** with playback
+stopped:
 
-The conservative checks require observed Loop, Punch In/Out, Arrangement
-Overdub, Session Record and Back to Arrangement pending all off. Change these
-in Live yourself; the phone does not change them. Unknown or unsupported
-reports block preparation. Configure count-in in Live. The page reports record
-mode and playback observations, which do not prove that audio was captured.
+1. Choose the track to record.
+2. Choose the start marker. The marker strip shows the session's markers and
+   observed playback position; use **Zoom** and scroll to inspect the region.
+3. For repeated passes, enable **Loop** and choose an end marker after the start.
+   Leave Loop off for an open-ended recording.
+4. Press **REC**. It checks Live's state, applies the chosen loop setting, arms
+   the selected track, positions at the start marker and starts recording.
+5. Press **STOP** to stop playback and recording. It disarms the track armed by
+   this REC workflow. Press REC again to arm it for another attempt.
 
-After STOP, **HEAR RESULT · DISARM TRACK** explicitly disarms the selected
-track, seeks the return point and plays the current main Arrangement lane with
-record mode off. Monitor In blocks this action; choose Auto/Off in Live.
-Stop audition before **NEW ATTEMPT · ARM + PREPARE**, then press REC again.
-No action deletes clips, selects take lanes or invokes undo. Earlier takes and
-audio preservation depend on Live: verify them in the Set before repeating.
-**GOOD/REVIEW** marks only the latest passage in this host session; it does not
-identify an audio take or save the Set.
+To listen, click a marker in the strip or choose the start marker, then use
+**Play in the header**. Selecting a marker positions the stopped transport;
+selection does not start playback or recording. The strip is a marker and
+position reference, without audio waveforms or take-lane selection. A moved or
+removed marker must be selected again.
+
+Loop repeats between the two markers until STOP; the end marker does not stop
+recording. REC confirms the loop region before starting. With Loop off, REC
+turns off Live's Arrangement Loop. STOP retains the chosen loop region for
+playback. Configure count-in, input monitoring and take lanes in Live. For
+listening to the Arrangement, choose Monitor Auto/Off instead of In.
+
+REC requires the selected track to be armable, other tracks disarmed, and
+observed Punch In/Out, Arrangement Overdub, Session Record and Back to
+Arrangement pending off. Change those conditions in Live. Unknown or stale
+required state blocks recording; background state reads do not lock the page's
+controls. The page reports observed playback and record mode, which do not
+prove audio capture. Earlier passages and take preservation remain Live's
+responsibility: verify them in the Set before repeating, and save the Set in
+Live. REC does not delete clips, select take lanes or invoke undo.
 
 REC writes require controller/admin permission and the current phone connection.
 Lost connections never stop an ongoing recording or replay a write after
@@ -1171,6 +1183,11 @@ take preservation and mobile touch still require acceptance on your Live setup.
 **AUT** beside MAP/CFG selects automation recording for XY1 or XY2. Enable AUT, then tap one XY: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Enable AUT again and right-click the XY (phone: hold without moving for 600ms) to set **SYNC / FREE**, **1/2/4 bars** or **10/20 seconds**, Record/replace, Play, Stop and Clear. Opening configuration emits no control. MAP, AUT and CFG stay visible in the header. Their selections are exclusive; leaving AUT selection does not stop an existing loop.
 
 SYNC uses Live's observed playback position, tempo and time signature, with receipt time retained independently of MAP rendering. Count/capture require Live playing and a fresh clock. Play/pause commands wait for Live confirmation; unrelated tempo/beat messages cannot confirm them. A stale position listener is recovered independently of other incoming OSC traffic. Captured data is aligned to the song grid. During playback, seeks and Live loop wraps follow the current song position; Live STOP pauses an enabled SYNC loop, and Play resumes at the real position. A stopped/stale clock, seek, loop wrap or meter change during **capture** cancels that attempt and retains the previous completed buffer. For a capture spanning multiple bars, leave Live's Arrangement Loop off until capture completes. A meter change during playback stops the loop. FREE uses elapsed seconds and ignores the Live transport.
+
+The small white square in an XY marks the mapping's takeover target. It
+blinks while takeover is pending; the orange dot remains the current XY
+position. With the system's reduced-motion preference enabled, the white
+indicator stays steady.
 
 Hold and move an XY over a playing loop to override it. On release, it returns to the loop's current phase; it does not restart the loop or overdub it. Physics can supply the captured movement, but playback owns both axes and overrides inertial motion. Both XY buffers/settings are independent; only one capture/countdown runs at a time. A failed replacement keeps the previous loop. Clear asks for confirmation.
 

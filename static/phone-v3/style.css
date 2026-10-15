@@ -3503,6 +3503,11 @@ body.mapping-mode [data-name].selected-control {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 7px rgba(255, 161, 51, .85);
   pointer-events: none;
+  animation: mapping-takeover-blink 900ms steps(1, end) infinite;
+}
+@keyframes mapping-takeover-blink { 50% { opacity: .15; } }
+@media (prefers-reduced-motion: reduce) {
+  .xy-pad.safe-takeover::after { animation: none; }
 }
 
 .media-meter { position: relative; }

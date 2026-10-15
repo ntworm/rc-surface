@@ -10,6 +10,8 @@ const writes = {
   recordingSelectTrack:{index:0,id:'1',name:'Track'}, recordingSetPoint:{beats:0}, recordingLocator:{direction:'next'},
   recordingArm:{enabled:true},recordingPrepare:{},recordingStart:{token:'test'},recordingStop:{},
   recordingAudition:{disarm:true},recordingClick:{enabled:true},recordingMark:{mark:'good'},
+  recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
+  recordingSeekMarker:{name:'Start',time:0},
 };
 test('REC commands are in the actual mappings registry and viewer cannot invoke any mutation',async () => {
   assert.equal(COMMAND_SIDE_EFFECTS.getRecordingState,'read');

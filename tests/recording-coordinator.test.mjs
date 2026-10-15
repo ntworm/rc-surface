@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
-import { CMD, GET, REC, REC_PREFLIGHT, CLIP } from '../src/osc-tokens.ts';
+import { CMD, GET, REC, REC_LOOP, REC_PREFLIGHT, CLIP } from '../src/osc-tokens.ts';
 
 test('REC conservative getter addresses match public AbletonOSC handlers literally', () => {
   assert.deepEqual(REC_PREFLIGHT, {
@@ -20,12 +20,12 @@ test('REC conservative getter addresses match public AbletonOSC handlers literal
 function fixture(t) {
   const osc = new OSCTransport();
   Object.assign(osc.state, { available: true, connected: true });
-  const song = { tracks: [
+  let song = { tracks: [
     { name: 'Guitar', handle: { id: '11' }, arm: true },
     { name: 'Bass', handle: { id: '22' }, arm: false },
   ], cuePoints: [{ name: 'Verse', time: 8 }, { name: 'Chorus', time: 24 }] };
   const values = { playing: false, record: false, position: 0, click: false, monitor: 1,
-    loop: false, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false };
+    loop: false, loopStart:0, loopLength:4, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false };
   const sent = [];
   let block, current = true;
   // AbletonOSC's pythonosc builder preserves Python bool as OSC T/F tags.
@@ -39,6 +39,9 @@ function fixture(t) {
     if (address === REC.setRecordMode) values.record = args[0].value === 1;
     if (address === REC.setMetronome) values.click = args[0].value === 1;
     if (address === REC.setSongTime) values.position = args[0].value;
+    if (address === REC_LOOP.setEnabled) values.loop = args[0].value === 1;
+    if (address === REC_LOOP.setStart) values.loopStart = args[0].value;
+    if (address === REC_LOOP.setLength) values.loopLength = args[0].value;
     if (address === CMD.startPlaying) values.playing = true;
     if (address === CMD.stopPlaying) values.playing = false;
     if (block === address) return;
@@ -47,6 +50,8 @@ function fixture(t) {
     if (address === REC.getRecordMode) response = [values.record];
     if (address === GET.currentSongTime) response = [values.position];
     if (address === GET.metronome) response = [values.click];
+    if (address === REC_LOOP.getStart) response = [values.loopStart];
+    if (address === REC_LOOP.getLength) response = [values.loopLength];
     if (address === CLIP.getTrackNames) response = song.tracks.map(track => track.name);
     if ([REC_PREFLIGHT.signatureNumerator, REC_PREFLIGHT.signatureDenominator].includes(address)) response = [4];
     for (const key of ['loop','punchIn','punchOut','overdub','backToArranger','sessionRecord']) {
@@ -66,7 +71,7 @@ function fixture(t) {
   };
   t.after(() => { coordinator.dispose(); osc.dispose(); });
   return { osc, coordinator, song, values, sent, context, select, push,
-    block: address => { block = address; }, retire: () => { current = false; } };
+    block: address => { block = address; }, retire: () => { current = false; }, replaceSong: replacement => { song = replacement; } };
 }
 
 test('REC real OSC boolean replies preserve preflight flags and track armability', async t => {
@@ -81,6 +86,33 @@ test('REC real OSC boolean replies preserve preflight flags and track armability
   assert.equal(state.transport.recordMode.fresh,true);
   assert.equal(state.preflightComplete,false);
   assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
+});
+
+test('REC background refresh keeps last valid observations and yields immediately to a user action', async t => {
+  const f=fixture(t);await f.select();
+  const pending=f.coordinator.refresh();const result=pending.catch(error=>error);
+  const during=f.coordinator.snapshot();
+  assert.equal(during.pending,null,'a read is not a blocking performance operation');
+  assert.equal(during.safety.loop,false);assert.equal(during.tracks[0].arm,true);
+  assert.equal(during.transport.isPlaying.fresh,true);
+  assert.doesNotThrow(()=>f.coordinator.selectTrack({index:0,id:'11',name:'Guitar'},f.context));
+  await result;
+  assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
+});
+
+test('REC concurrent passive reads share evidence and a failed refresh cannot revoke prepared intent',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t);await f.select();f.coordinator.setPoint(8,f.context);
+  const ready=await f.coordinator.prepare(f.context),token=ready.preparedToken;
+  const first=f.coordinator.refresh(),second=f.coordinator.refresh();
+  const [a,b]=await Promise.all([first,second]);
+  assert.equal(a,b);assert.equal(a.preparedToken,token);assert.equal(a.safety.loop,false);
+  f.block(REC_PREFLIGHT.loop);
+  const reading=f.coordinator.refresh(),rejected=assert.rejects(reading,/UNKNOWN/);
+  for(let i=0;i<8;i++)await Promise.resolve();t.mock.timers.tick(2001);await rejected;
+  assert.equal(f.coordinator.snapshot().preparedToken,token,'a read failure cannot cancel an explicit user choice');
+  f.block(undefined);await f.coordinator.refresh();
+  assert.equal(f.coordinator.snapshot().safety.loop,false);assert.equal(f.coordinator.snapshot().preparedToken,token);
 });
 
 test('REC boolean observations accept T/F and integer 0/1 only; monitor remains an integer enum', async t => {
@@ -263,4 +295,111 @@ test('REC multi-track getter overflow cannot masquerade as listener push and hid
   assert.equal(f.osc.lastPushAt,100);
   f.push(REC_PREFLIGHT.signatureNumerator,[3]);
   assert.ok(f.osc.lastPushAt>100,'genuine meter listener push remains evidence');
+});
+
+const recordingTrack={index:0,id:'11',name:'Guitar'};
+const markerRange=(loop=false)=>({start:{name:'Verse',time:8},end:loop?{name:'Chorus',time:24}:null,loop});
+
+test('marker REC owns arm/prepare internally; STOP disarms only its recorded track and marker playback uses no extra listen command',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;
+  const result=await f.coordinator.record(recordingTrack,markerRange(),f.context);
+  assert.equal(result.transport.recordMode.value,true);assert.equal(result.transport.isPlaying.value,true);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.values.position,8);
+  assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying).length,1);
+  await f.coordinator.stop(f.context);
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.song.tracks[1].arm,false);
+  const before=f.sent.length;
+  await f.coordinator.seekMarker({name:'Verse',time:8},f.context);
+  assert.equal(f.values.position,8);
+  assert.equal(f.sent.slice(before).some(([address])=>address===CMD.startPlaying || address===REC.setRecordMode),false);
+  await f.coordinator.record(recordingTrack,markerRange(),f.context);
+  assert.equal(f.song.tracks[0].arm,true,'another REC explicitly arms again');
+});
+
+test('marker REC applies real Arrangement loop start/length and confirms all endpoints before recording',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;
+  const state=await f.coordinator.record(recordingTrack,markerRange(true),f.context);
+  assert.equal(state.range.loop,true);assert.equal(f.values.loop,true);assert.equal(f.values.loopStart,8);assert.equal(f.values.loopLength,16);
+  const setters=f.sent.filter(([address])=>address.includes('/set/'));
+  assert.deepEqual(setters.slice(0,3),[[REC_LOOP.setLength,[{type:'float',value:16}]],[REC_LOOP.setStart,[{type:'float',value:8}]],[REC_LOOP.setEnabled,[{type:'integer',value:1}]]]);
+  assert.ok(f.sent.findIndex(([address])=>address===REC_LOOP.setEnabled)<f.sent.findIndex(([address])=>address===REC.setRecordMode));
+  await f.coordinator.stop(f.context);assert.equal(f.values.loop,true,'STOP retains the chosen region for normal header playback');
+  await f.coordinator.record(recordingTrack,markerRange(false),f.context);assert.equal(f.values.loop,false,'explicit Loop off disables the previous Arrangement loop');
+});
+
+test('missing, reordered or changed marker endpoints and invalid ranges never start REC',async t=>{
+  const f=fixture(t);
+  for(const range of [{...markerRange(true),end:{name:'Verse',time:8}}, {...markerRange(true),start:{name:'Verse',time:9}}, {...markerRange(),loop:'true'}]) {
+    await assert.rejects(f.coordinator.record(recordingTrack,range,f.context),/LOOP_RANGE|MARKER_CHANGED|ARGUMENTS/);
+  }
+  assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
+  f.song.cuePoints.reverse();
+  await f.coordinator.seekMarker({name:'Verse',time:8},f.context);assert.equal(f.values.position,8,'marker identity is name and exact position, not list index');
+  await assert.rejects(f.coordinator.seekMarker({name:'Verse',time:24},f.context),/MARKER_CHANGED/);
+});
+
+test('a loop setter with no matching observed result cannot arm or record',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;
+  const send=f.osc.send;
+  f.osc.send=(address,args)=>{if(address!==REC_LOOP.setStart)send(address,args);};
+  const error=await f.coordinator.record(recordingTrack,markerRange(true),f.context).then(()=>null,error=>error);
+  assert.equal(f.values.loop,false,'a rejected endpoint must not advance to enabling the global loop');
+  assert.match(error?.message || 'unexpected success',/LOOP_UNCONFIRMED/);
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.sent.some(([address])=>address===REC.setRecordMode || address===CMD.startPlaying),false);
+});
+
+test('STOP between loop setters prevents late region/start writes and background reads cannot undo STOP',async t=>{
+  const f=fixture(t);const send=f.osc.send;let stopping;
+  f.osc.send=(address,args)=>{send(address,args);if(address===REC_LOOP.setLength)stopping=f.coordinator.stop(f.context);};
+  await assert.rejects(f.coordinator.record(recordingTrack,markerRange(true),f.context),/STOPPED/);
+  await stopping;
+  assert.equal(f.sent.some(([address])=>address===REC_LOOP.setStart || address===CMD.startPlaying),false);
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+});
+
+test('marker REC never disarms another track or changes unrelated Punch/Session settings',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;f.song.tracks[1].arm=true;
+  await assert.rejects(f.coordinator.record(recordingTrack,markerRange(true),f.context),/OTHER_ARMED/);
+  assert.equal(f.song.tracks[1].arm,true);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
+});
+
+test('STOP discards arm ownership when Song changes without an intervening refresh',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;
+  await f.coordinator.record(recordingTrack,markerRange(),f.context);
+  const writes=[];
+  const replacement={...f.song,tracks:f.song.tracks.map(track=>({...track,handle:{...track.handle}}))};
+  let arm=true;
+  Object.defineProperty(replacement.tracks[0],'arm',{get:()=>arm,set:value=>{writes.push(value);arm=value;}});
+  replacement.tracks[1].arm=true;
+  f.replaceSong(replacement);
+  const before=f.sent.length;
+  const stopped=await f.coordinator.stop(f.context);
+  assert.deepEqual(writes,[],'matching track ids and names in another Song do not transfer ownership');
+  assert.equal(replacement.tracks[0].arm,true);assert.equal(replacement.tracks[1].arm,true);
+  assert.equal(stopped.selected,null);assert.equal(stopped.range,null);
+  assert.deepEqual(f.sent.slice(before).filter(([address])=>address===CMD.stopPlaying || address===REC.setRecordMode),[
+    [CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]],
+  ]);
+  await f.coordinator.stop(f.context);assert.deepEqual(writes,[],'a later STOP cannot reclaim the previous Song ownership');
+});
+
+test('STOP immediately inside the SDK arm setter disarms its track before confirmation and never starts later',async t=>{
+  const f=fixture(t),writes=[];let arm=false,stopping;
+  Object.defineProperty(f.song.tracks[0],'arm',{get:()=>arm,set:value=>{
+    writes.push(value);arm=value;
+    if(value) {
+      const before=f.sent.length;
+      stopping=f.coordinator.stop(f.context);
+      assert.deepEqual(f.sent.slice(before, before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+    }
+  }});
+  const recording=f.coordinator.record(recordingTrack,markerRange(),f.context);
+  await assert.rejects(recording,/STOPPED/);await stopping;
+  assert.deepEqual(writes,[true,false]);assert.equal(arm,false);assert.equal(f.song.tracks[1].arm,false);
+  f.push(REC_PREFLIGHT.trackArm,[0,true]);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(writes,[true,false],'late arm evidence does not replay the interrupted SDK setter');
+  assert.equal(f.sent.some(([address,args])=>address===CMD.startPlaying || (address===REC.setRecordMode && args[0]?.value===1)),false);
+  assert.equal(f.values.playing,false);assert.equal(f.values.record,false);
 });

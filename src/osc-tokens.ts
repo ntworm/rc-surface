@@ -65,6 +65,15 @@ export const REC = {
   setMetronome:     "/live/song/set/metronome",
 } as const;
 
+// Explicit marker-region recording. Song loop is the global Arrangement loop.
+export const REC_LOOP = {
+  getStart: '/live/song/get/loop_start',
+  getLength: '/live/song/get/loop_length',
+  setStart: '/live/song/set/loop_start',
+  setLength: '/live/song/set/loop_length',
+  setEnabled: '/live/song/set/loop',
+} as const;
+
 // Read-only Arrangement preflight. Unsupported/missing reports stay unknown.
 export const REC_PREFLIGHT = {
   loop: "/live/song/get/loop",

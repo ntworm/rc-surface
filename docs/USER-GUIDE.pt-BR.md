@@ -1151,28 +1151,40 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até 
 
 ## 16. Arrangement REC
 
-Abra **REC**, atualize o estado observado, escolha uma track armável e arme
-explicitamente. Outras tracks armadas aparecem na lista; este fluxo inicial
-exige apenas a track selecionada armada. Escolha o ponto de retorno por
-bar/beat ou marcador do Arrangement. **PREPARAR** confere as condições
-observadas e posiciona nesse ponto com o transporte parado. **REC** confere
-novamente e inicia uma tentativa. **STOP** cancela a preparação pendente e pede
-imediatamente a parada do playback e record mode desligado.
+Crie os marcadores do Arrangement no Live antes, depois abra **REC** com o
+playback parado:
 
-As verificações conservadoras exigem Loop, Punch In/Out, Arrangement Overdub,
-Session Record e retorno ao Arrangement pendente observados como desligados.
-Mude essas condições no Live; o celular não as altera. Respostas desconhecidas
-ou não suportadas bloqueiam a preparação. Configure o count-in no Live. A página
-mostra record mode e playback observados, sem comprovar captura de áudio.
+1. Escolha a track que quer gravar.
+2. Escolha o marcador de início. A faixa de marcadores mostra os marcadores da
+   sessão e a posição observada do playback; use **Zoom** e a rolagem para
+   inspecionar a região.
+3. Para gravar passagens repetidas, ligue **Loop** e escolha um marcador final
+   depois do início. Deixe Loop desligado para gravar sem um final definido.
+4. Aperte **REC**. Ele confere o estado do Live, aplica a opção de loop escolhida,
+   arma a track selecionada, posiciona no marcador inicial e começa a gravar.
+5. Aperte **STOP** para parar playback e gravação. Ele desarma a track armada por
+   esse fluxo REC. Aperte REC novamente para armá-la e fazer outra tentativa.
 
-Após STOP, **OUVIR RESULTADO · DESARMAR TRACK** desarma explicitamente a track
-selecionada, retorna ao ponto e toca o resultado atual da lane principal do
-Arrangement com record mode desligado. Monitor In bloqueia essa ação; escolha
-Auto/Off no Live. Pare a escuta antes de **NOVA TENTATIVA · ARMAR + PREPARAR**
-e então aperte REC novamente. Nenhuma ação apaga clips, seleciona take lanes
-ou aciona undo. Takes anteriores e preservação do áudio dependem do Live:
-confira no Set antes de repetir. **BOA/REVISAR** marca apenas a última passagem
-nesta sessão do host; não identifica um take de áudio nem salva o Set.
+Para ouvir, clique em um marcador na faixa ou escolha o marcador inicial e use
+**Play no cabeçalho**. Selecionar um marcador posiciona o transporte parado;
+selecionar não inicia playback nem gravação. A faixa serve de referência de
+marcadores e posição, sem waveform de áudio nem seleção de take lanes. Um
+marcador movido ou removido precisa ser escolhido novamente.
+
+Loop repete entre os dois marcadores até STOP; o marcador final não para a
+gravação. REC confirma a região de loop antes de começar. Com Loop desligado,
+REC desliga o Arrangement Loop do Live. STOP mantém a região de loop escolhida
+para reprodução. Configure count-in, monitoração da entrada e take lanes no
+Live. Para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
+
+REC exige a track selecionada armável, outras tracks desarmadas e Punch In/Out,
+Arrangement Overdub, Session Record e retorno ao Arrangement pendente
+observados como desligados. Mude essas condições no Live. Estado necessário
+desconhecido ou desatualizado bloqueia a gravação; leituras de estado em
+segundo plano não travam os controles da página. A página mostra playback e
+record mode observados, sem comprovar captura de áudio. Passagens anteriores e
+preservação de takes ficam a cargo do Live: confira no Set antes de repetir e
+salve o Set no Live. REC não apaga clips, seleciona take lanes ou aciona undo.
 
 Escritas REC exigem permissão de controller/admin e conexão atual do celular.
 Perder a conexão nunca para uma gravação em andamento nem repete uma escrita
@@ -1186,6 +1198,11 @@ takes e toque no celular ainda exigem aceitação no seu conjunto com Live.
 **AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Ative AUT e toque um XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Ative AUT novamente e clique direito no XY (celular: segure 600ms sem mover) para ajustar **SYNC / FREE**, **1/2/4 compassos** ou **10/20 segundos**, Gravar/substituir, Reproduzir, Parar e Apagar. Abrir configuração não emite controle. MAP, AUT e CFG permanecem visíveis no topo. Suas seleções são exclusivas; sair da seleção AUT não para um loop existente.
 
 SYNC usa posição, andamento e fórmula de compasso observados do playback do Live, com horário de recebimento preservado independentemente da renderização do MAP. Contagem/captura exigem Live tocando e relógio atualizado. Comandos Play/Pause aguardam confirmação do Live; mensagens de tempo/beat não confirmam esses comandos. Posição desatualizada é consultada independentemente de outras mensagens OSC recebidas. Os dados capturados ficam alinhados à grade da música. Durante reprodução, mudanças de posição e voltas do Loop do Live seguem a posição atual; STOP do Live pausa um loop SYNC habilitado e Play retoma na posição real. Relógio parado/desatualizado, mudança de posição, volta do Loop ou mudança de compasso durante a **captura** cancelam aquela tentativa e mantêm o buffer anterior completo. Para capturar vários compassos, deixe Arrangement Loop desligado até concluir. Mudança de compasso durante reprodução para o loop. FREE usa segundos decorridos e independe do transporte do Live.
+
+O pequeno quadrado branco no XY marca o alvo de retomada do mapping. Ele
+pisca enquanto a retomada está pendente; o ponto laranja continua indicando a
+posição atual do XY. Com a preferência de movimento reduzido do sistema
+ativada, o indicador branco fica contínuo.
 
 Segure e mova um XY durante a reprodução para sobrepor seu movimento manual. Ao soltar, ele volta à fase atual do loop, sem reiniciar nem regravar. A física pode fornecer o movimento capturado; durante reprodução, o loop controla ambos os eixos e substitui a inércia. Buffers/configurações dos dois XY são independentes; apenas uma captura/contagem ocorre de cada vez. Falha ao substituir preserva o loop completo anterior. Apagar pede confirmação.
 

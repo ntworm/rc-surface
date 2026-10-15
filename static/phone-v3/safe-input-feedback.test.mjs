@@ -41,3 +41,12 @@ test('audio surface shows a live value for every channel it still ships', () => 
       retired + ' left the surface with the dormant pitch lane');
   }
 });
+
+
+test('XY mapping takeover marker blinks independently of the orange performance point and respects reduced motion',()=>{
+  const css=fs.readFileSync(new URL('./style.css',import.meta.url),'utf8');
+  assert.match(css,/\.xy-pad\.safe-takeover::after\s*\{[^}]*animation:\s*mapping-takeover-blink/);
+  assert.match(css,/@keyframes mapping-takeover-blink\s*\{\s*50%\s*\{\s*opacity:\s*\.15/);
+  assert.match(css,/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.xy-pad\.safe-takeover::after\s*\{ animation: none/);
+  assert.doesNotMatch(css,/\.xy-dot\s*\{[^}]*animation:/);
+});

@@ -6,6 +6,9 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
+- Simplify Arrangement REC to track, start marker and optional Loop/end marker. Add a zoomable marker strip with observed playback position; marker selection seeks, and header Play auditions. REC verifies state, confirms the loop region, arms and records; STOP stops and disarms only the track armed by this workflow. Loop repeats until STOP; Live manages count-in and recorded passages.
+- Keep passive REC refreshes from discarding valid observations, blocking controls or revoking a prepared attempt on read failure. Current user actions supersede passive reads; late read replies cannot replace their state.
+- Blink the white XY mapping-takeover target while pending, respecting reduced motion. Keep the orange dot as the actual XY position.
 - Keep MAP/AUT/CFG header controls visible. Preserve AUT clock receipt metadata through MAP rendering; recover a stale position listener even when beat/tempo messages keep arriving. Play/pause state now waits for canonical Live observations.
 - Decode AbletonOSC T/F booleans in REC preflight and track armability, retaining strict unknown-state and monitor-enum guards.
 - Compact the VID cards, theme the scrollbar, grey Add Pose at fifteen cards and add a discrete card-removal X. Sparse IDs survive reload, Add reuses the first free ID, and removal explicitly releases held notes without shifting other mappings. CLR continues to retain its card; removed IDs retain their MAP destinations for deliberate reuse.

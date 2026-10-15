@@ -34,6 +34,12 @@ export const recordingCommands: Record<string, CommandSpec> = {
   recordingStart: { description: 'Start one prepared Arrangement attempt', handler: async (args, context) => {
     exact(args, ['token']); return recordingCoordinator.start(args['token'], context);
   } },
+  recordingRecord: { description: 'Arm chosen track and record from verified Arrangement markers, with optional loop', handler: async (args, context) => {
+    exact(args, ['track','range']); return recordingCoordinator.record(args['track'], args['range'], context);
+  } },
+  recordingSeekMarker: { description: 'Position normal header playback at a verified marker without starting it', handler: async (args, context) => {
+    exact(args, ['name','time']); return recordingCoordinator.seekMarker(args as {name:string;time:number}, context);
+  } },
   recordingStop: { description: 'Priority STOP and record mode off, including unknown state', handler: async (args, context) => {
     exact(args, []); return recordingCoordinator.stop(context);
   } },

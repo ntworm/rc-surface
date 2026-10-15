@@ -123,9 +123,17 @@ export class RecordingTransport extends EventEmitter {
   public async readState(): Promise<RecordingTransportState> {
     return this.run('read', async operation => {
       this.requireConnection();
-      await this.wait(operation, Object.keys(getters) as Field[], () => true, () => this.requestState());
+      await this.wait(operation, Object.keys(getters) as Field[], () => true, () => this.requestState(), false);
       return this.snapshot();
     });
+  }
+
+  /** A user action may supersede a passive read, never another write. */
+  public cancelRead(): void {
+    if (this.operation?.name !== 'read') return;
+    const operation = this.operation;
+    this.operation = null;
+    operation.abort.abort(Error('REC:READ_SUPERSEDED'));
   }
 
   public async seek(beats: number): Promise<RecordingTransportState> {
@@ -225,12 +233,12 @@ export class RecordingTransport extends EventEmitter {
     if (failure !== undefined) throw failure;
   }
 
-  private wait(operation: Operation, fields: Field[], matches: (state: RecordingTransportState) => boolean, send: () => void): Promise<void> {
+  private wait(operation: Operation, fields: Field[], matches: (state: RecordingTransportState) => boolean, send: () => void, invalidate = true): Promise<void> {
     if (this.operation !== operation || operation.abort.signal.aborted) return Promise.reject(operation.abort.signal.reason);
     const revision = this.revision;
     // The last pre-request value cannot describe the result of a new write or
     // resync. Keep it unknown until another valid packet supplies evidence.
-    for (const field of fields) {
+    for (const field of invalidate ? fields : []) {
       this.observations[field].value = null;
       this.observations[field].observedAt = null;
     }
