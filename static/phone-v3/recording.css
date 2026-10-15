@@ -44,7 +44,11 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-marker-strip { min-width:0; border:1px solid var(--border); background:var(--surface); padding:8px; }
 .rec-marker-strip > header { font-size:10px; color:var(--text2); justify-content:space-between; }
 .rec-workspace .rec-zoom { margin-left:auto; }
-.rec-workspace .rec-zoom input { min-height:44px; width:100px; padding:0; accent-color:var(--accent); }
+.rec-workspace .rec-zoom input { appearance:none; -webkit-appearance:none; min-height:44px; height:44px; width:100px; padding:0; border:0; background:transparent; cursor:ew-resize; }
+.rec-zoom input::-webkit-slider-runnable-track { height:4px; border:0; border-radius:0; background:var(--border); }
+.rec-zoom input::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; box-sizing:border-box; width:12px; height:20px; margin-top:-8px; border:0; border-radius:0; background:var(--accent); }
+.rec-zoom input::-moz-range-track { height:4px; border:0; border-radius:0; background:var(--border); }
+.rec-zoom input::-moz-range-thumb { box-sizing:border-box; width:12px; height:20px; border:0; border-radius:0; background:var(--accent); }
 .rec-timeline { overflow-x:auto; overflow-y:hidden; touch-action:pan-x; color-scheme:dark; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
 .rec-timeline-track { position:relative; min-width:0; height:88px; border-top:1px solid var(--text3); margin:12px 48px 0; }
 .rec-markers { position:absolute; inset:0; }
