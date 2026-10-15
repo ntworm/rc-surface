@@ -74,6 +74,12 @@ export const REC_LOOP = {
   setEnabled: '/live/song/set/loop',
 } as const;
 
+// Native punch-in owns the recording boundary during explicit REC pre-roll.
+export const REC_PREROLL = {
+  continuePlaying: '/live/song/continue_playing',
+  setPunchIn: '/live/song/set/punch_in',
+} as const;
+
 // Read-only Arrangement preflight. Unsupported/missing reports stay unknown.
 export const REC_PREFLIGHT = {
   loop: "/live/song/get/loop",

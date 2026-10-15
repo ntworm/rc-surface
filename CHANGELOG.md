@@ -6,6 +6,8 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
+- Highlight both XY targets in AUT and add separate 44px configuration buttons above them. Open, close or switch settings without arming or changing a loop; place the menu beside the XY column when space permits, preserving status and access to both buttons.
+- Add browser-local REC pre-roll OFF/1/2/4 bars, using observed meter, record-off playback and native Punch In at the selected marker. Restore owned click at the first observed crossing; priority STOP restores owned temporary state and disarms its track. Guard late starts, changed state and stale ownership. Show bar.beat above each timeline marker with end gutters; native count-in/metronome interaction and capture boundaries still require physical acceptance.
 - Restore the manual track-arm button in REC with observed ARMED/DISARMED state. REC still arms internally; STOP disarms only the track owned by that recording workflow.
 - Use Live's native locator jump when selecting a marker or starting REC, preserving that marker as the next playback start. Setting song position alone could leave Play starting from an older point.
 - Confirm Loop setters with bounded getter reads under one two-second deadline. Send each setter once, retain track/marker/state guards and let STOP cancel pending confirmation; missing confirmation blocks recording.

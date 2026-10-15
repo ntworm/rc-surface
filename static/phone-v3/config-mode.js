@@ -332,11 +332,26 @@
       const vh = documentRef.documentElement && documentRef.documentElement.clientHeight
         || (windowRef && windowRef.innerHeight) || 768;
       const margin = 8;
-      const w = Math.min(320, vw - margin * 2);
+      let w = Math.min(320, vw - margin * 2);
+      let sideLeft = null;
+      const avoid = opts.menuAvoidRect?.();
+      if (avoid) {
+        // AUT keeps both XY configuration buttons and their live status clear.
+        // Narrow viewports use the larger side and let the menu body scroll.
+        const before = Math.max(0, avoid.left - margin - 6);
+        const after = Math.max(0, vw - margin - avoid.right - 6);
+        const available = Math.max(before, after);
+        // If the excluded area fills the viewport, keep the bounded standard
+        // popover and its close control usable instead of collapsing to zero.
+        if (available >= 44) {
+          w = Math.min(w, available);
+          sideLeft = after >= before ? avoid.right + 6 : avoid.left - w - 6;
+        }
+      }
       el.style.width = w + "px";
       el.style.maxHeight = Math.max(44,vh-margin*2) + "px";
       const h = Math.min(el.offsetHeight || 320, vh - margin * 2);
-      let left = anchorRect.left;
+      let left = sideLeft ?? anchorRect.left;
       let top = anchorRect.bottom + 6;
       if (left + w + margin > vw) left = Math.max(margin, vw - w - margin);
       if (top + h + margin > vh) {
@@ -366,6 +381,7 @@
       state.expanded.clear();
       state.openFor = name;
       renderMenuFor(name, anchorRect || rectFor(closestDataName(name)));
+      opts.onMenuChange?.(name);
     }
 
     function close() {
@@ -373,6 +389,7 @@
       state.contextMenuOpen = false;
       state.openFor = null;
       clearMenu();
+      opts.onMenuChange?.(null);
       // A right-click popover is transient: closing it must not leave the
       // pointer frozen in CFG mode. A toggle-opened popover keeps CFG on.
       if (transient) off();
@@ -412,6 +429,7 @@
       if (documentRef && documentRef.body) documentRef.body.classList.remove(modeClass);
       setButtonPressed(false);
       clearMenu();
+      opts.onMenuChange?.(null);
     }
 
     function toggle() {

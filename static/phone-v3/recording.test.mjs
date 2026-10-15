@@ -255,3 +255,61 @@ test('REC manual arm uses observed state and rejects viewer, stale, playing, bus
   await seed(state(null));before=calls.length;assert.equal(node('rec-arm-state').disabled,true);click();assert.equal(calls.length,before);
   events.get('ableton-rc:phone-ws-close')();before=calls.length;assert.equal(node('rec-arm-state').disabled,true);assert.doesNotThrow(click);assert.equal(calls.length,before);
 });
+
+test('REC pre-roll preference defaults OFF, validates stored bars and tolerates disabled local storage',t=>{
+  const {api:a,calls}=api(t);
+  for(const raw of [null,undefined,'','3','8','-1','01','NaN']) assert.equal(a.preRollPreference({getItem:()=>raw}),0,String(raw));
+  for(const raw of ['0','1','2','4']) assert.equal(a.preRollPreference({getItem:()=>raw}),Number(raw));
+  assert.equal(a.preRollPreference({getItem(){throw Error('disabled');}}),0);
+  assert.equal(a.preRollPreference(undefined),0);assert.equal(calls.length,0,'reading the browser preference never contacts Live');
+});
+
+test('REC pre-roll segment wiring persists only a browser preference, sends its chosen bars and leaves STOP available',async t=>{
+  const nodes=new Map(),calls=[],saved=[];let generated=0;
+  const node=id=>{
+    if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
+      replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}});
+    return nodes.get(id);
+  };
+  const field=value=>({value,fresh:true,observedAt:Date.now()});
+  const state={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(0),metronome:field(false)},
+    selected:{index:0,id:'11',name:'Guitar'},pending:null,range:null,
+    tracks:[{index:0,id:'11',name:'Guitar',arm:false,canArm:true}],locators:[{name:'First',time:0},{name:'Last',time:4096}],meter:{numerator:4,denominator:4}};
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,
+    createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const context=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},
+    localStorage:{getItem:()=> '4',setItem:(key,value)=>saved.push([key,value])},sendPhoneCommand:(name,args,cb)=>calls.push({name,args,cb})});
+  vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
+  client.session(true,'viewer');let reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result:state});await reading;
+  let before=calls.length;node('rec-pre-roll-1').listeners.get('click')();assert.equal(calls.length,before);assert.deepEqual(saved,[]);
+  client.session(true,'controller');reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result:state});await reading;
+  assert.equal(node('rec-pre-roll-4')['aria-pressed'],'true');assert.equal(node('rec-pre-roll-4').disabled,false);
+  before=calls.length;node('rec-pre-roll-2').listeners.get('click')();assert.equal(calls.length,before,'segment changes never send Live writes');
+  assert.deepEqual(saved,[['rc-surface-v2.rec.preRollBars','2']]);assert.equal(node('rec-pre-roll-2')['aria-pressed'],'true');
+  const markers=node('rec-markers').children;
+  assert.deepEqual(markers.map(marker=>marker.children.map(child=>child.textContent)),[['1.1','First'],['1025.1','Last']]);
+  assert.equal(markers[0].style.left,'0%');assert.equal(node('rec-timeline-track').style.width,'calc(100% - 96px)');
+  node('rec-zoom').value='8';node('rec-zoom').listeners.get('input')();assert.equal(node('rec-timeline-track').style.width,'calc(800% - 96px)');
+  assert.equal(node('rec-markers').children[0],markers[0],'zoom keeps the timeline/marker binding and proportional scale');
+  node('rec-start').listeners.get('click')();assert.equal(calls.at(-1).name,'recordingRecord');assert.equal(calls.at(-1).args.preRollBars,2);
+  const pending={...state,pending:'record',preRoll:{phase:'running',bars:2},transport:{...state.transport,isPlaying:field(true),recordMode:field(true)}};
+  calls.at(-1).cb({ok:true,result:pending});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(client.view().busy,false,'host monitoring does not hold the command callback for the whole lead-in');
+  assert.equal(node('rec-status').textContent,'rec.preRolling');assert.equal(node('rec-pre-roll-2').disabled,true);assert.equal(node('rec-stop').disabled,false);
+  before=calls.length;node('rec-pre-roll-1').listeners.get('click')();assert.equal(calls.length,before);assert.equal(saved.length,1);
+  node('rec-stop').listeners.get('click')();assert.equal(calls.at(-1).name,'recordingStop');calls.at(-1).cb({ok:true,result:state});
+  await new Promise(resolve=>setImmediate(resolve));client.session(false);client.session(true,'controller');
+  assert.equal(calls.at(-1).name,'recordingStop','session reset does not replay the browser preference as a command');
+  assert.equal(node('rec-pre-roll-2')['aria-pressed'],'true','preference survives a session reset in the same browser');
+});
+
+test('REC timeline uses fixed gutters for both end cards and separate bar.beat labels above marker names',()=>{
+  const css=fs.readFileSync(new URL('./recording.css',import.meta.url),'utf8');
+  assert.match(css,/\.rec-timeline-track\s*\{[^}]*min-width:0[^}]*margin:12px 48px 0/);
+  assert.match(css,/\.rec-workspace \.rec-marker\s*\{[^}]*width:88px[^}]*translateX\(-50%\)/);
+  assert.match(css,/\.rec-marker-position,\.rec-marker-name\s*\{[^}]*display:block/);
+  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+  for(const bars of [0,1,2,4]) assert.match(html,new RegExp('id="rec-pre-roll-'+bars+'"'));
+  assert.match(html,/class="rec-row rec-pre-roll" role="group"/);
+});

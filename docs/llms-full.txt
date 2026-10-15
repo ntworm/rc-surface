@@ -1749,12 +1749,13 @@ stopped:
 1. Choose the track to record. The **ARMED / DISARMED** button beside the
    track shows Live's observed arm state. Click it to arm or disarm that track
    manually while playback is stopped; selection alone does not arm it.
-2. Choose the start marker. The marker strip shows the session's markers and
-   observed playback position; use **Zoom** and scroll to inspect the region.
+2. Choose the start marker. Each marker shows its **bar.beat** above its name.
+   Use **Zoom** and scroll to inspect the markers and observed playback position.
 3. For repeated passes, enable **Loop** and choose an end marker after the start.
    Leave Loop off for an open-ended recording.
-4. Press **REC**. It checks Live's state, applies the chosen loop setting, arms
-   the selected track, positions at the start marker and starts recording.
+4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
+   default and starts directly at the marker. Other choices play the preceding
+   bars with click before native Punch In opens capture at the selected marker.
 5. Press **STOP** to stop playback and recording. It disarms the track armed by
    this REC workflow. Press REC again to arm it for another attempt.
 
@@ -1769,8 +1770,29 @@ Loop repeats between the two markers until STOP; the end marker does not stop
 recording. REC waits for Live to confirm the loop region before starting. All
 loop changes share a two-second confirmation limit; missing confirmation
 blocks recording. With Loop off, REC turns off Live's Arrangement Loop. STOP
-retains the chosen loop region for playback. Configure count-in, input monitoring and take lanes in Live. For
-listening to the Arrangement, choose Monitor Auto/Off instead of In.
+retains the chosen loop region for playback. Configure input monitoring and
+take lanes in Live. For listening to the Arrangement, choose Monitor Auto/Off
+instead of In.
+
+Pre-roll is a preference saved in this browser, separate from Live's native
+count-in. It uses the currently observed time signature to calculate the lead-in;
+there must be enough song time before the marker. It does not resolve earlier
+time-signature changes from a meter map. REC confirms stopped/record-off state,
+enables native Punch In at the marker and starts playback from the lead-in
+position before enabling record mode. If playback has already reached the
+marker before that confirmation, it aborts instead of starting a late capture.
+The host monitors the lead-in after the command returns, so four bars are not
+limited by the phone's command timeout. At the first observed marker crossing,
+it restores the original click setting. STOP restores only click, Punch In and
+the temporary Loop start still owned by this attempt, then disarms its track;
+the temporary start is restored only while Loop remains off. Use this page's
+STOP to finish cleanup even if you stopped transport in Live. Changes to required
+state cancel the lead-in; connection/session loss or a new Set never replays
+cleanup writes. Check the corresponding settings in Live after such a loss.
+
+Live's `count_in_duration` is read-only in the supported API; this feature does
+not set it. Interaction with native count-in and **Enable Only While Recording**
+for the metronome still requires physical Live acceptance after installation.
 
 REC requires the selected track to be armable, other tracks disarmed, and
 observed Punch In/Out, Arrangement Overdub, Session Record and Back to
@@ -1784,13 +1806,16 @@ Live. REC does not delete clips, select take lanes or invoke undo.
 REC writes require controller/admin permission and the current phone connection.
 Lost connections never stop an ongoing recording or replay a write after
 reconnect. If the phone/host link is unavailable, stop recording in Live.
-The OSC and SDK flow has offline regression coverage; audio capture, monitoring,
-take preservation and mobile touch still require acceptance on your Live setup.
+The OSC and SDK flow has offline regression coverage; native Punch In capture
+boundaries, count-in/metronome preferences, audio monitoring, take preservation
+and mobile touch still require acceptance on your Live setup.
 
 
 ## AUT: XY gesture loops
 
-**AUT** beside MAP/CFG selects automation recording for XY1 or XY2. Enable AUT, then tap one XY: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Enable AUT again and right-click the XY (phone: hold without moving for 600ms) to set **SYNC / FREE**, **1/2/4 bars** or **10/20 seconds**, Record/replace, Play, Stop and Clear. Opening configuration emits no control. MAP, AUT and CFG stay visible in the header. Their selections are exclusive; leaving AUT selection does not stop an existing loop.
+**AUT** beside MAP/CFG selects automation recording for XY1 or XY2. While AUT is on, both XY targets are highlighted and each has an **AUT** configuration button above its movement area, including empty XY loops. Tap that button to open settings, tap it again to close, or use the other XY's button to switch targets. It never starts capture or changes a loop. The LOOP/REC/countdown status stays inside the XY, separate from this button. Enter and Space also activate the focused button.
+
+To record, enable AUT and tap the XY movement area: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Right-click the XY (phone: hold without moving for 600ms) still opens configuration. Settings include **SYNC / FREE**, **1/2/4 bars** or **10/20 seconds**, Record/replace, Play, Stop and Clear. Choosing a menu action or dismissing the menu resumes normal performance; toggling the same AUT configuration button closed keeps target selection active. Opening configuration emits no control. MAP, AUT and CFG stay visible in the header. Their selections are exclusive; leaving AUT selection does not stop an existing loop.
 
 SYNC uses Live's observed playback position, tempo and time signature, with receipt time retained independently of MAP rendering. Count/capture require Live playing and a fresh clock. Play/pause commands wait for Live confirmation; unrelated tempo/beat messages cannot confirm them. A stale position listener is recovered independently of other incoming OSC traffic. Captured data is aligned to the song grid. During playback, seeks and Live loop wraps follow the current song position; Live STOP pauses an enabled SYNC loop, and Play resumes at the real position. A stopped/stale clock, seek, loop wrap or meter change during **capture** cancels that attempt and retains the previous completed buffer. For a capture spanning multiple bars, leave Live's Arrangement Loop off until capture completes. A meter change during playback stops the loop. FREE uses elapsed seconds and ignores the Live transport.
 

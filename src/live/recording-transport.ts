@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/rc-surface
 import { EventEmitter } from 'node:events';
-import { CMD, GET, REC, RESPONSE } from '../osc-tokens.js';
+import { CMD, GET, REC, REC_PREROLL, RESPONSE } from '../osc-tokens.js';
 
 export const RECORDING_FRESH_MS = 2000;
 export const RECORDING_CONFIRM_MS = 2000;
@@ -34,6 +34,7 @@ const getters: Record<Field, string> = {
   songTimeBeats: GET.currentSongTime, metronome: GET.metronome,
 };
 interface Operation { name: string; abort: AbortController }
+interface PreRollProgress { start: number; startedAt: number; position: number; observedAt: number; tempo: () => number | null }
 type Packet = [address: string, args?: Array<{ type: string; value: number }>];
 
 /**
@@ -47,6 +48,7 @@ export class RecordingTransport extends EventEmitter {
   private active = false;
   private revision = 0;
   private operation: Operation | null = null;
+  private preRollProgress: PreRollProgress | null = null;
   private readonly observations = {
     recordMode: empty<boolean>(), isPlaying: empty<boolean>(),
     songTimeBeats: empty<number>(), metronome: empty<boolean>(),
@@ -107,6 +109,7 @@ export class RecordingTransport extends EventEmitter {
 
   public invalidate(): void {
     this.operation?.abort.abort(new Error('AbletonOSC lost before recording state was observed'));
+    this.preRollProgress = null;
     this.observations.recordMode = empty(); this.observations.isPlaying = empty();
     this.observations.songTimeBeats = empty(); this.observations.metronome = empty();
     this.emit('update', this.snapshot());
@@ -115,7 +118,7 @@ export class RecordingTransport extends EventEmitter {
   public dispose(): void { this.active = false; this.invalidate(); }
 
   public sendFailed(address: string, error: Error): void {
-    if ([...Object.values(REC), ...Object.values(getters), CMD.startPlaying, CMD.stopPlaying, CMD.cuePointJump].includes(address)) {
+    if ([...Object.values(REC), ...Object.values(REC_PREROLL), ...Object.values(getters), CMD.startPlaying, CMD.stopPlaying, CMD.cuePointJump].includes(address)) {
       this.operation?.abort.abort(error);
     }
   }
@@ -193,6 +196,62 @@ export class RecordingTransport extends EventEmitter {
     });
   }
 
+  /** Continue from the observed current position, never Live's insert marker.
+   * Punch-in is configured by the coordinator before this record-OFF start. */
+  public async continueFrom(beats: number, guard: () => void = () => {}, tempo?: () => number | null): Promise<RecordingTransportState> {
+    if (!Number.isFinite(beats) || beats < 0) throw Error('REC:PRE_ROLL_RANGE');
+    return this.run('continue', async operation => {
+      guard(); this.requireStopped();
+      await this.wait(operation, ['songTimeBeats'], state => Math.abs((state.songTimeBeats.value ?? -1) - beats) < .001,
+        () => this.sendBatch([[REC.setSongTime, [{type:'float',value:beats}]], [GET.currentSongTime]]));
+      guard(); this.requireStopped();
+      await this.wait(operation, ['songTimeBeats','isPlaying','recordMode'], state =>
+        state.recordMode.value === false && state.isPlaying.value === true && (tempo !== undefined || (state.songTimeBeats.value ?? -1) >= beats),
+        () => {
+          guard();
+          // Anchor to the native start send, before any confirmation latency.
+          const at = Date.now();
+          this.preRollProgress = tempo ? {start:beats, startedAt:at, position:beats, observedAt:at, tempo} : null;
+          this.sendBatch([[REC_PREROLL.continuePlaying], [GET.currentSongTime], [GET.isPlaying], [REC.getRecordMode]]);
+        });
+      this.checkPreRollProgress(this.snapshot());
+      guard(); return this.snapshot();
+    });
+  }
+
+  private checkPreRollProgress(state: RecordingTransportState): void {
+    const baseline = this.preRollProgress;
+    if (!baseline) return;
+    const position = state.songTimeBeats.value, at = state.songTimeBeats.observedAt, tempo = baseline.tempo();
+    if (!state.songTimeBeats.fresh || position === null || at === null || tempo === null || !Number.isFinite(tempo) || tempo <= 0) throw Error('REC:PRE_ROLL_STATE');
+    // Keep both the native-start bound and the preceding observation. The
+    // fixed half-beat tolerance covers OSC/report jitter without accepting a
+    // shortened bar or a backward seek before Record ON.
+    if (at < baseline.observedAt || position < baseline.position-.001
+      || position-baseline.start > (at-baseline.startedAt)*tempo/60000+.5
+      || position-baseline.position > (at-baseline.observedAt)*tempo/60000+.5) throw Error('REC:PRE_ROLL_SEEK');
+    baseline.position = position; baseline.observedAt = at;
+  }
+
+  /** Playback is already running before enabling record. Native Punch In,
+   * rather than a JS timer, decides where sample capture begins. */
+  public async punchRecording(before: number, guard: () => void = () => {}): Promise<RecordingTransportState> {
+    return this.run('punch', async operation => {
+      guard(); this.requireConnection();
+      await this.wait(operation, ['songTimeBeats','isPlaying','recordMode'], () => true,
+        () => this.sendBatch([[GET.currentSongTime], [GET.isPlaying], [REC.getRecordMode]]), false);
+      guard();
+      const state = this.snapshot();
+      if (!state.songTimeBeats.fresh || !state.isPlaying.fresh || !state.recordMode.fresh
+        || state.isPlaying.value !== true || state.recordMode.value !== false) throw Error('REC:PRE_ROLL_STATE');
+      if ((state.songTimeBeats.value ?? Infinity) >= before) throw Error('REC:PRE_ROLL_PASSED');
+      this.checkPreRollProgress(state);
+      await this.wait(operation, ['recordMode','isPlaying'], next => next.recordMode.value === true && next.isPlaying.value === true,
+        () => {guard(); this.sendBatch([[REC.setRecordMode, [{type:'integer',value:1}]], [REC.getRecordMode], [GET.isPlaying]]);});
+      guard(); return this.snapshot();
+    });
+  }
+
   /** Explicit audition playback, with fresh record-off evidence. */
   public async startPlayback(guard: () => void = () => {}): Promise<RecordingTransportState> {
     return this.run('playback', async operation => {
@@ -208,6 +267,7 @@ export class RecordingTransport extends EventEmitter {
    * other's confirmation; unknown state is allowed. No toggle, seek or retry. */
   public async stopRecording(): Promise<RecordingTransportState> {
     this.operation?.abort.abort(new Error('Recording operation superseded by stop'));
+    this.preRollProgress = null;
     return this.run('stop', async operation => {
       await this.wait(operation, ['isPlaying', 'recordMode'], state => state.isPlaying.value === false && state.recordMode.value === false,
         () => this.sendBatch([[CMD.stopPlaying], [REC.setRecordMode, [{ type: 'integer', value: 0 }]], [GET.isPlaying], [REC.getRecordMode]]));

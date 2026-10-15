@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from '../src/live/recording-transport.ts';
-import { CMD, GET, REC, RESPONSE } from '../src/osc-tokens.ts';
+import { CMD, GET, REC, REC_PREROLL, RESPONSE } from '../src/osc-tokens.ts';
 
 function fixture(t) {
   t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 10000 });
@@ -33,6 +33,7 @@ test('REC canonical addresses match the public AbletonOSC Song contract', () => 
     setSongTime: '/live/song/set/current_song_time',
     setMetronome: '/live/song/set/metronome',
   });
+  assert.deepEqual(REC_PREROLL,{continuePlaying:'/live/song/continue_playing',setPunchIn:'/live/song/set/punch_in'});
 });
 
 test('REC starts unknown and observes each field independently; legacy optimistic state is not evidence', t => {

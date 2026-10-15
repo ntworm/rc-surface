@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { CLIP, REC_LOOP, REC_PREFLIGHT } from '../osc-tokens.js';
+import { CLIP, GET, REC_LOOP, REC_PREFLIGHT, REC_PREROLL } from '../osc-tokens.js';
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
@@ -15,7 +15,12 @@ interface MarkerRef { name: string; time: number }
 interface MarkerRange { start: MarkerRef; end: MarkerRef | null; loop: boolean }
 interface Observed { value: unknown; at: number; revision: number }
 interface Operation { name: string; abort: AbortController; context?: CommandExecutionContext }
-interface LoopExpectation { key: 'loop' | 'loopStart' | 'loopLength'; value: number | boolean; getter: string; deadline: number }
+interface LoopExpectation { key: 'loop' | 'loopStart' | 'loopLength' | 'punchIn'; value: number | boolean; getter: string; deadline: number; code?: string }
+interface PreRoll {
+  operation: Operation; song: Song; track: TrackRef; range: MarkerRange; bars: number;
+  start: number; numerator: number; denominator: number; phase: 'preparing' | 'running' | 'complete';
+  originalClick: boolean; originalLoopStart: number; clickOwned: boolean; punchOwned: boolean; loopStartOwned: boolean;
+}
 const flags = ['loop', 'punchIn', 'punchOut', 'overdub', 'backToArranger', 'sessionRecord'] as const;
 function fail(code: string): never { throw Error('REC:' + code); }
 // AbletonOSC keeps Python booleans as OSC T/F; older reports may use 0/1.
@@ -40,6 +45,9 @@ export class RecordingCoordinator extends EventEmitter {
   private song: Song | null = null;
   private range: MarkerRange | null = null;
   private armedByRecorder: TrackRef | null = null;
+  private preRoll: PreRoll | null = null;
+  private preRollRequested = false;
+  private preRollError: string | null = null;
 
   constructor(private readonly osc: OSCTransport, private readonly getSong: () => Song) {
     super();
@@ -49,7 +57,10 @@ export class RecordingCoordinator extends EventEmitter {
 
   private readonly lost = () => {
     this.operation?.abort.abort(Error('REC:CONNECTION'));
+    this.operation = null;
     this.preparedToken = null; this.observed.clear();
+    if (this.preRoll) { this.preRoll = null; this.preRollError = 'REC:CONNECTION'; }
+    this.preRollRequested = false;
   };
   public dispose(): void {
     this.lost(); this.osc.off('recording-observation', this.observe); this.osc.off('link-lost', this.lost);
@@ -60,6 +71,11 @@ export class RecordingCoordinator extends EventEmitter {
       this.song = song; this.selected = null; this.point = null; this.preparedToken = null;
       this.lastAttempt = null; this.observed.clear();
       this.range = null; this.armedByRecorder = null;
+      if (this.preRoll) {
+        this.preRoll.operation.abort.abort(Error('REC:IDENTITY'));
+        if (this.operation === this.preRoll.operation) this.operation = null;
+      }
+      this.preRoll = null; this.preRollRequested = false; this.preRollError = null;
     }
     return song;
   }
@@ -82,6 +98,8 @@ export class RecordingCoordinator extends EventEmitter {
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
       lastAttempt: this.lastAttempt,
+      preRoll: this.preRoll ? {bars:this.preRoll.bars, phase:this.preRoll.phase, start:this.preRoll.start, point:this.preRoll.range.start.time} : null,
+      ...(this.preRollError ? {error:this.preRollError} : {}),
     };
   }
   private requireContext(context?: CommandExecutionContext): void {
@@ -105,6 +123,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
   private idle(context?: CommandExecutionContext): void {
     this.requireContext(context); this.interruptRead(); if (this.operation) fail('BUSY');
+    if (this.preRoll) fail('PRE_ROLL_STATE');
   }
   private interruptRead(): void {
     if (this.operation?.name !== 'read') return;
@@ -170,16 +189,26 @@ export class RecordingCoordinator extends EventEmitter {
     if (context) this.requireContext(context);
     if (name !== 'read') this.interruptRead();
     if (this.operation) fail('BUSY');
+    if (this.preRoll && !['read','stop','click'].includes(name)) fail('PRE_ROLL_STATE');
     const operation: Operation = { name, abort: new AbortController(), ...(context ? { context } : {}) };
     this.operation = operation;
     try { this.check(operation); await body(operation); this.check(operation); }
-    catch (error) { if (name !== 'read') this.preparedToken = null; throw error; }
-    finally { if (this.operation === operation) this.operation = null; }
+    catch (error) {
+      if (name !== 'read') this.preparedToken = null;
+      if (name === 'record' && this.preRoll?.operation === operation) await this.failPreRoll(this.preRoll, error);
+      throw error;
+    }
+    finally {
+      if (this.operation === operation && !(this.preRoll?.operation === operation && this.preRoll.phase === 'running')) this.operation = null;
+    }
     return this.snapshot();
   }
   private readonly observe = ({ address, args, at }: { address: string; args: { value?: unknown }[]; at: number }) => {
     let key: string | undefined, value: unknown;
     if (address === CLIP.getTrackNames && args.every(arg => typeof arg.value === 'string')) { key = 'names'; value = args.map(arg => arg.value); }
+    else if (address === GET.tempo && args.length === 1 && typeof args[0]?.value === 'number' && Number.isFinite(args[0].value) && args[0].value >= 20 && args[0].value <= 999) {
+      key = 'tempo'; value = args[0].value;
+    }
     else if (args.length === 1 && (address === REC_LOOP.getStart || address === REC_LOOP.getLength)) {
       const raw = args[0]?.value;
       if (typeof raw === 'number' && Number.isFinite(raw) && raw >= (address === REC_LOOP.getLength ? .001 : 0) && raw <= 10_000_000) {
@@ -215,11 +244,12 @@ export class RecordingCoordinator extends EventEmitter {
       keys.push('arm:' + i, 'canArm:' + i);
     }
     if (this.selected) { packets.push([REC_PREFLIGHT.trackMonitor, this.selected.index]); keys.push('monitor:' + this.selected.index); }
-    if (this.range?.loop) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
+    if (this.range?.loop || this.preRollRequested || this.preRoll) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
+    if (this.preRollRequested || this.preRoll) { packets.push([GET.tempo]); keys.push('tempo'); }
     const revision = this.revision;
     const evidence = new Promise<void>((resolve, reject) => {
       let done = false, retry: ReturnType<typeof setTimeout> | undefined;
-      const mismatch = () => Error(`REC:LOOP_UNCONFIRMED (${expected!.key} expected=${expected!.value} observed=${this.value(expected!.key)})`);
+      const mismatch = () => Error(`REC:${expected!.code || 'LOOP_UNCONFIRMED'} (${expected!.key} expected=${expected!.value} observed=${this.value(expected!.key)})`);
       const matches = () => {
         if (!expected) return true;
         const actual = this.value(expected.key);
@@ -236,7 +266,7 @@ export class RecordingCoordinator extends EventEmitter {
           this.check(operation);
           if (expected && Date.now() >= expected.deadline) { finish(mismatch()); return; }
           if (keys.every(key => (this.observed.get(key)?.revision ?? 0) > revision && this.value(key) !== null)) {
-            if (expected) { this.preflight(false, false); this.markerRange(this.range!); }
+            if (expected) { this.preflight(false, false, expected.key); this.markerRange(this.range!); }
             if (matches()) finish();
           }
         }
@@ -261,18 +291,18 @@ export class RecordingCoordinator extends EventEmitter {
     await Promise.all([evidence, this.osc.recording.readState()]);
     this.check(operation);
   }
-  private preflight(armed: boolean, checkLoop = true): void {
+  private preflight(armed: boolean, checkLoop = true, confirming?: string): void {
     this.identity();
     const transport = this.osc.recording.snapshot();
     if (!transport.isPlaying.fresh || !transport.recordMode.fresh) fail('UNKNOWN');
     if (transport.isPlaying.value || transport.recordMode.value) fail('NOT_STOPPED');
-    this.conditions(armed, checkLoop);
+    this.conditions(armed, checkLoop, confirming);
   }
-  private conditions(armed: boolean, checkLoop = true): void {
+  private conditions(armed: boolean, checkLoop = true, confirming?: string): void {
     for (const key of flags) {
       const value = this.value(key); if (value === null) fail('UNKNOWN');
-      if (key === 'loop' && !checkLoop) continue;
-      const expected = key === 'loop' && this.range?.loop === true;
+      if ((key === 'loop' && !checkLoop) || key === confirming) continue;
+      const expected = key === 'loop' && this.range?.loop === true || key === 'punchIn' && this.preRoll?.punchOwned === true;
       if (value !== expected) fail(key.toUpperCase());
     }
     if (checkLoop && this.range?.loop && (Math.abs(Number(this.value('loopStart')) - this.range.start.time) >= .001
@@ -310,25 +340,36 @@ export class RecordingCoordinator extends EventEmitter {
     });
   }
   /** One explicit REC action owns arm, region confirmation, seek and start. */
-  public async record(track: TrackRef, requested: MarkerRange, context?: CommandExecutionContext) {
+  public async record(track: TrackRef, requested: MarkerRange, context?: CommandExecutionContext, preRollBars = 0) {
     this.idle(context); this.currentSong();
     const range = this.markerRange(requested);
+    if (![0,1,2,4].includes(preRollBars)) fail('PRE_ROLL_RANGE');
     if (!track || Object.keys(track).length !== 3 || !Number.isInteger(track.index) || track.index < 0 || typeof track.id !== 'string' || typeof track.name !== 'string') fail('IDENTITY');
     const candidate = this.currentSong().tracks[track.index];
     if (!candidate || String(candidate.handle.id) !== track.id || candidate.name !== track.name) fail('IDENTITY');
-    this.preparedToken = null;
+    this.preparedToken = null; this.preRollError = null;
     return this.run('record', context, async operation => {
-      this.range = range; this.point = range.start.time;
+      this.range = range; this.point = range.start.time; this.preRollRequested = preRollBars > 0;
       await this.read(operation); this.stopped();
       this.selected = {...track};
       await this.read(operation); this.preflight(false, false); this.markerRange(range);
+      if (preRollBars) {
+        const numerator = Number(this.value('numerator')), denominator = Number(this.value('denominator'));
+        const start = range.start.time - preRollBars * numerator * 4 / denominator;
+        if (!Number.isFinite(start) || start < 0 || ![1,2,4,8,16,32].includes(denominator)) fail('PRE_ROLL_RANGE');
+        const transport = this.osc.recording.snapshot();
+        if (!transport.metronome.fresh || transport.metronome.value === null || this.value('tempo') === null || this.value('loopStart') === null) fail('UNKNOWN');
+        this.preRoll = {operation, song:this.currentSong(), track:{...track}, range, bars:preRollBars, start, numerator, denominator,
+          phase:'preparing', originalClick:transport.metronome.value, originalLoopStart:Number(this.value('loopStart')),
+          clickOwned:false, punchOwned:false, loopStartOwned:false};
+      }
       // The chosen Loop setting is explicit. Never silently clear Punch,
       // Session Record, other armed tracks, or Back to Arrangement.
       // Anonymous GET replies may still describe an earlier poll. Wait for
       // matching evidence using GETs only; all loop writes share one budget.
       const loopDeadline = Date.now() + RECORDING_CONFIRM_MS;
       const loopGetters = {loop: REC_PREFLIGHT.loop, loopStart: REC_LOOP.getStart, loopLength: REC_LOOP.getLength};
-      const confirm = async (address: string, value: number, key: LoopExpectation['key'], expected: number | boolean) => {
+      const confirm = async (address: string, value: number, key: 'loop' | 'loopStart' | 'loopLength', expected: number | boolean) => {
         this.check(operation); this.identity(); this.stopped(); this.markerRange(range);
         if (Date.now() >= loopDeadline) fail(`LOOP_UNCONFIRMED (${key} expected=${expected} observed=${this.value(key)})`);
         this.osc.send(address, [{type: address === REC_LOOP.setEnabled ? 'integer' : 'float', value}]);
@@ -341,6 +382,7 @@ export class RecordingCoordinator extends EventEmitter {
         await confirm(REC_LOOP.setEnabled, 1, 'loop', true);
       }
       this.check(operation); this.preflight(false); this.markerRange(range);
+      if (this.preRoll) { await this.startPreRoll(this.preRoll); return; }
       this.armedByRecorder = {...track}; this.identity().arm = true;
       await this.read(operation); this.preflight(true);
       await this.jumpMarker(operation, range.start);
@@ -348,7 +390,130 @@ export class RecordingCoordinator extends EventEmitter {
       if (Math.abs((this.osc.recording.snapshot().songTimeBeats.value ?? -1) - range.start.time) >= .001) fail('POSITION_CHANGED');
       await this.osc.recording.startRecording(() => {this.check(operation); this.identity(); this.conditions(true); this.markerRange(range);});
       this.lastAttempt = {id:randomUUID(),track:{...track},point:range.start.time,stopped:false,mark:null};
+    }).finally(() => {this.preRollRequested = false;});
+  }
+  private ownPreRoll(owner: PreRoll, operation = owner.operation): void {
+    this.check(operation);
+    if (this.preRoll !== owner || this.currentSong() !== owner.song) fail('IDENTITY');
+    const track = owner.song.tracks[owner.track.index];
+    if (!track || String(track.handle.id) !== owner.track.id || track.name !== owner.track.name) fail('IDENTITY');
+    const names = this.value('names');
+    if (!Array.isArray(names) || owner.song.tracks.some((item,index) => names[index] !== item.name)) fail('IDENTITY');
+  }
+  private async setPreRollProperty(owner: PreRoll, address: string, value: number, key: 'punchIn' | 'loopStart', operation = owner.operation): Promise<void> {
+    this.ownPreRoll(owner, operation); this.stopped();
+    this.osc.send(address, [{type:key === 'punchIn' ? 'integer' : 'float', value}]);
+    await this.read(operation, {key, value:key === 'punchIn' ? value === 1 : value,
+      getter:key === 'punchIn' ? REC_PREFLIGHT.punchIn : REC_LOOP.getStart, deadline:Date.now()+RECORDING_CONFIRM_MS, code:'PRE_ROLL_STATE'});
+    this.ownPreRoll(owner, operation);
+  }
+  private async startPreRoll(owner: PreRoll): Promise<void> {
+    const operation = owner.operation;
+    this.ownPreRoll(owner); this.preflight(false); this.markerRange(owner.range);
+    if (!owner.range.loop && Math.abs(Number(this.value('loopStart')) - owner.range.start.time) >= .001) {
+      owner.loopStartOwned = true;
+      await this.setPreRollProperty(owner, REC_LOOP.setStart, owner.range.start.time, 'loopStart');
+    }
+    owner.punchOwned = true;
+    await this.setPreRollProperty(owner, REC_PREROLL.setPunchIn, 1, 'punchIn');
+    if (!owner.originalClick) {
+      owner.clickOwned = true;
+      await this.osc.recording.setMetronome(true);
+    }
+    this.ownPreRoll(owner); this.preflight(false); this.markerRange(owner.range);
+    this.armedByRecorder = {...owner.track}; this.identity(owner.track).arm = true;
+    await this.read(operation); this.preflight(true);
+    const guard = () => {
+      this.ownPreRoll(owner); this.identity(owner.track); this.conditions(true); this.markerRange(owner.range);
+      if (this.value('numerator') !== owner.numerator || this.value('denominator') !== owner.denominator
+        || Math.abs(Number(this.value('loopStart'))-owner.range.start.time) >= .001) fail('PRE_ROLL_STATE');
+    };
+    await this.osc.recording.continueFrom(owner.start, guard, () => {
+      const tempo = this.value('tempo'); return typeof tempo === 'number' ? tempo : null;
     });
+    guard();
+    await this.osc.recording.punchRecording(owner.range.start.time, guard);
+    owner.phase = 'running';
+    this.lastAttempt = {id:randomUUID(),track:{...owner.track},point:owner.range.start.time,stopped:false,mark:null};
+    // Return the command now. Its lifecycle remains owned on the host so STOP
+    // can preempt immediately and a four-bar lead-in has no client timeout.
+    void this.monitorPreRoll(owner).catch(error => this.failPreRoll(owner, error));
+  }
+  private pausePreRoll(owner: PreRoll): Promise<void> {
+    return new Promise((resolve,reject) => {
+      const signal = owner.operation.abort.signal;
+      const abort = () => {clearTimeout(timer); reject(signal.reason);};
+      const timer = setTimeout(() => {signal.removeEventListener('abort',abort); resolve();},100);
+      if (signal.aborted) {abort(); return;}
+      signal.addEventListener('abort',abort,{once:true});
+    });
+  }
+  private async monitorPreRoll(owner: PreRoll): Promise<void> {
+    let previous = this.osc.recording.snapshot().songTimeBeats.value ?? owner.start;
+    let previousAt = Date.now(), progressedAt = previousAt;
+    // Tempo may change during the lead-in. Live's minimum supported 20 BPM
+    // gives a finite outer bound; capture itself is always native Punch In.
+    const deadline = previousAt + (owner.range.start.time-owner.start)*3000 + RECORDING_CONFIRM_MS;
+    try {
+      for (;;) {
+        await this.pausePreRoll(owner); await this.read(owner.operation);
+        this.ownPreRoll(owner); this.identity(owner.track); this.conditions(true); this.markerRange(owner.range);
+        const transport = this.osc.recording.snapshot(), now = Date.now(), position = transport.songTimeBeats.value;
+        if (!transport.songTimeBeats.fresh || !transport.isPlaying.fresh || !transport.recordMode.fresh
+          || transport.isPlaying.value !== true || transport.recordMode.value !== true || position === null
+          || this.value('numerator') !== owner.numerator || this.value('denominator') !== owner.denominator
+          || Math.abs(Number(this.value('loopStart'))-owner.range.start.time) >= .001) fail('PRE_ROLL_STATE');
+        const tempo = Number(this.value('tempo'));
+        if (!Number.isFinite(tempo) || position < previous-.001 || position-previous > (now-previousAt)*tempo/60000+.5) fail('PRE_ROLL_SEEK');
+        if (position > previous+.001) progressedAt = now;
+        if (now-progressedAt >= RECORDING_FRESH_MS || now > deadline) fail('PRE_ROLL_CLOCK');
+        if (position >= owner.range.start.time) {
+          if (owner.clickOwned) {
+            this.ownPreRoll(owner); await this.osc.recording.setMetronome(owner.originalClick);
+            owner.clickOwned = false;
+          }
+          owner.phase = 'complete'; return;
+        }
+        previous = position; previousAt = now;
+      }
+    } finally {
+      if (this.operation === owner.operation && owner.phase === 'complete') this.operation = null;
+    }
+  }
+  private async restorePreRoll(owner: PreRoll, operation: Operation): Promise<void> {
+    this.ownPreRoll(owner, operation); await this.read(operation); this.ownPreRoll(owner, operation); this.stopped();
+    let failure: unknown;
+    const attempt = async (restore: () => Promise<void>) => {try {await restore();} catch (error) {failure ??= error;}};
+    if (owner.clickOwned && this.osc.recording.snapshot().metronome.value === true) await attempt(async () => {
+      this.ownPreRoll(owner, operation); await this.osc.recording.setMetronome(owner.originalClick); owner.clickOwned = false;
+    });
+    if (owner.punchOwned && this.value('punchIn') === true) await attempt(async () => {
+      // Expected state changes before confirmation so subsequent preflight
+      // observes the restored OFF value rather than this workflow's ON.
+      owner.punchOwned = false;
+      await this.setPreRollProperty(owner, REC_PREROLL.setPunchIn, 0, 'punchIn', operation);
+    });
+    if (owner.loopStartOwned && this.value('loop') === false && Math.abs(Number(this.value('loopStart'))-owner.range.start.time) < .001) await attempt(async () => {
+      owner.loopStartOwned = false;
+      await this.setPreRollProperty(owner, REC_LOOP.setStart, owner.originalLoopStart, 'loopStart', operation);
+    });
+    if (failure) throw failure;
+  }
+  private async failPreRoll(owner: PreRoll, error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : 'REC:PRE_ROLL_STATE';
+    if (this.preRoll !== owner) return;
+    // STOP now owns cleanup. An interrupted start/monitor must not discard
+    // its ownership while the priority stop is awaiting fresh evidence.
+    if (this.operation?.name === 'stop') return;
+    if (!owner.clickOwned && !owner.punchOwned && !owner.loopStartOwned && !this.armedByRecorder) {
+      this.preRoll = null; this.preRollError = message; return;
+    }
+    if (this.operation === owner.operation && owner.operation.context?.isCurrent()
+      && this.getSong() === owner.song && this.osc.state.available && this.osc.state.connected) {
+      try { await this.stop(owner.operation.context); }
+      catch (cleanup) {this.preRollError = message+'; '+(cleanup instanceof Error ? cleanup.message : 'REC:PRE_ROLL_STATE'); return;}
+    } else {this.preRoll = null; if (this.operation === owner.operation) this.operation = null;}
+    this.preRollError = message;
   }
   /** A timeline marker positions normal header playback; it never starts it. */
   public async seekMarker(marker: MarkerRef, context?: CommandExecutionContext) {
@@ -378,11 +543,18 @@ export class RecordingCoordinator extends EventEmitter {
   public async stop(context?: CommandExecutionContext) {
     this.requireContext(context);
     if (this.operation?.name === 'stop' && this.stopping) return this.stopping;
+    const preRoll = this.preRoll;
     this.operation?.abort.abort(Error('REC:STOPPED')); this.operation = null; this.preparedToken = null;
     const promise = this.run('stop', context, async operation => {
       await this.osc.recording.stopRecording();
       // A newly loaded Set cannot inherit this recorder's track ownership.
       const song = this.currentSong();
+      let cleanupError: unknown;
+      if (preRoll && this.preRoll === preRoll) {
+        try { await this.restorePreRoll(preRoll, operation); }
+        catch (error) {cleanupError = error;}
+        finally { if (this.preRoll === preRoll) this.preRoll = null; }
+      }
       if (this.lastAttempt) this.lastAttempt.stopped = true;
       const ref = this.armedByRecorder;
       if (ref) {
@@ -394,6 +566,7 @@ export class RecordingCoordinator extends EventEmitter {
         if (this.value('arm:' + ref.index) !== false) fail('ARM_UNCONFIRMED');
         this.armedByRecorder = null;
       }
+      if (cleanupError) throw cleanupError;
     });
     this.stopping = promise;
     try { return await promise; } finally { if (this.stopping === promise) this.stopping = null; }

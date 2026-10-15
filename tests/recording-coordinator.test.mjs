@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
-import { CMD, GET, REC, REC_LOOP, REC_PREFLIGHT, CLIP } from '../src/osc-tokens.ts';
+import { CMD, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL, CLIP } from '../src/osc-tokens.ts';
 
 test('REC conservative getter addresses match public AbletonOSC handlers literally', () => {
   assert.deepEqual(REC_PREFLIGHT, {
@@ -25,7 +25,8 @@ function fixture(t) {
     { name: 'Bass', handle: { id: '22' }, arm: false },
   ], cuePoints: [{ name: 'Verse', time: 8 }, { name: 'Chorus', time: 24 }] };
   const values = { playing: false, record: false, position: 0, click: false, monitor: 1,
-    loop: false, loopStart:0, loopLength:4, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false };
+    loop: false, loopStart:0, loopLength:4, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false,
+    numerator:4, denominator:4, tempo:120 };
   const sent = [];
   let block, current = true;
   // AbletonOSC's pythonosc builder preserves Python bool as OSC T/F tags.
@@ -42,6 +43,8 @@ function fixture(t) {
     if (address === REC_LOOP.setEnabled) values.loop = args[0].value === 1;
     if (address === REC_LOOP.setStart) values.loopStart = args[0].value;
     if (address === REC_LOOP.setLength) values.loopLength = args[0].value;
+    if (address === REC_PREROLL.setPunchIn) values.punchIn = args[0].value === 1;
+    if (address === REC_PREROLL.continuePlaying) values.playing = true;
     if (address === CMD.startPlaying) values.playing = true;
     if (address === CMD.stopPlaying) values.playing = false;
     if (address === CMD.cuePointJump) values.position = song.cuePoints[args[0].value].time;
@@ -54,7 +57,9 @@ function fixture(t) {
     if (address === REC_LOOP.getStart) response = [values.loopStart];
     if (address === REC_LOOP.getLength) response = [values.loopLength];
     if (address === CLIP.getTrackNames) response = song.tracks.map(track => track.name);
-    if ([REC_PREFLIGHT.signatureNumerator, REC_PREFLIGHT.signatureDenominator].includes(address)) response = [4];
+    if (address === REC_PREFLIGHT.signatureNumerator) response = [values.numerator];
+    if (address === REC_PREFLIGHT.signatureDenominator) response = [values.denominator];
+    if (address === GET.tempo) response = [values.tempo];
     for (const key of ['loop','punchIn','punchOut','overdub','backToArranger','sessionRecord']) {
       if (address === REC_PREFLIGHT[key]) response = [values[key]];
     }
@@ -652,4 +657,193 @@ test('STOP immediately inside the SDK arm setter disarms its track before confir
   assert.deepEqual(writes,[true,false],'late arm evidence does not replay the interrupted SDK setter');
   assert.equal(f.sent.some(([address,args])=>address===CMD.startPlaying || (address===REC.setRecordMode && args[0]?.value===1)),false);
   assert.equal(f.values.playing,false);assert.equal(f.values.record,false);
+});
+
+function preRollFixture(t) {
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t);
+  f.song.tracks[0].arm=false;
+  f.song.cuePoints=[{name:'Take',time:32},{name:'End',time:64}];
+  f.values.loopStart=4;
+  f.range={start:{name:'Take',time:32},end:null,loop:false};
+  return f;
+}
+const preRollWrites=f=>f.sent.filter(([address])=>address.includes('/set/') || address===REC_PREROLL.continuePlaying || address===CMD.stopPlaying);
+
+test('REC pre-roll accepts only OFF/1/2/4 and refuses negative lead-in before writing or arming',async t=>{
+  const f=preRollFixture(t);
+  for(const bars of [-1,3,5,'1',null,NaN]) await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,bars),/PRE_ROLL_RANGE/);
+  f.song.cuePoints[0].time=2;f.range.start.time=2;
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_RANGE/);
+  assert.equal(f.song.tracks[0].arm,false);assert.deepEqual(preRollWrites(f),[]);
+  assert.equal(f.coordinator.snapshot().preRoll,null);
+});
+
+for(const bars of [1,2,4]) test('REC pre-roll '+bars+' bars follows the observed 6/8 meter and starts playback record-OFF before Record ON',async t=>{
+  const f=preRollFixture(t);f.values.numerator=6;f.values.denominator=8;
+  const send=f.osc.send;let insertSeek=0;
+  f.osc.send=(address,args=[])=>{
+    // Model Live's Start Playback with Record preference. It must not get a
+    // stopped transport to reposition to the old insert marker here.
+    if(address===REC.setRecordMode && args[0]?.value===1 && !f.values.playing) {insertSeek++;f.values.position=100;}
+    send(address,args);
+  };
+  const state=await f.coordinator.record(recordingTrack,f.range,f.context,bars);
+  assert.equal(state.preRoll.phase,'running');assert.equal(state.preRoll.start,32-bars*3);
+  assert.equal(state.pending,'record');assert.equal(f.values.position,32-bars*3);assert.equal(insertSeek,0);
+  assert.equal(f.values.punchIn,true);assert.equal(f.values.click,true);assert.equal(f.values.loopStart,32);
+  const sequence=preRollWrites(f).map(([address])=>address);
+  assert.ok(sequence.indexOf(REC_PREROLL.setPunchIn)<sequence.indexOf(REC_PREROLL.continuePlaying));
+  assert.ok(sequence.indexOf(REC_PREROLL.continuePlaying)<sequence.indexOf(REC.setRecordMode));
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===CMD.cuePointJump || address.includes('count_in_duration')),false);
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.click,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
+});
+
+test('REC pre-roll returns armed immediately and keeps host ownership through a 16-second lead-in; first crossing restores click',async t=>{
+  const f=preRollFixture(t);f.values.tempo=60;
+  const state=await f.coordinator.record(recordingTrack,f.range,f.context,4);
+  assert.equal(state.preRoll.start,16);assert.equal(state.preRoll.phase,'running');
+  for(let beat=17;beat<=32;beat++) {
+    f.values.position=beat;t.mock.timers.tick(1000);await flushRecording();
+    if(beat<32) {assert.equal(f.values.click,true);assert.equal(f.coordinator.snapshot().pending,'record');}
+  }
+  const captured=f.coordinator.snapshot();
+  assert.equal(captured.preRoll.phase,'complete');assert.equal(captured.pending,null);assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+  assert.equal(f.values.click,false,'restore original click at the first observed marker crossing');
+  assert.equal(f.sent.filter(([address,args])=>address===REC.setMetronome && args[0].value===0).length,1);
+  assert.equal(f.values.punchIn,true,'native Punch In stays owned until explicit STOP');
+  // Live STOP alone does not dispose the temporary Punch/loop-start ownership.
+  f.values.record=false;f.values.playing=false;
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,0),/PRE_ROLL_STATE/);
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
+});
+
+test('REC pre-roll preserves an originally enabled click and the explicitly selected native Loop region',async t=>{
+  const f=preRollFixture(t);f.values.click=true;f.range={...f.range,end:{name:'End',time:64},loop:true};
+  await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.click,true);assert.equal(f.values.loop,true);assert.equal(f.values.loopStart,32);assert.equal(f.values.loopLength,32);
+  assert.equal(f.values.punchIn,false);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.sent.some(([address])=>address===REC.setMetronome),false,'click was never owned or changed');
+});
+
+test('REC pre-roll confirms still before marker immediately before Record ON and aborts a passed marker without late capture',async t=>{
+  const f=preRollFixture(t),send=f.osc.send;f.values.tempo=240;
+  f.osc.send=(address,args)=>{send(address,args);if(address===REC_PREROLL.continuePlaying) {t.mock.timers.setTime(11000);f.values.position=32;}};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_PASSED/);
+  assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);
+  assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);assert.equal(f.coordinator.snapshot().preRoll,null);
+});
+
+for(const phase of ['continue confirmation','last pre-Record read']) for(const direction of ['forward','backward']) {
+  test('REC pre-roll rejects a startup '+direction+' seek below the marker during '+phase+' without Record ON',async t=>{
+    const f=preRollFixture(t),send=f.osc.send;let continued=false,positionReads=0;
+    f.osc.send=(address,args)=>{
+      if(address===REC_PREROLL.continuePlaying) continued=true;
+      if(address===GET.currentSongTime && continued && ++positionReads===(phase==='continue confirmation'?1:2)) f.values.position=direction==='forward'?31:27;
+      // The startup observation must be rejected even if a later report
+      // returns to the lead-in start before the final pre-Record read.
+      if(phase==='continue confirmation' && positionReads===2) f.values.position=28;
+      send(address,args);
+    };
+    await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_SEEK/);
+    assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
+    assert.equal(f.sent.filter(([address])=>address===REC_PREROLL.continuePlaying).length,1,'never replay the native start');
+    assert.equal(f.sent.filter(([address])=>address===REC.setSongTime).length,1,'never retry the seek');
+    assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.song.tracks[0].arm,false);
+  });
+}
+
+for(const elapsed of [0,500]) test('REC pre-roll accepts plausible startup progress with '+elapsed+'ms observation latency',async t=>{
+  const f=preRollFixture(t),send=f.osc.send;let continued=false,positionReads=0;
+  f.osc.send=(address,args)=>{
+    if(address===REC_PREROLL.continuePlaying) continued=true;
+    if(address===GET.currentSongTime && continued && ++positionReads<=2) {
+      t.mock.timers.setTime(10000+positionReads*elapsed);
+      f.values.position=elapsed?28+positionReads:28+positionReads*.2;
+    }
+    send(address,args);
+  };
+  const state=await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  assert.equal(state.preRoll.phase,'running');assert.equal(state.preRoll.start,28);
+  assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+  assert.equal(f.sent.filter(([address,args])=>address===REC.setRecordMode && args[0]?.value===1).length,1);
+  await f.coordinator.stop(f.context);
+});
+
+test('REC STOP during pre-roll setup retains ownership while the aborted start settles and restores every owned property',async t=>{
+  const f=preRollFixture(t),send=f.osc.send;let stopping;
+  f.osc.send=(address,args)=>{
+    send(address,args);
+    if(address===REC_PREROLL.setPunchIn && args[0]?.value===1) {
+      const before=f.sent.length;stopping=f.coordinator.stop(f.context);
+      assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+    }
+  };
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/STOPPED/);await stopping;
+  assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.sent.some(([address])=>address===REC_PREROLL.continuePlaying || address===CMD.startPlaying),false);
+});
+
+test('REC STOP preempts the running pre-roll monitor, restores ownership and disarms even if click restoration fails',async t=>{
+  const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  const send=f.osc.send;
+  f.osc.send=(address,args)=>{if(address===REC.setMetronome && args[0]?.value===0) throw Error('click restore failed');send(address,args);};
+  const before=f.sent.length,stopping=f.coordinator.stop(f.context);
+  assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  await assert.rejects(stopping,/click restore failed/);
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.coordinator.snapshot().pending,null);
+  const count=f.sent.length;t.mock.timers.tick(5000);await flushRecording();assert.equal(f.sent.length,count,'cancelled monitor never resumes a write');
+});
+
+test('REC STOP does not overwrite a temporary loop start after the operator enables Loop or moves its start',async t=>{
+  const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  f.values.loop=true;await f.coordinator.stop(f.context);
+  assert.equal(f.values.loop,true);assert.equal(f.values.loopStart,32,'an enabled Loop must retain its start');
+  f.values.loop=false;await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  f.values.loopStart=48;await f.coordinator.stop(f.context);
+  assert.equal(f.values.loopStart,48,'a changed loop start is no longer owned');assert.equal(f.values.punchIn,false);
+});
+
+for(const interruption of ['retired session','OSC loss','new Song']) test('REC pre-roll '+interruption+' retires monitor without delayed or reconnect writes',async t=>{
+  const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  const before=preRollWrites(f).length;
+  if(interruption==='retired session') f.retire();
+  else if(interruption==='OSC loss') {f.osc.state.connected=false;f.osc.emit('link-lost');}
+  else {f.replaceSong({...f.song,tracks:f.song.tracks.map(track=>({...track,handle:{...track.handle}}))});f.coordinator.snapshot();}
+  t.mock.timers.tick(100);await flushRecording();
+  assert.equal(preRollWrites(f).length,before,'a stale owner cannot send STOP, restore, seek or Record ON');
+  Object.assign(f.osc.state,{connected:true,available:true});await f.coordinator.refresh();
+  assert.equal(f.coordinator.snapshot().pending,null,'retired monitor ownership cannot block future reads or actions');
+  t.mock.timers.tick(5000);await flushRecording();assert.equal(preRollWrites(f).length,before,'recovery reads never replay cleanup');
+});
+
+test('REC pre-roll loop-confirmation failure leaves no stale owner for the next direct OFF attempt',async t=>{
+  const f=preRollFixture(t),send=f.osc.send;f.range={...f.range,end:{name:'End',time:64},loop:true};
+  f.osc.send=(address,args)=>{if(address===REC_LOOP.setLength) throw Error('loop write failed');send(address,args);};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/loop write failed/);
+  assert.equal(f.coordinator.snapshot().preRoll,null);assert.equal(f.coordinator.snapshot().pending,null);
+  assert.equal(f.sent.some(([address])=>address===CMD.stopPlaying || address===REC_PREROLL.setPunchIn),false,'no pre-roll write was owned yet');
+  f.osc.send=send;f.range={...f.range,end:null,loop:false};
+  const result=await f.coordinator.record(recordingTrack,f.range,f.context,0);
+  assert.equal(result.preRoll,null);assert.equal(result.transport.recordMode.value,true);assert.equal(f.values.position,32);
+  assert.equal(f.sent.some(([address])=>address===REC_PREROLL.continuePlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+for(const changed of ['marker','meter','track','seek','clock']) test('REC pre-roll aborts '+changed+' changes before the marker and disarms its own track safely',async t=>{
+  const f=preRollFixture(t);await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  if(changed==='marker') f.song.cuePoints[0].time=33;
+  if(changed==='meter') f.values.numerator=3;
+  if(changed==='track') f.song.tracks[0].handle.id='replaced';
+  if(changed==='seek') f.values.position=40;
+  t.mock.timers.tick(changed==='clock'?2100:100);await flushRecording();
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+  if(changed==='track') assert.equal(f.song.tracks[0].arm,true,'a replaced track never inherits arm ownership');
+  else assert.equal(f.song.tracks[0].arm,false,'only the original owned track is disarmed');
+  assert.match(f.coordinator.snapshot().error,/REC:/);
+  assert.equal(f.sent.filter(([address,args])=>address===REC.setRecordMode && args[0]?.value===1).length,1,'abort never restarts recording');
 });

@@ -35,7 +35,7 @@ export const recordingCommands: Record<string, CommandSpec> = {
     exact(args, ['token']); return recordingCoordinator.start(args['token'], context);
   } },
   recordingRecord: { description: 'Arm chosen track and record from verified Arrangement markers, with optional loop', handler: async (args, context) => {
-    exact(args, ['track','range']); return recordingCoordinator.record(args['track'], args['range'], context);
+    exact(args, Object.hasOwn(args,'preRollBars') ? ['track','range','preRollBars'] : ['track','range']); return recordingCoordinator.record(args['track'], args['range'], context, Object.hasOwn(args,'preRollBars') ? args['preRollBars'] : 0);
   } },
   recordingSeekMarker: { description: 'Position normal header playback at a verified marker without starting it', handler: async (args, context) => {
     exact(args, ['name','time']); return recordingCoordinator.seekMarker(args as {name:string;time:number}, context);

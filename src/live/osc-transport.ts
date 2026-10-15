@@ -400,7 +400,7 @@ export class OSCTransport extends EventEmitter {
     const address = oscMsg.address;
     const args = oscMsg.args || [];
     this.recording.observe(address, args, now);
-    if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames || address === REC_LOOP.getStart || address === REC_LOOP.getLength) {
+    if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames || address === REC_LOOP.getStart || address === REC_LOOP.getLength || address === GET.tempo) {
       this.emit('recording-observation', { address, args, at: now });
     }
 

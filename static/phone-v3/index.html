@@ -137,6 +137,10 @@
 
     <section class="col col-xy">
       <div class="xy-block">
+        <div class="xy-aut-toolbar">
+          <span data-i18n="perf.xy1">XY 1</span>
+          <button class="xy-aut-config" data-aut-config="xy-1" type="button" aria-controls="automation-config-menu" aria-expanded="false" aria-label="XY 1 automation settings" data-i18n-aria-label="aut.configXY1">AUT</button>
+        </div>
         <div class="xy-pad" data-name="xy-1"><span class="xy-aut-status" aria-live="polite"></span>
           <span class="xy-label" data-i18n="perf.xy1">XY 1</span>
           <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
@@ -145,6 +149,10 @@
         <div class="xy-readout" data-readout="xy-1">0.50 / 0.50</div>
       </div>
       <div class="xy-block">
+        <div class="xy-aut-toolbar">
+          <span data-i18n="perf.xy2">XY 2</span>
+          <button class="xy-aut-config" data-aut-config="xy-2" type="button" aria-controls="automation-config-menu" aria-expanded="false" aria-label="XY 2 automation settings" data-i18n-aria-label="aut.configXY2">AUT</button>
+        </div>
         <div class="xy-pad" data-name="xy-2"><span class="xy-aut-status" aria-live="polite"></span>
           <span class="xy-label" data-i18n="perf.xy2">XY 2</span>
           <svg class="xy-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="xy-trail-line" points=""></polyline></svg>
@@ -612,6 +620,13 @@
         <label><span data-i18n="rec.startMarker">START</span><select id="rec-start-marker"></select></label>
         <button id="rec-loop" type="button" aria-pressed="false">LOOP</button>
         <label id="rec-end-field" hidden><span data-i18n="rec.endMarker">END</span><select id="rec-end-marker"></select></label>
+      </div>
+      <div class="rec-row rec-pre-roll" role="group" aria-label="Pre-roll bars" data-i18n-aria-label="rec.preRollBars">
+        <span data-i18n="rec.preRoll">PRE-ROLL</span>
+        <button id="rec-pre-roll-0" type="button" aria-pressed="true" data-i18n="rec.preRollOff">OFF</button>
+        <button id="rec-pre-roll-1" type="button" aria-pressed="false">1</button>
+        <button id="rec-pre-roll-2" type="button" aria-pressed="false">2</button>
+        <button id="rec-pre-roll-4" type="button" aria-pressed="false">4</button>
       </div>
       <details class="rec-help">
         <summary data-i18n="rec.info">INFO</summary>

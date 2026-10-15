@@ -7,6 +7,10 @@
     if(!automation || !root.RcConfigMode) return;
     const tr=(key,fallback)=>root.RcSurfaceI18n?.t(key) ?? fallback;
     let selecting=false,pointer=null;
+    function cancelPointer() {if(pointer) clearTimeout(pointer.timer);pointer=null;}
+    function syncConfigButtons(name=null) {
+      for(const button of document.querySelectorAll?.('.xy-aut-config') || []) button.setAttribute('aria-expanded',String(button.dataset.autConfig===name));
+    }
     function perform(action) {
       const status=document.getElementById('aut-message');
       try {action();if(status) status.textContent='';} catch(error) {
@@ -20,8 +24,10 @@
     const mode=root.RcConfigMode.create({buttonId:'btn-aut-mode',menuId:'automation-config-menu',
       modeClass:'automation-mode',primary:false,accept:name=>/^xy-[12]$/.test(name),
       contextEnabled:()=>mode.state.on,
+      menuAvoidRect:()=>document.querySelector('.col-xy')?.getBoundingClientRect(),
       onActivate:()=>{root.RcConfigModeInstance?.off();selecting=true;},
-      onDeactivate:()=>{selecting=false;if(pointer) clearTimeout(pointer.timer);pointer=null;},
+      onDeactivate:()=>{selecting=false;cancelPointer();},
+      onMenuChange:syncConfigButtons,
     });
     root.RcAutomationMode=mode;
     mode.register(/^xy-[12]$/,name=>{
@@ -39,8 +45,27 @@
         }}},
       ];
     });
-    mode.attach();
     function consume(event) {event.preventDefault();event.stopImmediatePropagation();}
+    function configButton(event) {
+      const button=event.target.closest?.('[data-aut-config]');
+      return mode.state.on && /^xy-[12]$/.test(button?.dataset.autConfig || '')?button:null;
+    }
+    function toggleConfig(event) {
+      const button=configButton(event);if(!button) return;
+      consume(event);cancelPointer();
+      const name=button.dataset.autConfig;
+      if(mode.state.openFor===name) {mode.state.contextMenuOpen=false;mode.close();}
+      else {mode.state.contextMenuOpen=true;mode.open(name,button.getBoundingClientRect());}
+    }
+    // Register before the shared menu's outside handler: another XY's button
+    // switches the editor, and the same button closes it, without arming.
+    document.addEventListener('pointerdown',event=>{
+      if(event.button!==0 || !configButton(event)) return;
+      event.stopImmediatePropagation();cancelPointer();
+    },true);
+    document.addEventListener('click',toggleConfig,true);
+    document.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' ') toggleConfig(event);},true);
+    mode.attach();
     function named(event) {return event.target.closest?.('.xy-pad[data-name]');}
     document.addEventListener('pointerdown',event=>{
       if(!mode.state.on || !selecting || event.button!==0) return;

@@ -1157,13 +1157,14 @@ playback parado:
 1. Escolha a track que quer gravar. O botão **ARMADA / DESARMADA** ao lado da
    track mostra o estado de arm observado no Live. Clique para armar ou
    desarmar essa track manualmente com o playback parado; só selecionar não arma.
-2. Escolha o marcador de início. A faixa de marcadores mostra os marcadores da
-   sessão e a posição observada do playback; use **Zoom** e a rolagem para
-   inspecionar a região.
+2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
+   do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
+   observada do playback.
 3. Para gravar passagens repetidas, ligue **Loop** e escolha um marcador final
    depois do início. Deixe Loop desligado para gravar sem um final definido.
-4. Aperte **REC**. Ele confere o estado do Live, aplica a opção de loop escolhida,
-   arma a track selecionada, posiciona no marcador inicial e começa a gravar.
+4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
+   padrão e começa diretamente no marcador. As outras opções tocam os compassos
+   anteriores com click até o Punch In nativo abrir a captura no marcador.
 5. Aperte **STOP** para parar playback e gravação. Ele desarma a track armada por
    esse fluxo REC. Aperte REC novamente para armá-la e fazer outra tentativa.
 
@@ -1178,8 +1179,30 @@ Loop repete entre os dois marcadores até STOP; o marcador final não para a
 gravação. REC aguarda o Live confirmar a região de loop antes de começar.
 Todas as mudanças de loop compartilham um limite de dois segundos para a
 confirmação; sem ela, a gravação não começa. Com Loop desligado, REC desliga
-o Arrangement Loop do Live. STOP mantém a região escolhida para reprodução. Configure count-in, monitoração da entrada e take lanes no
-Live. Para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
+o Arrangement Loop do Live. STOP mantém a região escolhida para reprodução.
+Configure monitoração da entrada e take lanes no Live. Para ouvir o Arrangement,
+escolha Monitor Auto/Off em vez de In.
+
+Pré-roll é uma preferência salva neste navegador, separada do count-in nativo
+do Live. Usa a fórmula de compasso observada para calcular a antecipação;
+é preciso haver tempo suficiente antes do marcador. Não resolve mudanças
+anteriores de fórmula a partir de um mapa de compassos. REC confirma transporte
+parado e record mode desligado, liga Punch In nativo no marcador e inicia
+playback da posição anterior antes de ligar record mode. Se o playback já
+chegou ao marcador antes dessa confirmação, aborta em vez de iniciar captura
+atrasada. O host acompanha o pré-roll depois de devolver o comando, portanto
+quatro compassos não ficam limitados pelo timeout de comando do celular.
+Na primeira passagem observada pelo marcador, restaura o click original.
+STOP restaura somente click, Punch In e início temporário do Loop ainda
+pertencentes à tentativa, depois desarma sua track; o início temporário só
+volta enquanto Loop permanece desligado. Use STOP desta página para terminar
+a limpeza mesmo se parou o transporte no Live. Mudanças de estado necessário
+cancelam o pré-roll; perda de conexão/sessão ou um novo Set nunca repetem
+escritas de limpeza. Confira esses ajustes no Live depois de uma perda.
+
+`count_in_duration` do Live é somente leitura na API suportada; esta função
+não o altera. A interação com count-in nativo e **Enable Only While Recording**
+do metrônomo ainda exige aceite físico no Live depois da instalação.
 
 REC exige a track selecionada armável, outras tracks desarmadas e Punch In/Out,
 Arrangement Overdub, Session Record e retorno ao Arrangement pendente
@@ -1193,13 +1216,16 @@ salve o Set no Live. REC não apaga clips, seleciona take lanes ou aciona undo.
 Escritas REC exigem permissão de controller/admin e conexão atual do celular.
 Perder a conexão nunca para uma gravação em andamento nem repete uma escrita
 ao reconectar. Se o link celular/host estiver indisponível, pare no Live.
-O fluxo OSC/SDK tem regressões offline; captura, monitoração, preservação dos
-takes e toque no celular ainda exigem aceitação no seu conjunto com Live.
+O fluxo OSC/SDK tem regressões offline; limites de captura do Punch In nativo,
+preferências de count-in/metrônomo, monitoração de áudio, preservação dos takes
+e toque no celular ainda exigem aceitação no seu conjunto com Live.
 
 
 ## AUT: loops de movimento dos XY
 
-**AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Ative AUT e toque um XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Ative AUT novamente e clique direito no XY (celular: segure 600ms sem mover) para ajustar **SYNC / FREE**, **1/2/4 compassos** ou **10/20 segundos**, Gravar/substituir, Reproduzir, Parar e Apagar. Abrir configuração não emite controle. MAP, AUT e CFG permanecem visíveis no topo. Suas seleções são exclusivas; sair da seleção AUT não para um loop existente.
+**AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Com AUT ligado, os dois XY ficam destacados e cada um mostra um botão de configuração **AUT** acima da área de movimento, mesmo sem loop gravado. Toque nesse botão para abrir os ajustes, toque novamente para fechar ou use o botão do outro XY para trocar o alvo. O botão não inicia captura nem altera o loop. O estado LOOP/REC/contagem permanece dentro do XY, separado desse botão. Enter e Espaço também ativam o botão em foco.
+
+Para gravar, ative AUT e toque na área de movimento do XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Clique direito no XY (celular: segure 600ms sem mover) continua abrindo a configuração. Os ajustes incluem **SYNC / FREE**, **1/2/4 compassos** ou **10/20 segundos**, Gravar/substituir, Reproduzir, Parar e Apagar. Escolher uma ação do menu ou dispensar o menu devolve a performance normal; fechar pelo mesmo botão AUT mantém a seleção de alvos ativa. Abrir configuração não emite controle. MAP, AUT e CFG permanecem visíveis no topo. Suas seleções são exclusivas; sair da seleção AUT não para um loop existente.
 
 SYNC usa posição, andamento e fórmula de compasso observados do playback do Live, com horário de recebimento preservado independentemente da renderização do MAP. Contagem/captura exigem Live tocando e relógio atualizado. Comandos Play/Pause aguardam confirmação do Live; mensagens de tempo/beat não confirmam esses comandos. Posição desatualizada é consultada independentemente de outras mensagens OSC recebidas. Os dados capturados ficam alinhados à grade da música. Durante reprodução, mudanças de posição e voltas do Loop do Live seguem a posição atual; STOP do Live pausa um loop SYNC habilitado e Play retoma na posição real. Relógio parado/desatualizado, mudança de posição, volta do Loop ou mudança de compasso durante a **captura** cancelam aquela tentativa e mantêm o buffer anterior completo. Para capturar vários compassos, deixe Arrangement Loop desligado até concluir. Mudança de compasso durante reprodução para o loop. FREE usa segundos decorridos e independe do transporte do Live.
 

@@ -47,3 +47,17 @@ test('REC manual arm dispatch requires the viewed track reference and forwards i
   const result=await dispatchCommand('controller',{cmd:'recordingArm',args:{enabled:true,track}},context);
   assert.equal(result.ok,true);assert.equal(called,1);
 });
+
+test('REC dispatch forwards optional pre-roll bars explicitly and preserves legacy OFF calls while rejecting extras',async t=>{
+  const original=recordingCoordinator.record,calls=[];
+  recordingCoordinator.record=async (...args)=>{calls.push(args);return {observed:true};};
+  t.after(()=>{recordingCoordinator.record=original;});
+  const args=writes.recordingRecord,context={clientId:'phone-a',isCurrent:()=>true};
+  for(const bars of [undefined,0,1,2,4,null]) {
+    const result=await dispatchCommand('controller',{cmd:'recordingRecord',args:{...args,...(bars===undefined?{}:{preRollBars:bars})}},context);
+    assert.equal(result.ok,true);assert.deepEqual(calls.at(-1),[args.track,args.range,context,bars===undefined?0:bars]);
+  }
+  const before=calls.length;
+  const denied=await dispatchCommand('controller',{cmd:'recordingRecord',args:{...args,preRollBars:1,toggle:true}},context);
+  assert.equal(denied.ok,false);assert.match(denied.error,/ARGUMENTS/);assert.equal(calls.length,before);
+});

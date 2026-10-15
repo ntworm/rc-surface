@@ -69,14 +69,24 @@
     const end = Math.max(16, ...locators.map(cue => cue.time + 4));
     return {start:0, end, width:Math.max(1,Math.min(8,zoom)) * 100};
   }
+  const PRE_ROLL_KEY = 'rc-surface-v2.rec.preRollBars';
+  function preRollPreference(storage) {
+    try {
+      const raw = storage?.getItem(PRE_ROLL_KEY);
+      return ['0','1','2','4'].includes(raw) ? Number(raw) : 0;
+    } catch { return 0; }
+  }
   function setup() {
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
     const elements = Object.fromEntries(['rec-status','rec-track','rec-start','rec-stop','rec-click','rec-arm-state','rec-start-marker','rec-end-marker',
-      'rec-loop','rec-end-field','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position'].map(id => [id.slice(4),doc.getElementById(id)]));
+      'rec-loop','rec-end-field','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
+      'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
     let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null;
     let startIndex='', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[];
+    let preRollBars=0;
+    try { preRollBars=preRollPreference(root.localStorage); } catch { /* Disabled browser storage uses OFF. */ }
     const client = createClient({send:(name,args,cb)=>root.sendPhoneCommand(name,args,cb),render});
     const invoke = (name,args) => client.command(name,args).catch(()=>{});
     const cueAt = index => index === '' ? null : client.view().state?.locators[Number(index)] || null;
@@ -131,7 +141,7 @@
       const stopped=known && transport.isPlaying.value===false && transport.recordMode.value===false;
       const working=view.busy || Boolean(state?.pending);
       const editable=view.writable && !working && stopped;
-      el('status').textContent=view.error?reason(view.error):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
+      el('status').textContent=view.error?reason(view.error):state?.preRoll?.phase==='running'?t('preRolling'):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
       el('status').dataset.recording=String(known && transport.recordMode.value===true);
       el('stop').disabled=!view.writable;
       for(const id of ['track','start-marker','end-marker']) el(id).disabled=!editable;
@@ -139,6 +149,10 @@
       el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
       el('arm-state').disabled=!manualArmTrack(view);
+      for(const bars of [0,1,2,4]) {
+        el('pre-roll-'+bars).disabled=!editable;
+        el('pre-roll-'+bars).setAttribute('aria-pressed',String(preRollBars===bars));
+      }
       el('arm-state').textContent='?';el('arm-state').setAttribute('aria-pressed','false');
       for(const marker of el('markers').children) marker.disabled=!editable;
       if(!state) {el('start').disabled=true;el('cursor').hidden=true;return;}
@@ -159,11 +173,14 @@
         const previousEnd=endIndex!==''?previousLocators[Number(endIndex)]:null;markerSignature=markerKey;
         el('start-marker').replaceChildren();el('end-marker').replaceChildren();el('markers').replaceChildren();
         option(el('start-marker'),'',t('chooseMarker'));option(el('end-marker'),'',t('chooseEnd'));
-        bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width=bounds.width+'%';
+        bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';
         state.locators.forEach((cue,index)=>{
           const label=cue.name+' · '+positionLabel(cue.time,state.meter);
           option(el('start-marker'),String(index),label);option(el('end-marker'),String(index),label);
-          const marker=doc.createElement('button');marker.type='button';marker.textContent=cue.name;marker.title=label;
+          const marker=doc.createElement('button');marker.type='button';marker.title=label;marker.setAttribute('aria-label',label);
+          const position=doc.createElement('span');position.className='rec-marker-position';position.textContent=positionLabel(cue.time,state.meter);
+          const name=doc.createElement('span');name.className='rec-marker-name';name.textContent=cue.name;
+          marker.appendChild(position);marker.appendChild(name);
           marker.className='rec-marker';marker.dataset.index=String(index);marker.style.left=percent(cue.time)+'%';
           marker.addEventListener('click',()=>{
             if(marker.disabled || !client.view().state) return;
@@ -214,10 +231,16 @@
       }
       render(client.view());
     });
-    el('zoom').addEventListener('input',()=>{zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);el('timeline-track').style.width=bounds.width+'%';drawCursor();});
+    for(const bars of [0,1,2,4]) el('pre-roll-'+bars).addEventListener('click',()=>{
+      if(el('pre-roll-'+bars).disabled) return;
+      preRollBars=bars;
+      try { root.localStorage?.setItem(PRE_ROLL_KEY,String(bars)); } catch { /* The current page preference still works. */ }
+      render(client.view());
+    });
+    el('zoom').addEventListener('input',()=>{zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();});
     el('start').addEventListener('click',()=>{
       const state=client.view().state,track=state?.tracks.find(track=>track.index===state.selected?.index),start=cueAt(startIndex),end=looping?cueAt(endIndex):null;
-      if(track && start) invoke('recordingRecord',{track:{index:track.index,id:track.id,name:track.name},range:{start:markerRef(start),end:end?markerRef(end):null,loop:looping}});
+      if(track && start) invoke('recordingRecord',{track:{index:track.index,id:track.id,name:track.name},range:{start:markerRef(start),end:end?markerRef(end):null,loop:looping},preRollBars});
     });
     el('stop').addEventListener('click',()=>invoke('recordingStop'));
     el('click').addEventListener('click',()=>invoke('recordingClick',{enabled:!client.view().state?.transport.metronome.value}));
@@ -239,7 +262,7 @@
     doc.addEventListener('rcsurface:languagechange',()=>{trackSignature='';markerSignature='';render(client.view());});
     render(client.view());return client;
   }
-  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, setup});
+  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, setup});
   if (root.document) {
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded',setup,{once:true});
     else setup();
