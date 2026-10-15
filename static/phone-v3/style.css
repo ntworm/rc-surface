@@ -2,12 +2,8 @@
    Design rule: the page assumes width > height. If portrait, show a
    "rotate me" overlay; don't try to cram a horizontal layout vertically. */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-/* P04 (rc-surface-cfg-pad-stutter-polish-2026-09-18): the CFG header button
-   is only meaningful on PERF and MIX tabs. Hide it everywhere else so it
-   does not advertise a feature that does nothing on AUD/VID/SNS/SNP. The
-   JS layer (config-mode.js) also turns CFG off automatically on tab change;
-   this rule is the visible counterpart. */
-body:not([data-page="performance"]):not([data-page="mixer"]) #btn-cfg-mode { display: none !important; }
+/* MAP, AUT and CFG stay in place. Their controllers own exclusive selection
+   and eligible targets; opening MAP must not remove another mode button. */
 /* Form controls do not inherit font-family. Without this every button on the
    surface falls back to Arial, which was already true before the retheme but
    only became obvious once the body face was a pixel font. Family only: each
@@ -3835,14 +3831,14 @@ body.mapping-mode [data-name].selected-control {
 }
 .vision-studio-head span { font-size: 10px; color: #8e8e8e; }
 
-/* Pose cards keep a stable footprint; the bank scrolls as poses are added. */
+/* Compact base rows stay stable through capture/CLR. Diagnostics use space only when visible. */
 .vision-gesture-slots,
 .vision-pose-grid {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-auto-rows: 248px;
+  grid-auto-rows: max-content;
   align-content: start;
   gap: 8px;
   overflow-y: auto;
@@ -3858,19 +3854,45 @@ body.mapping-mode [data-name].selected-control {
   background: var(--surface-soft);
   font: inherit;
 }
-/*
- * Stable card geometry reserves status, neighbor and outlier feedback rows.
- * Only the list scrolls; capture and CLR do not resize individual cards.
- */
+#btn-add-learned-pose:disabled {
+  color: var(--text3);
+  background: var(--surface);
+  border-color: var(--border);
+  cursor: default;
+}
+.vision-pose-grid {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text3) var(--surface);
+}
+.vision-pose-grid::-webkit-scrollbar { width: 6px; }
+.vision-pose-grid::-webkit-scrollbar-track { background: var(--surface); }
+.vision-pose-grid::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 0; }
+.vision-pose-grid::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+.vision-pose-grid::-webkit-scrollbar-button { display: none; }
+.vision-slot-remove {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid transparent;
+  font-size: 16px;
+}
+.vision-slot-remove:hover, .vision-slot-remove:focus-visible {
+  color: #ff7b72;
+  border-color: var(--border);
+}
+/* Only the pose bank scrolls; empty cards do not reserve invisible diagnostic rows. */
 .vision-gesture-slot {
   min-width: 0;
-  min-height: 248px;
-  height: 248px;
+  min-height: 136px;
+  height: auto;
   box-sizing: border-box;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  grid-template-rows: 91px 20px 32px 64px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: 91px 20px;
   align-items: stretch;
   gap: 4px 6px;
   padding: 8px;
@@ -4581,13 +4603,13 @@ body.mapping-mode [data-name].selected-control {
   .vision-gesture-slot {
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr);
-    grid-template-rows: 91px 20px 32px 64px;
+    grid-template-rows: 91px 20px;
     padding: 8px;
     gap: 6px 10px;
   }
   .vision-gesture-slot > header { grid-column: 1; grid-row: 1 / 3; flex-direction: column; }
   .vision-gesture-slot > header span { font-size: 18px; }
-  .vision-gesture-slot > header strong { font-size: 14px; }
+  .vision-gesture-slot > header strong { font-size: 12px; }
   .vision-slot-actions {
     grid-column: 2;
     grid-row: 1;
@@ -4809,7 +4831,7 @@ body.mapping-mode [data-name].selected-control {
 .map-clip-list-item .map-mini-btn,
 .map-clip-add { min-height: 44px; }
 
-.vision-slot-consistency { grid-column: 1 / -1; grid-row: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
+.vision-slot-consistency { grid-column: 1 / -1; grid-row: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
 .vision-slot-consistency.hidden { display: none; }
 .vision-slot-consistency button { min-height: 44px; padding: 4px 8px; }
 
@@ -4834,7 +4856,7 @@ body.mapping-mode [data-name].selected-control {
   }
 }
 
-.vision-slot-neighbor { grid-column: 1 / -1; grid-row: 3; overflow-y: auto; white-space: normal; font-size: 11px; line-height: 1.35; }
+.vision-slot-neighbor { grid-column: 1 / -1; grid-row: auto; overflow-y: auto; white-space: normal; font-size: 11px; line-height: 1.35; }
 .vision-slot-neighbor.hidden { display: none; }
 
 /* Context settings reuse the existing flat modal and live controls. */

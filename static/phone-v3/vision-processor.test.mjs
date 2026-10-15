@@ -490,6 +490,7 @@ function loadVisionAndApp({ gestureSlots = false, savedVision = null } = {}) {
   }
 
   const mockElements = {};
+  let cloneSequence = 0;
   const getMockElement = (id) => {
     if (!mockElements[id]) {
       const el = {
@@ -530,7 +531,20 @@ function loadVisionAndApp({ gestureSlots = false, savedVision = null } = {}) {
         el.dataset = {};
         el.setAttribute = (name, value) => { el[name] = value; };
         el.querySelector = selector => getMockElement(`${id} ${selector}`);
-        const slot = id.match(/^\[data-gesture-slot="(\d)"\]$/);
+        el.children = [];
+        el.appendChild = child => {
+          child.remove?.(); el.children.push(child); child.parentNode = el;
+        };
+        el.remove = () => {
+          if (el.parentNode) el.parentNode.children = el.parentNode.children.filter(child => child !== el);
+          el.parentNode = null;
+        };
+        el.cloneNode = () => {
+          const clone = getMockElement(`${id} clone-${++cloneSequence}`);
+          clone.dataset = {...el.dataset};
+          return clone;
+        };
+        const slot = id.match(/^\[data-gesture-slot="(\d+)"\]$/);
         if (slot) el.dataset.gestureSlot = slot[1];
       }
       mockElements[id] = el;
@@ -2179,6 +2193,28 @@ async function learnedApp() {
     && event.tracking?.activation !== false).map(event => event.value);
   return { ...harness, processor, frame, missing, edges, emissions, card: mockElements['[data-gesture-slot="1"]'] };
 }
+
+test('actual VID Add/X controls preserve sparse identities, cap state and an empty bank across reload', () => {
+  const {mockElements,windowContext}=loadVisionAndApp({gestureSlots:true});
+  const grid=mockElements['.vision-pose-grid'],add=mockElements['btn-add-learned-pose'];
+  const ids=()=>grid.children.map(card=>Number(card.dataset.gestureSlot));
+  assert.deepEqual(ids(),[1,2,3]);
+  for(let i=4;i<=15;i++) add.onclick();
+  assert.equal(grid.children.length,15);assert.equal(add.disabled,true);
+  add.onclick();assert.equal(grid.children.length,15);
+  const third=grid.children[2];
+  grid.children[1].querySelector('.vision-slot-remove').onclick({stopPropagation(){}});
+  assert.equal(add.disabled,false);assert.equal(grid.children[1],third);
+  assert.deepEqual(Array.from(windowContext.savedVision.visionControls.slots,slot=>slot.id),[1,...Array.from({length:13},(_,i)=>i+3)]);
+  add.onclick();assert.equal(add.disabled,true);assert.equal(grid.children[2],third);
+  for(const card of [...grid.children]) card.querySelector('.vision-slot-remove').onclick({stopPropagation(){}});
+  assert.equal(grid.children.length,0);assert.equal(add.disabled,false);
+  const restored=loadVisionAndApp({gestureSlots:true,savedVision:windowContext.savedVision});
+  const restoredGrid=restored.mockElements['.vision-pose-grid'];
+  assert.equal(restoredGrid.children.length,0);
+  restored.mockElements['btn-add-learned-pose'].onclick();
+  assert.deepEqual(restoredGrid.children.map(card=>Number(card.dataset.gestureSlot)),[1]);
+});
 
 test('actual app: pose loss waits for grace; qualified same pose renews without another ON', async () => {
   const { processor, frame, missing, edges, emissions, card, mockElements, windowContext } = await learnedApp();

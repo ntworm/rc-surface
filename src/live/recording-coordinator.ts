@@ -15,6 +15,10 @@ interface Observed { value: unknown; at: number; revision: number }
 interface Operation { name: string; abort: AbortController; context?: CommandExecutionContext }
 const flags = ['loop', 'punchIn', 'punchOut', 'overdub', 'backToArranger', 'sessionRecord'] as const;
 function fail(code: string): never { throw Error('REC:' + code); }
+// AbletonOSC keeps Python booleans as OSC T/F; older reports may use 0/1.
+function observedBoolean(value: unknown): boolean | null {
+  return value === true || value === 1 ? true : value === false || value === 0 ? false : null;
+}
 
 /** Session-local workflow metadata, never a representation of Live take lanes.
  * All writes share the existing OSC connection/SDK. UDP observations cannot
@@ -142,12 +146,14 @@ export class RecordingCoordinator extends EventEmitter {
         key = address === REC_PREFLIGHT.signatureNumerator ? 'numerator' : 'denominator'; value = raw;
       }
     }
-    else if (args.length === 1 && (args[0]?.value === 0 || args[0]?.value === 1)) {
-      key = flags.find(flag => REC_PREFLIGHT[flag] === address); value = args[0]?.value === 1;
+    else if (args.length === 1 && observedBoolean(args[0]?.value) !== null) {
+      key = flags.find(flag => REC_PREFLIGHT[flag] === address); value = observedBoolean(args[0]?.value);
     } else if (args.length === 2 && Number.isInteger(args[0]?.value) && Number(args[0]?.value) >= 0) {
       const field = address === REC_PREFLIGHT.trackArm ? 'arm' : address === REC_PREFLIGHT.trackCanArm ? 'canArm' : address === REC_PREFLIGHT.trackMonitor ? 'monitor' : null;
       const raw = args[1]?.value;
-      if (field && (raw === 0 || raw === 1 || (field === 'monitor' && raw === 2))) { key = field + ':' + args[0]?.value; value = field === 'monitor' ? raw : raw === 1; }
+      if (field === 'monitor' ? raw === 0 || raw === 1 || raw === 2 : field !== null && observedBoolean(raw) !== null) {
+        key = field + ':' + args[0]?.value; value = field === 'monitor' ? raw : observedBoolean(raw);
+      }
     }
     if (key !== undefined) { this.observed.set(key, { value, at, revision: ++this.revision }); this.emit('observation'); }
   };

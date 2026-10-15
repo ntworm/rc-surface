@@ -425,6 +425,7 @@
     'vid.liveCheck': { en: 'LIVE CHECK', 'pt-BR': 'CHECAGEM AO VIVO' },
     'vid.learnedPoses': { en: 'LEARNED POSES', 'pt-BR': 'POSES APRENDIDAS' },
     'vid.addPose': { en: '+ ADD POSE', 'pt-BR': '+ ADICIONAR POSE' },
+    'vid.removePose': { en: 'Remove pose', 'pt-BR': 'Remover pose' },
     'vid.victory': { en: 'Victory', 'pt-BR': 'Victory' },
     'vid.clutch': { en: 'CLUTCH', 'pt-BR': 'CLUTCH' },
     'vid.confidence': { en: 'Vision confidence', 'pt-BR': 'Confiança da visão' },

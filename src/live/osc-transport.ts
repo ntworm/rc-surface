@@ -411,10 +411,12 @@ export class OSCTransport extends EventEmitter {
       }
     } else if (address === RESPONSE.isPlaying) {
       const val = args[0]?.value;
-      const isPlaying = val === 1 || val === true || val === 'true';
-      if (this.state.isPlaying !== isPlaying) {
-        this.state.isPlaying = isPlaying;
-        updated = true;
+      if (args.length === 1 && (val === 0 || val === 1 || typeof val === 'boolean')) {
+        const isPlaying = val === 1 || val === true;
+        if (this.state.isPlaying !== isPlaying) {
+          this.state.isPlaying = isPlaying;
+          updated = true;
+        }
       }
     } else if (address === RESPONSE.currentSongTime) {
       const time = args[0]?.value;
@@ -722,7 +724,16 @@ export class OSCTransport extends EventEmitter {
   /** One polling turn. Public so the cadence can be tested without timers. */
   public pollTick(now: number = Date.now()): void {
     this.recording.pollTick(now);
-    if (!this.isListenerStreamQuiet(now)) return;
+    const quiet = this.isListenerStreamQuiet(now);
+    // Beat/tempo pushes do not prove that the position listener survived.
+    // Recover that channel at the existing 500 ms cadence, leaving margin
+    // for reply latency before the 1000 ms clock freshness deadline.
+    const recoverPosition = this.state.isPlaying && (quiet || now - this.lastSongTimeUpdateAt >= 250);
+    if (recoverPosition) this.send(GET.currentSongTime);
+    if (!quiet) {
+      if (recoverPosition) this.send(GET.isPlaying);
+      return;
+    }
 
     // Quiet stream: either AbletonOSC restarted and dropped our listener
     // registrations, or Live is idle. Re-ask for the listener-backed state.
@@ -730,9 +741,6 @@ export class OSCTransport extends EventEmitter {
     this.send(GET.isPlaying);
     this.send(GET.metronome);
     this.send(GET.selectedTrack);
-    if (this.state.isPlaying) {
-      this.send(GET.currentSongTime);
-    }
   }
 
   /**
@@ -763,9 +771,8 @@ export class OSCTransport extends EventEmitter {
     }
     // Liveness probe. Anything arriving on the socket already refreshes
     // lastSeenAt, so while the push stream is flowing the link is proven and
-    // the probe is pure noise. is_playing rides along because play() and
-    // stopPlayback() set it optimistically and only a reply can correct it
-    // once the listeners are gone.
+    // the probe is pure noise. is_playing rides along to recover confirmed
+    // play/pause state once the listeners are gone.
     if (this.isListenerStreamQuiet(now)) {
       this.send(GET.tempo);
       this.send(GET.isPlaying);
@@ -789,12 +796,12 @@ export class OSCTransport extends EventEmitter {
   // Transport Command Helpers
   public play(): void {
     this.send(CMD.startPlaying);
-    this.state.isPlaying = true;
+    this.send(GET.isPlaying);
   }
 
   public stopPlayback(): void {
     this.send(CMD.stopPlaying);
-    this.state.isPlaying = false;
+    this.send(GET.isPlaying);
   }
 
   public toggle(): void {

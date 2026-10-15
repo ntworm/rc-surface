@@ -1879,6 +1879,7 @@
       .filter((button) => button?.dataset?.visionGesture);
     const gestureSlotCards = Array.from(document.querySelectorAll('[data-gesture-slot]'))
       .filter((card) => card?.dataset?.gestureSlot);
+    const gestureSlotTemplate = gestureSlotCards[0]?.cloneNode(true);
     if (typeof window.VisionControlState !== 'function') return;
 
     const VISION_LOSS_CHANNELS = Object.freeze([
@@ -2053,7 +2054,7 @@
       });
       gestureSlotCards.forEach((card) => {
         const id = Number(card.dataset.gestureSlot);
-        const slot = visionControls.slots[id - 1];
+        const slot = visionControls.slotById(id);
         const status = card.querySelector('.vision-slot-status');
         const countLabel = card.querySelector('header strong');
         const learnButton = card.querySelector('.vision-slot-learn');
@@ -2288,7 +2289,7 @@
     const finishGestureCapture = (timedOut = false) => {
       const slotId = visionGestureLearnSlot;
       if (slotId === null) return;
-      const slot = visionControls.slots[slotId - 1];
+      const slot = visionControls.slotById(slotId);
       const card = gestureSlotCards.find((entry) => Number(entry.dataset.gestureSlot) === slotId);
       const learnButton = card?.querySelector('.vision-slot-learn');
       const status = card?.querySelector('.vision-slot-status');
@@ -2329,7 +2330,7 @@
     const beginGestureCaptureWindow = (name) => {
       const slotId = visionGestureLearnSlot;
       if (slotId === null) return;
-      const slot = visionControls.slots[slotId - 1];
+      const slot = visionControls.slotById(slotId);
       if (!slot?.name || slot.name !== name) return;
       if (poseCaptureTimer) clearTimeout(poseCaptureTimer);
       const card = gestureSlotCards.find((entry) => Number(entry.dataset.gestureSlot) === slotId);
@@ -2341,6 +2342,34 @@
       poseCaptureTimer = setTimeout(() => finishGestureCapture(false), POSE_CAPTURE_MS);
     };
 
+    function removeGestureSlot(slotId) {
+      const slot = visionControls.slotById(slotId);
+      if (!slot) return;
+      if (visionGestureLearnSlot === slotId) {
+        if (poseCaptureTimer) clearTimeout(poseCaptureTimer);
+        poseCaptureTimer = null;
+        visionGestureLearnSlot = null;
+        visionProcessor?.cancelGestureLearn?.();
+      }
+      if (visionGestureTestSlot === slotId) stopGestureTest();
+      // Deliberate OFF, not tracking loss: even Hold indefinitely must release.
+      window.onControl?.({name: visionControls.controlForSlot(slotId), value: 0});
+      liveGestureSlots.delete(slotId);
+      visionPoseActivations.delete(slotId);
+      if (badgePose === `G${slotId}`) {
+        badgePose = null;
+        badgeNoteState = null;
+        renderPerformanceBadge();
+      }
+      deleteStoredGesture(slot.name);
+      dismissedPoseWarnings.delete(slot.name);
+      poseWarnings.delete(slot.name);
+      visionControls.removeSlot(slotId);
+      syncGestureSlotCards();
+      persistVisionSafety();
+      renderVisionControlState();
+    }
+
     function bindGestureSlotCard(card) {
       if(card.dataset.poseBound) return;
       card.dataset.poseBound='1';
@@ -2350,13 +2379,18 @@
       const retakeButton = card.querySelector('.vision-slot-retake');
       const deleteButton = card.querySelector('.vision-slot-delete');
       const status = card.querySelector('.vision-slot-status');
+      card.querySelector('.vision-slot-remove')?.addEventListener('click', event => {
+        event.stopPropagation();
+        if (document.body.classList.contains('mapping-mode')) return;
+        removeGestureSlot(slotId);
+      });
 
       learnButton?.addEventListener('click', () => {
         if (!visionProcessor) return showToast(T('vid.enableCameraFirst', 'Enable camera before gesture Learn'), 'warning');
         if (visionGestureLearnSlot !== null) {
           return showToast(T('vid.finishCaptureFirst', 'Finish Gesture {n} capture first', { n: visionGestureLearnSlot }), 'warning');
         }
-        const name = visionControls.slots[slotId - 1]?.name || `Gesture ${slotId}`;
+        const name = visionControls.slotById(slotId)?.name || `Gesture ${slotId}`;
         if (samplesForGesture(name) >= captureCap()) return showToast(T('vid.poseFull', 'This pose already has {max} examples · use DELETE LAST first', { max: captureCap() }), 'warning');
         stopGestureTest();
         visionGestureLearnSlot = slotId;
@@ -2373,7 +2407,7 @@
       });
 
       testButton?.addEventListener('click', () => {
-        const slot = visionControls.slots[slotId - 1];
+        const slot = visionControls.slotById(slotId);
         if (!slot?.name || samplesForGesture(slot.name) < 3) return showToast(T('vid.captureThreeFirst', 'Capture at least three pose examples before testing'), 'warning');
         const shouldStart = visionGestureTestSlot !== slotId;
         stopGestureTest();
@@ -2392,7 +2426,7 @@
       });
 
       retakeButton?.addEventListener('click', () => {
-        const slot = visionControls.slots[slotId - 1];
+        const slot = visionControls.slotById(slotId);
         if (!slot?.name) return;
         stopGestureTest();
         const samples = removeStoredTake(slot.name);
@@ -2402,7 +2436,7 @@
       });
 
       card.querySelector('.vision-consistency-retake')?.addEventListener('click', () => {
-        const slot = visionControls.slots[slotId - 1];
+        const slot = visionControls.slotById(slotId);
         const warning = poseWarnings.get(slot?.name);
         if (!warning) return;
         stopGestureTest();
@@ -2411,14 +2445,14 @@
         renderVisionControlState();
       });
       card.querySelector('.vision-consistency-keep')?.addEventListener('click', () => {
-        const name = visionControls.slots[slotId - 1]?.name;
+        const name = visionControls.slotById(slotId)?.name;
         if (!name) return;
         dismissedPoseWarnings.add(name);
         renderVisionControlState();
       });
 
       deleteButton?.addEventListener('click', () => {
-        const slot = visionControls.slots[slotId - 1];
+        const slot = visionControls.slotById(slotId);
         stopGestureTest();
         if (slot?.name) deleteStoredGesture(slot.name);
         persistVisionSafety();
@@ -2427,9 +2461,10 @@
     }
     function syncGestureSlotCards() {
       const container=document.querySelector('.vision-pose-grid');
-      const template=gestureSlotCards[0];
+      const template=gestureSlotTemplate;
       if(!container || !template) return;
-      for(const card of [...gestureSlotCards]) if(Number(card.dataset.gestureSlot)>visionControls.slots.length) {
+      const ids = new Set(visionControls.slots.map(slot => slot.id));
+      for(const card of [...gestureSlotCards]) if(!ids.has(Number(card.dataset.gestureSlot))) {
         card.remove();gestureSlotCards.splice(gestureSlotCards.indexOf(card),1);
       }
       for(const slot of visionControls.slots) {
@@ -2443,18 +2478,26 @@
         if(learn) learn.textContent=T('js.capturePose', 'CAPTURE POSE');
         const test=card.querySelector('.vision-slot-test');
         test?.classList.remove('active');test?.setAttribute('aria-pressed','false');
+        const remove=card.querySelector('.vision-slot-remove');
+        if(remove) {
+          remove.title=T('vid.removePose','Remove pose');
+          remove.setAttribute('aria-label',remove.title);
+        }
         card.querySelector('.vision-slot-neighbor')?.classList.add('hidden');
         container.appendChild(card);gestureSlotCards.push(card);bindGestureSlotCard(card);
       }
+      gestureSlotCards.sort((a,b)=>Number(a.dataset.gestureSlot)-Number(b.dataset.gestureSlot));
+      gestureSlotCards.forEach(card=>container.appendChild(card));
       const add=document.getElementById('btn-add-learned-pose');
       if(add) add.disabled=visionControls.slots.length>=window.VISION_MAX_LEARNED_POSES;
     }
     gestureSlotCards.forEach(bindGestureSlotCard);
     syncGestureSlotCards();
     document.getElementById('btn-add-learned-pose')?.addEventListener('click',()=>{
-      if(!visionControls.addSlot()) return;
+      const slot=visionControls.addSlot();
+      if(!slot) return;
       syncGestureSlotCards();persistVisionSafety();renderVisionControlState();
-      gestureSlotCards.at(-1)?.scrollIntoView?.({block:'nearest'});
+      gestureSlotCards.find(card=>Number(card.dataset.gestureSlot)===slot.id)?.scrollIntoView?.({block:'nearest'});
     });
     renderVisionControlState();
 
@@ -2706,7 +2749,7 @@
         visionProcessor.onGestureProgress = (evaluation) => {
           if (visionProcessor !== ownedVisionProcessor) return;
           if (visionGestureTestSlot === null) return;
-          const slot = visionControls.slots[visionGestureTestSlot - 1];
+          const slot = visionControls.slotById(visionGestureTestSlot);
           if (!slot?.name) return;
           const target = evaluation?.candidates?.find((candidate) => candidate.name === slot.name);
           if (!target) return;
@@ -3137,7 +3180,7 @@
         if (msg.clock) {
           window.triggerNoteClockSnapshot = {...msg.clock,receivedAt:performance.now()};
           if (typeof window.updateTriggerNoteClockUI === 'function') {
-            window.updateTriggerNoteClockUI(msg.clock);
+            window.updateTriggerNoteClockUI();
           }
         }
         if (state) {

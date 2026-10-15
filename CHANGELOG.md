@@ -6,6 +6,10 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local candidate
 
+- Keep MAP/AUT/CFG header controls visible. Preserve AUT clock receipt metadata through MAP rendering; recover a stale position listener even when beat/tempo messages keep arriving. Play/pause state now waits for canonical Live observations.
+- Decode AbletonOSC T/F booleans in REC preflight and track armability, retaining strict unknown-state and monitor-enum guards.
+- Compact the VID cards, theme the scrollbar, grey Add Pose at fifteen cards and add a discrete card-removal X. Sparse IDs survive reload, Add reuses the first free ID, and removal explicitly releases held notes without shifting other mappings. CLR continues to retain its card; removed IDs retain their MAP destinations for deliberate reuse.
+
 - Keep active toggles running across Square waveform swaps, preserving mode-D deadlines and valid rhythmic pins on the host. Animate full-width values with transforms; avoid repeated DOM reads/writes for unchanged labels/trails.
 - Add mode-specific pad CFG, sparse project/preset/snapshot persistence and effective-mode echo/disconnect guards. Second right-click on the same control closes CFG.
 

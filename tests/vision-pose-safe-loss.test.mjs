@@ -8,6 +8,7 @@ import { applyMapping, controlMappings, eventModesState, cancelPendingMappingWri
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 
 test.afterEach(async () => {
   await cancelPendingMappingWrites();
@@ -86,4 +87,29 @@ test('host validates loss policy atomically and preserves legacy safe-loss targe
     assert.equal(getProjectConfigStatus().preferences.visionLoss.legacy,true);
     assert.equal(getProjectConfigStatus().preferences.unknownPreserved,8);
   } finally {await fs.rm(dir,{recursive:true,force:true});}
+});
+
+test('VID card removal sends a deliberate release through real mappings even with Hold indefinitely', async () => {
+  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'vision-remove-'));
+  const packets=[],pending=[];
+  const parameter={name:'RC MIDI Packet v2',min:0,max:4194303,isQuantized:false,
+    setValue:async value=>packets.push([Math.floor(value/128)%128,value%128])};
+  setExtensionContext({application:{song:{tempo:120,tracks:[{devices:[{name:'RC-Midi-Receiver',parameters:[parameter]}]}]}}});
+  try {
+    await configureMappingStorage(dir);
+    await commands.saveProjectClientState.handler({preferences:{visionLoss:{version:1,mode:'hold',timeoutMs:10000,legacy:false}}});
+    const control='sensor.vision.gesture.2';
+    controlMappings.set(control,[{type:'device_param',mode:'trigger_note',trackIndex:0,midiNote:'C3',noteGate:'hold',noteTiming:'immediate',neutralPolicy:'hold'}]);
+    await applyMapping('phone',control,1);
+    assert.deepEqual(packets,[[60,100]]);
+    const app=await fs.readFile(new URL('../static/phone-v3/app.js',import.meta.url),'utf8');
+    const start=app.indexOf('    function removeGestureSlot('),end=app.indexOf('    function bindGestureSlotCard(',start);
+    const context={window:{onControl:message=>pending.push(applyMapping('phone',message.name,message.value,Boolean(message.lost)))},
+      visionControls:{slotById:()=>({id:2,name:'Gesture 2'}),controlForSlot:()=>control,removeSlot(){}},
+      visionGestureLearnSlot:null,visionGestureTestSlot:null,liveGestureSlots:new Set([2]),visionPoseActivations:new Map(),badgePose:null,
+      deleteStoredGesture(){},dismissedPoseWarnings:new Set(),poseWarnings:new Map(),syncGestureSlotCards(){},persistVisionSafety(){},renderVisionControlState(){}};
+    vm.runInNewContext(app.slice(start,end),context);context.removeGestureSlot(2);await Promise.all(pending);
+    assert.deepEqual(packets,[[60,100],[60,0]],'removing the card must not be treated as tracking loss with indefinite hold');
+    assert.ok(controlMappings.has(control),'removing a pose never renumbers or silently deletes its destination');
+  } finally {await cancelPendingMappingWrites();await fs.rm(dir,{recursive:true,force:true});}
 });

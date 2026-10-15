@@ -139,13 +139,12 @@ test('vision performance layout fits one screen with compact controls and fixed 
     assert.match(block, /min-height:\s*0/, `${shrinkable} needs min-height:0 to actually shrink`);
     assert.doesNotMatch(block, /height:\s*auto/, `${shrinkable} must not opt out with height:auto`);
   }
-  // Each slot is a shrinkable one-row card. Its container stacks the three
-  // cards, while vision-layout-fit.test.mjs holds the containment contract
-  // that keeps every card inside its row.
+  // Cards keep the compact action/summary footprint. Real diagnostics can
+  // extend a card; the bank, rather than the page, owns scrolling.
   const slot = cssBlock(css, '.vision-gesture-slot');
-  assert.match(slot, /min-height:\s*248px/);
+  assert.match(slot, /min-height:\s*136px/);
   assert.match(slot, /display:\s*grid/);
-  assert.doesNotMatch(slot, /height:\s*auto/);
+  assert.match(slot, /height:\s*auto/);
   // The focused full-width deck gives MAP and CLUTCH explicit track counts.
   assert.match(cssBlock(css, '.vision-readout-card:nth-child(1) .vision-axis-chips'),
     /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);

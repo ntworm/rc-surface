@@ -67,7 +67,26 @@ test('saved slot names take precedence over migrated gesture templates', () => {
   const { VisionControlState } = load();
   const state = new VisionControlState({ slots: [{ name: 'Saved wave' }] }, [{ name: 'Old wave' }]);
   assert.equal(state.slots[0].name, 'Saved wave');
-  assert.equal(state.slots[1].name, 'Gesture 2');
+  assert.equal(state.slots.length, 1, 'an explicit saved list is authoritative');
+});
+
+test('remove pose keeps other identities and destinations stable across reload and re-add', () => {
+  const { VisionControlState } = load();
+  const state = new VisionControlState();
+  state.setSlotName(3, 'Keep me');
+  assert.equal(state.removeSlot(2).id, 2);
+  assert.equal(state.controlForSlot(2), null);
+  assert.equal(state.slotForGesture('Keep me').id, 3);
+  assert.equal(state.controlForSlot(3), 'sensor.vision.gesture.3');
+  assert.equal(state.removeSlot(2), null);
+  const restored = new VisionControlState(JSON.parse(JSON.stringify(state.toJSON())), [{name:'orphan'}]);
+  assert.deepEqual(Array.from(restored.slots, slot => slot.id), [1, 3]);
+  assert.equal(restored.setSlotName(3, 'Still G3').id, 3);
+  assert.equal(restored.addSlot().id, 2, 'first free numbered identity is reused, never renumber others');
+  for (const slot of [...restored.slots]) restored.removeSlot(slot.id);
+  const empty = new VisionControlState(JSON.parse(JSON.stringify(restored.toJSON())));
+  assert.equal(empty.slots.length, 0, 'removing every card survives reload');
+  assert.equal(empty.addSlot().id, 1);
 });
 
 test('hand label only exposes detectors explicitly enabled by the performer', () => {

@@ -173,7 +173,7 @@ test("OSCTransport falls back when the preferred OSC port is occupied", async ()
   });
 });
 
-test("OSCTransport stopPlayback changes isPlaying state but keeps socket open", async () => {
+test("OSCTransport stopPlayback waits for observed state and keeps socket open", async () => {
   const transport = createTestTransport();
   
   // Start transport
@@ -184,10 +184,35 @@ test("OSCTransport stopPlayback changes isPlaying state but keeps socket open", 
   transport.state.isPlaying = true;
   transport.stopPlayback();
   
+  assert.equal(transport.state.isPlaying, true, 'a command is not proof that Live has stopped');
+  transport.handleIncoming(osc.fromBuffer(osc.toBuffer({oscType:'message', address:'/live/song/get/is_playing', args:[false]})));
   assert.equal(transport.state.isPlaying, false);
   assert.equal(transport.state.available, wasAvailable); // Available state is unchanged
   
   transport.dispose();
+});
+
+test('play/stop confirmation comes only from canonical observations, never from a tempo push or malformed play state', () => {
+  const transport = createTestTransport();
+  const sent = [];
+  transport.send = address => sent.push(address);
+  const observe = args => transport.handleIncoming(osc.fromBuffer(osc.toBuffer({oscType:'message', address:'/live/song/get/is_playing', args})));
+  observe([true]);
+  transport.stopPlayback();
+  transport.handleIncoming({oscType:'message', address:'/live/song/get/tempo', args:[{value:121}]});
+  assert.equal(transport.state.isPlaying, true);
+  for (const args of [[], [null], ['false'], ['true'], [2], [false, true]]) {
+    observe(args);
+    assert.equal(transport.state.isPlaying, true, `invalid play state ${JSON.stringify(args)}`);
+  }
+  observe([false]);
+  transport.play();
+  assert.equal(transport.state.isPlaying, false);
+  observe([1]);
+  assert.equal(transport.state.isPlaying, true);
+  observe([0]);
+  assert.equal(transport.state.isPlaying, false);
+  assert.deepEqual(sent, ['/live/song/stop_playing', '/live/song/get/is_playing', '/live/song/start_playing', '/live/song/get/is_playing']);
 });
 
 test("OSCTransport sends from its bound listener endpoint", async () => {

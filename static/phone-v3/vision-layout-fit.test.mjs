@@ -60,8 +60,8 @@ test('a slot is contained and cannot spill out of its row', () => {
 
   assert.match(slot, /overflow:\s*hidden/, 'nothing may draw outside the slot');
   assert.match(slot, /min-width:\s*0/);
-  assert.match(slot, /min-height:\s*248px/);
-  assert.match(slot, /height:\s*248px/);
+  assert.match(slot, /min-height:\s*136px/);
+  assert.match(slot, /height:\s*auto/);
   assert.match(slot, /display:\s*grid/, 'slot lays out its label, actions and status on a grid');
 });
 
@@ -83,20 +83,36 @@ test('the secondary sections cannot squeeze the slots out', () => {
   assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card'), /overflow:\s*hidden/);
 });
 
-test('the pose list scrolls at a stable card height, independent of capture or warning state', () => {
+test('the pose list scrolls compact base cards without reserving empty diagnostic rows', () => {
   const css = read('style.css');
   for (const selector of ['.vision-pose-grid']) {
     const block = cssBlock(css, selector);
     assert.match(block, /grid-template-columns:\s*minmax\(0,\s*1fr\)/, `${selector} is one column`);
     assert.match(
       block,
-      /grid-auto-rows:\s*248px/,
+      /grid-auto-rows:\s*max-content/,
       `${selector} retains card height when the number of poses changes`,
     );
     assert.match(block, /overflow-y:\s*auto/);
     assert.match(block, /min-height:\s*0/);
   }
-  assert.doesNotMatch(css, /\.vision-gesture-slot:has\(/, 'warnings cannot resize the cards');
+  assert.doesNotMatch(css, /\.vision-gesture-slot:has\(/, 'diagnostics need no selector-driven card resizing');
+  assert.match(cssBlock(css, '.vision-gesture-slot'), /grid-template-rows:\s*91px\s+20px;/,
+    'only actions and summary reserve space in an ordinary card');
+  assert.match(cssBlock(css, '.vision-slot-consistency'), /grid-row:\s*auto;/);
+  assert.match(cssBlock(css, '.vision-slot-neighbor'), /grid-row:\s*auto;/);
+});
+
+test('pose bank uses dark square scrollbars, a subdued disabled Add and a small X with a touch floor', () => {
+  const css = read('style.css');
+  assert.match(css, /\.vision-pose-grid\s*\{[^}]*scrollbar-color:\s*var\(--text3\)\s+var\(--surface\)/);
+  assert.match(cssBlock(css, '.vision-pose-grid::-webkit-scrollbar-thumb'), /background:\s*var\(--text3\)/);
+  assert.match(cssBlock(css, '.vision-pose-grid::-webkit-scrollbar-thumb'), /border-radius:\s*0/);
+  assert.match(cssBlock(css, '.vision-pose-grid::-webkit-scrollbar-button'), /display:\s*none/);
+  assert.match(cssBlock(css, '#btn-add-learned-pose:disabled'), /color:\s*var\(--text3\)/);
+  assert.match(cssBlock(css, '.vision-slot-remove'), /width:\s*44px/);
+  assert.match(cssBlock(css, '.vision-slot-remove'), /min-height:\s*44px/);
+  assert.equal((read('index.html').match(/class="vision-slot-remove"/g) || []).length, 3);
 });
 
 test('the four slot actions form two rows and keep a touch floor', () => {

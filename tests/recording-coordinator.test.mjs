@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
 import { CMD, GET, REC, REC_PREFLIGHT, CLIP } from '../src/osc-tokens.ts';
@@ -27,8 +28,12 @@ function fixture(t) {
     loop: false, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false };
   const sent = [];
   let block, current = true;
-  const push = (address, args) => osc.handleIncoming({ oscType: 'message', address,
-    args: args.map(value => ({ value })) });
+  // AbletonOSC's pythonosc builder preserves Python bool as OSC T/F tags.
+  // Exercise the real codec and OSCTransport entry, including index-prefixed
+  // track getters, rather than converting booleans into integers in a mock.
+  const push = (address, args) => osc.handleIncoming(oscCodec.fromBuffer(oscCodec.toBuffer({ address,
+    args: args.map(value => ({ type: typeof value === 'boolean' ? (value ? 'true' : 'false')
+      : typeof value === 'string' ? 'string' : value === null ? 'null' : Number.isInteger(value) ? 'integer' : 'float', value })) })));
   osc.send = (address, args = []) => {
     sent.push([address, args]);
     if (address === REC.setRecordMode) values.record = args[0].value === 1;
@@ -38,18 +43,18 @@ function fixture(t) {
     if (address === CMD.stopPlaying) values.playing = false;
     if (block === address) return;
     let response;
-    if (address === GET.isPlaying) response = [Number(values.playing)];
-    if (address === REC.getRecordMode) response = [Number(values.record)];
+    if (address === GET.isPlaying) response = [values.playing];
+    if (address === REC.getRecordMode) response = [values.record];
     if (address === GET.currentSongTime) response = [values.position];
-    if (address === GET.metronome) response = [Number(values.click)];
+    if (address === GET.metronome) response = [values.click];
     if (address === CLIP.getTrackNames) response = song.tracks.map(track => track.name);
     if ([REC_PREFLIGHT.signatureNumerator, REC_PREFLIGHT.signatureDenominator].includes(address)) response = [4];
     for (const key of ['loop','punchIn','punchOut','overdub','backToArranger','sessionRecord']) {
-      if (address === REC_PREFLIGHT[key]) response = [Number(values[key])];
+      if (address === REC_PREFLIGHT[key]) response = [values[key]];
     }
     const index = args[0]?.value;
-    if (address === REC_PREFLIGHT.trackArm) response = [index, Number(song.tracks[index].arm)];
-    if (address === REC_PREFLIGHT.trackCanArm) response = [index, 1];
+    if (address === REC_PREFLIGHT.trackArm) response = [index, song.tracks[index].arm];
+    if (address === REC_PREFLIGHT.trackCanArm) response = [index, true];
     if (address === REC_PREFLIGHT.trackMonitor) response = [index, values.monitor];
     if (response) queueMicrotask(() => push(address, response));
   };
@@ -63,6 +68,45 @@ function fixture(t) {
   return { osc, coordinator, song, values, sent, context, select, push,
     block: address => { block = address; }, retire: () => { current = false; } };
 }
+
+test('REC real OSC boolean replies preserve preflight flags and track armability', async t => {
+  const f = fixture(t);
+  const state = await f.coordinator.refresh();
+  assert.deepEqual(state.safety,{loop:false,punchIn:false,punchOut:false,overdub:false,backToArranger:false,sessionRecord:false});
+  assert.equal(state.tracks[0].arm,true);
+  assert.equal(state.tracks[0].canArm,true);
+  assert.equal(state.tracks[1].arm,false);
+  assert.equal(state.tracks.filter(track=>track.canArm===true).length,2);
+  assert.equal(state.transport.recordMode.value,false);
+  assert.equal(state.transport.recordMode.fresh,true);
+  assert.equal(state.preflightComplete,false);
+  assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
+});
+
+test('REC boolean observations accept T/F and integer 0/1 only; monitor remains an integer enum', async t => {
+  t.mock.timers.enable({apis:['setTimeout','Date'],now:10000});
+  const f=fixture(t);await f.select();
+  for(const raw of [true,1,false,0]) {
+    const expected=raw===true || raw===1;
+    f.push(REC_PREFLIGHT.loop,[raw]);f.push(REC_PREFLIGHT.trackArm,[0,raw]);f.push(REC_PREFLIGHT.trackCanArm,[0,raw]);
+    const state=f.coordinator.snapshot();
+    assert.equal(state.safety.loop,expected);assert.equal(state.tracks[0].arm,expected);assert.equal(state.tracks[0].canArm,expected);
+  }
+  t.mock.timers.tick(2001);
+  for(const raw of ['true','false','0','1',2,-1,null,.5,NaN,Infinity]) {
+    f.push(REC_PREFLIGHT.loop,[raw]);f.push(REC_PREFLIGHT.trackArm,[0,raw]);f.push(REC_PREFLIGHT.trackCanArm,[0,raw]);
+    const state=f.coordinator.snapshot();
+    assert.equal(state.safety.loop,null,String(raw));assert.equal(state.tracks[0].arm,null,String(raw));assert.equal(state.tracks[0].canArm,null,String(raw));
+  }
+  f.push(REC_PREFLIGHT.punchIn,[false,0]);f.push(REC_PREFLIGHT.trackArm,[0,false,0]);
+  f.push(REC_PREFLIGHT.trackCanArm,[-1,true]);f.push(REC_PREFLIGHT.trackCanArm,[.5,true]);
+  f.push(REC_PREFLIGHT.trackMonitor,[0,true]);
+  assert.equal(f.coordinator.snapshot().safety.punchIn,null);
+  assert.equal(f.coordinator.snapshot().tracks[0].arm,null);
+  assert.equal(f.coordinator.snapshot().tracks[0].canArm,null);
+  assert.equal(f.coordinator.snapshot().tracks[0].monitor,null);
+  for(const raw of [0,1,2]) {f.push(REC_PREFLIGHT.trackMonitor,[0,raw]);assert.equal(f.coordinator.snapshot().tracks[0].monitor,raw);}
+});
 
 test('REC complete flow prepares observed position/arm, starts once, stops, auditions disarmed, and retains return point', async t => {
   const f = fixture(t);

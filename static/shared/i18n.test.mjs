@@ -267,5 +267,6 @@ test('the pose-slot status lines read in Portuguese', () => {
   // The buttons read TESTE and APAGAR ÚLTIMA, so the prose names them that way.
   assert.match(api.t('vid.slotReady'), /TESTE/);
   assert.match(api.t('vid.poseFull'), /APAGAR ÚLTIMA/);
+  assert.equal(api.t('vid.removePose'), 'Remover pose');
   assert.equal(api.t('mm.inOutLost', { in: '0.50', out: '0.25' }), 'SEM SINAL — último In: 0.50 | Out: 0.25');
 });

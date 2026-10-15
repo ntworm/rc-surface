@@ -29,6 +29,7 @@ test("a flowing push stream reduces polling to what has no listener behind it", 
   const now = Date.now();
   transport.state.lastSeenAt = now - 100; // a push arrived 100 ms ago
   transport.lastPushAt = now - 100;
+  transport.lastSongTimeUpdateAt = now - 100;
   transport.state.isPlaying = true;
 
   transport.pollTick(now);
@@ -121,6 +122,7 @@ test("steady-state traffic drops by roughly an order of magnitude", () => {
   for (let i = 0; i < 20; i++) {
     transport.state.lastSeenAt = now + i * 500;
     transport.lastPushAt = now + i * 500;
+    transport.lastSongTimeUpdateAt = now + i * 500;
     transport.pollTick(now + i * 500);
   }
   for (let i = 0; i < 5; i++) {
@@ -132,6 +134,37 @@ test("steady-state traffic drops by roughly an order of magnitude", () => {
   // Was 20 * 6 + 5 = 125 messages for the same ten seconds; the selection
   // is asked for on demand now, so a flowing link sends nothing at all.
   assert.equal(sent.length, 0, "a flowing link is silent");
+});
+
+test('partial listener failure recovers real position while beat and tempo keep the link alive', t => {
+  const { transport, sent } = recordingTransport();
+  t.mock.timers.enable({ apis: ['Date'], now: 10000 });
+  const push = (address, value) => transport.handleIncoming({oscType:'message', address, args:[{value}]});
+  transport.state.isPlaying = true;
+  push('/live/song/get/current_song_time', 0);
+  for (let elapsed = 500; elapsed <= 12000; elapsed += 500) {
+    t.mock.timers.setTime(10000 + elapsed);
+    push('/live/song/get/beat', elapsed / 500);
+    push('/live/song/get/tempo', 120);
+    sent.length = 0;
+    transport.pollTick(Date.now());
+    assert.ok(sent.includes('/live/song/get/current_song_time'), `position recovery at ${elapsed}`);
+    assert.ok(sent.includes('/live/song/get/is_playing'), 'partial failure must also confirm play/pause');
+    assert.ok(!sent.includes('/live/song/get/metronome'), 'healthy channels need no full resync');
+    // A 20 ms reply delay must not make the next 500 ms turn skip recovery.
+    t.mock.timers.setTime(10020 + elapsed);
+    push('/live/song/get/current_song_time', elapsed / 500);
+    push('/live/song/get/is_playing', 1);
+  }
+});
+
+test('a stopped transport and healthy pushes do not poll for position', () => {
+  const { transport, sent } = recordingTransport();
+  const now = Date.now();
+  transport.lastPushAt = now;
+  transport.lastSongTimeUpdateAt = now - 5000;
+  transport.pollTick(now);
+  assert.deepEqual(sent, []);
 });
 
 // Owner bench 2026-09-21: Live creates the AbletonOSC control surface once

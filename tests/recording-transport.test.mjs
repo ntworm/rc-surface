@@ -43,7 +43,8 @@ test('REC starts unknown and observes each field independently; legacy optimisti
     assert.deepEqual(state[field], { value: null, observedAt: null, fresh: false });
   }
   osc.play();
-  assert.equal(osc.state.isPlaying, true);
+  assert.equal(osc.state.isPlaying, false, 'a play command is not a Live observation');
+  osc.state.isPlaying = true; // A legacy caller changing the cache still cannot confirm REC state.
   assert.equal(rec.snapshot().isPlaying.value, null);
   seed();
   t.mock.timers.tick(RECORDING_FRESH_MS + 1);

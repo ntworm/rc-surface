@@ -100,8 +100,9 @@
     }
   }
 
-  window.updateTriggerNoteClockUI = function updateTriggerNoteClockUI(snapshot) {
-    if (snapshot) window.triggerNoteClockSnapshot = snapshot;
+  window.updateTriggerNoteClockUI = function updateTriggerNoteClockUI() {
+    // The receiver owns the observation and its timestamp. Rendering must not
+    // replace it with the raw host payload or renew the age of a stale clock.
     const liveLine = document.querySelector('.map-timing-live-status');
     const syncWarning = document.querySelector('.map-timing-sync-warning');
     updateLiveLine(liveLine, syncWarning);
