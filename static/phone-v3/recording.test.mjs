@@ -124,6 +124,43 @@ test('REC preserves actionable errors across successful passive refreshes until 
   assert.equal(client.view().error,'REC:OTHER_ARMED');
 });
 
+test('REC ARM recovery DOM marks an unconfirmed vector unknown and reconciles before another exact card action',async t=>{
+  t.mock.timers.enable({apis:['Date'],now:10000});
+  const nodes=new Map(),calls=[];let generated=0;
+  const node=id=>{
+    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
+    return nodes.get(id);
+  };
+  const field=value=>({value,fresh:true,observedAt:Date.now()});
+  let observed={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},
+    pending:null,attemptActive:false,safety:{loop:false},meter:{numerator:4,denominator:4},locators:[{name:'Start',time:8}],
+    tracks:[{index:0,id:'a',name:'Input A',arm:false,canArm:true,solo:false,mute:false},{index:1,id:'b',name:'Input B',arm:false,canArm:true,solo:false,mute:false},{index:2,id:'group',name:'Group',arm:null,canArm:false,solo:false,mute:false}]};
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const context=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},
+    sendPhoneCommand:(name,args,cb)=>{calls.push({name,args,cb});if(name==='getRecordingState')cb({ok:true,result:observed});}});
+  vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
+  client.session(true,'controller');await client.command('getRecordingState');
+  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children[0];
+  arm(0).listeners.get('click')();const first=calls.at(-1);assert.equal(first.name,'recordingTrackControl');assert.equal(first.args.track.id,'a');assert.equal(first.args.enabled,true);
+  first.cb({ok:false,error:'REC:UNKNOWN'});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(client.view().error,'REC:UNKNOWN');assert.equal(arm(0)['aria-pressed'],'mixed');assert.equal(arm(1)['aria-pressed'],'mixed');assert.equal(arm(0).disabled,true);assert.equal(arm(1).disabled,true);
+  const before=calls.length;arm(1).listeners.get('click')();assert.equal(calls.length,before,'no toggle from the preceding unconfirmed boolean');
+  observed={...observed,tracks:observed.tracks.map(track=>({...track,arm:track.index===0?true:track.index===2?null:false}))};
+  await client.command('getRecordingState');assert.equal(client.view().error,'REC:UNKNOWN','a read does not fabricate a successful action');
+  assert.equal(arm(0)['aria-pressed'],'true');assert.equal(arm(1)['aria-pressed'],'false');assert.equal(arm(1).disabled,false);assert.equal(arm(2).disabled,true);
+  assert.equal(node('rec-start').disabled,false,'fresh non-armable group capability does not require an invented ARM observation for the UI cohort');
+  assert.deepEqual(node('rec-track-grid').children,cards,'polling retains cards');
+  t.mock.timers.setTime(12001);await client.command('getRecordingState');
+  // A server snapshot carrying stale transport must still lock the card.
+  observed={...observed,transport:{...observed.transport,isPlaying:{...field(false),fresh:false}}};await client.command('getRecordingState');assert.equal(arm(1).disabled,true);
+  observed={...observed,transport:{...observed.transport,isPlaying:field(false),recordMode:field(false)}};await client.command('getRecordingState');
+  arm(1).listeners.get('click')();const second=calls.at(-1);assert.equal(second.args.track.index,1);assert.equal(second.args.track.id,'b');assert.equal(second.args.track.name,'Input B');assert.equal(second.args.enabled,true);
+  second.cb({ok:true,result:{...observed,tracks:observed.tracks.map(track=>({...track,arm:track.index===1?true:track.arm}))}});await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(calls.filter(call=>call.name==='recordingTrackControl').map(call=>call.args.track.id),['a','b']);
+  observed={...observed,tracks:observed.tracks.map(track=>({...track,canArm:track.index===2?null:track.canArm,arm:track.index===2?false:track.arm}))};await client.command('getRecordingState');assert.equal(node('rec-start').disabled,true,'unknown capability may conceal another armed input');
+});
+
 test('REC timeline geometry covers real marker times and bounds zoom without modifying the Set',t=>{
   const {api:a,calls}=api(t);
   assert.equal(a.timelineBounds([{time:8},{time:24}],2).end,28);

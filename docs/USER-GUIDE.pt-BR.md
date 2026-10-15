@@ -1178,6 +1178,9 @@ playback parado:
    quando você aperta ARM de uma track. Trocar o modo ou dar um toque simples no nome não
    altera o Live. Grupos têm SOLO/MUTE, mas não podem ser armados. A preferência
    global de arm do Live não muda; um resultado incompatível do host é informado.
+   ARM confirma o conjunto de entradas armáveis sem esperar Loop, compasso ou click.
+   Se a confirmação falhar, os estados ARM ficam desconhecidos até nova leitura;
+   a escrita pode já ter sido aplicada. A superfície não a repete automaticamente.
 2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
    do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
    observada do playback.

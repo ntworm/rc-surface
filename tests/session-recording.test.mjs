@@ -7,7 +7,7 @@ import {OSCTransport} from '../src/live/osc-transport.ts';
 import {RecordingCoordinator} from '../src/live/recording-coordinator.ts';
 import {CLIP,CMD,GET,REC,REC_LOOP,REC_PREFLIGHT,SESSION_REC,REC_RETURN} from '../src/osc-tokens.ts';
 
-function fixture(t,inputs=2) {
+function fixture(t,inputs=2,groupArm=false) {
   const osc=new OSCTransport();Object.assign(osc.state,{available:true,connected:true});
   let song={scenes:Array.from({length:10},(_,index)=>({name:'Scene '+(index+1),handle:{id:'scene-'+index}})),cuePoints:[],tracks:[]},current=true;
   const writes=[],sent=[],block=new Set(),state={playing:false,record:false,click:false,numerator:4,denominator:4,sessionRecord:false};
@@ -15,10 +15,10 @@ function fixture(t,inputs=2) {
   song.tracks=Array.from({length:inputs+1},(_,index)=>{
     const track={handle:{id:'track-'+index},name:index===inputs?'Group':index===0?'Audio':index===1?'MIDI':'Input '+(index+1),canArm:index<inputs,monitor:1,
       clipSlots:song.scenes.map((_,scene)=>({handle:{id:'slot-'+index+'-'+scene},clip:null}))};
-    for(const [key,start] of [['arm',index<inputs],['solo',false],['mute',false]]){let value=start;Object.defineProperty(track,key,{enumerable:true,configurable:true,get:()=>value,set:next=>{writes.push([index,key,next]);value=next;}});}
+    for(const [key,start] of [['arm',index<inputs?true:groupArm],['solo',false],['mute',false]]){let value=start;Object.defineProperty(track,key,{enumerable:true,configurable:true,get:()=>value,set:next=>{writes.push([index,key,next]);value=next;}});}
     return track;
   });
-  const push=(address,values)=>osc.handleIncoming(codec.fromBuffer(codec.toBuffer({address,args:values.map(value=>({type:typeof value==='boolean'?(value?'true':'false'):typeof value==='string'?'string':Number.isInteger(value)?'integer':'float',value}))})));
+  const push=(address,values)=>osc.handleIncoming(codec.fromBuffer(codec.toBuffer({address,args:values.map(value=>({type:typeof value==='boolean'?(value?'true':'false'):typeof value==='string'?'string':value===null?'null':Number.isInteger(value)?'integer':'float',value}))})));
   let onSend=()=>{},mode='record',stopDelayed=false,stopIndex=-1;
   osc.send=(address,args=[])=>{
     sent.push([address,args]);onSend(address,args);
@@ -74,6 +74,17 @@ test('REC Arrangement return recovers confirmed stopped ownership and never repl
   f.state.backToArranger=true;f.block.add(REC_RETURN.setBackToArranger);
   const pending=f.coordinator.returnToArrangement(f.context),rejected=assert.rejects(pending,/RETURN_UNCONFIRMED/);await flush();t.mock.timers.tick(2101);await flush();await rejected;
   const count=mutations(f).length;await f.coordinator.refreshSession(0);assert.equal(mutations(f).length,count);
+});
+
+// AbletonOSC answers a group's Track.arm getter with nil because Live raises.
+test('Session REC and Arrangement return complete when a group answers ARM with nil',async t=>{
+  const f=fixture(t,2,null),result=await f.coordinator.recordSession(f.request(),f.context);
+  assert.equal(result.session.active,true);assert.ok(result.session.owned.every(target=>target.state==='recording'));
+  assert.equal(result.tracks[2].canArm,false);assert.equal(result.tracks[2].arm,null,'group ARM is never invented');
+  for(let index=0;index<2;index++)Object.assign(f.flags[index],{playing:-2,fired:-1,recording:false,active:false});
+  f.state.backToArranger=true;await f.coordinator.returnToArrangement(f.context);
+  assert.equal(f.coordinator.snapshot().attemptActive,false);assert.equal(f.state.backToArranger,false);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[true,true,null]);assert.deepEqual(f.writes,[]);
 });
 
 test('Session native Clip Stop index -2 completes STOP and permits another scene without reload',async t=>{

@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { CLIP, GET, REC_LOOP, REC_PREFLIGHT, REC_PREROLL,REC_RETURN } from '../osc-tokens.js';
+import { CLIP, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL,REC_RETURN } from '../osc-tokens.js';
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
@@ -109,6 +109,11 @@ export class RecordingCoordinator extends EventEmitter {
   private value(key: string): unknown {
     const field = this.observed.get(key), now = Date.now();
     return this.osc.state.connected && this.osc.state.available && field && now >= field.at && now - field.at <= RECORDING_FRESH_MS ? field.value : null;
+  }
+  /** Observed ARM; a non-armable group has no ARM value and is never an input. */
+  private armed(index: number): unknown {
+    const arm = this.value('arm:' + index);
+    return arm === null && this.value('canArm:' + index) === false ? false : arm;
   }
   public snapshot() {
     const song = this.currentSong();
@@ -233,14 +238,14 @@ export class RecordingCoordinator extends EventEmitter {
     this.currentSong();
     if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
     if (this.operation || this.trackMutation) return this.snapshot();
-    const promise = this.run('read', undefined, async operation => {await this.read(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
   }
   public async refreshSession(offset:unknown) {
     this.currentSong();this.session.window(offset);
     if(this.operation || this.trackMutation)return this.snapshot();
-    return this.run('read',undefined,async operation=>{await this.read(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    return this.run('read',undefined,async operation=>{await this.readDisplay(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
   }
   public async recordSession(request:unknown,context?:CommandExecutionContext) {
     this.idle(context);if(this.punch || this.armedByRecorder.length)fail('STOP_REQUIRED');
@@ -253,7 +258,7 @@ export class RecordingCoordinator extends EventEmitter {
         if(!transport.recordMode.fresh || transport.recordMode.value!==false)fail('SESSION_CONFLICT');
         if(this.value('sessionRecord')!==false)fail('SESSION_CONFLICT');
         for(const ref of refs)if(this.value('arm:'+ref.index)!==true || this.value('canArm:'+ref.index)!==true)fail('TRACK_NOT_ARMED');
-        if(song.tracks.some((_,index)=>this.value('arm:'+index)!==refs.some(ref=>ref.index===index)))fail('OTHER_ARMED');
+        if(song.tracks.some((_,index)=>this.armed(index)!==refs.some(ref=>ref.index===index)))fail('OTHER_ARMED');
       };
       const prepared=await this.session.record(request,context!,check,operation.abort.signal,preflight);
       const refs=prepared.owner.targets.map(target=>target.target.track);
@@ -343,7 +348,7 @@ export class RecordingCoordinator extends EventEmitter {
       }
     }
     else if (args.length === 1 && observedBoolean(args[0]?.value) !== null) {
-      key = flags.find(flag => REC_PREFLIGHT[flag] === address); value = observedBoolean(args[0]?.value);
+      key = address === GET.isPlaying ? 'isPlaying' : address === REC.getRecordMode ? 'recordMode' : flags.find(flag => REC_PREFLIGHT[flag] === address); value = observedBoolean(args[0]?.value);
     } else if (args.length === 2 && Number.isInteger(args[0]?.value) && Number(args[0]?.value) >= 0) {
       const field = address === REC_PREFLIGHT.trackArm ? 'arm' : address === REC_PREFLIGHT.trackSolo ? 'solo' : address === REC_PREFLIGHT.trackMute ? 'mute'
         : address === REC_PREFLIGHT.trackCanArm ? 'canArm' : address === REC_PREFLIGHT.trackMonitor ? 'monitor' : null;
@@ -357,6 +362,49 @@ export class RecordingCoordinator extends EventEmitter {
       this.observed.set(key, { value, at, revision: ++this.revision }); this.emit('observation');
     }
   };
+  /** Card ARM confirmation excludes recording-only state, but observes every
+   * armable input so MULTI cannot hide a host-side exclusive-arm side effect. */
+  private readArms(operation: Operation, song = this.currentSong()): Promise<void> {
+    this.check(operation);if(song.tracks.length>256)fail('TRACK_LIMIT');
+    const refs=song.tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
+    const revision=this.revision;
+    const packets:[key:string,address:string,index?:number][]=[['names',CLIP.getTrackNames],['isPlaying',GET.isPlaying],['recordMode',REC.getRecordMode],
+      ...refs.map(ref=>['canArm:'+ref.index,REC_PREFLIGHT.trackCanArm,ref.index] as [string,string,number])];
+    return new Promise<void>((resolve,reject)=>{
+      let done=false,armsRequested=false,retry:ReturnType<typeof setTimeout>|undefined;
+      const guard=()=>{this.check(operation);if(this.getSong()!==song)fail('IDENTITY');};
+      const fresh=(key:string)=>(this.observed.get(key)?.revision??0)>revision&&this.value(key)!==null;
+      const finish=(error?:unknown)=>{if(done)return;done=true;clearTimeout(timer);clearTimeout(retry);this.off('observation',changed);operation.abort.signal.removeEventListener('abort',abort);if(error)reject(error);else resolve();};
+      const abort=()=>finish(operation.abort.signal.reason);
+      const sendMissing=()=>{for(const [key,address,index] of packets){if(done)break;if(fresh(key))continue;guard();this.osc.send(address,index===undefined?[]:[{type:'integer',value:index}]);}};
+      const changed=()=>{
+        try {
+          guard();
+          if(!armsRequested&&refs.every(ref=>fresh('canArm:'+ref.index))){
+            armsRequested=true;
+            for(const ref of refs)if(this.value('canArm:'+ref.index)===true)packets.push(['arm:'+ref.index,REC_PREFLIGHT.trackArm,ref.index]);
+            sendMissing();
+          }
+          if(armsRequested&&packets.every(([key])=>fresh(key))){this.identities(refs);finish();}
+        } catch(error){finish(error);}
+      };
+      const poll=()=>{try{guard();if(fresh('names'))this.identities(refs);sendMissing();if(!done)retry=setTimeout(poll,100);}catch(error){finish(error);}};
+      const timer=setTimeout(()=>finish(Error('REC:UNKNOWN')),RECORDING_CONFIRM_MS);
+      this.on('observation',changed);operation.abort.signal.addEventListener('abort',abort,{once:true});poll();
+    });
+  }
+  /** A failed passive full read must not strand card state behind an unrelated
+   * meter/Loop/click timeout. Recover only fresh card evidence, retaining the
+   * original failure; recording actions still use the full reader below. */
+  private async readDisplay(operation:Operation):Promise<void> {
+    const song=this.currentSong();
+    try {await this.read(operation);}
+    catch(error){
+      this.check(operation);if(this.getSong()!==song)fail('IDENTITY');
+      if(!(error instanceof Error)||!['REC:UNKNOWN','Requested recording state was not observed within 2000 ms'].includes(error.message))throw error;
+      await this.readArms(operation,song);throw error;
+    }
+  }
   private async read(operation: Operation, expected?: LoopExpectation, monitorRefs?:TrackRef[]): Promise<void> {
     this.check(operation);
     const song = this.currentSong();
@@ -391,11 +439,15 @@ export class RecordingCoordinator extends EventEmitter {
         if (error) reject(error); else resolve();
       };
       const abort = () => finish(operation.abort.signal.reason);
+      const fresh = (key: string) => (this.observed.get(key)?.revision ?? 0) > revision && this.value(key) !== null;
+      // Live raises on a group's Track.arm and AbletonOSC answers nil; a fresh
+      // can_be_armed=false is that track's complete ARM evidence.
+      const satisfied = (key: string) => fresh(key) || key.startsWith('arm:') && fresh('canArm:' + key.slice(4)) && this.value('canArm:' + key.slice(4)) === false;
       const observed = () => {
         try {
           this.check(operation);
           if (expected && Date.now() >= expected.deadline) { finish(mismatch()); return; }
-          if (keys.every(key => (this.observed.get(key)?.revision ?? 0) > revision && this.value(key) !== null)) {
+          if (keys.every(satisfied)) {
             if (expected && operation.name !== 'stop') { this.preflight(false, false, expected.key); this.markerRange(this.range!); }
             if (matches()) finish();
           }
@@ -444,7 +496,7 @@ export class RecordingCoordinator extends EventEmitter {
       if ((armed || this.strictCohort) && this.value('arm:' + ref.index) !== true) fail('TRACK_NOT_ARMED');
       if (this.cohort && (this.value('monitor:'+ref.index) === null || ![0,1,2].includes(Number(this.value('monitor:'+ref.index))))) fail('UNKNOWN');
     }
-    if (this.currentSong().tracks.some((_, index) => !refs.some(ref => ref.index === index) && this.value('arm:' + index) !== false)) fail('OTHER_ARMED');
+    if (this.currentSong().tracks.some((_, index) => !refs.some(ref => ref.index === index) && this.armed(index) !== false)) fail('OTHER_ARMED');
     if (this.point === null) fail('POSITION');
   }
   public async arm(enabled: boolean, expected: TrackRef, context?: CommandExecutionContext) {
@@ -469,19 +521,24 @@ export class RecordingCoordinator extends EventEmitter {
     if (property === 'arm') {
       this.idle(context);
       return this.run('tracks',context,async operation => {
-        await this.read(operation); this.identities([ref]); this.stopped();
+        const song=this.currentSong();
+        await this.readArms(operation,song); this.identities([ref]); this.stopped();
         if (this.armedByRecorder.length) fail('STOP_REQUIRED');
         if (this.value('canArm:'+ref.index) !== true) fail('NOT_ARMABLE');
-        const song = this.currentSong(), before = song.tracks.map((_,index) => this.value('arm:'+index));
+        const arms=()=>song.tracks.map((_,index)=>this.value('canArm:'+index)===false?false:this.value('arm:'+index));
+        const before=arms();
         const identities = song.tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
         if (before.some(value => typeof value !== 'boolean')) fail('UNKNOWN');
         const desired = before.map((value,index) => index === ref.index ? enabled : armMode === 'exclusive' && enabled ? false : value);
         for (let index=0;index<song.tracks.length;index++) if (before[index] !== desired[index]) {
           this.check(operation); this.identities(identities); if (this.getSong() !== song) fail('IDENTITY'); this.stopped();
+          // A native arm setter can affect peers before applying/throwing.
+          // Auxiliary snapshots must not resurrect any pre-write ARM value.
+          for(const affected of identities)this.observed.delete('arm:'+affected.index);
           song.tracks[index]!.arm = desired[index] as boolean;
         }
-        await this.read(operation); this.identities(identities); this.stopped();
-        if (desired.some((value,index) => this.value('arm:'+index) !== value)) fail('ARM_UNCONFIRMED');
+        await this.readArms(operation,song); this.identities(identities); this.stopped();
+        const actual=arms();if (desired.some((value,index) => actual[index] !== value)) fail('ARM_UNCONFIRMED');
         this.preparedToken = null;
       });
     }

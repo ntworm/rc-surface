@@ -53,6 +53,10 @@
             notify(); resolve(state);
           } else {
             const message = response?.error || 'REC:UNKNOWN';
+            // An SDK write may have applied without confirmation, including
+            // exclusive-arm side effects. Wait for observed arms before any
+            // subsequent toggle; never retry the write or claim success.
+            if(!read && name==='recordingTrackControl' && args.property==='arm' && state?.tracks)state={...state,tracks:state.tracks.map(track=>({...track,arm:null}))};
             if(read) readError = message; else error = message;
             notify(); reject(Error(message));
           }
@@ -105,7 +109,7 @@
     }
     function armedTracks(view) {
       const tracks=view.state?.tracks;
-      return view.fresh&&tracks?.every(track=>typeof track.arm==='boolean')?tracks.filter(track=>track.arm===true&&track.canArm===true):[];
+      return view.fresh&&tracks?.every(track=>typeof track.canArm==='boolean'&&(track.canArm===false||typeof track.arm==='boolean'))?tracks.filter(track=>track.arm===true&&track.canArm===true):[];
     }
     const canRename=view=>canControl(view,'arm') && !view.state?.attemptActive;
     const sessionTargets=view=>{

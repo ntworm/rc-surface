@@ -1164,6 +1164,9 @@ stopped:
    you press a track's ARM. Changing this mode or single-clicking a name does not
    change Live. Groups have SOLO/MUTE but cannot be armed. Live's global arm
    preference is unchanged; an incompatible host arm result is reported.
+   ARM confirms the armable input set without waiting for Loop, meter or click.
+   If confirmation fails, ARM states become unknown until a fresh read; a write
+   may already have applied. The surface does not repeat it automatically.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
    The list follows timeline time, including newly created early markers, with

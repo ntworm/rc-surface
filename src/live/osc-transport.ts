@@ -403,7 +403,7 @@ export class OSCTransport extends EventEmitter {
     const args = oscMsg.args || [];
     this.recording.observe(address, args, now);
     if (Object.values(SESSION_REC).includes(address)) this.emit('session-recording-observation',{address,args,at:now});
-    if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames || address === REC_LOOP.getStart || address === REC_LOOP.getLength || address === GET.tempo) {
+    if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames || address === REC_LOOP.getStart || address === REC_LOOP.getLength || address === GET.tempo || address === GET.isPlaying || address === REC.getRecordMode) {
       this.emit('recording-observation', { address, args, at: now });
     }
 

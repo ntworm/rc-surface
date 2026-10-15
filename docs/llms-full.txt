@@ -1755,6 +1755,9 @@ stopped:
    you press a track's ARM. Changing this mode or single-clicking a name does not
    change Live. Groups have SOLO/MUTE but cannot be armed. Live's global arm
    preference is unchanged; an incompatible host arm result is reported.
+   ARM confirms the armable input set without waiting for Loop, meter or click.
+   If confirmation fails, ARM states become unknown until a fresh read; a write
+   may already have applied. The surface does not repeat it automatically.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
    The list follows timeline time, including newly created early markers, with
@@ -3369,6 +3372,8 @@ with Escape and preserves drafts during polling; blur never saves.
 Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time.
 
 REC submits `tracks` as a nonempty ordered set of `{index,id,name}` refs (up to 256); the backend confirms all identities, armability, ARM and absence of outside ARM. Legacy single-track commands are normalized. ARM MULTI retains other inputs; EXCLUSIVE acts only on explicit ARM and confirms the whole set. SOLO/MUTE use serialized GET confirmation without interrupting pre-roll. Native STOP has priority and disarms only the attempt’s owned identities.
+
+Card ARM uses fresh names, stopped/record-off transport, capabilities and the entire armable ARM vector, without depending on Loop, meter, position, click or mixer flags. A freshly non-armable group is excluded from that vector without inventing an ARM observation. Missing required evidence vetoes writing/confirmation; bounded retries send GETs only. An unconfirmed write may already have applied: cards mark ARM unknown and reconcile through fresh reads without replay or optimistic success. A failed passive full read may refresh card evidence while retaining its error; REC start still requires the complete fresh preflight, including observations unavailable in the partial snapshot. Live raises on a group's `Track.arm`, so AbletonOSC answers its ARM getter with nil; full REC reads accept a fresh `can_be_armed=false` as that track's complete ARM evidence and never count it as an outside armed input, while a nil ARM from an armable input stays unknown.
 
 Punch In has baseline/desired/expected and ownership by Song/session/link: ON for pre-roll, OFF for a direct start; restore only while owned without an observed external edit. Pre-roll uses observed meter and an exact existing locator or temporary SDK locator, removed and confirmed before arming/playback. `count_in_duration` is read-only. Session/link/Set loss never replays cleanup. Observed record mode does not prove audio capture or take preservation.
 

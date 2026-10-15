@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
@@ -1149,6 +1151,166 @@ for(const loss of ['session','link','Song']) test('REC native pre-roll late crea
 });
 
 const trackRefs=tracks=>tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
+function armControlFixture(t,count=33) {
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t),writes=[],nativeArms=[];let onArm=()=>{};
+  f.song.tracks=Array.from({length:count},(_,index)=>{
+    nativeArms[index]=index===0;
+    const track={name:'Synthetic '+index,handle:{id:'arm-'+index},canArm:index!==16,solo:false,mute:false};
+    Object.defineProperty(track,'arm',{enumerable:true,configurable:true,get:()=>nativeArms[index],set:value=>{writes.push([index,value]);nativeArms[index]=value;onArm(index,value);}});
+    return track;
+  });
+  return {...f,refs:trackRefs(f.song.tracks),writes,onArm:callback=>{onArm=callback;},hostArm:(index,value)=>{nativeArms[index]=value;}};
+}
+for(const mode of ['multi','exclusive'])for(const enabled of [true,false])test('REC ARM focused '+mode+' '+enabled+' ignores unrelated full-REC getters and non-armable group ARM',async t=>{
+  const f=armControlFixture(t),send=f.osc.send,allowed=[CLIP.getTrackNames,GET.isPlaying,REC.getRecordMode,REC_PREFLIGHT.trackCanArm,REC_PREFLIGHT.trackArm];
+  f.osc.send=(address,args=[])=>{
+    assert.ok(allowed.includes(address),'ARM requested unrelated dependency '+address);
+    assert.ok(address!==REC_PREFLIGHT.trackArm||args[0].value!==16,'group ARM is not readable');send(address,args);
+  };
+  const target=enabled?1:0;let result;
+  const action=f.coordinator.trackControl(f.refs[target],'arm',enabled,mode,f.context).then(value=>{result=value;return value;},error=>error);
+  await flushRecording();assert.ok(result,'fresh essential replies complete ARM without unrelated getters');await action;
+  const expected=Array.from({length:33},(_,index)=>index===target?enabled:index===0&&mode==='multi');
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),expected);
+  assert.equal(result.tracks[target].arm,enabled);assert.equal(result.tracks[16].canArm,false);
+  assert.deepEqual(f.writes,enabled&&mode==='exclusive'?[[0,false],[1,true]]:[[target,enabled]]);
+  assert.ok(f.sent.length<150,'bounded cold ARM request budget');assert.equal(result.preflightComplete,false);
+  t.diagnostic('33-track cold '+mode+' '+enabled+': '+f.sent.length+' GETs, '+f.writes.length+' explicit SDK setters');
+});
+
+test('REC ARM focused retries only missing GET evidence within the existing bound, never setters',async t=>{
+  const f=armControlFixture(t),send=f.osc.send;let dropped=false;
+  f.osc.send=(address,args=[])=>{
+    if(!dropped&&address===REC_PREFLIGHT.trackArm&&args[0].value===1){dropped=true;f.sent.push([address,args]);return;}
+    send(address,args);
+  };
+  let done=false;const action=f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context).then(value=>{done=true;return value;},error=>error);
+  await flushRecording();assert.equal(done,false);assert.deepEqual(f.writes,[]);
+  const before=f.sent.length;t.mock.timers.tick(100);await flushRecording();assert.equal(done,true,'missing getter is queried again without retrying a write');await action;
+  assert.deepEqual(f.writes,[[1,true]]);assert.equal(dropped,true);
+  assert.equal(f.sent.slice(before).filter(([address])=>address===REC_PREFLIGHT.trackArm).length,33,'one missing getter then 32 armable confirmations');
+});
+
+for(const key of ['names','canArm','arm','playing','record'])test('REC ARM focused missing required '+key+' never uses cached evidence or writes',async t=>{
+  const f=armControlFixture(t);await f.coordinator.refresh();
+  const getter={names:CLIP.getTrackNames,canArm:REC_PREFLIGHT.trackCanArm,arm:REC_PREFLIGHT.trackArm,playing:GET.isPlaying,record:REC.getRecordMode}[key];f.block(getter);
+  const action=f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),rejected=assert.rejects(action,/UNKNOWN/);
+  await flushRecording();t.mock.timers.tick(2001);await rejected;
+  assert.deepEqual(f.writes,[]);assert.equal(f.coordinator.snapshot().pending,null);
+  f.block(undefined);await f.coordinator.refresh();assert.deepEqual(f.writes,[]);
+});
+
+for(const conflict of ['playing','record','not armable'])test('REC ARM focused refuses '+conflict+' with fresh essential evidence',async t=>{
+  const f=armControlFixture(t);
+  if(conflict==='playing')f.values.playing=true;if(conflict==='record')f.values.record=true;if(conflict==='not armable')f.song.tracks[1].canArm=false;
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/NOT_STOPPED|NOT_ARMABLE/);assert.deepEqual(f.writes,[]);
+});
+
+test('REC ARM focused lost post-write confirmation recovers cards through read-only fallback without replay or partial REC authorization',async t=>{
+  const f=armControlFixture(t);f.onArm(()=>f.block(REC_PREFLIGHT.trackArm));
+  const action=f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),rejected=assert.rejects(action,/UNKNOWN/);
+  await flushRecording();assert.deepEqual(f.writes,[[1,true]]);t.mock.timers.tick(2001);await rejected;
+  assert.equal(f.song.tracks[1].arm,true);assert.equal(f.coordinator.snapshot().pending,null);
+  f.onArm(()=>{});f.block(REC_PREFLIGHT.loop);
+  const reading=f.coordinator.refresh(),unknown=assert.rejects(reading,/UNKNOWN/);await flushRecording();t.mock.timers.tick(2001);await flushRecording();await unknown;
+  const recovered=f.coordinator.snapshot();assert.equal(recovered.tracks[1].arm,true);assert.equal(recovered.transport.isPlaying.fresh,true);assert.equal(recovered.transport.recordMode.fresh,true);assert.equal(recovered.safety.loop,null);
+  assert.deepEqual(f.writes,[[1,true]]);
+  const recording=f.coordinator.record(f.refs.slice(0,2),markerRange(),f.context),blocked=assert.rejects(recording,/UNKNOWN/);
+  await flushRecording();t.mock.timers.tick(2001);await blocked;
+  assert.equal(f.sent.some(([address])=>address===REC.setRecordMode||address===CMD.startPlaying),false);assert.deepEqual(f.writes,[[1,true]]);
+});
+
+test('REC ARM focused applied SDK rejection invalidates old ARM evidence until a fresh read',async t=>{
+  const f=armControlFixture(t);f.onArm(()=>{throw Error('applied then rejected');});
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/applied then rejected/);
+  assert.equal(f.song.tracks[1].arm,true);assert.equal(f.coordinator.snapshot().tracks[1].arm,null);
+  f.onArm(()=>{});await f.coordinator.refresh();assert.equal(f.coordinator.snapshot().tracks[1].arm,true);assert.deepEqual(f.writes,[[1,true]]);
+});
+
+for(const outcome of ['SDK throws','incompatible confirmed','peer confirmation missing'])for(const property of ['solo','mute'])test('REC ARM peer recovery '+outcome+' then '+property+' never resurrects an unconfirmed peer',async t=>{
+  const f=armControlFixture(t,3),nodes=new Map(),calls=[];let generated=0,afterWrite=false;
+  const node=id=>{
+    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
+    return nodes.get(id);
+  };
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const browser=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},
+    sendPhoneCommand:(name,args,cb)=>{
+      calls.push({name,args});
+      const request=name==='getRecordingState'?f.coordinator.refresh():f.coordinator.trackControl(args.track,args.property,args.enabled,args.armMode??'multi',f.context);
+      request.then(result=>cb({ok:true,result}),error=>cb({ok:false,error:error.message}));
+    }});
+  vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording.js',import.meta.url),'utf8'),browser);
+  const client=browser.RcRecording.setup();t.after(()=>client.session(false));client.session(true,'controller');await client.command('getRecordingState');
+  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children[0];
+  const send=f.osc.send;
+  f.osc.send=(address,args=[])=>{
+    if(afterWrite&&outcome==='peer confirmation missing'&&address===REC_PREFLIGHT.trackArm&&args[0]?.value===0){f.sent.push([address,args]);return;}
+    send(address,args);
+  };
+  f.onArm((index,value)=>{if(index===1&&value===true){afterWrite=true;f.hostArm(0,false);if(outcome==='SDK throws')throw Error('applied then rejected');}});
+  const action=client.command('recordingTrackControl',{track:f.refs[1],property:'arm',enabled:true,armMode:'multi'}),failed=assert.rejects(action,/applied then rejected|ARM_UNCONFIRMED|UNKNOWN/);
+  await flushRecording();if(outcome==='peer confirmation missing'){t.mock.timers.tick(2001);await flushRecording();}await failed;
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.song.tracks[1].arm,true);assert.equal(arm(0).disabled,true);assert.equal(arm(0)['aria-pressed'],'mixed');
+  const before=f.sent.length;
+  await client.command('recordingTrackControl',{track:f.refs[2],property,enabled:true});
+  assert.equal(f.sent.slice(before).some(([address])=>address===REC_PREFLIGHT.trackArm),false,'auxiliary confirmation performs no ARM read');
+  const peer=client.view().state.tracks[0].arm;
+  assert.equal(peer,outcome==='incompatible confirmed'?false:null,'only fresh post-write ARM evidence can restore the peer');
+  assert.equal(arm(0)['aria-pressed'],outcome==='incompatible confirmed'?'false':'mixed');
+  if(outcome!=='incompatible confirmed'){
+    assert.equal(arm(0).disabled,true);const count=calls.length;arm(0).listeners.get('click')();assert.equal(calls.length,count,'unknown peer cannot issue a blind toggle');
+  }
+  assert.deepEqual(f.writes,[[1,true]],'SOLO/MUTE response cannot replay ARM or roll back a host side effect');
+  f.onArm(()=>{});afterWrite=false;await client.command('getRecordingState');
+  assert.equal(arm(0)['aria-pressed'],'false');assert.equal(arm(0).disabled,false);assert.deepEqual(node('rec-track-grid').children,cards);
+  arm(0).listeners.get('click')();await flushRecording();
+  const last=calls.at(-1);assert.equal(last.name,'recordingTrackControl');assert.deepEqual({...last.args.track},f.refs[0]);assert.equal(last.args.enabled,true,'click uses reconciled false, never the preceding true');
+  assert.deepEqual(f.writes,[[1,true],[0,true]]);assert.equal(client.view().state.tracks[0].arm,true);
+});
+
+test('REC ARM focused required evidence missing in passive recovery stays unknown and releases its bounded operation',async t=>{
+  const f=armControlFixture(t);f.block(REC_PREFLIGHT.trackArm);let done=false;
+  const reading=f.coordinator.refresh().finally(()=>{done=true;}),rejected=assert.rejects(reading,/UNKNOWN/);
+  await flushRecording();t.mock.timers.tick(2001);await flushRecording();assert.equal(done,false);
+  t.mock.timers.tick(2001);await rejected;assert.equal(f.coordinator.snapshot().pending,null);assert.equal(f.coordinator.snapshot().tracks[1].arm,null);assert.deepEqual(f.writes,[]);
+});
+
+for(const loss of ['session','link','Song'])test('REC ARM focused '+loss+' after an applied setter never confirms or replays it',async t=>{
+  const f=armControlFixture(t);f.onArm(()=>{
+    if(loss==='session')f.retire();
+    if(loss==='link'){f.osc.state.connected=false;f.osc.emit('link-lost');}
+    if(loss==='Song')f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+  });
+  await assert.rejects(f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),/SESSION|CONNECTION|IDENTITY/);assert.deepEqual(f.writes,[[1,true]]);
+  f.onArm(()=>{});Object.assign(f.osc.state,{available:true,connected:true});await f.coordinator.refresh();f.push(REC_PREFLIGHT.trackArm,[1,true]);t.mock.timers.tick(2500);await flushRecording();assert.deepEqual(f.writes,[[1,true]]);
+});
+
+for(const interruption of ['STOP','session','link','Song','identity'])test('REC ARM focused '+interruption+' retires pending evidence without delayed setters',async t=>{
+  const f=armControlFixture(t);f.block(REC_PREFLIGHT.trackArm);
+  const action=f.coordinator.trackControl(f.refs[1],'arm',true,'multi',f.context),rejected=assert.rejects(action,/STOPPED|SESSION|CONNECTION|IDENTITY/);await flushRecording();
+  if(interruption==='STOP') {const before=f.sent.length,stop=f.coordinator.stop(f.context);assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);f.block(undefined);await stop;}
+  if(interruption==='session')f.retire();
+  if(interruption==='link'){f.osc.state.connected=false;f.osc.emit('link-lost');}
+  if(interruption==='Song')f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+  if(interruption==='identity')f.song.tracks[1].handle.id='replacement';
+  t.mock.timers.tick(100);await flushRecording();t.mock.timers.tick(1901);await flushRecording();await rejected;
+  const before=f.sent.length;f.block(undefined);f.push(REC_PREFLIGHT.trackArm,[1,true]);t.mock.timers.tick(2500);await flushRecording();
+  assert.deepEqual(f.writes,[]);assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')),false);assert.equal(f.coordinator.listenerCount('observation'),0);
+});
+
+for(const interruption of ['STOP','link','Song'])test('REC ARM focused passive fallback cannot restart after '+interruption,async t=>{
+  const f=armControlFixture(t);f.block(REC_PREFLIGHT.loop);
+  const read=f.coordinator.refresh(),rejected=assert.rejects(read,/STOPPED|CONNECTION|IDENTITY/);await flushRecording();
+  if(interruption==='STOP'){const stop=f.coordinator.stop(f.context);f.block(undefined);await stop;}
+  if(interruption==='link'){f.osc.state.connected=false;f.osc.emit('link-lost');}
+  if(interruption==='Song')f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+  const before=f.sent.length;t.mock.timers.tick(2001);await rejected;
+  assert.equal(f.sent.length,before);assert.deepEqual(f.writes,[]);
+});
+
 function cohortFixture(t,count=10) {
   const f=preRollFixture(t);
   f.song.tracks=Array.from({length:count},(_,index)=>({name:'Input '+(index+1),handle:{id:String(index+100)},arm:true,solo:false,mute:false,canArm:true}));
@@ -1215,6 +1377,38 @@ test('REC group tracks expose observed solo/mute but reject ARM and never change
   const state=await f.coordinator.trackControl(f.refs[1],'mute',true,'multi',f.context);
   assert.equal(state.tracks[1].canArm,false);assert.equal(state.tracks[1].solo,true);assert.equal(state.tracks[1].mute,true);
   assert.equal(f.song.tracks[0].solo,false);assert.equal(f.song.tracks[0].mute,false);assert.equal(f.song.tracks[0].arm,true);
+});
+
+// Live raises on a group's Track.arm; AbletonOSC replies [index, nil].
+const nilArmGroup=f=>{f.song.tracks.push({name:'Group',handle:{id:'group-'+f.song.tracks.length},canArm:false,arm:null,solo:false,mute:false});return trackRefs(f.song.tracks);};
+test('REC full reader accepts nil ARM only from a freshly non-armable group, then records and STOP disarms its own inputs',async t=>{
+  const f=cohortFixture(t,2),refs=nilArmGroup(f);let state;
+  const reading=f.coordinator.refresh().then(value=>{state=value;},error=>{state=error;});
+  await flushRecording();assert.ok(state&&!(state instanceof Error),'fresh can_be_armed=false completes the full read without a timer');await reading;
+  assert.equal(state.tracks[2].canArm,false);assert.equal(state.tracks[2].arm,null,'group ARM is never invented');assert.equal(state.tracks[0].arm,true);
+  assert.ok(f.sent.some(([address,args])=>address===REC_PREFLIGHT.trackArm&&args[0].value===2),'nil reply comes from the real getter');
+  const recorded=await f.coordinator.record(refs.slice(0,2),f.range,f.context,0);
+  assert.equal(recorded.transport.recordMode.value,true);assert.deepEqual(recorded.lastAttempt.tracks,refs.slice(0,2));
+  await f.coordinator.stop(f.context);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,null]);
+});
+
+for(const missing of ['armable input nil','group capability missing'])test('REC full reader keeps '+missing+' unknown and blocks recording without writes',async t=>{
+  const f=cohortFixture(t,2),refs=nilArmGroup(f);
+  if(missing==='armable input nil')f.song.tracks[1].arm=null;else f.block(REC_PREFLIGHT.trackCanArm);
+  const reading=f.coordinator.refresh(),unknown=assert.rejects(reading,/UNKNOWN/);
+  await flushRecording();t.mock.timers.tick(2001);await flushRecording();t.mock.timers.tick(2001);await unknown;
+  const recording=f.coordinator.record(refs.slice(0,2),f.range,f.context,0),blocked=assert.rejects(recording,/UNKNOWN/);
+  await flushRecording();t.mock.timers.tick(2001);await blocked;
+  assert.equal(f.sent.some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);assert.deepEqual(f.cueWrites,[]);
+});
+
+test('REC rename and audition complete in a Set whose group answers ARM with nil',async t=>{
+  const f=fixture(t);f.song.tracks[0].arm=false;nilArmGroup(f);await f.select();
+  const renamed=await f.coordinator.renameTrack({index:0,id:'11',name:'Guitar'},'Lead',f.context);
+  assert.equal(renamed.tracks[0].name,'Lead');assert.equal(renamed.tracks[2].canArm,false);
+  f.coordinator.setPoint(8,f.context);await f.coordinator.audition(false,f.context);assert.equal(f.values.playing,true);assert.equal(f.values.position,8);
+  assert.deepEqual(f.song.tracks.map(track=>track.arm),[false,false,null]);
 });
 
 test('REC cohort rejects empty, duplicate, unordered and obsolete identities before a native write',async t=>{
