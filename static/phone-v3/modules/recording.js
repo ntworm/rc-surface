@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 (function (root) {
   'use strict';
-  const WRITES = new Set(['recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
+  const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
   function positionToBeats(bar, beat, meter) {
     const numerator = meter?.numerator, denominator = meter?.denominator;
@@ -48,6 +48,7 @@
           if (!read) busy = false;
           if (response?.ok && response.result) {
             state = response.result; receivedAt = Date.now();
+            if(read && error?.includes('REC:SESSION_STOP_PENDING') && state.session?.active===false)error=null;
             if(read) readError = state.error || null; else error = state.error || null;
             notify(); resolve(state);
           } else {
@@ -79,7 +80,7 @@
   function setup() {
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
-    const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-arm-mode','rec-start-marker','rec-end-marker',
+    const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-start-marker','rec-end-marker',
       'rec-loop','rec-end-field','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
       'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
@@ -88,6 +89,7 @@
     let preRollBars=0;
     let armMode='multi';
     let destination='arrangement',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
+    let displayMeter=null,displaySongId=null;
     const sessionCells=new Map();
     try { preRollBars=preRollPreference(root.localStorage); } catch { /* Disabled browser storage uses OFF. */ }
     try {if(root.localStorage?.getItem('rc-surface-v2.rec.armMode')==='exclusive')armMode='exclusive';}catch{}
@@ -215,6 +217,7 @@
       }
     }
     const positionLabel = (time,meter) => {
+      meter=meter?.numerator&&meter?.denominator?meter:displayMeter;
       if (!Number.isFinite(time) || !meter?.numerator || !meter?.denominator) return '?';
       const pos=beatsToPosition(time,meter);return pos.bar+'.'+pos.beat;
     };
@@ -253,6 +256,10 @@
     }
     function render(view) {
       const state=view.state, transport=state?.transport;
+      if(state?.session?.songId && displaySongId!==state.session.songId){displaySongId=state.session.songId;displayMeter=null;}
+      const meterKnown=Number.isInteger(state?.meter?.numerator)&&state.meter.numerator>0&&[1,2,4,8,16,32].includes(state?.meter?.denominator);
+      if(meterKnown)displayMeter={...state.meter};
+      el('position').setAttribute('data-meter-stale',String(!meterKnown));el('position').title=!meterKnown&&displayMeter?t('staleMeter'):'';
       const known=transport?.connected && transport.isPlaying?.fresh && transport.recordMode?.fresh;
       const stopped=known && transport.isPlaying.value===false && transport.recordMode.value===false;
       const working=view.busy || Boolean(state?.pending);
@@ -265,6 +272,8 @@
       el('loop').disabled=!editable || (!looping && !state?.locators?.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
       el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
+      el('return-arrangement').disabled=!view.writable||!view.fresh||working||!known||transport.recordMode.value!==false||Boolean(state?.attemptActive)||state?.safety?.backToArranger!==true||!state?.session?.rows.every(row=>row.ready===true);
+      el('return-arrangement').hidden=state?.safety?.backToArranger!==true;
       el('arm-mode').disabled=!editable||Boolean(state?.attemptActive);
       el('arm-mode').textContent=t(armMode==='multi'?'armMulti':'armExclusive');
       el('arm-mode').setAttribute('aria-pressed',String(armMode==='exclusive'));
@@ -282,7 +291,7 @@
         if(!view.error){const owned=session?.owned||[];el('status').textContent=t(session?.stopping?'sessionStopping':working?'working':owned.some(item=>item.state==='recording')?'sessionState.recording':owned.some(item=>item.state==='queued')?'sessionState.queued':owned.some(item=>item.state==='playing')?'sessionState.playing':session?.active?owned.some(item=>item.state==='unknown')?'unknown':'finishSession':!armedTracks(view).length?'armTracks':!sceneTarget?'chooseScene':!targets?'emptySceneRequired':'ready');}
         return;
       }
-      const markerKey=JSON.stringify([state.locators,state.meter]);
+      const markerKey=JSON.stringify([state.locators,displayMeter]);
       if(markerSignature!==markerKey) {
         const previous=startIndex!==''?previousLocators[Number(startIndex)]:null;
         const previousEnd=endIndex!==''?previousLocators[Number(endIndex)]:null;markerSignature=markerKey;
@@ -368,6 +377,7 @@
     });
     el('stop').addEventListener('click',()=>invoke(destination==='clip'||client.view().state?.session?.active?'recordingSessionStop':'recordingStop'));
     el('click').addEventListener('click',()=>invoke('recordingClick',{enabled:!client.view().state?.transport.metronome.value}));
+    el('return-arrangement').addEventListener('click',()=>{if(!el('return-arrangement').disabled)client.command('recordingReturnToArrangement').then(()=>{destination='arrangement';render(client.view());poll();}).catch(()=>{});});
     function animate() {
       frame=null;if(doc.hidden || doc.body.dataset.page!=='recording' || !client.view().connected) return;
       drawCursor();frame=root.requestAnimationFrame?.(animate);

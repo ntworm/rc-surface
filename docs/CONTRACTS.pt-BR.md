@@ -362,6 +362,23 @@ Quantização de clip tem enum separado (`0=Global`, `1=None`, `2..14`);
 
 ### Gravação em Session vazia
 
+Idle nativo distingue `playing_slot_index=-2` (Clip Stop concluído) de
+`fired_slot_index=-2` (parada na fila). Exige fired=-1; playing=-1/-2 é concluído.
+Com índice playing não negativo retido, exige has_clip concordante fresco,
+is_triggered=false, Clip.is_recording=false e Clip.is_playing=false. O polling
+retira tentativa parada confirmada sem nova escrita e limpa seu erro STOP pendente;
+transporte false, flags desconhecidas ou tempo decorrido isolados não bastam.
+Captura que termina em PLAY mantém posse. STOP não adota clip SDK sem identidade;
+observação normal fresca de gravação pode vinculá-lo.
+
+`recordingReturnToArrangement({})` é live-write explícito controller/admin. Exige
+Session inteira ociosa com leituras frescas, record mode e Session Record off,
+contexto e Song atuais; clips ativos/na fila/desconhecidos vetam. Envia Song
+`back_to_arranger=0` uma vez e confirma getter nativo sem replay. Não pausa/toca
+transporte, move posição, arm, Loop/Punch In ou clips. Transporte rodando pode
+continuar o Arrangement conforme pedido pelo clique. O navegador seleciona
+ARRANGEMENT só com sucesso confirmado; troca passiva de modo nunca retorna.
+
 `getSessionRecordingState({offset})` é somente leitura, em janela de oito cenas
 (offset múltiplo de 8). Identidades SDK de Song/track/cena/slot e nomes de clips
 formam a grade; índices fired/playing da track e flags recording/playing do Clip
@@ -403,6 +420,14 @@ de takes, audition e comp ficam fora deste comando. Estado observado não compro
 captura física de áudio/MIDI nem preservação de takes.
 
 ### Arrangement, AUT e contratos compartilhados de tracks
+
+Marcadores usam cópia ordenada por cue.time, estável nos empates, preservando
+nomes completos e ordem SDK. O salto nativo resolve o índice SDK original por
+nome/tempo exatos. Posicionar marcador exige transporte parado/record off frescos
+e nomes/monitor da faixa selecionada; não exige preflight de mixer sem relação.
+Gravação mantém preflight completo. Último compasso confirmado pode permanecer
+visivelmente desatualizado só nos labels, sem transformar null/stale em autorização
+de gravação; compasso stale isolado não reconstrói DOM de marcadores.
 
 AUT aceita FREE de 1–30 segundos inteiros e SYNC de 1–5 compassos. Os padrões
 continuam 10 segundos/2 compassos; loops anteriores de 10 ou 20 segundos seguem

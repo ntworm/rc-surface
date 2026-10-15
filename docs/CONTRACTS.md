@@ -355,6 +355,23 @@ it is observed only and never written by this command.
 
 ### Empty Session recording
 
+Native idle distinguishes `playing_slot_index=-2` (settled Clip Stop) from
+`fired_slot_index=-2` (stop queued). Idle requires fired=-1; playing=-1/-2 is
+settled. With a retained nonnegative playing index, fresh concordant has_clip,
+is_triggered=false, Clip.is_recording=false and Clip.is_playing=false are required.
+Polling retires a confirmed stopped owned attempt without another write and clears
+its pending STOP UI error; transport false, unknown flags or elapsed time alone do
+not authorize retirement. Capture finishing into PLAY remains owned. STOP itself
+does not adopt an unidentified SDK clip; normal fresh recording observation does.
+
+`recordingReturnToArrangement({})` is an explicit controller/admin live-write.
+Fresh all-track Session idle, record mode off, Session Record off, current context
+and Song are required; existing active/queued/unknown clips veto it. It sends
+Song `back_to_arranger=0` once and confirms the native getter, with no replay.
+It neither pauses/plays transport nor moves position, arms, Loop/Punch In or clips.
+Running transport may continue Arrangement as requested by the click. The browser
+selects ARRANGEMENT only on confirmed success; passive mode changes never return.
+
 `getSessionRecordingState({offset})` is read-only, with an eight-scene window
 (offset multiple of 8). SDK Song/track/scene/slot identities and clip names form
 the grid; fresh OSC track fired/playing indices and Clip recording/playing flags
@@ -397,6 +414,14 @@ take browsing, audition and comp selection are outside this command. Observed
 states do not establish physical audio/MIDI capture or take preservation.
 
 ### Arrangement, AUT and shared track contracts
+
+Marker presentation sorts a copied inventory by cue.time, stably at equal times,
+preserving full names and SDK order. Native jumps still resolve the original
+SDK index from exact name/time. Marker-only positioning requires fresh stopped/
+record-off transport plus the selected track's names/monitor evidence; it skips
+unrelated mixer preflight. Recording retains full preflight. Last confirmed meter
+may remain visibly stale for labels without turning null/stale data into fresh
+recording authorization, and stale meter alone never rebuilds the marker DOM.
 
 AUT accepts integer FREE durations of 1–30 seconds and SYNC lengths of 1–5 bars.
 Defaults remain 10 seconds/2 bars, with existing 10/20-second loops valid. The

@@ -71,7 +71,8 @@ export class SessionRecording extends EventEmitter {
   private state(track:number,scene:number) {
     const fired=this.value('firedSlot:'+track),playing=this.value('playingSlot:'+track);
     if(fired===null || playing===null)return 'unknown';
-    if(fired===scene || this.value('triggered:'+track+':'+scene)===true)return 'queued';
+    if(fired===-1 && (playing===-1 || playing===-2))return 'stopped';
+    if(fired===-2 || fired===scene || this.value('triggered:'+track+':'+scene)===true)return 'queued';
     if(playing===scene){const recording=this.value('recording:'+track+':'+scene),active=this.value('playing:'+track+':'+scene);return recording===true?'recording':recording===false&&active===true?'playing':'unknown';}
     return 'stopped';
   }
@@ -79,7 +80,7 @@ export class SessionRecording extends EventEmitter {
     const song=this.current(),scenes=song.scenes??[];
     return {songId:this.token,offset:this.offset,totalScenes:scenes.length,active:!!this.owner,stopping:this.owner?.stopping??false,
       scenes:scenes.slice(this.offset,this.offset+8).map((scene,index)=>({index:index+this.offset,id:id(scene),name:scene.name})),
-      rows:song.tracks.map((track,index)=>({track:{index,id:id(track),name:track.name},ready:this.value('firedSlot:'+index)===-1&&this.value('playingSlot:'+index)===-1,slots:(track.clipSlots??[]).slice(this.offset,this.offset+8).map((slot,scene)=>({index:scene+this.offset,id:id(slot),clip:slot.clip?{id:id(slot.clip),name:slot.clip.name}:null,state:this.state(index,scene+this.offset)}))})),
+      rows:song.tracks.map((track,index)=>({track:{index,id:id(track),name:track.name},ready:this.idle(index),slots:(track.clipSlots??[]).slice(this.offset,this.offset+8).map((slot,scene)=>({index:scene+this.offset,id:id(slot),clip:slot.clip?{id:id(slot.clip),name:slot.clip.name}:null,state:this.state(index,scene+this.offset)}))})),
       owned:this.owner?.targets.filter(target=>target.sent).map(target=>({track:target.target.track,scene:this.owner!.scene.index,state:this.state(target.target.track.index,this.owner!.scene.index)}))??[]};
   }
   public window(offset:unknown) {
@@ -87,6 +88,24 @@ export class SessionRecording extends EventEmitter {
     if(!Number.isInteger(offset)||Number(offset)<0||Number(offset)>=Math.max(1,song.scenes?.length??0)||Number(offset)%8!==0)fail('ARGUMENTS');
     this.offset=Number(offset);
   }
+  private idle(track:number) {
+    const fired=this.value('firedSlot:'+track),playing=this.value('playingSlot:'+track);
+    if(fired!==-1)return false;
+    // -2 is Track's settled Clip Stop index; fired=-2 is still a queued stop.
+    if(playing===-1 || playing===-2)return true;
+    return typeof playing==='number' && playing>=0 && Boolean(this.current().tracks[track]?.clipSlots?.[playing]?.clip)
+      && this.value('hasClip:'+track+':'+playing)===true && this.value('triggered:'+track+':'+playing)===false
+      && this.value('recording:'+track+':'+playing)===false && this.value('playing:'+track+':'+playing)===false;
+  }
+  private settled(target:Owned,scene:number) {
+    const track=target.target.track.index;
+    if(!target.clipId && !this.owner?.stopping)return false;
+    if(this.value('firedSlot:'+track)===-1 && [ -1,-2 ].includes(Number(this.value('playingSlot:'+track))))return true;
+    if(!this.idle(track) || this.value('triggered:'+track+':'+scene)!==false)return false;
+    return target.slot.clip?this.value('hasClip:'+track+':'+scene)===true && this.value('recording:'+track+':'+scene)===false && this.value('playing:'+track+':'+scene)===false
+      :this.value('hasClip:'+track+':'+scene)===false;
+  }
+  public allIdle(){return this.current().tracks.every((_,index)=>this.idle(index));}
   private async read(keys:[string,number,number?][],guard:()=>void,signal:AbortSignal,timeout=RECORDING_CONFIRM_MS) {
     guard();if(signal.aborted)throw signal.reason;
     const unique=[...new Map(keys.map(item=>[item.join(':'),item])).values()],revision=this.revision;
@@ -111,23 +130,30 @@ export class SessionRecording extends EventEmitter {
       signal.addEventListener('abort',abort,{once:true});
     });
   }
-  public async refresh(guard:()=>void,signal:AbortSignal) {
+  public async refresh(guard:()=>void,signal:AbortSignal,deadline?:number,bind=true) {
     const song=this.current();if(song.tracks.length>256 || (song.scenes?.length??0)>4096)fail('TRACK_LIMIT');
-    await this.read(this.indices(song),()=>{guard();if(this.current()!==song)fail('IDENTITY');},signal);
+    const remaining=()=>deadline===undefined?RECORDING_CONFIRM_MS:Math.max(1,deadline-Date.now());
+    await this.read(this.indices(song),()=>{guard();if(this.current()!==song)fail('IDENTITY');},signal,remaining());
     const keys:[string,number,number?][]=[];
     song.tracks.forEach((track,index)=>{
       const playing=this.value('playingSlot:'+index),fired=this.value('firedSlot:'+index);
-      for(const scene of new Set([playing,fired]))if(typeof scene==='number' && scene>=0 && track.clipSlots?.[scene]?.clip)keys.push(['recording',index,scene],['playing',index,scene]);
+      for(const scene of new Set([playing,fired]))if(typeof scene==='number' && scene>=0 && track.clipSlots?.[scene]?.clip)keys.push(['recording',index,scene],['playing',index,scene],['hasClip',index,scene],['triggered',index,scene]);
     });
-    for(const target of this.owner?.targets??[])if(target.sent)keys.push(['hasClip',target.target.track.index,this.owner!.scene.index],['triggered',target.target.track.index,this.owner!.scene.index]);
-    await this.read(keys,()=>{guard();if(this.current()!==song)fail('IDENTITY');},signal);
+    for(const target of this.owner?.targets??[])if(target.sent) {
+      const index=target.target.track.index,scene=this.owner!.scene.index;
+      if(this.value('firedSlot:'+index)===-1 && [-1,-2].includes(Number(this.value('playingSlot:'+index))))continue;
+      keys.push(['hasClip',index,scene],['triggered',index,scene]);
+      if(target.slot.clip && this.value('playingSlot:'+index)===scene)keys.push(['recording',index,scene],['playing',index,scene]);
+    }
+    await this.read(keys,()=>{guard();if(this.current()!==song)fail('IDENTITY');},signal,remaining());
     for(const target of this.owner?.targets??[])if(target.sent) {
       try{this.identity(this.owner!,target);}catch{target.sent=false;continue;}
       const index=target.target.track.index,scene=this.owner!.scene.index;
       const playing=this.value('playingSlot:'+index),fired=this.value('firedSlot:'+index);
       if(typeof playing==='number'&&playing>=0&&playing!==scene || typeof fired==='number'&&fired>=0&&fired!==scene){target.sent=false;continue;}
       if(target.clipId && (!target.slot.clip || id(target.slot.clip)!==target.clipId)){target.sent=false;continue;}
-      if(!target.clipId && target.slot.clip && this.value('hasClip:'+index+':'+scene)===true && this.value('playingSlot:'+index)===scene && this.value('recording:'+index+':'+scene)===true)target.clipId=id(target.slot.clip);
+      if(this.settled(target,scene)){target.sent=false;continue;}
+      if(bind && !target.clipId && target.slot.clip && this.value('hasClip:'+index+':'+scene)===true && this.value('playingSlot:'+index)===scene && this.value('recording:'+index+':'+scene)===true)target.clipId=id(target.slot.clip);
     }
     if(this.owner?.targets.every(target=>!target.sent))this.owner=null;
   }
@@ -154,11 +180,11 @@ export class SessionRecording extends EventEmitter {
     check();preflight(targets.map(target=>target.target.track));
     const keys:[string,number,number?][]=this.indices(song);
     for(const target of targets)keys.push(['hasClip',target.target.track.index,scene.index],['triggered',target.target.track.index,scene.index]);
-    await this.read(keys,check,signal);check();preflight(targets.map(target=>target.target.track));
+    await this.read(keys,check,signal);await this.refresh(check,signal);check();preflight(targets.map(target=>target.target.track));
     for(const target of targets) {
       const index=target.target.track.index;
       if(target.slot.clip || this.value('hasClip:'+index+':'+scene.index)!==false)fail('SLOT_NOT_EMPTY');
-      if(this.value('triggered:'+index+':'+scene.index)!==false || this.value('firedSlot:'+index)!==-1 || this.value('playingSlot:'+index)!==-1)fail('SESSION_CONFLICT');
+      if(this.value('triggered:'+index+':'+scene.index)!==false || !this.idle(index))fail('SESSION_CONFLICT');
     }
     return {owner,bars:request['bars'],quantization:request['quantization'],check};
   }
@@ -171,7 +197,7 @@ export class SessionRecording extends EventEmitter {
         for(const candidate of owner.targets)if(!candidate.sent) {
           const index=candidate.target.track.index;
           if(candidate.slot.clip || this.value('hasClip:'+index+':'+owner.scene.index)!==false)fail('SLOT_NOT_EMPTY');
-          if(this.value('triggered:'+index+':'+owner.scene.index)!==false || this.value('firedSlot:'+index)!==-1 || this.value('playingSlot:'+index)!==-1)fail('SESSION_CONFLICT');
+          if(this.value('triggered:'+index+':'+owner.scene.index)!==false || !this.idle(index))fail('SESSION_CONFLICT');
         }
         target.sent=true;
         this.osc.recordEmptyClipSlot(target.target.track.index,owner.scene.index,beats,prepared.quantization==='global'?'global':prepared.quantization==='none'?0:prepared.quantization==='bar'?4:7);
@@ -199,7 +225,7 @@ export class SessionRecording extends EventEmitter {
     const deadline=Date.now()+RECORDING_CONFIRM_MS;
     const check=()=>{guard();if(!contextCurrent(owner,this.getSong(),this.osc))fail('SESSION');};
     for(const target of owner.targets)if(target.sent)try{this.identity(owner,target);}catch{target.sent=false;}
-    await this.read([...this.indices(owner.song),...owner.targets.filter(target=>target.sent).flatMap(target=>[['hasClip',target.target.track.index,owner.scene.index],['triggered',target.target.track.index,owner.scene.index]] as [string,number,number][])],check,signal);
+    await this.refresh(check,signal,deadline,false);
     for(const target of owner.targets.filter(target=>target.sent)) {
       check();
       if(this.owner!==owner || !target.sent)continue;
@@ -211,7 +237,7 @@ export class SessionRecording extends EventEmitter {
       try{this.identity(owner,target);}catch{target.sent=false;continue;}
       const playing=this.value('playingSlot:'+index),fired=this.value('firedSlot:'+index);
       if((typeof playing==='number'&&playing>=0&&playing!==owner.scene.index)||(typeof fired==='number'&&fired>=0&&fired!==owner.scene.index)) {target.sent=false;continue;}
-      if(playing===-1 && fired===-1){target.sent=false;continue;}
+      if(this.settled(target,owner.scene.index)){target.sent=false;continue;}
       if(playing!==owner.scene.index && fired!==owner.scene.index)continue;
       if(target.clipId && (!target.slot.clip || id(target.slot.clip)!==target.clipId)){target.sent=false;continue;}
       if(target.clipId && this.value('hasClip:'+index+':'+owner.scene.index)!==true)continue;
@@ -221,10 +247,9 @@ export class SessionRecording extends EventEmitter {
       if(this.owner!==owner || !target.sent)continue;
       this.osc.stopTrackClips(index);
     }
-    await this.read(this.indices(owner.song),check,signal,Math.max(1,deadline-Date.now()));
+    await this.refresh(check,signal,deadline,false);
     for(const target of owner.targets)if(target.sent) {
-      const index=target.target.track.index;
-      if(this.value('playingSlot:'+index)===-1 && this.value('firedSlot:'+index)===-1)target.sent=false;
+      if(this.settled(target,owner.scene.index))target.sent=false;
     }
     if(owner.targets.every(target=>!target.sent)){if(this.owner===owner)this.owner=null;}
     else fail('SESSION_STOP_PENDING');

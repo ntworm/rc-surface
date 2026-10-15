@@ -11,6 +11,9 @@ function exact(args: Record<string, unknown>, keys: string[]) {
   if (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).length !== keys.length || keys.some(key => !Object.hasOwn(args, key))) throw Error('REC:ARGUMENTS');
 }
 export const recordingCommands: Record<string, CommandSpec> = {
+  recordingReturnToArrangement:{description:'Explicitly return to Arrangement after observed Session stop',handler:async(args,context)=>{
+    exact(args,[]);return recordingCoordinator.returnToArrangement(context);
+  }},
   getSessionRecordingState:{description:'Read observed Session REC grid',handler:async args=>{
     exact(args,['offset']);try{return await recordingCoordinator.refreshSession(args['offset']);}catch{return {...recordingCoordinator.snapshot(),error:'REC:SESSION_UNKNOWN'};}
   }},

@@ -78,6 +78,7 @@ export const REC_LOOP = {
 export const REC_PREROLL = {
   setPunchIn: '/live/song/set/punch_in',
 } as const;
+export const REC_RETURN={setBackToArranger:'/live/song/set/back_to_arranger'} as const;
 
 // Read-only Arrangement preflight. Unsupported/missing reports stay unknown.
 export const REC_PREFLIGHT = {
@@ -164,4 +165,5 @@ export type OscAddress =
   | typeof CLIP[keyof typeof CLIP]
   | typeof CLIP_RESPONSE[keyof typeof CLIP_RESPONSE]
   | typeof SESSION_REC[keyof typeof SESSION_REC]
+  | typeof REC_RETURN[keyof typeof REC_RETURN]
   | typeof RESPONSE[keyof typeof RESPONSE];

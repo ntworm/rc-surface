@@ -27,6 +27,10 @@
 
   const catalog = {
     'rec.destination':{en:'Recording destination','pt-BR':'Destino da gravação'},
+    'rec.returnArrangement':{en:'BACK TO ARR','pt-BR':'VOLTAR AO ARR'},
+    'rec.returnArrangementLabel':{en:'Return to Arrangement','pt-BR':'Voltar ao Arrangement'},
+    'rec.staleMeter':{en:'Last confirmed meter · stale','pt-BR':'Último compasso confirmado · desatualizado'},
+    'rec.reason.RETURN_UNCONFIRMED':{en:'Return unconfirmed. Check Live.','pt-BR':'Retorno não confirmado. Confira o Live.'},
     'rec.sessionClips':{en:'Session clips','pt-BR':'Clips de Session'},
     'rec.scene':{en:'SCENE','pt-BR':'CENA'},
     'rec.chooseScene':{en:'Choose a scene','pt-BR':'Escolha uma cena'},

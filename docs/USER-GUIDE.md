@@ -1166,6 +1166,11 @@ stopped:
    preference is unchanged; an incompatible host arm result is reported.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
+   The list follows timeline time, including newly created early markers, with
+   stable equal-time order and full names. A temporarily stale meter keeps its
+   last confirmed display with a dotted indicator; it cannot authorize REC.
+   Marker jumps check stopped/record-off transport and selected identity/monitor
+   without waiting for unrelated mixer states. REC still checks the full set.
 3. For repeated passes, enable **Loop** and choose an end marker after the start.
    Leave Loop off for an open-ended recording.
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
@@ -1277,12 +1282,26 @@ markers/Loop and Punch In are hidden and unused in CLIP. ARM changes and renamin
 are blocked while the attempt is owned; SOLO/MUTE remain explicit actions.
 
 STOP respects native quantization and may show **Stop pending**; confirm in Live
-or press STOP again. Missing observations or an SDK clip identity still catching
+or press STOP again. Polling releases the attempt when fresh native Clip Stop
+(`playing_slot_index=-2`, `fired_slot_index=-1`) or confirmed stopped clip flags
+establish completion, including an external stop. A queued stop
+(`fired_slot_index=-2`), unknown state or transport pause alone never suffices.
+No reload or repeated stop write is required after confirmed completion.
+Missing observations or an SDK clip identity still catching
 up cannot authorize a blind track stop. A fresh recording observation can bind
 the created clip; then an explicit STOP can finish. An observed foreign clip,
 changed track/scene/slot or replaced clip relinquishes that target without stopping
 it. Loss of session/link/Set retires ownership with no stop, fire or cleanup replay
 after reconnection. Stop in Live if the link is unavailable.
+
+When Session has overridden Arrangement playback, **BACK TO ARR** appears in REC.
+After every Session track is freshly confirmed idle and recording is off, press
+it to return explicitly to Arrangement. It confirms Live's native return flag and
+selects ARRANGEMENT only on success. If transport is already running, Arrangement
+continues at its current position; the control never pauses/plays, moves the
+playhead, changes arms/Loop/Punch In or deletes clips. Active/queued/unknown clips
+block it. Opening REC, changing destination or stopping clips never returns
+automatically.
 
 Multiple fires are sequential OSC requests, not an atomic host transaction.
 A partial failure attempts to stop only emitted targets whose identities and

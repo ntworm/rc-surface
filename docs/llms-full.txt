@@ -1757,6 +1757,11 @@ stopped:
    preference is unchanged; an incompatible host arm result is reported.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
+   The list follows timeline time, including newly created early markers, with
+   stable equal-time order and full names. A temporarily stale meter keeps its
+   last confirmed display with a dotted indicator; it cannot authorize REC.
+   Marker jumps check stopped/record-off transport and selected identity/monitor
+   without waiting for unrelated mixer states. REC still checks the full set.
 3. For repeated passes, enable **Loop** and choose an end marker after the start.
    Leave Loop off for an open-ended recording.
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
@@ -1868,12 +1873,26 @@ markers/Loop and Punch In are hidden and unused in CLIP. ARM changes and renamin
 are blocked while the attempt is owned; SOLO/MUTE remain explicit actions.
 
 STOP respects native quantization and may show **Stop pending**; confirm in Live
-or press STOP again. Missing observations or an SDK clip identity still catching
+or press STOP again. Polling releases the attempt when fresh native Clip Stop
+(`playing_slot_index=-2`, `fired_slot_index=-1`) or confirmed stopped clip flags
+establish completion, including an external stop. A queued stop
+(`fired_slot_index=-2`), unknown state or transport pause alone never suffices.
+No reload or repeated stop write is required after confirmed completion.
+Missing observations or an SDK clip identity still catching
 up cannot authorize a blind track stop. A fresh recording observation can bind
 the created clip; then an explicit STOP can finish. An observed foreign clip,
 changed track/scene/slot or replaced clip relinquishes that target without stopping
 it. Loss of session/link/Set retires ownership with no stop, fire or cleanup replay
 after reconnection. Stop in Live if the link is unavailable.
+
+When Session has overridden Arrangement playback, **BACK TO ARR** appears in REC.
+After every Session track is freshly confirmed idle and recording is off, press
+it to return explicitly to Arrangement. It confirms Live's native return flag and
+selects ARRANGEMENT only on success. If transport is already running, Arrangement
+continues at its current position; the control never pauses/plays, moves the
+playhead, changes arms/Loop/Punch In or deletes clips. Active/queued/unknown clips
+block it. Opening REC, changing destination or stopping clips never returns
+automatically.
 
 Multiple fires are sequential OSC requests, not an atomic host transaction.
 A partial failure attempts to stop only emitted targets whose identities and
@@ -3262,6 +3281,23 @@ it is observed only and never written by this command.
 
 ### Empty Session recording
 
+Native idle distinguishes `playing_slot_index=-2` (settled Clip Stop) from
+`fired_slot_index=-2` (stop queued). Idle requires fired=-1; playing=-1/-2 is
+settled. With a retained nonnegative playing index, fresh concordant has_clip,
+is_triggered=false, Clip.is_recording=false and Clip.is_playing=false are required.
+Polling retires a confirmed stopped owned attempt without another write and clears
+its pending STOP UI error; transport false, unknown flags or elapsed time alone do
+not authorize retirement. Capture finishing into PLAY remains owned. STOP itself
+does not adopt an unidentified SDK clip; normal fresh recording observation does.
+
+`recordingReturnToArrangement({})` is an explicit controller/admin live-write.
+Fresh all-track Session idle, record mode off, Session Record off, current context
+and Song are required; existing active/queued/unknown clips veto it. It sends
+Song `back_to_arranger=0` once and confirms the native getter, with no replay.
+It neither pauses/plays transport nor moves position, arms, Loop/Punch In or clips.
+Running transport may continue Arrangement as requested by the click. The browser
+selects ARRANGEMENT only on confirmed success; passive mode changes never return.
+
 `getSessionRecordingState({offset})` is read-only, with an eight-scene window
 (offset multiple of 8). SDK Song/track/scene/slot identities and clip names form
 the grid; fresh OSC track fired/playing indices and Clip recording/playing flags
@@ -3304,6 +3340,14 @@ take browsing, audition and comp selection are outside this command. Observed
 states do not establish physical audio/MIDI capture or take preservation.
 
 ### Arrangement, AUT and shared track contracts
+
+Marker presentation sorts a copied inventory by cue.time, stably at equal times,
+preserving full names and SDK order. Native jumps still resolve the original
+SDK index from exact name/time. Marker-only positioning requires fresh stopped/
+record-off transport plus the selected track's names/monitor evidence; it skips
+unrelated mixer preflight. Recording retains full preflight. Last confirmed meter
+may remain visibly stale for labels without turning null/stale data into fresh
+recording authorization, and stale meter alone never rebuilds the marker DOM.
 
 AUT accepts integer FREE durations of 1–30 seconds and SYNC lengths of 1–5 bars.
 Defaults remain 10 seconds/2 bars, with existing 10/20-second loops valid. The

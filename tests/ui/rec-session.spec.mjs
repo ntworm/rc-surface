@@ -5,12 +5,13 @@ import {test,expect} from '@playwright/test';
 for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty scene, keeps native CFG, owns STOP and preserves polling focus ('+locale+')',async({page},testInfo)=>{
   const tracks=Array.from({length:10},(_,index)=>({index,id:'track-'+index,name:'Input '+(index+1),arm:true,canArm:true,monitor:1,solo:false,mute:false}));
   const scenes=Array.from({length:10},(_,index)=>({index,id:'scene-'+index,name:'Scene '+(index+1)}));
+  const locators=Array.from({length:202},(_,index)=>({name:'Água > [bpm 121] · '+index,time:index*16}));
   const slots=tracks.map(track=>scenes.map(scene=>({index:scene.index,id:'slot-'+track.index+'-'+scene.index,clip:scene.index===0?{id:'old-'+track.index,name:'Existing '+(track.index+1)}:null,state:'stopped'})));
-  const writes=[];let offset=0,active=false,polls=0,queued=false;
+  const writes=[];let offset=0,active=false,polls=0,queued=false,stopping=false,backToArranger=false,meterStale=false,playingAfterStop=false;
   const snapshot=()=>{
     const field=value=>({value,fresh:true,observedAt:Date.now()});
-    return {transport:{connected:true,isPlaying:field(active&&!queued),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},pending:null,attemptActive:active,tracks,locators:[{name:'Verse',time:8}],meter:{numerator:4,denominator:4},
-      session:{songId:'song-test',offset,totalScenes:10,active,stopping:false,scenes:scenes.slice(offset,offset+8),rows:tracks.map(track=>({track:{index:track.index,id:track.id,name:track.name},ready:!active,slots:slots[track.index].slice(offset,offset+8)})),owned:active?tracks.map(track=>({track,scene:1,state:queued?'queued':'recording'})):[]}};
+    return {transport:{connected:true,isPlaying:field(playingAfterStop||active&&!queued&&!stopping),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},pending:null,attemptActive:active,tracks,safety:{backToArranger},locators,meter:meterStale?{numerator:null,denominator:null}:{numerator:4,denominator:4},
+      session:{songId:'song-test',offset,totalScenes:10,active,stopping,scenes:scenes.slice(offset,offset+8),rows:tracks.map(track=>({track:{index:track.index,id:track.id,name:track.name},ready:!active,slots:slots[track.index].slice(offset,offset+8)})),owned:active?tracks.map(track=>({track,scene:1,state:stopping?'queued':queued?'queued':'recording'})):[]}};
   };
   await page.routeWebSocket('**/ws*',socket=>socket.onMessage(raw=>{
     const message=JSON.parse(raw);
@@ -22,12 +23,13 @@ for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty sc
     if(message.cmd.startsWith('recording')) {
       writes.push(message);
       if(message.cmd==='recordingSessionRecord'){
-        active=true;queued=true;slots.forEach(row=>{row[1].state='queued';});
+        active=true;queued=true;backToArranger=true;slots.forEach(row=>{row[1].state='queued';});
       }
-      else if(message.cmd==='recordingSessionStop'){active=false;queued=false;slots.forEach(row=>{row[1].state='stopped';});}
+      else if(message.cmd==='recordingSessionStop'){stopping=true;playingAfterStop=true;error='REC:SESSION_STOP_PENDING';}
+      else if(message.cmd==='recordingReturnToArrangement'){backToArranger=false;}
       else if(message.cmd==='recordingTrackControl')tracks[message.args.track.index][message.args.property]=message.args.enabled;
       else if(message.cmd==='recordingRenameTrack')tracks[message.args.track.index].name=message.args.name;
-      else if(!['recordingClick','recordingRecord'].includes(message.cmd))error='Unexpected command';
+      else if(!['recordingClick','recordingRecord','recordingSeekMarker'].includes(message.cmd))error='Unexpected command';
       result=snapshot();
     }
     socket.send(JSON.stringify({id:message.id,ok:!error,...error?{error}:{result}}));
@@ -61,8 +63,21 @@ for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty sc
   await expect(page.locator('#rec-status')).toHaveText('REC');
   expect(await page.locator('.rec-session-cell[data-state="recording"]').first().evaluate(node=>getComputedStyle(node).opacity)).toBe('1');
   await page.locator('#page-recording').screenshot({path:testInfo.outputPath('rec-session-'+locale+'-recording.png')});
-  await page.locator('#rec-stop').click();expect(writes.at(-1).cmd).toBe('recordingSessionStop');await expect(page.locator('#rec-arrangement-mode')).toBeEnabled();
+  await page.locator('#rec-stop').click();expect(writes.at(-1).cmd).toBe('recordingSessionStop');await expect(page.locator('#rec-arrangement-mode')).toBeDisabled();
+  active=false;queued=false;stopping=false;slots.forEach(row=>{row[1].state='stopped';});
+  await expect(page.locator('#rec-arrangement-mode')).toBeEnabled();await expect(page.locator('.rec-track-actions [data-property="arm"]').first()).toBeDisabled();
+  const fresh=page.locator('#rec-session-grid [data-scene="2"]');await fresh.click();await expect(page.locator('#rec-start')).toBeEnabled();
+  playingAfterStop=false;await expect(page.locator('#rec-arm-mode')).toBeEnabled();await expect(page.locator('.rec-track-actions [data-property="arm"]').first()).toBeEnabled();
+  await expect(page.locator('#rec-return-arrangement')).toBeEnabled();const stoppedWrites=writes.length;await expect.poll(()=>polls).toBeGreaterThan(before+2);expect(writes).toHaveLength(stoppedWrites);
+  await page.locator('#page-recording').screenshot({path:testInfo.outputPath('rec-return-'+locale+'-ready.png')});
+  await page.locator('#rec-return-arrangement').click();expect(writes.at(-1).cmd).toBe('recordingReturnToArrangement');await expect(page.locator('#rec-arrangement-panel')).toBeVisible();await expect(page.locator('#rec-return-arrangement')).toBeHidden();
+  await page.locator('#page-recording').screenshot({path:testInfo.outputPath('rec-return-'+locale+'.png')});
+  await page.locator('#rec-clip-mode').click();
   await page.locator('#rec-session-next').click();await expect(page.locator('#rec-session-grid [data-scene="8"]')).toBeVisible();await expect(page.locator('#rec-session-grid .rec-session-cell')).toHaveCount(20);
   const count=writes.length;await page.locator('#rec-arrangement-mode').click();await expect(page.locator('#rec-arrangement-panel')).toBeVisible();await expect(page.locator('#rec-session-panel')).toBeHidden();expect(writes).toHaveLength(count);
+  const markerMenu=page.locator('#rec-start-marker');await expect(markerMenu.locator('option')).toHaveCount(203);await markerMenu.selectOption('123');await expect(markerMenu).toBeEnabled();await markerMenu.focus();
+  meterStale=true;await expect(page.locator('#rec-position')).toHaveAttribute('data-meter-stale','true');await expect(markerMenu).toBeFocused();await expect(markerMenu).toHaveValue('123');
+  await expect(markerMenu.locator('option:checked')).toHaveText('Água > [bpm 121] · 123 · 493.1');
+  const noPassiveWrites=writes.length;await page.locator('#page-recording').screenshot({path:testInfo.outputPath('rec-markers-'+locale+'-stale.png')});expect(writes).toHaveLength(noPassiveWrites);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

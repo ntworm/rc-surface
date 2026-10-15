@@ -5,13 +5,13 @@ import assert from 'node:assert/strict';
 import * as codec from 'osc-min';
 import {OSCTransport} from '../src/live/osc-transport.ts';
 import {RecordingCoordinator} from '../src/live/recording-coordinator.ts';
-import {CLIP,CMD,GET,REC,REC_LOOP,REC_PREFLIGHT,SESSION_REC} from '../src/osc-tokens.ts';
+import {CLIP,CMD,GET,REC,REC_LOOP,REC_PREFLIGHT,SESSION_REC,REC_RETURN} from '../src/osc-tokens.ts';
 
 function fixture(t,inputs=2) {
   const osc=new OSCTransport();Object.assign(osc.state,{available:true,connected:true});
   let song={scenes:Array.from({length:10},(_,index)=>({name:'Scene '+(index+1),handle:{id:'scene-'+index}})),cuePoints:[],tracks:[]},current=true;
   const writes=[],sent=[],block=new Set(),state={playing:false,record:false,click:false,numerator:4,denominator:4,sessionRecord:false};
-  const flags=Array.from({length:inputs+1},()=>({fired:-1,playing:-1,recording:false,triggered:false}));
+  const flags=Array.from({length:inputs+1},()=>({fired:-1,playing:-1,recording:false,triggered:false,active:true}));
   song.tracks=Array.from({length:inputs+1},(_,index)=>{
     const track={handle:{id:'track-'+index},name:index===inputs?'Group':index===0?'Audio':index===1?'MIDI':'Input '+(index+1),canArm:index<inputs,monitor:1,
       clipSlots:song.scenes.map((_,scene)=>({handle:{id:'slot-'+index+'-'+scene},clip:null}))};
@@ -19,7 +19,7 @@ function fixture(t,inputs=2) {
     return track;
   });
   const push=(address,values)=>osc.handleIncoming(codec.fromBuffer(codec.toBuffer({address,args:values.map(value=>({type:typeof value==='boolean'?(value?'true':'false'):typeof value==='string'?'string':Number.isInteger(value)?'integer':'float',value}))})));
-  let onSend=()=>{},mode='record',stopDelayed=false;
+  let onSend=()=>{},mode='record',stopDelayed=false,stopIndex=-1;
   osc.send=(address,args=[])=>{
     sent.push([address,args]);onSend(address,args);
     const track=args[0]?.value,scene=args[1]?.value,slot=song.tracks[track]?.clipSlots[scene];
@@ -27,7 +27,8 @@ function fixture(t,inputs=2) {
       if(mode==='queued'){flags[track].fired=scene;flags[track].triggered=true;}
       else if(mode!=='ignored'){slot.clip={name:'Take '+track,handle:{id:'clip-'+track}};Object.assign(flags[track],{playing:scene,recording:mode==='record',fired:-1,triggered:false});}
     }
-    if(address===CLIP.stopTrack && !stopDelayed)Object.assign(flags[track],{fired:-1,playing:-1,recording:false,triggered:false});
+    if(address===CLIP.stopTrack && !stopDelayed)Object.assign(flags[track],{fired:-1,playing:stopIndex,recording:false,triggered:false});
+    if(address===REC_RETURN.setBackToArranger&&!block.has(address))state.backToArranger=false;
     if(block.has(address))return;
     let response;
     if(address===GET.isPlaying)response=[state.playing];
@@ -41,16 +42,69 @@ function fixture(t,inputs=2) {
     for(const key of ['arm','solo','mute','canArm','monitor'])if(address===REC_PREFLIGHT['track'+key[0].toUpperCase()+key.slice(1)])response=[track,song.tracks[track][key]];
     if(address===SESSION_REC.firedSlot)response=[track,flags[track].fired];if(address===SESSION_REC.playingSlot)response=[track,flags[track].playing];
     if(address===SESSION_REC.hasClip)response=[track,scene,!!slot.clip];if(address===SESSION_REC.triggered)response=[track,scene,flags[track].fired===scene&&flags[track].triggered];
-    if(address===SESSION_REC.recording)response=[track,scene,flags[track].playing===scene&&flags[track].recording];if(address===SESSION_REC.playing)response=[track,scene,flags[track].playing===scene];
+    if(address===SESSION_REC.recording)response=[track,scene,flags[track].playing===scene&&flags[track].recording];if(address===SESSION_REC.playing)response=[track,scene,flags[track].playing===scene&&flags[track].active];
     if(response)queueMicrotask(()=>push(address,response));
   };
   const coordinator=new RecordingCoordinator(osc,()=>song),context={clientId:'session-test',isCurrent:()=>current};
   const request=()=>{const snapshot=coordinator.snapshot().session;return {songId:snapshot.songId,scene:snapshot.scenes[1],targets:song.tracks.slice(0,inputs).map((track,index)=>({track:{index,id:track.handle.id,name:track.name},slotId:track.clipSlots[1].handle.id})),bars:4,quantization:'global'};};
   t.after(()=>{coordinator.dispose();osc.dispose();});
-  return {osc,coordinator,context,state,sent,writes,flags,block,request,push,get song(){return song;},replace:value=>{song=value;},retire:()=>{current=false;},setHook:fn=>{onSend=fn;},mode:value=>{mode=value;},delayStop:value=>{stopDelayed=value;}};
+  return {osc,coordinator,context,state,sent,writes,flags,block,request,push,get song(){return song;},replace:value=>{song=value;},retire:()=>{current=false;},setHook:fn=>{onSend=fn;},mode:value=>{mode=value;},delayStop:value=>{stopDelayed=value;},nativeStopIndex:value=>{stopIndex=value;}};
 }
 const mutations=f=>f.sent.filter(([address])=>[CLIP.fireSlot,CLIP.stopTrack,CMD.startPlaying,CMD.stopPlaying,REC.setRecordMode,REC.setMetronome].includes(address)||address.includes('/set/'));
 const flush=async()=>{for(let index=0;index<40;index++)await Promise.resolve();};
+
+for(const playing of [false,true])test('REC explicit Arrangement return confirms native flag without changing transport '+playing,async t=>{
+  const f=fixture(t);f.state.playing=playing;f.state.backToArranger=true;await f.coordinator.refreshSession(0);assert.deepEqual(mutations(f),[]);
+  const result=await f.coordinator.returnToArrangement(f.context);assert.equal(result.safety.backToArranger,false);assert.equal(f.state.playing,playing);
+  assert.deepEqual(mutations(f),[[REC_RETURN.setBackToArranger,[{type:'integer',value:0}]]]);assert.deepEqual(f.writes,[]);
+  await f.coordinator.returnToArrangement(f.context);assert.equal(mutations(f).length,1,'confirmed return is a no-op');
+});
+for(const conflict of ['recording','queued','foreign','unknown'])test('REC Arrangement return rejects '+conflict+' Session state without stopping or overriding it',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});const f=fixture(t);f.state.backToArranger=true;
+  if(conflict==='recording')f.state.record=true;
+  if(conflict==='queued')f.flags[2].fired=-2;
+  if(conflict==='foreign'){f.flags[2].playing=0;f.song.tracks[2].clipSlots[0].clip={name:'Foreign',handle:{id:'foreign'}};}
+  if(conflict==='unknown')f.block.add(SESSION_REC.playingSlot);
+  const returned=f.coordinator.returnToArrangement(f.context),rejected=assert.rejects(returned,/SESSION_CONFLICT|SESSION_UNKNOWN/);await flush();if(conflict==='unknown')t.mock.timers.tick(2001);await rejected;assert.deepEqual(mutations(f),[]);
+});
+test('REC Arrangement return recovers confirmed stopped ownership and never replays an unconfirmed write',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});const f=fixture(t);await f.coordinator.recordSession(f.request(),f.context);f.state.backToArranger=true;
+  for(let index=0;index<2;index++)Object.assign(f.flags[index],{playing:-2,fired:-1,recording:false,active:false});
+  await f.coordinator.returnToArrangement(f.context);assert.equal(f.coordinator.snapshot().attemptActive,false);
+  f.state.backToArranger=true;f.block.add(REC_RETURN.setBackToArranger);
+  const pending=f.coordinator.returnToArrangement(f.context),rejected=assert.rejects(pending,/RETURN_UNCONFIRMED/);await flush();t.mock.timers.tick(2101);await flush();await rejected;
+  const count=mutations(f).length;await f.coordinator.refreshSession(0);assert.equal(mutations(f).length,count);
+});
+
+test('Session native Clip Stop index -2 completes STOP and permits another scene without reload',async t=>{
+  const f=fixture(t);f.nativeStopIndex(-2);await f.coordinator.recordSession(f.request(),f.context);
+  f.setHook(address=>{if(address===CLIP.stopTrack){f.block.add(SESSION_REC.recording);f.block.add(SESSION_REC.playing);}});
+  await f.coordinator.stopSession(f.context);const stopped=await f.coordinator.refreshSession(0);
+  assert.equal(stopped.attemptActive,false);assert.equal(stopped.session.active,false);assert.ok(stopped.session.rows.every(row=>row.ready));
+  const request=f.request();request.scene=stopped.session.scenes[2];request.targets=request.targets.map(target=>({...target,slotId:f.song.tracks[target.track.index].clipSlots[2].handle.id}));
+  f.block.clear();f.setHook(()=>{});
+  await f.coordinator.recordSession(request,f.context);assert.equal(f.flags[0].playing,2);
+  assert.deepEqual(f.writes,[]);
+});
+
+for(const retained of [false,true])test('Session fresh external stop '+(retained?'with retained indices':'at native -2')+' releases ownership in polling without repeating STOP',async t=>{
+  const f=fixture(t);await f.coordinator.recordSession(f.request(),f.context);f.delayStop(true);
+  await assert.rejects(f.coordinator.stopSession(f.context),/SESSION_STOP_PENDING/);const before=f.sent.length;
+  f.state.playing=false;for(let index=0;index<2;index++)Object.assign(f.flags[index],{fired:-1,playing:retained?1:-2,recording:false,active:false,triggered:false});
+  const result=await f.coordinator.refreshSession(0);assert.equal(result.attemptActive,false);assert.equal(result.session.active,false);assert.ok(result.session.rows.every(row=>row.ready));
+  assert.equal(f.sent.slice(before).some(([address])=>address===CLIP.stopTrack),false);
+});
+
+test('Session fired -2 is a pending stop, and transport pause or unknown clip flags cannot retire ownership',async t=>{
+  const f=fixture(t);await f.coordinator.recordSession(f.request(),f.context);f.state.playing=false;
+  for(let index=0;index<2;index++)Object.assign(f.flags[index],{fired:-2,playing:-2,recording:false,active:false,triggered:false});
+  let result=await f.coordinator.refreshSession(0);assert.equal(result.session.active,true);assert.ok(result.session.rows.slice(0,2).every(row=>!row.ready));
+  for(let index=0;index<2;index++)Object.assign(f.flags[index],{fired:-1,playing:1,recording:false,active:true});
+  result=await f.coordinator.refreshSession(0);assert.equal(result.session.active,true,'normal native capture completion into PLAY remains owned');
+  f.block.add(SESSION_REC.playing);f.flags[0].active=false;
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const pending=f.coordinator.refreshSession(0),unknown=assert.rejects(pending,/SESSION_UNKNOWN/);await flush();t.mock.timers.tick(2001);await unknown;assert.equal(f.coordinator.snapshot().session.active,true);
+});
 
 test('Session inventory is paged SDK metadata with ordinary Audio/MIDI states; passive reads never fire or arm',async t=>{
   const f=fixture(t),result=await f.coordinator.refreshSession(0);
@@ -81,7 +135,7 @@ test('Session queued/recording/playing/stopped follows native observations rathe
   for(let index=0;index<2;index++){Object.assign(f.flags[index],{playing:1,fired:-1,triggered:false,recording:true});f.song.tracks[index].clipSlots[1].clip={name:'Take',handle:{id:'created-'+index}};}
   assert.ok((await f.coordinator.refreshSession(0)).session.owned.every(target=>target.state==='recording'));
   f.flags[0].recording=false;assert.equal((await f.coordinator.refreshSession(0)).session.owned[0].state,'playing');
-  Object.assign(f.flags[0],{playing:-1,fired:-1});assert.equal((await f.coordinator.refreshSession(0)).session.owned[0].state,'stopped');
+  Object.assign(f.flags[0],{playing:-1,fired:-1});assert.ok((await f.coordinator.refreshSession(0)).session.owned.every(target=>target.track.index!==0));
 });
 
 test('Session native fire can confirm on a later host callback without a repeated fire or inferred REC',async t=>{

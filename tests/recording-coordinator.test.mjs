@@ -536,6 +536,25 @@ test('marker jump changes the persistent playback start using the verified numer
   assert.equal(f.sent.some(([address])=>address===REC.setSongTime),false);
 });
 
+test('marker inventory sorts 202 creation-ordered cues by timeline time stably without changing native jump indices or names',async t=>{
+  const f=fixture(t);f.song.cuePoints=Array.from({length:201},(_,index)=>({name:index%3?'Água > [bpm 123] · '+index:'Repeated [bpm 88]',time:(200-index)*16}));
+  f.song.cuePoints.push({name:'New at beginning > [bpm 97]',time:0});const original=[...f.song.cuePoints];
+  const result=await f.coordinator.refresh(),expected=[...original].sort((a,b)=>a.time-b.time);
+  assert.deepEqual(result.locators,expected);assert.deepEqual(f.song.cuePoints,original);
+  assert.deepEqual(result.locators.filter(cue=>cue.time===0).map(cue=>cue.name),original.filter(cue=>cue.time===0).map(cue=>cue.name));
+  const nativeIndex=123;await f.coordinator.seekMarker(original[nativeIndex],f.context);
+  assert.deepEqual(f.sent.filter(([address])=>address===CMD.cuePointJump).at(-1),[CMD.cuePointJump,[{type:'integer',value:nativeIndex}]]);
+});
+
+test('marker seek in a 256-track Set only reads stopped transport and exact selected identity/monitor, not mixer preflight',async t=>{
+  const f=fixture(t);f.song.tracks=Array.from({length:256},(_,index)=>index===0?f.song.tracks[0]:{name:'Input '+index,handle:{id:String(index+30)},arm:false,solo:false,mute:false});
+  await f.select();const before=f.sent.length,send=f.osc.send;
+  f.osc.send=(address,args)=>{if([REC_PREFLIGHT.trackArm,REC_PREFLIGHT.trackCanArm,REC_PREFLIGHT.trackSolo,REC_PREFLIGHT.trackMute,REC_PREFLIGHT.loop].includes(address))throw Error('marker requested unrelated full mixer preflight');send(address,args);};
+  await f.coordinator.seekMarker({name:'Chorus',time:24},f.context);assert.equal(f.values.position,24);
+  assert.ok(f.sent.length-before<16);assert.ok(f.sent.slice(before).some(([address])=>address===CLIP.getTrackNames));assert.ok(f.sent.slice(before).some(([address,args])=>address===REC_PREFLIGHT.trackMonitor&&args[0].value===0));
+  f.values.monitor=0;await assert.rejects(f.coordinator.seekMarker({name:'Verse',time:8},f.context),/MONITOR_IN/);
+});
+
 test('marker jump revalidates name, time and index at the transport boundary before any locator packet',async t=>{
   const f=insertMarkerFixture(t),jump=f.osc.recording.jumpToMarker.bind(f.osc.recording);
   f.osc.recording.jumpToMarker=(index,time,guard)=>{

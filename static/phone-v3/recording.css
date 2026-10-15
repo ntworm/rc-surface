@@ -56,6 +56,7 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-workspace .rec-stop { background:#ff5555; color:var(--bg2); border-color:#ff5555; }
 .rec-status { min-height:32px; display:flex; align-items:center; font-size:11px; color:var(--text2); }
 .rec-status[data-recording="true"] { color:#ff5555; }
+#rec-position[data-meter-stale="true"] { color:var(--text3); text-decoration:underline dotted; }
 .rec-note,.rec-help { color:var(--text2); font-size:11px; }
 .rec-help p { line-height:1.5; }
 .rec-range label { flex:1; min-width:200px; }

@@ -15,6 +15,7 @@ const writes = {
   recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
   recordingSeekMarker:{name:'Start',time:0},
   recordingSessionRecord:{songId:'test',scene:{index:0,id:'scene',name:'Scene'},targets:[{track:{index:0,id:'1',name:'Track'},slotId:'slot'}],bars:4,quantization:'global'},recordingSessionStop:{},
+  recordingReturnToArrangement:{},
 };
 test('REC commands are in the actual mappings registry and viewer cannot invoke any mutation',async () => {
   assert.equal(COMMAND_SIDE_EFFECTS.getRecordingState,'read');
@@ -42,6 +43,11 @@ test('Session REC dispatch forwards strict request/current context and keeps rea
   const before=calls.length;
   for(const [cmd,args] of [['recordingSessionRecord',{...writes.recordingSessionRecord,preRollBars:1}],['recordingSessionStop',{all:true}],['getSessionRecordingState',{}]])assert.equal((await dispatchCommand('admin',{cmd,args},context)).ok,false);
   assert.equal(calls.length,before);
+});
+test('REC explicit Arrangement return dispatch is controller/admin only with an exact empty schema',async t=>{
+  const original=recordingCoordinator.returnToArrangement,calls=[];recordingCoordinator.returnToArrangement=async context=>{calls.push(context);return {observed:true};};t.after(()=>{recordingCoordinator.returnToArrangement=original;});
+  const context={clientId:'return',isCurrent:()=>true};assert.equal((await dispatchCommand('controller',{cmd:'recordingReturnToArrangement',args:{}},context)).ok,true);assert.deepEqual(calls,[context]);
+  assert.equal((await dispatchCommand('controller',{cmd:'recordingReturnToArrangement',args:{enabled:true}},context)).ok,false);assert.equal(calls.length,1);
 });
 
 test('REC grid dispatch forwards exact cohort and track controls and rejects mixed or extra schemas',async t=>{

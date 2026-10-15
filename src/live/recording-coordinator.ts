@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { CLIP, GET, REC_LOOP, REC_PREFLIGHT, REC_PREROLL } from '../osc-tokens.js';
+import { CLIP, GET, REC_LOOP, REC_PREFLIGHT, REC_PREROLL,REC_RETURN } from '../osc-tokens.js';
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
@@ -126,7 +126,7 @@ export class RecordingCoordinator extends EventEmitter {
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
         arm: this.value('arm:' + index), solo: this.value('solo:' + index), mute: this.value('mute:' + index),
         canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index) })),
-      locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })),
+      locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
       lastAttempt: this.lastAttempt,
       preRoll: this.preRoll ? {bars:this.preRoll.bars, phase:this.preRoll.phase, start:this.preRoll.start, point:this.preRoll.range.start.time} : null,
@@ -233,7 +233,7 @@ export class RecordingCoordinator extends EventEmitter {
     this.currentSong();
     if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
     if (this.operation || this.trackMutation) return this.snapshot();
-    const promise = this.run('read', undefined, operation => this.read(operation));
+    const promise = this.run('read', undefined, async operation => {await this.read(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
   }
@@ -272,12 +272,40 @@ export class RecordingCoordinator extends EventEmitter {
     this.operation?.abort.abort(Error('REC:STOPPED'));this.operation=null;this.preparedToken=null;
     return this.run('stop',context,operation=>this.session.stop(()=>this.check(operation),operation.abort.signal));
   }
+  public async returnToArrangement(context?:CommandExecutionContext) {
+    this.requireContext(context);if(this.preRoll||this.punch||this.armedByRecorder.length)fail('STOP_REQUIRED');
+    return this.run('return',context,async operation=>{
+      const song=this.currentSong();
+      const guard=()=>{this.check(operation);if(this.getSong()!==song)fail('IDENTITY');};
+      const safe=()=>{
+        guard();const transport=this.osc.recording.snapshot();
+        if(!transport.recordMode.fresh||transport.recordMode.value!==false||!transport.isPlaying.fresh||this.value('sessionRecord')!==false)fail('SESSION_CONFLICT');
+        if(this.session.active||!this.session.allIdle())fail('SESSION_CONFLICT');
+      };
+      await this.read(operation);await this.session.refresh(guard,operation.abort.signal);safe();
+      if(this.value('backToArranger')===false)return;
+      if(this.value('backToArranger')!==true)fail('UNKNOWN');
+      this.osc.send(REC_RETURN.setBackToArranger,[{type:'integer',value:0}]);
+      const deadline=Date.now()+RECORDING_CONFIRM_MS;
+      while(true) {
+        await this.read(operation);await this.session.refresh(guard,operation.abort.signal);safe();
+        if(this.value('backToArranger')===false)return;
+        if(Date.now()>=deadline)fail('RETURN_UNCONFIRMED');
+        await new Promise<void>((resolve,reject)=>{
+          const abort=()=>{clearTimeout(timer);reject(operation.abort.signal.reason);};
+          const timer=setTimeout(()=>{operation.abort.signal.removeEventListener('abort',abort);resolve();},100);
+          operation.abort.signal.addEventListener('abort',abort,{once:true});
+          if(operation.abort.signal.aborted)abort();
+        });
+      }
+    });
+  }
   private async run(name: string, context: CommandExecutionContext | undefined, body: (op: Operation) => Promise<void>) {
     if (context) this.requireContext(context);
     if (name !== 'read') this.interruptRead();
     if (this.operation || (this.trackMutation && name !== 'stop')) fail('BUSY');
     if (this.preRoll && !['read','stop','click'].includes(name)) fail('PRE_ROLL_STATE');
-    if(this.session.active && !['read','stop','click'].includes(name))fail('STOP_REQUIRED');
+    if(this.session.active && !['read','stop','click','return'].includes(name))fail('STOP_REQUIRED');
     const operation: Operation = { name, abort: new AbortController(), ...(context ? { context } : {}) };
     this.operation = operation;
     try { this.check(operation); await body(operation); this.check(operation); }
@@ -333,19 +361,21 @@ export class RecordingCoordinator extends EventEmitter {
     this.check(operation);
     const song = this.currentSong();
     if (song.tracks.length > 256) fail('TRACK_LIMIT');
-    const packets: [string, number?][] = flags.map(key => [REC_PREFLIGHT[key]]);
-    packets.push([CLIP.getTrackNames], [REC_PREFLIGHT.signatureNumerator], [REC_PREFLIGHT.signatureDenominator]);
-    const keys: string[] = [...flags, 'names', 'numerator', 'denominator'];
-    for (let i = 0; i < song.tracks.length; i++) {
+    const markerRead=operation.name==='position';
+    const packets: [string, number?][] = markerRead?[]:flags.map(key => [REC_PREFLIGHT[key]]);
+    const keys: string[] = markerRead?[]:[...flags];
+    if(!markerRead || this.selected){packets.push([CLIP.getTrackNames]);keys.push('names');}
+    if(!markerRead){packets.push([REC_PREFLIGHT.signatureNumerator],[REC_PREFLIGHT.signatureDenominator]);keys.push('numerator','denominator');}
+    for (let i = 0; !markerRead && i < song.tracks.length; i++) {
       packets.push([REC_PREFLIGHT.trackArm, i], [REC_PREFLIGHT.trackCanArm, i]);
       keys.push('arm:' + i, 'canArm:' + i);
       for (const field of ['solo','mute'] as const) if (operation.name === 'read' || this.value(field+':'+i) === null) {
         packets.push([field === 'solo' ? REC_PREFLIGHT.trackSolo : REC_PREFLIGHT.trackMute,i]); keys.push(field+':'+i);
       }
     }
-    for (const ref of monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
-    if (this.range?.loop || this.preRollRequested || this.preRoll) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
-    if (this.preRollRequested || this.preRoll) { packets.push([GET.tempo]); keys.push('tempo'); }
+    for (const ref of markerRead?(this.selected?[this.selected]:[]):monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
+    if (!markerRead && (this.range?.loop || this.preRollRequested || this.preRoll)) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
+    if (!markerRead && (this.preRollRequested || this.preRoll)) { packets.push([GET.tempo]); keys.push('tempo'); }
     const revision = this.revision;
     const evidence = new Promise<void>((resolve, reject) => {
       let done = false, retry: ReturnType<typeof setTimeout> | undefined;
@@ -384,7 +414,7 @@ export class RecordingCoordinator extends EventEmitter {
       const timer = setTimeout(() => finish(expected && !matches() ? mismatch() : Error('REC:UNKNOWN')),
         expected ? Math.max(0, expected.deadline - Date.now()) : RECORDING_CONFIRM_MS);
       this.on('observation', observed); operation.abort.signal.addEventListener('abort', abort, { once: true });
-      try { for (const [address, index] of packets) this.osc.send(address, index === undefined ? [] : [{ type: 'integer', value: index }]); }
+      try { if(!keys.length)finish();for (const [address, index] of packets) this.osc.send(address, index === undefined ? [] : [{ type: 'integer', value: index }]); }
       catch (error) { finish(error); }
       if (expected && !done) retry = setTimeout(poll, Math.min(100, expected.deadline - Date.now()));
     });

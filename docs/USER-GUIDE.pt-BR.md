@@ -1181,6 +1181,11 @@ playback parado:
 2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
    do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
    observada do playback.
+   A lista segue o tempo da timeline, inclusive marcadores novos no início, com
+   ordem estável nos empates e nomes completos. Compasso temporariamente atrasado
+   mantém o último display confirmado com indicador pontilhado, sem autorizar REC.
+   Salto de marcador confirma transporte parado/record off e identidade/monitor
+   selecionado sem esperar estados do mixer sem relação. REC confirma o conjunto.
 3. Para gravar passagens repetidas, ligue **Loop** e escolha um marcador final
    depois do início. Deixe Loop desligado para gravar sem um final definido.
 4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
@@ -1293,12 +1298,25 @@ Arrangement e Punch In ficam ocultos e não são usados em CLIP. ARM e renomeaç
 ficam bloqueados durante a tentativa própria; SOLO/MUTE são ações explícitas.
 
 STOP respeita a quantização nativa e pode mostrar **Parada pendente**; confirme
-no Live ou aperte STOP novamente. Observações ausentes ou identidade de clip
+no Live ou aperte STOP novamente. O polling libera a tentativa quando Clip Stop
+nativo fresco (`playing_slot_index=-2`, `fired_slot_index=-1`) ou flags frescas de
+clip parado comprovam conclusão, inclusive por parada externa. Stop na fila
+(`fired_slot_index=-2`), estado desconhecido ou pausa do transporte isolada não
+bastam. Após confirmação, não precisa recarregar nem repetir escrita de STOP.
+Observações ausentes ou identidade de clip
 ainda atrasada no SDK não autorizam parar uma faixa às cegas. Uma observação
 fresca de gravação pode vincular o clip criado; depois, STOP explícito conclui.
 Clip externo observado, troca de faixa/cena/slot ou substituição de clip encerra
 a posse daquele alvo sem pará-lo. Perda de sessão/link/Set retira posse, sem
 repetir parada, disparo ou limpeza na reconexão. Sem link, pare no Live.
+
+Quando Session substitui o playback do Arrangement, **VOLTAR AO ARR** aparece em
+REC. Após todas as faixas de Session confirmadas ociosas e gravação desligada,
+aperte para retornar explicitamente. O comando confirma o sinal nativo e só então
+seleciona ARRANGEMENT. Com transporte rodando, Arrangement continua na posição
+atual; não envia Pause/Play, move playhead, muda arm/Loop/Punch In nem apaga clips.
+Clip ativo/na fila/desconhecido bloqueia o retorno. Abrir REC, trocar destino ou
+parar clips nunca retorna automaticamente.
 
 Os disparos multifaixa são pedidos OSC sequenciais, sem transação atômica no host.
 Falha parcial tenta parar somente os alvos emitidos cuja identidade e posse

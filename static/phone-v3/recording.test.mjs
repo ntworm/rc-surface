@@ -237,9 +237,20 @@ function gridHarness(t) {
   const buttons=index=>node('rec-track-grid').children[index].children[1].children;
   return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=2001;}};
 }
+test('REC polling retains 202 marker menus, full names, selection and scroll when the observed meter becomes stale',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
+  state.locators=Array.from({length:202},(_,index)=>({name:'Água > [bpm 121] · '+index,time:index*16}));await h.seed(state);
+  const select=h.node('rec-start-marker'),markers=h.node('rec-markers'),options=[...select.children],buttons=[...markers.children],rebuilds=select.replacements;
+  select.focused=true;select.scrollTop=420;select.value='123';select.listeners.get('change')();h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  await h.seed({...state,meter:{numerator:null,denominator:null}});
+  assert.equal(select.replacements,rebuilds);assert.deepEqual(select.children,options);assert.deepEqual(markers.children,buttons);assert.equal(select.value,'123');assert.equal(select.scrollTop,420);assert.equal(select.focused,true);
+  assert.equal(buttons[123].children[0].textContent,'493.1');assert.equal(buttons[123].children[1].textContent,state.locators[123].name);
+  assert.equal(h.node('rec-position')['data-meter-stale'],'true');
+  await h.seed(state);assert.equal(select.replacements,rebuilds);assert.equal(h.node('rec-position')['data-meter-stale'],'false');
+});
 test('REC Session viewer blocks mutations, reads remain passive, and STOP retires an in-flight Session command',async t=>{
   const {client,calls}=api(t);client.session(true,'viewer');
-  for(const name of ['recordingSessionRecord','recordingSessionStop'])await assert.rejects(client.command(name,{}),/SESSION/);
+  for(const name of ['recordingSessionRecord','recordingSessionStop','recordingReturnToArrangement'])await assert.rejects(client.command(name,{}),/SESSION/);
   assert.equal(calls.length,0);const read=client.command('getSessionRecordingState',{offset:0});calls.at(-1).cb({ok:true,result:{session:{active:false}}});await read;
   client.session(true,'controller');const start=client.command('recordingSessionRecord',{}),retired=assert.rejects(start,/SESSION/),old=calls.at(-1).cb;
   const stop=client.command('recordingSessionStop');assert.equal(calls.at(-1).cmd,'recordingSessionStop');calls.at(-1).cb({ok:true,result:{session:{active:false}}});await stop;
@@ -261,6 +272,13 @@ test('REC Session mode and scene selection are passive, include all ten arms, an
   assert.equal(h.node('rec-status').textContent,'rec.sessionState.queued');
   await h.seed({...owned,session:{...owned.session,owned:owned.session.owned.map(target=>({...target,state:'stopped'}))}});assert.equal(h.node('rec-status').textContent,'rec.finishSession');assert.equal(h.node('rec-start').disabled,true);
   h.node('rec-stop').listeners.get('click')();assert.equal(h.calls.at(-1).name,'recordingSessionStop');h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+});
+test('REC a confirmed passive Session stop clears only its pending STOP error without another write',async t=>{
+  const {client,calls}=api(t);client.session(true,'controller');
+  const stop=client.command('recordingSessionStop'),rejected=assert.rejects(stop,/SESSION_STOP_PENDING/);calls.at(-1).cb({ok:false,error:'REC:SESSION_STOP_PENDING'});await rejected;
+  let reading=client.command('getSessionRecordingState',{offset:0});calls.at(-1).cb({ok:true,result:{session:{active:true}}});await reading;assert.match(client.view().error,/SESSION_STOP_PENDING/);
+  reading=client.command('getSessionRecordingState',{offset:0});calls.at(-1).cb({ok:true,result:{session:{active:false}}});await reading;assert.equal(client.view().error,null);
+  assert.equal(calls.filter(call=>call.cmd==='recordingSessionStop').length,1);
 });
 test('REC grid observes ten inputs, preserves cards/focus on polling and sends exact visible armed cohort',async t=>{
   const h=gridHarness(t);h.client.session(true,'controller');let state=h.state();await h.seed(state);
