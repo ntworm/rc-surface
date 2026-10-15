@@ -1176,10 +1176,17 @@ dos dois; refaça os exemplos conflitantes deliberadamente. Os exemplos salvos
 permanecem preservados. Abrir o quinto dedo
 (indicador, médio, anelar ou mindinho) que estava consistentemente dobrado na
 pose de quatro solta a pose após o intervalo de liberação; se a mão aberta
-estiver treinada em outro slot, pode trocar diretamente. O polegar fica fora
-dessa checagem: poses que só diferem pelo polegar dependem apenas da
-tolerância aprendida. Pequenas dobras e leituras incertas continuam usando a
-tolerância aprendida. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
+estiver treinada em outro slot, pode trocar diretamente. O polegar tem um veto
+próprio: pode dobrar ou se recolher pela palma mantendo a articulação reta.
+Pelo menos duas tomadas claras e maioria estrita dos estados claros do polegar
+devem concordar; uma vista extra incerta não apaga essa identidade. Abrir o
+polegar aprendido recolhido, ou recolher o aprendido aberto, rejeita entrada
+e libera HOLD. Evidência incerta dos dedos não começa nem completa novo disparo;
+incerteza breve sozinha não redispara uma pose sustentada. TEST mostra DEDOS
+INCERTOS ou DEDOS DIFERENTES. Ajuste o ângulo ou repare capturas conflitantes;
+polegar oculto numa vista de perfil não é evidência confiável. Pequenas dobras
+dentro do mesmo estado mantêm tolerância aprendida. Capturas v9 são preservadas,
+inclusive bancos conflitantes; repare esses bancos deliberadamente. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 O aviso de recaptura permanece após salvar, reiniciar a câmera e restaurar o projeto, até uma nova captura bem-sucedida ou um CLR explícito dessa pose.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 

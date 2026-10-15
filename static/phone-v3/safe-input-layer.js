@@ -367,11 +367,28 @@
       + (y(base + 3) - y(base)) * (y(base) - y(0))) / (palm * chain);
   }
 
-  function contradictsLearnedFingers(descriptor, samples) {
+  // The thumb can fold at its IP joint or oppose across the palm while
+  // remaining straight. Use both shape cues as a gate, not another term in
+  // the whole-hand distance. An edge-on palm cannot resolve opposition in XY.
+  function thumbState(descriptor) {
+    const distance = (a, b) => Math.hypot(descriptor[a * 2] - descriptor[b * 2],
+      descriptor[a * 2 + 1] - descriptor[b * 2 + 1]);
+    const palm = MCP_LANDMARKS.reduce((sum, base) => sum + distance(0, base), 0) / 4;
+    const chain = distance(2, 3) + distance(3, 4);
+    if (palm < 1e-6 || chain < 1e-6) return { usable: false, state: null };
+    if (distance(5, 17) / palm < 0.15) return { usable: true, state: null };
+    const curl = distance(2, 4) / chain;
+    const opposition = distance(4, 17) / palm;
+    if (curl <= 0.55 || opposition <= 0.60) return { usable: true, state: 'folded' };
+    if (curl >= 0.85 && opposition >= 0.75) return { usable: true, state: 'extended' };
+    return { usable: true, state: null };
+  }
+
+  function learnedFingerEvidence(descriptor, samples) {
+    let uncertain = false;
     for (const base of MCP_LANDMARKS) {
       const current = fingerProjection(descriptor, base);
       const learned = samples.map((sample) => fingerProjection(sample, base));
-      if (current === null) continue;
       // Keep the original three-take consensus, but do not let one uncertain
       // or opposing extra take erase it. Require at least three clear takes
       // and a strict majority of the complete bank (including uncertain takes).
@@ -380,11 +397,32 @@
       const folded = learned.filter(value => value !== null && value <= 0.35).length;
       const extended = learned.filter(value => value !== null && value >= 0.70).length;
       // Two equally supported opposing identities are not one learned pose.
-      if (folded >= 3 && extended >= 3) return true;
+      if (folded >= 3 && extended >= 3) return { contradiction: true, fingerUncertain: false };
       if ((folded >= required && current >= 0.70)
-        || (extended >= required && current <= 0.35)) return true;
+        || (extended >= required && current !== null && current <= 0.35)) {
+        return { contradiction: true, fingerUncertain: false };
+      }
+      if ((folded >= required || extended >= required)
+        && (current === null || (current > 0.35 && current < 0.70))) uncertain = true;
     }
-    return false;
+    const learnedThumbs = samples.map(thumbState);
+    // Degenerate legacy descriptors have no anatomical evidence to infer.
+    // Real captures are normalized from a usable palm; preserve old saves.
+    if (!learnedThumbs.some(thumb => thumb.usable)) return { contradiction: false, fingerUncertain: uncertain };
+    const clear = learnedThumbs.filter(thumb => thumb.state !== null);
+    const required = Math.max(2, Math.floor(clear.length / 2) + 1);
+    const folded = clear.filter(thumb => thumb.state === 'folded').length;
+    const extended = clear.length - folded;
+    const expected = folded >= required ? 'folded' : extended >= required ? 'extended' : null;
+    const current = thumbState(descriptor).state;
+    return {
+      contradiction: expected !== null && current !== null && current !== expected,
+      fingerUncertain: uncertain || expected === null || current === null,
+    };
+  }
+
+  function contradictsLearnedFingers(descriptor, samples) {
+    return learnedFingerEvidence(descriptor, samples).contradiction;
   }
 
   class GestureLibrary {
@@ -602,7 +640,7 @@
           .sort((a, b) => a.score - b.score);
         const raw = distances[1].score;
         scores.push({ name, score: raw, nearestTake: distances[0].index, relative: raw / Math.max(0.0001, this.thresholdFor(name)),
-          contradiction: contradictsLearnedFingers(descriptor, samples) });
+          ...learnedFingerEvidence(descriptor, samples) });
       }
       scores.sort((a, b) => Number(a.contradiction) - Number(b.contradiction) || a.relative - b.relative);
       const best = scores[0];
@@ -615,7 +653,8 @@
       // Entry radius is min(limit, (1 - minimumConfidence) * 1.5 * limit).
       // Confidence is the tighter gate for every shipped preset (>= 1/3);
       // HOLD instead uses releaseRatio * limit in the recognition FSM.
-      const accepted = !best.contradiction && best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
+      const accepted = !best.contradiction && !best.fingerUncertain
+        && best.score <= limit && confidence >= this.minimumConfidence && !ambiguous;
       const candidates = scores.map(({ name, score, nearestTake }) => ({
         name,
         score,
@@ -630,6 +669,7 @@
         confidence,
         accepted,
         contradiction: best.contradiction,
+        fingerUncertain: best.fingerUncertain,
         ambiguous,
         candidates,
         target: targetName ? candidates.find((candidate) => candidate.name === targetName) || null : null,
@@ -779,5 +819,6 @@
     medianDescriptor,
     descriptorSpread,
     contradictsLearnedFingers,
+    learnedFingerEvidence,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

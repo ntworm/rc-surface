@@ -1756,9 +1756,17 @@ neither state; deliberately replace the conflicting takes. Saved examples
 remain intact. Opening a fifth finger
 (index, middle, ring or pinky) that was consistently curled in a four-finger
 pose releases it after the release interval; if the open hand is trained in
-another slot, it can switch directly. The thumb is not part of this check:
-poses that differ only by the thumb rely on the learned tolerance alone.
-Small curls and uncertain readings still use the learned tolerance.
+another slot, it can switch directly. The thumb has a separate identity gate:
+it can curl or oppose across the palm while staying straight. At least two
+clear takes and a strict majority of clear thumb states must agree; an
+uncertain extra view does not erase that identity. Opening a learned tucked
+thumb, or tucking a learned open thumb, rejects entry and releases HOLD.
+Uncertain finger evidence cannot begin or complete a new trigger; brief
+uncertainty alone does not retrigger a held pose. TEST shows FINGERS UNCLEAR
+or FINGER SHAPE DIFFERS. Adjust the angle or repair conflicting captures;
+a thumb hidden in an edge-on view is not reliable evidence. Small curls
+within the same finger state retain learned tolerance. Existing v9 takes
+remain saved, including conflicting banks; repair those deliberately.
 Missing-hand frames preserve an active pose; unconfirmed candidates expire after grace. Camera-corrected version 9 saves with 42/47 coordinates load without recapture; version 8 requires recapture. TEST uses the same compatibility check as live recognition.
 The recapture warning survives local saves, camera restarts and project restores until a successful new capture or an explicit CLR for that pose.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.

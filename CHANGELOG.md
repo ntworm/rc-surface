@@ -21,6 +21,11 @@ intermediate release records are intentionally not published.
 
 ### Learned poses
 
+- Include thumb identity in learned-pose safety using both IP curl and palm
+  opposition. A clear opposing thumb vetoes entry/HOLD; uncertain finger
+  evidence blocks new onsets without duplicating a held note. TEST explains
+  uncertain/mismatched fingers. Keep saved v9 takes, distance/calibration and
+  presets; a thumb hidden by an edge-on view does not qualify a fresh trigger.
 - Preserve learned finger identity with four to six takes: at least three clear
   examples and a strict majority veto a visibly opposing finger. An extra
   uncertain/opposing capture cannot disable that protection. Equally supported

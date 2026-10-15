@@ -133,7 +133,7 @@ export function adapterEvaluate(library, descriptor, targetName = null, arm = 'A
     const limit = library.thresholdFor(name);
     scores.push({ name, score, nearestTake: distances.indexOf(Math.min(...distances)), relative: score / Math.max(.0001, limit),
       confidence: clamp(1 - score / Math.max(.0001, limit * 1.5)),
-      contradiction: safe.contradictsLearnedFingers(descriptor, samples) });
+      ...safe.learnedFingerEvidence(descriptor, samples) });
     for (const distance of distances) neighbors.push({ name, relative: distance / Math.max(.0001, limit) });
   }
   scores.sort((a, b) => Number(a.contradiction) - Number(b.contradiction) || a.relative - b.relative);
@@ -152,9 +152,9 @@ export function adapterEvaluate(library, descriptor, targetName = null, arm = 'A
   const candidates = scores.map(({ name, score, confidence, nearestTake }) => ({ name, score, confidence,
     nearestTake, kthDistance: score, entryRadius: (1 - library.minimumConfidence) * 1.5 * library.thresholdFor(name) }));
   return { name: best.name, score: best.score, confidence: best.confidence,
-    accepted: !best.contradiction && best.score <= library.thresholdFor(best.name)
+    accepted: !best.contradiction && !best.fingerUncertain && best.score <= library.thresholdFor(best.name)
       && best.confidence >= library.minimumConfidence && !ambiguous,
-    ambiguous, contradiction: best.contradiction, candidates,
+    ambiguous, contradiction: best.contradiction, fingerUncertain: best.fingerUncertain, candidates,
     target: candidates.find(candidate => candidate.name === targetName) || null };
 }
 

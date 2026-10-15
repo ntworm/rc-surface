@@ -2585,7 +2585,11 @@
           const percent = Math.round((target.confidence || 0) * 100);
           if (status) {
             const state = evaluation?.recognitionState;
-            if (state === 'held') {
+            if (evaluation.name === slot.name && evaluation.fingerUncertain) {
+              status.textContent = T('vid.fingersUnclear', 'FINGERS UNCLEAR · adjust angle or recapture');
+            } else if (evaluation.name === slot.name && evaluation.contradiction) {
+              status.textContent = T('vid.fingerMismatch', 'FINGER SHAPE DIFFERS · check each finger');
+            } else if (state === 'held') {
               status.textContent = T('vid.poseStateHeld', 'HELD · release slightly to retrigger', { percent });
             } else if (state === 'releasing') {
               status.textContent = T('vid.poseStateReleasing', 'RELEASING · almost ready to retrigger');

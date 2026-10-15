@@ -535,6 +535,8 @@
       'pt-BR': '✓ TESTE OK · {percent}% de confiança · desfaça e mostre a pose de novo para disparar outra vez',
     },
     'vid.poseRecognized': { en: '✓ {name} recognized · {percent}%', 'pt-BR': '✓ {name} reconhecido · {percent}%' },
+    'vid.fingersUnclear': { en: 'FINGERS UNCLEAR · adjust angle or recapture', 'pt-BR': 'DEDOS INCERTOS · ajuste o ângulo ou refaça as capturas' },
+    'vid.fingerMismatch': { en: 'FINGER SHAPE DIFFERS · check each finger', 'pt-BR': 'DEDOS DIFERENTES · confira cada dedo' },
     'vid.poseStateHeld': { en: 'HELD · release slightly to retrigger', 'pt-BR': 'RECONHECIDO · solte levemente para repetir' },
     'vid.poseStateReleasing': { en: 'RELEASING · almost ready to retrigger', 'pt-BR': 'SOLTANDO · solte para repetir' },
     'vid.poseStateReady': { en: 'READY · ready to trigger', 'pt-BR': 'PRONTO · pronto para repetir' },

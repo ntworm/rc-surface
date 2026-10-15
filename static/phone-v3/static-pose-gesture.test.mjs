@@ -88,7 +88,7 @@ function frames(descriptor, count = 8, jitter = 0.002) {
 const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
   holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };
 
-test('seeded 400-case corpus retains the exact three-take scores and calibration', () => {
+test('seeded 400-case corpus retains geometry and calibration before the finger-identity gate', () => {
   const { GestureLibrary, normalizeHandPose } = load();
   let seed = 11;
   const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
@@ -104,21 +104,21 @@ test('seeded 400-case corpus retains the exact three-take scores and calibration
     }
     const evaluation = library.evaluate(shape(), 'A');
     results.push({ factors: ['A', 'B'].map(name => library.thresholdFor(name)),
-      score: evaluation.score, name: evaluation.name, confidence: evaluation.confidence,
-      accepted: evaluation.accepted, ambiguous: evaluation.ambiguous, contradiction: evaluation.contradiction,
-      candidates: evaluation.candidates.map(({ name, score, confidence }) => ({ name, score, confidence })) });
+      candidates: evaluation.candidates.map(({ name, score, confidence }) => ({ name, score, confidence }))
+        .sort((a, b) => a.name.localeCompare(b.name)) });
   }
-  // Captured from the verified three-take library at commit 3cdf910.
-  assert.equal(createHash('sha256').update(JSON.stringify(results)).digest('hex'), 'fd7267957f8fbd4722cc3827d759c34520386ee90202b5325eb9271b7c14f2d7');
+  // Captured by replaying e014e19 before this patch. Finger rejection/ranking
+  // intentionally changes; distances, confidence and calibration must not.
+  assert.equal(createHash('sha256').update(JSON.stringify(results)).digest('hex'), 'b86362dac56875ee70e03df5539ce1de6b136559d89e2644b21de2ffc661f7c1');
 });
 
 test('six-take bank scores its second neighbor and calibrates LOTO', () => {
   const { GestureLibrary, normalizeHandPose, weightedPoseDistance } = load();
   const library = new GestureLibrary({ ...performanceOptions, maxTakes: 6 });
   const config = thumb => handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: 1 });
-  for (const thumb of [.15, .16, .17, .98, .99, 1]) library.learn('Rock', frames(normalizeHandPose(config(thumb))));
+  for (const thumb of [.08, .09, .10, .25, .26, .27]) library.learn('Rock', frames(normalizeHandPose(config(thumb))));
   assert.equal(library.sampleCount('Rock'), 6);
-  assert.equal(library.learn('Rock', frames(normalizeHandPose(config(1)))), 6);
+  assert.equal(library.learn('Rock', frames(normalizeHandPose(config(.27)))), 6);
   const samples = library.templates.get('Rock'), weights = library.weightsFor('Rock');
   const second = values => values.sort((a, b) => a - b)[1];
   const distances = samples.map((sample, index) => samples.filter((_, other) => other !== index)
@@ -127,7 +127,7 @@ test('six-take bank scores its second neighbor and calibrates LOTO', () => {
   const worstPair = Math.max(...distances.flat());
   assert.equal(library.thresholdFor('Rock') / library.threshold, Math.min(2.5, Math.max(1, loto * 1.6 / library.threshold)));
   assert.ok(loto < worstPair);
-  for (const thumb of [.15, 1]) {
+  for (const thumb of [.08, .27]) {
     const live = normalizeHandPose(config(thumb));
     assert.equal(library.evaluate(live).score, second(samples.map(sample => weightedPoseDistance(live, sample, weights))));
     assert.equal(library.evaluate(live).accepted, true);
@@ -357,6 +357,99 @@ test('uncertain extras cannot erase folded identity and opposing extras cannot e
     assert.equal(library.evaluate(shape(wrong)).accepted, false);
     assert.equal(library.evaluate(shape(wrong)).contradiction, true);
   }
+});
+
+for (const [label, takes, correct, wrong] of [
+  ['curled thumb', [.08, .10, .12], .1, 1],
+  ['opposed thumb', [.58, .60, .62], .6, 1],
+  ['open thumb', [.98, .99, 1], 1, .1],
+]) {
+  test(`${label} is part of Index identity before onset and during HOLD`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const shape = thumb => normalizeHandPose(handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: .2 }));
+    const library = new GestureLibrary(performanceOptions);
+    for (const thumb of takes) library.learn('Index', frames(shape(thumb)));
+    assert.equal(library.evaluate(shape(correct)).accepted, true);
+    assert.equal(library.evaluate(shape(wrong)).accepted, false, 'thumb contradiction cannot disappear in whole-hand distance');
+    for (const time of [0, 60, 121, 300]) assert.equal(library.recognize(shape(wrong), time), null);
+    library.recognize(shape(correct), 400); library.recognize(shape(correct), 520);
+    assert.equal(library.activeName, 'Index');
+    library.recognize(shape(wrong), 600); library.recognize(shape(wrong), 741);
+    assert.equal(library.activeName, null);
+    for (const dims of [42, 47]) {
+      const saved = JSON.parse(JSON.stringify(library.toJSON()));
+      saved.templates[0].samples = saved.templates[0].samples.map(sample => sample.slice(0, dims));
+      const restored = GestureLibrary.fromJSON(saved, performanceOptions);
+      assert.equal(restored.sampleCount('Index'), 3);
+      assert.equal(restored.evaluate(shape(correct)).accepted, true);
+      assert.equal(restored.evaluate(shape(wrong)).accepted, false);
+    }
+  });
+}
+
+test('uncertain thumb cannot begin or complete a candidate, but does not retrigger a held pose', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = thumb => normalizeHandPose(handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: .2 }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const thumb of [.08, .10, .12]) library.learn('Index', frames(shape(thumb)));
+  const uncertain = shape(.8);
+  assert.equal(library.evaluate(uncertain).accepted, false);
+  assert.equal(library.evaluate(uncertain).fingerUncertain, true);
+  assert.equal(library.recognize(shape(.1), 0), null);
+  assert.equal(library.recognize(uncertain, 100), null);
+  assert.equal(library.recognize(shape(.1), 121), null, 'uncertainty interrupts the onset timer');
+  assert.equal(library.recognize(shape(.1), 241)?.name, 'Index');
+  assert.equal(library.recognize(uncertain, 300), null);
+  assert.equal(library.activeName, 'Index', 'uncertain camera reading is not a clear opposing finger');
+  library.markMissing(400); library.markMissing(1000);
+  assert.equal(library.recognize(shape(.1), 1100), null);
+  assert.equal(library.activeName, 'Index');
+});
+
+test('extra opposing thumb capture and front/back/oblique views cannot erase thumb identity', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const points = thumb => handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: .2 });
+  const view = (thumb, radians) => points(thumb).map(point => ({
+    x: .5 + (point.x - .5) * Math.cos(radians), y: point.y,
+    z: (point.x - .5) * Math.sin(radians),
+  }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const radians of [0, Math.PI / 2, Math.PI]) library.learn('Index', frames(normalizeHandPose(view(.1, radians))));
+  library.learn('Index', frames(normalizeHandPose(points(1))));
+  for (const radians of [0, Math.PI / 4, Math.PI]) {
+    assert.equal(library.evaluate(normalizeHandPose(view(1, radians))).accepted, false);
+  }
+  assert.equal(library.evaluate(normalizeHandPose(view(.1, 0))).accepted, true);
+  const edgeOn = library.evaluate(normalizeHandPose(view(1, Math.PI / 2)));
+  assert.equal(edgeOn.accepted, false, 'hidden thumb is not evidence for a new onset');
+  assert.equal(edgeOn.fingerUncertain, true);
+});
+
+for (const count of [4, 5, 6]) {
+  test(`${count} thumb takes preserve the dominant identity in both directions`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const shape = thumb => normalizeHandPose(handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: .2 }));
+    for (const [correct, wrong] of [[.1, 1], [1, .1]]) {
+      const library = new GestureLibrary(performanceOptions);
+      for (let take = 0; take < count - 1; take++) library.learn('Index', frames(shape(correct)));
+      library.learn('Index', frames(shape(wrong)));
+      assert.equal(library.evaluate(shape(correct)).accepted, true);
+      assert.equal(library.evaluate(shape(wrong)).accepted, false);
+      assert.equal(library.sampleCount('Index'), count);
+    }
+  });
+}
+
+test('equally supported opposing thumb states keep the bank but cannot arm a pose', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = thumb => normalizeHandPose(handPose({ thumb, index: 1, middle: .2, ring: .2, pinky: .2 }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const thumb of [.08, .10, .12, .98, .99, 1]) library.learn('Mixed', frames(shape(thumb)));
+  for (const thumb of [.1, 1]) {
+    assert.equal(library.evaluate(shape(thumb)).accepted, false);
+    assert.equal(library.evaluate(shape(thumb)).fingerUncertain, true);
+  }
+  assert.equal(library.sampleCount('Mixed'), 6);
 });
 
 test('learned three, four and five fingers switch directly after hold, with matching TEST evaluation', () => {
