@@ -55,6 +55,16 @@ export const CMD = {
   cuePointJump:        "/live/song/cue_point/jump",
 } as const;
 
+// Arrangement REC transport only. These do not select/arm tracks or prove
+// audio capture: record_mode may include count-in, punch or an unarmed Set.
+export const REC = {
+  listenRecordMode: "/live/song/start_listen/record_mode",
+  getRecordMode:    "/live/song/get/record_mode",
+  setRecordMode:    "/live/song/set/record_mode",
+  setSongTime:      "/live/song/set/current_song_time",
+  setMetronome:     "/live/song/set/metronome",
+} as const;
+
 // ── Launch Clip ────────────────────────────────────────────────────────────
 //
 // AbletonOSC addresses clips and tracks by index. Launch Clip only fires,
