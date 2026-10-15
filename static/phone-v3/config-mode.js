@@ -23,13 +23,14 @@
 (function (root) {
   "use strict";
 
-  const BUTTON_ID = "btn-cfg-mode";
-  const MENU_ID = "control-config-menu";
   const CFG_PAGES_SELECTOR = ".page[data-page=\"performance\"], .page[data-page=\"mixer\"]";
   const DATA_NAME_SELECTOR = "[data-name]";
 
   function createRcConfigMode(options) {
     const opts = options || {};
+    const BUTTON_ID=opts.buttonId || "btn-cfg-mode";
+    const MENU_ID=opts.menuId || "control-config-menu";
+    const modeClass=opts.modeClass || "config-mode";
     const documentRef = opts.document || (typeof document !== "undefined" ? document : null);
     const windowRef = opts.window || (typeof window !== "undefined" ? window : null);
     const controlConfig = opts.controlConfig || (windowRef && windowRef.RcControlConfig);
@@ -56,7 +57,7 @@
       const named = target.closest(DATA_NAME_SELECTOR);
       if (!named) return false;
       const page = named.closest(CFG_PAGES_SELECTOR);
-      return Boolean(page);
+      return Boolean(page) && (!opts.accept || opts.accept(named.getAttribute("data-name")));
     }
 
     function controlName(target) {
@@ -396,16 +397,19 @@
       if (mapState && mapState.open && typeof windowRef.closeMobileMappingMode === "function") {
         windowRef.closeMobileMappingMode();
       }
+      opts.onActivate?.();
+      if(modeClass==='config-mode') windowRef?.RcAutomationMode?.off();
       state.on = true;
-      if (documentRef && documentRef.body) documentRef.body.classList.add("config-mode");
+      if (documentRef && documentRef.body) documentRef.body.classList.add(modeClass);
       setButtonPressed(true);
     }
 
     function off() {
       if (!state.on && !state.openFor) return;
       state.on = false;
+      opts.onDeactivate?.();
       state.openFor = null;
-      if (documentRef && documentRef.body) documentRef.body.classList.remove("config-mode");
+      if (documentRef && documentRef.body) documentRef.body.classList.remove(modeClass);
       setButtonPressed(false);
       clearMenu();
     }
@@ -424,7 +428,7 @@
     }
 
     function onPointerDownCapture(ev) {
-      if (!state.on) return;
+      if (!state.on || opts.primary === false) return;
       if (ev.button !== undefined && ev.button !== 0) {state.pointerDownAnchor=null;return;}
       if (!isCfgPageTarget(ev.target)) return;
       // Already inside the menu: let it through so close button works.
@@ -436,7 +440,7 @@
     }
 
     function onPointerUpCapture(ev) {
-      if (!state.on) return;
+      if (!state.on || opts.primary === false) return;
       if (ev.button !== undefined && ev.button !== 0) return;
       if (!state.pointerDownAnchor) return;
       const startName = controlName(documentRef.querySelector && documentRef.querySelector(`[data-name="${cssEscape(controlNameFromTarget(ev.target) || "")}"]`));
@@ -457,10 +461,12 @@
     }
 
     function onContextMenu(ev) {
+      if(opts.contextEnabled && !opts.contextEnabled()) return;
+      if(modeClass==='config-mode' && windowRef?.RcAutomationMode?.state.on) return;
       const named = ev.target && ev.target.closest && ev.target.closest(DATA_NAME_SELECTOR);
       if (!named) return;
       const page = named.closest(CFG_PAGES_SELECTOR);
-      if (!page) return;
+      if (!page || (opts.accept && !opts.accept(named.getAttribute("data-name")))) return;
       ev.preventDefault();
       if (typeof ev.stopPropagation === "function") ev.stopPropagation();
       if (state.openFor === named.getAttribute("data-name")) {

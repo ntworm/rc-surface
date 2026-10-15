@@ -4119,7 +4119,7 @@ body.mapping-mode [data-name].selected-control {
 @media (max-height: 460px) {
   .media-card-vision > .media-card-head { display: none; }
   .vision-detector-section > header { display: none; }
-  .vision-studio-head { display: none; }
+  .vision-studio-head > div:first-child { display: none; }
   .vision-gesture-studio { padding: 4px; }
   .vision-gesture-slots { gap: 3px; }
   .vision-gesture-slot { padding: 2px 4px; }
@@ -4851,3 +4851,15 @@ body.mapping-mode [data-name].selected-control {
 .cfg-advanced-body { display:flex; flex-direction:column; gap:12px; padding:8px 0; }
 .cfg-menu-close { min-width:44px; min-height:44px; }
 .cfg-action { min-height:44px; }
+
+
+/* Red identifies AUT countdown/capture, not waveform or pad mode. */
+.xy-aut-status { position:absolute; top:4px; right:6px; z-index:2; font-size:12px; color:var(--accent); pointer-events:none; }
+.xy-pad[data-aut-state="recording"],
+.xy-pad[data-aut-state="countdown"][data-aut-flash="true"] { border-color:#ff453a; outline:2px solid #ff453a; outline-offset:-2px; }
+.xy-pad[data-aut-state="recording"] .xy-aut-status,
+.xy-pad[data-aut-state="countdown"] .xy-aut-status { color:#ff453a; }
+body.automation-mode .xy-pad { cursor:crosshair; }
+#btn-aut-mode.on { color:#ff453a; border-color:#ff453a; }
+#aut-message:empty { display:none; }
+#aut-message { position:fixed; bottom:8px; left:8px; right:8px; z-index:2100; padding:8px; background:var(--surface); color:var(--accent); border:1px solid var(--border); }

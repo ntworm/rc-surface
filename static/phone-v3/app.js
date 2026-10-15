@@ -1323,15 +1323,19 @@
     if (window.RcControlConfig && typeof window.RcControlConfig.subscribe === 'function') {
       window.RcControlConfig.subscribe(refreshBadges);
       let saveTimer;
-      window.RcControlConfig.subscribe(({ name }) => {
-        if (!/^(?:toggle-[1-8]|xy-[12]|pad-(?:[1-9]|1[0-2]))$/.test(name) || window.PerformanceSettings?.applying) return;
+      const savePerformance=() => {
+        if(window.PerformanceSettings?.applying) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
           window.sendPhoneCommand?.('saveProjectClientState', {
             preferences: { performance: window.PerformanceSettings.capture() },
           });
         }, 250);
+      };
+      window.RcControlConfig.subscribe(({name})=>{
+        if(/^(?:toggle-[1-8]|xy-[12]|pad-(?:[1-9]|1[0-2]))$/.test(name)) savePerformance();
       });
+      window.addEventListener('ableton-rc:performance-settings-change',savePerformance);
     }
     refreshBadges();
 
@@ -3037,7 +3041,7 @@
           if (sigEl) sigEl.textContent = `${window.currentNumerator || 4}/${window.currentDenominator || 4}`;
         }
         if (msg.clock) {
-          window.triggerNoteClockSnapshot = msg.clock;
+          window.triggerNoteClockSnapshot = {...msg.clock,receivedAt:performance.now()};
         }
         if (typeof window.updateTriggerNoteClockUI === 'function') {
           window.updateTriggerNoteClockUI();
@@ -3131,7 +3135,7 @@
       } else if (msg.type === 'transport_state') {
         const state = msg.state;
         if (msg.clock) {
-          window.triggerNoteClockSnapshot = msg.clock;
+          window.triggerNoteClockSnapshot = {...msg.clock,receivedAt:performance.now()};
           if (typeof window.updateTriggerNoteClockUI === 'function') {
             window.updateTriggerNoteClockUI(msg.clock);
           }

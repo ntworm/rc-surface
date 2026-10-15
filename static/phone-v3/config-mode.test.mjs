@@ -428,3 +428,20 @@ test('small viewport bounds the whole popover rather than only its body',()=>{
   const menu=documentRef.getElementById('control-config-menu');
   assert.equal(menu.style.maxHeight,'244px');assert.equal(menu.style.top,'8px');
 });
+
+
+test('the shared menu renderer supports AUT without consuming performance gestures or leaking CFG',()=>{
+  const {documentRef,windowRef,body}=makeFakeDom();
+  let active=true;
+  const aut=globalThis.RcConfigMode.create({document:documentRef,window:windowRef,primary:false,
+    modeClass:'automation-mode',contextEnabled:()=>active,accept:name=>/^xy-[12]$/.test(name)});
+  aut.attach();aut.on();assert.equal(body.classList.contains('automation-mode'),true);
+  const page=documentRef.makePage('performance',[]),xy=documentRef.makeElement('div',{name:'xy-1'});
+  page.appendChild(xy);assert.equal(dispatchPointerDownCapture(documentRef,xy)._prevented,undefined);
+  const right=target=>aut._internals.onContextMenu({target,preventDefault(){},stopPropagation(){}});
+  right(xy);assert.equal(aut.state.openFor,'xy-1');right(xy);assert.equal(aut.state.openFor,null);
+  active=false;right(xy);assert.equal(aut.state.openFor,null);
+  windowRef.RcAutomationMode={state:{on:true},off(){this.state.on=false;}};
+  const cfg=globalThis.RcConfigMode.create({document:documentRef,window:windowRef});cfg.on();
+  assert.equal(windowRef.RcAutomationMode.state.on,false);
+});

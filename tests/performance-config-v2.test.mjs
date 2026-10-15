@@ -61,3 +61,14 @@ test('toggle D accepts independent burst settings and rejects invalid durations 
     assert.throws(()=>validatePerformanceSettings({...value,slots:{'toggle-1':{...value.slots['toggle-1'],[key]:bad}}}));
   }
 });
+
+
+test('automation bank persists bounded XY data only, never runtime flags or foreign controls',()=>{
+  const automation={version:1,xy:{'xy-1':{timing:'sync',bars:2,seconds:10,points:[0,0,65535,65535]}}};
+  assert.equal(validatePerformanceSettings({version:2,slots:{},automation}).automation,automation);
+  for(const entry of [{...automation.xy['xy-1'],playing:true},{...automation.xy['xy-1'],points:Array(2050).fill(0)},
+    {...automation.xy['xy-1'],points:[0,0,NaN,0]}, {...automation.xy['xy-1'],bars:3}]) {
+    assert.throws(()=>validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'xy-1':entry}}}));
+  }
+  assert.throws(()=>validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'pad-1':automation.xy['xy-1']}}}));
+});

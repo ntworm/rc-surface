@@ -116,6 +116,7 @@ test('compact card labels and controls survive the primary short-screen layout',
   const shortScreen = css.match(/@media \(max-height: 460px\)\s*\{([\s\S]*?)\n\}/);
 
   assert.ok(shortScreen, 'a short-screen rule must exist');
+  assert.doesNotMatch(shortScreen[1], /\.vision-studio-head\s*\{[^}]*display:\s*none/, 'Add pose remains available on short phones');
   assert.doesNotMatch(
     shortScreen[1],
     /\.vision-readout-card em\s*\{\s*display:\s*none/,

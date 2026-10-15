@@ -1148,3 +1148,45 @@ Clique direito novamente no mesmo controle fecha seu CFG. Clique direito em outr
 No modo D, cada toggle tem **Duração do burst** e ataque próprios, independentes da subdivisão da onda (período de cada ciclo). A duração pode seguir o ajuste compartilhado, usar valor musical fixo em SYNC ou milissegundos em FREE. A seção recolhida mostra a duração selecionada. O modo D herdado de Global apresenta os mesmos ajustes. Pins persistem em projetos, presets e snapshots; abrir CFG nunca dispara controles.
 
 VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta slots até G15. O banco tem rolagem vertical; os cards mantêm a altura antes da captura, após reconhecimento, durante avisos sobre exemplos e depois de CLR. CLR apaga exemplos da pose, preservando seu slot e ID de mapping. Nomes e exemplos existentes são preservados. Cada pose continua exigindo três exemplos e aceita até seis. Novos slots usam `sensor.vision.gesture.4` até `.15` no MAP e no painel da extensão, com as mesmas regras de qualificação, MIDI e perda de tracking dos três slots iniciais. Esta expansão de interface não reajusta classificador, guardas de polegar nem tempos de captura/reconhecimento. Aceite físico da câmera continua necessário.
+
+## 16. Arrangement REC
+
+Abra **REC**, atualize o estado observado, escolha uma track armável e arme
+explicitamente. Outras tracks armadas aparecem na lista; este fluxo inicial
+exige apenas a track selecionada armada. Escolha o ponto de retorno por
+bar/beat ou marcador do Arrangement. **PREPARAR** confere as condições
+observadas e posiciona nesse ponto com o transporte parado. **REC** confere
+novamente e inicia uma tentativa. **STOP** cancela a preparação pendente e pede
+imediatamente a parada do playback e record mode desligado.
+
+As verificações conservadoras exigem Loop, Punch In/Out, Arrangement Overdub,
+Session Record e retorno ao Arrangement pendente observados como desligados.
+Mude essas condições no Live; o celular não as altera. Respostas desconhecidas
+ou não suportadas bloqueiam a preparação. Configure o count-in no Live. A página
+mostra record mode e playback observados, sem comprovar captura de áudio.
+
+Após STOP, **OUVIR RESULTADO · DESARMAR TRACK** desarma explicitamente a track
+selecionada, retorna ao ponto e toca o resultado atual da lane principal do
+Arrangement com record mode desligado. Monitor In bloqueia essa ação; escolha
+Auto/Off no Live. Pare a escuta antes de **NOVA TENTATIVA · ARMAR + PREPARAR**
+e então aperte REC novamente. Nenhuma ação apaga clips, seleciona take lanes
+ou aciona undo. Takes anteriores e preservação do áudio dependem do Live:
+confira no Set antes de repetir. **BOA/REVISAR** marca apenas a última passagem
+nesta sessão do host; não identifica um take de áudio nem salva o Set.
+
+Escritas REC exigem permissão de controller/admin e conexão atual do celular.
+Perder a conexão nunca para uma gravação em andamento nem repete uma escrita
+ao reconectar. Se o link celular/host estiver indisponível, pare no Live.
+O fluxo OSC/SDK tem regressões offline; captura, monitoração, preservação dos
+takes e toque no celular ainda exigem aceitação no seu conjunto com Live.
+
+
+## AUT: loops de movimento dos XY
+
+**AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Ative AUT e toque um XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Ative AUT novamente e clique direito no XY (celular: segure 600ms sem mover) para ajustar **SYNC / FREE**, **1/2/4 compassos** ou **10/20 segundos**, Gravar/substituir, Reproduzir, Parar e Apagar. Abrir configuração não emite controle. Seleções AUT, CFG e MAP são exclusivas; sair da seleção AUT não para um loop existente.
+
+SYNC usa posição, andamento e fórmula de compasso observados do playback do Live, sem depender da animação otimista do transporte no topo. Contagem/captura exigem Live tocando e relógio atualizado. Os dados capturados ficam alinhados à grade da música. Durante reprodução, mudanças de posição e voltas do Loop do Live seguem a posição atual; STOP do Live pausa um loop SYNC habilitado e Play retoma na posição real. Relógio parado/desatualizado, mudança de posição, volta do Loop ou mudança de compasso durante a **captura** cancelam aquela tentativa e mantêm o buffer anterior completo. Para capturar vários compassos, deixe Arrangement Loop desligado até concluir. Mudança de compasso durante reprodução para o loop. FREE usa segundos decorridos e independe do transporte do Live.
+
+Segure e mova um XY durante a reprodução para sobrepor seu movimento manual. Ao soltar, ele volta à fase atual do loop, sem reiniciar nem regravar. A física pode fornecer o movimento capturado; durante reprodução, o loop controla ambos os eixos e substitui a inércia. Buffers/configurações dos dois XY são independentes; apenas uma captura/contagem ocorre de cada vez. Falha ao substituir preserva o loop completo anterior. Apagar pede confirmação.
+
+Pontos completos e configurações persistem em projetos, presets, snapshots e armazenamento local. Estados de reprodução/contagem/gravação nunca persistem: recarregar, reconectar, substituir a sessão, perder papel de controlador ou ocultar a página para AUT; use Reproduzir explicitamente depois. Parar segue Safe loss de cada mapping e solta gates de Trigger Note. Esta função repete dados dos controles XY do RC Surface; não escreve automação nativa no Arrangement. Pads/toggles ainda não são gravados por AUT nesta versão. O gravador limitado mira 30 amostras/segundo, até 1.024 pares de coordenadas por XY. Intervalo de captura acima de 250ms cancela a tentativa. Fluidez real no navegador e saída no Live continuam exigindo aceite no dispositivo.

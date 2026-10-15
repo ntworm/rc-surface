@@ -116,6 +116,8 @@
       window.RcControlConfig?.get(name, key, value) ?? value]));
   }
   const xyStates = new Map();
+  const automation=window.RcXYAutomationController?.create();
+  window.XYAutomation=automation;
 
   function perInstanceSyncSubdivision(name) {
     if (window.RcControlConfig) {
@@ -933,12 +935,13 @@
         const configured=window.RcControlConfig?.get(name) || {};
         pads[name]=Object.fromEntries(PAD_CONFIG_FIELDS.filter(key=>Object.hasOwn(configured,key)).map(key=>[key,configured[key]]));
       }
-      return { version: 2, slots, pads, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
+      return { version: 2, slots, pads, ...(automation?{automation:automation.capture()}:{}), xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
     },
     apply(value, preserveValues = false) {
       if (value?.version !== 2 || !value.slots || typeof value.slots !== 'object') return;
       applyingPerformanceSettings = true;
       try {
+        automation?.apply(value.automation);
         for (const name of modulatorStates.keys()) {
           const entry = value.slots[name];
           if (entry !== undefined && (!entry || typeof entry !== 'object')) continue;
@@ -1002,12 +1005,13 @@
       emit();
     }
     bindPointerGesture(el, () => activeId, {
-      start(t) { activeId = t.pointerId; trail.length=0; state.dragging = true; move(t); engine.stop(state); },
+      start(t) { automation?.manual(name,true); activeId = t.pointerId; trail.length=0; state.dragging = true; move(t); engine.stop(state); },
       move,
       end(pointerId) {
         if (pointerId !== activeId) return;
         activeId = null; engine.release(state,performance.now());
-        if (xySettings(name).behavior !== 'physics') engine.stop(state);
+        if (xySettings(name).behavior !== 'physics' || automation?.playing(name)) engine.stop(state);
+        automation?.manual(name,false);
       },
     });
     window.RcControlConfig?.subscribe(event => {
@@ -1017,13 +1021,14 @@
     });
     window.controlSetters = window.controlSetters || {};
     for (const axis of ['x','y']) window.controlSetters[name+'.'+axis] = value => {
-      if (!Number.isFinite(value)) return;
+      if (!Number.isFinite(value) || automation?.owns(name)) return;
       engine.stop(state); trail.length=0; state[axis] = clamp(value, 0, 1); emit();
     };
     for (const key of ['friction','bounce','speed']) window.controlSetters[name+'.'+key] = value => {
       if (Number.isFinite(value)) window.RcControlConfig?.set(name, {[key]: value});
     };
     state.render = render; state.emit = emit;state.drawTrail=drawTrail;
+    automation?.register(name,state,el,emit);
     render();
   }
 
@@ -1419,9 +1424,11 @@
     }
 
     for (const [name, state] of xyStates) {
-      if (window.RcXYEngine.tick(state, xySettings(name), now)) state.emit();
+      if (!automation?.playing(name) && window.RcXYEngine.tick(state, xySettings(name), now)) state.emit();
       state.drawTrail(now);
     }
+
+    automation?.tick(now);
 
     // 1. Run scalar bursts (mode D pads)
     for (const [name, burst] of activeScalarBursts.entries()) {
@@ -2204,6 +2211,7 @@
   // window; the Live side already dropped the value, so we just need to
   // refresh the visual state. Toggles/latched (B/C) keep their value.
   window.resetTransientControls = () => {
+    automation?.stopAll(null,false);
     for (const state of xyStates.values()) window.RcXYEngine.stop(state);
     for(const [name,pad] of padStates) if(['A','D'].includes(modeFor(name))) pad.reset();
     for(const [name,state] of modulatorStates) if(['A','D'].includes(modeFor(name))) {

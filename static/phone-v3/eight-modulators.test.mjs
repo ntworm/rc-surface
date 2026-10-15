@@ -41,7 +41,7 @@ function makeElement(dataset = {}) {
   };
 }
 
-function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = false, pulseBar = null, saved = {}, withXY = false, visuals = false, withPads = false } = {}) {
+function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = false, pulseBar = null, saved = {}, withXY = false, visuals = false, withPads = false, withAutomation = false } = {}) {
   const engineFile = path.join(import.meta.dirname, 'mode-engine.js');
   const controlsFile = path.join(import.meta.dirname, 'controls.js');
   const engineSource = fs.readFileSync(engineFile, 'utf8');
@@ -126,6 +126,10 @@ function loadControls(pulseName = 'toggle-5', { snapshots = true, syncPanel = fa
   vm.runInNewContext(engineSource, context, { filename: engineFile });
   if (snapshots) vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'modules/snapshots.js'), 'utf8'), context);
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, 'xy-engine.js'), 'utf8'), context);
+  if(withAutomation) {
+    context.phoneWs={readyState:1};context.state={role:'controller'};
+    for(const name of ['xy-automation','xy-automation-controller']) vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname,name+'.js'),'utf8'),context);
+  }
   vm.runInNewContext(controlsSource, context, { filename: controlsFile });
 
   return {
@@ -519,4 +523,22 @@ test('toggle D burst duration is separate from wave subdivision and survives res
   assert.equal(burst(),undefined);
   ctx.RcControlConfig.set('toggle-1',{mode:null});ctx.setPadMode('D');
   assert.ok(burst(),'Global D also exposes its burst settings');
+});
+
+
+test('AUT uses the real XY output, pointer override, restore and global frame loop',()=>{
+  const app=loadControls('toggle-5',{withXY:true,withAutomation:true});const ctx=app.context;
+  const automation=ctx.XYAutomation;
+  automation.configure('xy-1',{timing:'free',points:[0,0,65535,65535]});automation.play('xy-1');
+  app.tick(2500);assert.equal(ctx.currentControlStates['xy-1.x'],.5);
+  const xy=app.xy[0];xy.listeners.pointerdown({...pointer(1,20),clientX:90});
+  assert.equal(ctx.currentControlStates['xy-1.x'],.9);
+  app.tick(3000);assert.equal(ctx.currentControlStates['xy-1.x'],.9);
+  ctx.controlSetters['xy-1.x'](.1);assert.equal(ctx.currentControlStates['xy-1.x'],.9,'remote echo cannot steal manual ownership');
+  xy.listeners.pointerup(pointer(1,20));assert.ok(Math.abs(ctx.currentControlStates['xy-1.x']-.6)<1e-12);
+  const saved=JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture()));
+  assert.deepEqual(saved.automation.xy['xy-1'].points,[0,0,65535,65535]);
+  ctx.resetTransientControls();assert.equal(automation.get('xy-1').stage,'stopped');
+  ctx.PerformanceSettings.applyHost(saved);assert.equal(automation.get('xy-1').stage,'stopped');
+  assert.equal(app.emitted.filter(event=>event.name==='xy-1' && event.lost).length,0,'disconnect does not send stale loss into another session');
 });

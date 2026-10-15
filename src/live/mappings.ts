@@ -37,6 +37,7 @@ import {
   type LaunchMode,
 } from "./clip-launch.js";
 import type { CommandExecutionContext } from "./catalog/types.js";
+import { recordingCommands } from './recording-commands.js';
 import { buildServerAccessUrls } from "../server/access-urls.js";
 import {
   buildProjectConfig,
@@ -1756,6 +1757,7 @@ export type CommandSpec = {
 let benchInFlight = false;
 
 export const commands: Record<string, CommandSpec> = {
+  ...recordingCommands,
   getTransportLiteState: {
     description: "Get current Transport Lite state from AbletonOSC",
     handler: async () => {

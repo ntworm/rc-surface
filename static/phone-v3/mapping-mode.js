@@ -687,6 +687,7 @@
     if (typeof window.setPhoneMappingModeActive === 'function') {
       window.setPhoneMappingModeActive(true);
     }
+    window.RcAutomationMode?.off();
     // CFG mode is exclusive with MAP: opening MAP must close CFG.
     if (window.RcConfigModeInstance && typeof window.RcConfigModeInstance.off === 'function') {
       window.RcConfigModeInstance.off();

@@ -1741,6 +1741,47 @@ In mode D, each toggle has its own **Burst length** and attack, independent of t
 
 VID starts with three learned poses. **+ ADD POSE** appends a slot up to G15. The bank scrolls vertically; cards keep the same height before capture, after recognition, during take warnings and after CLR. CLR removes that pose's examples, retaining its slot and mapping ID. Existing names and examples are preserved. Each pose still needs three examples and accepts up to six. New slots use `sensor.vision.gesture.4` through `.15` in MAP and the extension panel, with the same qualification, MIDI and tracking-loss rules as the initial three slots. The classifier, thumb checks and capture/recognition timing have not been retuned in this UI expansion. Physical camera acceptance remains necessary.
 
+## 16. Arrangement REC
+
+Open **REC**, refresh the observed state, choose an armable track and arm it
+explicitly. Other armed tracks are listed; this first workflow requires only
+the selected track armed. Choose the return point by bar/beat or Arrangement
+marker. **PREPARE** verifies the observed conditions and seeks that point while
+stopped. **REC** checks again and starts one attempt. **STOP** cancels pending
+preparation and immediately requests playback stop and record mode off.
+
+The conservative checks require observed Loop, Punch In/Out, Arrangement
+Overdub, Session Record and Back to Arrangement pending all off. Change these
+in Live yourself; the phone does not change them. Unknown or unsupported
+reports block preparation. Configure count-in in Live. The page reports record
+mode and playback observations, which do not prove that audio was captured.
+
+After STOP, **HEAR RESULT · DISARM TRACK** explicitly disarms the selected
+track, seeks the return point and plays the current main Arrangement lane with
+record mode off. Monitor In blocks this action; choose Auto/Off in Live.
+Stop audition before **NEW ATTEMPT · ARM + PREPARE**, then press REC again.
+No action deletes clips, selects take lanes or invokes undo. Earlier takes and
+audio preservation depend on Live: verify them in the Set before repeating.
+**GOOD/REVIEW** marks only the latest passage in this host session; it does not
+identify an audio take or save the Set.
+
+REC writes require controller/admin permission and the current phone connection.
+Lost connections never stop an ongoing recording or replay a write after
+reconnect. If the phone/host link is unavailable, stop recording in Live.
+The OSC and SDK flow has offline regression coverage; audio capture, monitoring,
+take preservation and mobile touch still require acceptance on your Live setup.
+
+
+## AUT: XY gesture loops
+
+**AUT** beside MAP/CFG selects automation recording for XY1 or XY2. Enable AUT, then tap one XY: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Enable AUT again and right-click the XY (phone: hold without moving for 600ms) to set **SYNC / FREE**, **1/2/4 bars** or **10/20 seconds**, Record/replace, Play, Stop and Clear. Opening configuration emits no control. AUT, CFG and MAP selection are exclusive; leaving AUT selection does not stop an existing loop.
+
+SYNC uses Live's observed playback position, tempo and time signature, rather than the optimistic header animation. Count/capture require Live playing and a fresh clock. Captured data is aligned to the song grid. During playback, seeks and Live loop wraps follow the current song position; Live STOP pauses an enabled SYNC loop, and Play resumes at the real position. A stopped/stale clock, seek, loop wrap or meter change during **capture** cancels that attempt and retains the previous completed buffer. For a capture spanning multiple bars, leave Live's Arrangement Loop off until capture completes. A meter change during playback stops the loop. FREE uses elapsed seconds and ignores the Live transport.
+
+Hold and move an XY over a playing loop to override it. On release, it returns to the loop's current phase; it does not restart the loop or overdub it. Physics can supply the captured movement, but playback owns both axes and overrides inertial motion. Both XY buffers/settings are independent; only one capture/countdown runs at a time. A failed replacement keeps the previous loop. Clear asks for confirmation.
+
+Completed points and settings persist in projects, presets, snapshots and local storage. Playback/countdown/recording state never persists: reload, reconnect, a replaced session, role loss or a hidden page stops AUT; use Play explicitly afterward. Stop follows each mapping's Safe loss policy and releases Trigger Note gates. This feature loops RC Surface XY control data; it does not write native Arrangement automation lanes. Pads/toggles are not recorded by AUT in this version. The bounded recorder targets 30 samples/second with at most 1,024 coordinate pairs per XY. A capture gap over 250ms aborts the attempt. Physical browser smoothness and Live output still need device acceptance.
+
 ---
 
 <!-- source: https://github.com/ntworm/rc-surface/blob/main/docs/FAQ.md -->

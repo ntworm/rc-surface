@@ -56,7 +56,7 @@ Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compa
 ## Novidades da 1.0
 
 - **Modo Config (CFG):** configure cada slot LFO (T1–T8), incluindo Square como onda, e escolha Estático ou Física de forma independente para cada XY. Cada física tem atrito, quique e velocidade próprios. Modos dos pads, sensibilidade dos knobs e reset dos faders continuam configuráveis. Abra `CFG` no header do celular; segure para limpar os ajustes. As configurações usam `ableton-rc:v3:control_config` e fazem parte dos novos projetos e presets.
-- **Prévia da forma de onda do LFO:** o modal de ajustes do SYNC desenha a forma ativa do LFO (senoide, triangular, rampa para cima, rampa para baixo, quadrada), para você ver a curva que vai mandar para o Live, incluindo a subdivisão travada de 32 tempos e o teto de cada forma (senoide até 4 Hz, quadrada até 12 Hz).
+- **Prévia da forma de onda do LFO:** o modal de ajustes do SYNC desenha a forma ativa do LFO (senoide, triangular, rampa para cima, rampa para baixo, quadrada), para você ver a curva que vai mandar para o Live, incluindo a subdivisão travada de 32 tempos e o teto de cada forma (senoide até 4 Hz, quadrada até 15 Hz).
 - **Controle pelo teclado no desktop:** todo controle contínuo (knob, fader, XY pad, toggle, square) aceita ajustes pelo teclado quando o cliente está em foco, então o painel de mapeamento do desktop e a interface do celular usam o mesmo modelo de gesto.
 - **Loudness ponderado K:** a aba AUD mostra loudness momentâneo, de curto prazo e integrado com ponderação K (ITU-R BS.1770), ao lado dos doze descritores.
 

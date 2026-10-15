@@ -132,6 +132,19 @@ export function validatePerformanceSettings(value: unknown): Record<string, any>
       }
     }
   }
+  if(value.automation!==undefined) {
+    const automation=value.automation;
+    if(!isRecord(automation) || automation.version!==1 || !isRecord(automation.xy)
+      || Object.keys(automation).some(key=>!['version','xy'].includes(key))) throw new Error('Invalid XY automation');
+    for(const [name,entry]of Object.entries(automation.xy)) {
+      if(!/^xy-[12]$/.test(name) || !isRecord(entry) || !['sync','free'].includes(entry.timing)
+        || ![1,2,4].includes(entry.bars) || ![10,20].includes(entry.seconds)
+        || Object.keys(entry).some(key=>!['timing','bars','seconds','points'].includes(key))) throw new Error('Invalid XY automation settings');
+      if(entry.points!==undefined && (!Array.isArray(entry.points) || entry.points.length<4 || entry.points.length>2048
+        || entry.points.length%2 || entry.points.some((point:unknown)=>typeof point!=='number' || !Number.isInteger(point)
+          || point<0 || point>65535))) throw new Error('Invalid XY automation points');
+    }
+  }
   return value;
 }
 

@@ -1,0 +1,25 @@
+/* Copyright © 2026 Gabriel Worm
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 */
+body[data-page="recording"] { touch-action:pan-y; }
+.page-recording { overflow:auto; touch-action:pan-y; padding:12px; display:block; background:#141414; color:#eeeeee; }
+.rec-workspace { max-width:1000px; margin:0 auto; display:grid; gap:12px; font-family:"Departure Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+.rec-workspace h1 { font-size:16px; margin:0; }
+.rec-workspace p { margin:0; font-size:11px; line-height:1.6; }
+.rec-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.rec-workspace button,.rec-workspace select,.rec-workspace input { min-height:56px; min-width:56px; padding:8px; border:1px solid #666666; border-radius:0; background:#222222; color:#eeeeee; font:inherit; font-size:12px; touch-action:manipulation; }
+.rec-workspace button:focus-visible,.rec-workspace select:focus-visible,.rec-workspace input:focus-visible { outline:2px solid #ffa133; outline-offset:2px; }
+.rec-workspace button:disabled,.rec-workspace select:disabled,.rec-workspace input:disabled { opacity:.45; }
+.rec-workspace label { font-size:11px; display:flex; align-items:center; gap:8px; }
+.rec-workspace input { width:84px; }
+.rec-track { flex:1; min-width:180px; }
+.rec-main button { flex:1; }
+.rec-main { position:sticky; top:0; z-index:2; background:#141414; padding:8px 0; }
+/* Red carries the recording/STOP state, as permitted by the theme contract. */
+.rec-workspace .rec-start { border-color:#ff5555; color:#ff5555; }
+.rec-workspace .rec-stop { background:#ff5555; color:#141414; border-color:#ff5555; min-height:64px; font-size:18px; }
+.rec-status { border:1px solid #666666; padding:10px; min-height:44px; display:flex; align-items:center; font-size:12px; }
+.rec-status[data-recording="true"] { color:#ff5555; border-color:#ff5555; }
+.rec-note { color:#c0c0c0; }
+.rec-workspace fieldset { border:1px solid #444444; margin:0; padding:10px; display:grid; gap:8px; }
+.rec-workspace legend { font-size:11px; padding:0 6px; color:#ffa133; }
+@media(max-width:620px) { .rec-main { display:grid; grid-template-columns:1fr 1fr; } .rec-main .rec-stop { grid-column:1/-1; } .rec-track { width:100%; } }
