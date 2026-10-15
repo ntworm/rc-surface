@@ -50,6 +50,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title data-i18n="app.title">ableton-rc v3</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="recording.css">
 </head>
 <body data-page="performance" data-pad-mode="A" data-orient-locked="false">
   <header class="topbar">
@@ -60,6 +61,7 @@
       <button class="tab" data-page="sensors" role="tab" aria-selected="false" data-i18n="tabs.sns">SNS</button>
       <button class="tab" data-page="audio" role="tab" aria-selected="false" data-i18n="tabs.aud">AUD</button>
       <button class="tab" data-page="video" role="tab" aria-selected="false" data-i18n="tabs.vid">VID</button>
+      <button class="tab" data-page="recording" role="tab" aria-selected="false">REC</button>
     </div>
 
     <!-- Ableton Live Info Panel -->
@@ -574,6 +576,53 @@
     </section>
   </main>
 
+  <main id="page-recording" class="page page-recording hidden" data-page="recording">
+    <section class="rec-workspace" aria-label="Arrangement REC">
+      <h1 data-i18n="rec.title">ARRANGEMENT REC</h1>
+      <div id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">UNKNOWN — refresh observed state</div>
+      <div class="rec-row rec-main">
+        <button id="rec-prepare" type="button" data-i18n="rec.prepare">PREPARE</button>
+        <button id="rec-start" type="button" class="rec-start">REC</button>
+        <button id="rec-stop" type="button" class="rec-stop">STOP</button>
+      </div>
+      <fieldset>
+        <legend data-i18n="rec.track">TRACK / ARM</legend>
+        <div class="rec-row">
+          <select id="rec-track" class="rec-track" aria-label="Track" data-i18n-aria-label="rec.track"></select>
+          <button id="rec-arm" type="button" data-i18n="rec.arm">ARM TRACK</button>
+          <button id="rec-refresh" type="button" data-i18n="rec.refresh">REFRESH</button>
+        </div>
+        <p id="rec-arms"></p>
+      </fieldset>
+      <fieldset>
+        <legend data-i18n="rec.returnPoint">RETURN POINT</legend>
+        <div class="rec-row">
+          <label><span data-i18n="rec.bar">BAR</span><input id="rec-bar" type="number" min="1" max="1000000" step="1" value="1"></label>
+          <label><span data-i18n="rec.beat">BEAT</span><input id="rec-beat" type="number" min="1" step="0.001" value="1"></label>
+          <button id="rec-point" type="button" data-i18n="rec.setPoint">SET POINT</button>
+          <button id="rec-previous" type="button" data-i18n="rec.previous">PREV MARKER</button>
+          <button id="rec-next" type="button" data-i18n="rec.next">NEXT MARKER</button>
+          <select id="rec-locators" aria-label="Locators" data-i18n-aria-label="rec.locators"></select>
+        </div>
+        <p data-i18n="rec.pointNote">Choosing a point does not move Live. PREPARE checks conditions and seeks while stopped.</p>
+      </fieldset>
+      <div class="rec-row">
+        <button id="rec-audition" type="button" data-i18n="rec.audition">HEAR RESULT · DISARM TRACK</button>
+        <button id="rec-retry" type="button" data-i18n="rec.retry">NEW ATTEMPT · ARM + PREPARE</button>
+        <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
+      </div>
+      <div class="rec-row">
+        <button id="rec-good" type="button" data-i18n="rec.good">GOOD</button>
+        <button id="rec-review" type="button" data-i18n="rec.review">REVIEW</button>
+        <span id="rec-mark" role="status"></span>
+      </div>
+      <p id="rec-conditions" class="rec-note"></p>
+      <p class="rec-note" data-i18n="rec.countIn">Set count-in in Live. Record mode may include count-in; it does not prove audio capture.</p>
+      <p class="rec-note" data-i18n="rec.limits">Hear the current main Arrangement lane. Earlier takes depend on Live: verify preservation there before repeating. No take-lane selection, undo or delete is offered. GOOD/REVIEW is a session-local note; save your Set in Live.</p>
+      <p class="rec-note" data-i18n="rec.loss">Connection loss does not stop Live recording. Use STOP in Live if the phone or host link is unavailable. Reconnection never repeats a write.</p>
+    </section>
+  </main>
+
   <main id="mapping-mode" class="mapping-mode hidden" data-page="mapping" aria-label="Mappings" data-i18n-aria-label="panel.tabMappings">
     <section id="map-armed-strip" class="map-armed-strip" role="status" aria-live="polite">
       <span><strong data-i18n="map.armed">MAP ARMED</strong><small data-i18n="map.tapControl">TAP A CONTROL</small></span>
@@ -883,6 +932,7 @@
   <script src="config-mode.js"></script>
   <script src="app.js"></script>
   <script src="mapping-mode.js"></script>
+  <script src="modules/recording.js"></script>
   <div id="control-config-menu" class="cfg-menu hidden" role="dialog" aria-modal="false"></div>
 </body>
 </html>

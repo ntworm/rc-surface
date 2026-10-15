@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 (function (root) {
   'use strict';
-  const pages = ['performance', 'mixer', 'snapshots', 'audio', 'video', 'sensors'];
+  const pages = ['performance', 'mixer', 'snapshots', 'audio', 'video', 'sensors', 'recording'];
   const supports = page => ['performance', 'audio', 'video', 'sensors'].includes(page);
   const resolvePage = (page, previous = 'performance') => pages.includes(page) ? page : previous;
   function policy(value, restored = false) {

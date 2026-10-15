@@ -149,20 +149,33 @@ export class RecordingTransport extends EventEmitter {
     });
   }
 
-  public async startRecording(): Promise<RecordingTransportState> {
+  public async startRecording(guard: () => void = () => {}): Promise<RecordingTransportState> {
     return this.run('start', async operation => {
+      guard();
       this.requireStopped();
       await this.wait(operation, ['recordMode'], state => state.recordMode.value === true,
         () => this.sendBatch([[REC.setRecordMode, [{ type: 'integer', value: 1 }]], [REC.getRecordMode]]));
       // Live's Start Playback with Record preference may already have started
       // playback. Obtain another observation before deciding to send start.
       await this.wait(operation, ['isPlaying'], () => true, () => this.link.send(GET.isPlaying));
+      guard();
       const state = this.snapshot();
       if (!state.recordMode.fresh || state.recordMode.value !== true) throw new Error('Record mode changed during start');
       if (state.isPlaying.value !== true) {
         await this.wait(operation, ['recordMode', 'isPlaying'], next => next.recordMode.value === true && next.isPlaying.value === true,
           () => this.sendBatch([[CMD.startPlaying], [REC.getRecordMode], [GET.isPlaying]]));
       }
+      return this.snapshot();
+    });
+  }
+
+  /** Explicit audition playback, with fresh record-off evidence. */
+  public async startPlayback(guard: () => void = () => {}): Promise<RecordingTransportState> {
+    return this.run('playback', async operation => {
+      guard(); this.requireStopped();
+      await this.wait(operation, ['recordMode', 'isPlaying'], state => state.recordMode.value === false && state.isPlaying.value === true,
+        () => this.sendBatch([[CMD.startPlaying], [REC.getRecordMode], [GET.isPlaying]]));
+      guard();
       return this.snapshot();
     });
   }

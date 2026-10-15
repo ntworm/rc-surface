@@ -65,6 +65,21 @@ export const REC = {
   setMetronome:     "/live/song/set/metronome",
 } as const;
 
+// Read-only Arrangement preflight. Unsupported/missing reports stay unknown.
+export const REC_PREFLIGHT = {
+  loop: "/live/song/get/loop",
+  punchIn: "/live/song/get/punch_in",
+  punchOut: "/live/song/get/punch_out",
+  overdub: "/live/song/get/arrangement_overdub",
+  backToArranger: "/live/song/get/back_to_arranger",
+  sessionRecord: "/live/song/get/session_record",
+  trackArm: "/live/track/get/arm",
+  trackCanArm: "/live/track/get/can_be_armed",
+  trackMonitor: "/live/track/get/current_monitoring_state",
+  signatureNumerator: "/live/song/get/signature_numerator",
+  signatureDenominator: "/live/song/get/signature_denominator",
+} as const;
+
 // ── Launch Clip ────────────────────────────────────────────────────────────
 //
 // AbletonOSC addresses clips and tracks by index. Launch Clip only fires,

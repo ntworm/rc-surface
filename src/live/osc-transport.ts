@@ -16,7 +16,7 @@ import { TextDecoder, TextEncoder } from 'node:util';
 // (resolved at runtime by the host's module loader) instead of the wrapper.
 import * as osc from 'osc-min';
 import { EventEmitter } from 'node:events';
-import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, REC, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
+import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, REC, REC_PREFLIGHT, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
 import { RecordingTransport } from './recording-transport.js';
 
 if (typeof (globalThis as any).TextEncoder === 'undefined') {
@@ -52,6 +52,7 @@ export const LISTENER_REREGISTER_MS = 10_000;
 const GET_ADDRESSES: ReadonlySet<string> = new Set([
   ...Object.values(GET),
   REC.getRecordMode,
+  ...Object.values(REC_PREFLIGHT),
   CLIP.getLaunchQuantization,
   CLIP.getLaunchMode,
   CLIP.getLegato,
@@ -59,6 +60,11 @@ const GET_ADDRESSES: ReadonlySet<string> = new Set([
   CLIP.getTrackNames,
 ]);
 const PENDING_REPLY_CAP = 8;
+// These properties are only polled by REC. A large Set can return more than
+// eight track arm reports on one address; overflow must not impersonate a
+// listener push and postpone listener recovery. Meter still has listeners.
+const REC_POLL_ONLY: ReadonlySet<string> = new Set(Object.entries(REC_PREFLIGHT)
+  .filter(([key]) => !key.startsWith('signature')).map(([, address]) => address));
 
 const oscInt = (value: number) => ({ type: 'integer', value: Math.trunc(value) });
 export const GLOBAL_QUANTIZATION_CONFIRM_MS = 2000;
@@ -379,7 +385,7 @@ export class OSCTransport extends EventEmitter {
     const pending = this.pendingReplies.get(oscMsg.address) ?? 0;
     if (pending > 0) {
       this.pendingReplies.set(oscMsg.address, pending - 1);
-    } else {
+    } else if (!REC_POLL_ONLY.has(oscMsg.address)) {
       this.lastPushAt = now;
     }
 
@@ -391,6 +397,9 @@ export class OSCTransport extends EventEmitter {
     const address = oscMsg.address;
     const args = oscMsg.args || [];
     this.recording.observe(address, args, now);
+    if (Object.values(REC_PREFLIGHT).includes(address) || address === CLIP.getTrackNames) {
+      this.emit('recording-observation', { address, args, at: now });
+    }
 
     let updated = false;
 

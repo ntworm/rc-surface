@@ -1139,3 +1139,34 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 Para problemas mais complexos de instalação (certificados, rede, instalação), veja
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
+
+## 16. Arrangement REC
+
+Abra **REC**, atualize o estado observado, escolha uma track armável e arme
+explicitamente. Outras tracks armadas aparecem na lista; este fluxo inicial
+exige apenas a track selecionada armada. Escolha o ponto de retorno por
+bar/beat ou marcador do Arrangement. **PREPARAR** confere as condições
+observadas e posiciona nesse ponto com o transporte parado. **REC** confere
+novamente e inicia uma tentativa. **STOP** cancela a preparação pendente e pede
+imediatamente a parada do playback e record mode desligado.
+
+As verificações conservadoras exigem Loop, Punch In/Out, Arrangement Overdub,
+Session Record e retorno ao Arrangement pendente observados como desligados.
+Mude essas condições no Live; o celular não as altera. Respostas desconhecidas
+ou não suportadas bloqueiam a preparação. Configure o count-in no Live. A página
+mostra record mode e playback observados, sem comprovar captura de áudio.
+
+Após STOP, **OUVIR RESULTADO · DESARMAR TRACK** desarma explicitamente a track
+selecionada, retorna ao ponto e toca o resultado atual da lane principal do
+Arrangement com record mode desligado. Monitor In bloqueia essa ação; escolha
+Auto/Off no Live. Pare a escuta antes de **NOVA TENTATIVA · ARMAR + PREPARAR**
+e então aperte REC novamente. Nenhuma ação apaga clips, seleciona take lanes
+ou aciona undo. Takes anteriores e preservação do áudio dependem do Live:
+confira no Set antes de repetir. **BOA/REVISAR** marca apenas a última passagem
+nesta sessão do host; não identifica um take de áudio nem salva o Set.
+
+Escritas REC exigem permissão de controller/admin e conexão atual do celular.
+Perder a conexão nunca para uma gravação em andamento nem repete uma escrita
+ao reconectar. Se o link celular/host estiver indisponível, pare no Live.
+O fluxo OSC/SDK tem regressões offline; captura, monitoração, preservação dos
+takes e toque no celular ainda exigem aceitação no seu conjunto com Live.

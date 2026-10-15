@@ -1732,6 +1732,36 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 For deeper setup issues (certificates, network, installation) see
 `docs/INSTALL.md` and `docs/FAQ.md`.
 
+## 16. Arrangement REC
+
+Open **REC**, refresh the observed state, choose an armable track and arm it
+explicitly. Other armed tracks are listed; this first workflow requires only
+the selected track armed. Choose the return point by bar/beat or Arrangement
+marker. **PREPARE** verifies the observed conditions and seeks that point while
+stopped. **REC** checks again and starts one attempt. **STOP** cancels pending
+preparation and immediately requests playback stop and record mode off.
+
+The conservative checks require observed Loop, Punch In/Out, Arrangement
+Overdub, Session Record and Back to Arrangement pending all off. Change these
+in Live yourself; the phone does not change them. Unknown or unsupported
+reports block preparation. Configure count-in in Live. The page reports record
+mode and playback observations, which do not prove that audio was captured.
+
+After STOP, **HEAR RESULT · DISARM TRACK** explicitly disarms the selected
+track, seeks the return point and plays the current main Arrangement lane with
+record mode off. Monitor In blocks this action; choose Auto/Off in Live.
+Stop audition before **NEW ATTEMPT · ARM + PREPARE**, then press REC again.
+No action deletes clips, selects take lanes or invokes undo. Earlier takes and
+audio preservation depend on Live: verify them in the Set before repeating.
+**GOOD/REVIEW** marks only the latest passage in this host session; it does not
+identify an audio take or save the Set.
+
+REC writes require controller/admin permission and the current phone connection.
+Lost connections never stop an ongoing recording or replay a write after
+reconnect. If the phone/host link is unavailable, stop recording in Live.
+The OSC and SDK flow has offline regression coverage; audio capture, monitoring,
+take preservation and mobile touch still require acceptance on your Live setup.
+
 ---
 
 <!-- source: https://github.com/ntworm/rc-surface/blob/main/docs/FAQ.md -->
