@@ -58,15 +58,15 @@
       e.preventDefault();
       handlers.move(e);
     };
-    const finish = (e) => {
+    const finish = (e, cancelled = false) => {
       if (e.pointerId !== getActivePointerId()) return;
       e.preventDefault();
-      handlers.end(e.pointerId);
+      handlers.end(e.pointerId, cancelled);
     };
     target.addEventListener('pointerdown', down);
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', finish);
-    target.addEventListener('pointercancel', finish);
+    target.addEventListener('pointercancel', e => finish(e,true));
   }
 
   // Global tempo/meter state shared with app.js
@@ -86,6 +86,9 @@
   let padMode = 'A';
   const latchedValues = new Map();    // B: last value before release
   const toggledStates = new Map();    // C: on/off boolean
+  const padStates = new Map();
+  const PAD_CONFIG_FIELDS = ['mode','syncMode','padRange','padCurve','padTouchValue',
+    'padToggleValue','padLatchTapReset','burstSubdivision','burstDurationMs','burstAttackRatio','burstPeak'];
   const modeClasses = ['mode-a', 'mode-b', 'mode-c', 'mode-d'];
 
   function clearModeClass(el) {
@@ -104,6 +107,7 @@
     }
     return padMode;
   }
+  window.getControlMode = modeFor;
 
 
   function xySettings(name) {
@@ -305,15 +309,21 @@
     function start(t) {
       if (gestureState.activePointerId !== null) return;
       const h = el.clientHeight || 100;
-      rangePx = Modes.calculatePadRangePx(h);
+      const get = (key,fallback) => window.RcControlConfig?.get(name,key,fallback) ?? fallback;
+      rangePx = get('padRange',Modes.calculatePadRangePx(h));
       const event = Modes.beginScalarGesture(gestureState, {
         mode: modeFor(name),
         pointerId: t.pointerId,
         y: t.clientY,
         rangePx,
+        curve: get('padCurve','linear'),
+        touchValue: get('padTouchValue',0),
+        defaultToggleValue: get('padToggleValue',undefined),
+        latchTapReset: get('padLatchTapReset',false),
+        burstPeak: get('burstPeak',undefined),
         now: performance.now(),
-        burstDurationMs: resolveBurstShape().durationMs,
-        burstAttackMs: resolveBurstShape().attackMs,
+        burstDurationMs: resolveBurstShape(name).durationMs,
+        burstAttackMs: resolveBurstShape(name).attackMs,
       });
       if (modeFor(name) === 'D') {
         activeScalarBursts.set(name, {
@@ -333,21 +343,36 @@
       applyGestureEvent(event, gestureState.mode || modeFor(name));
     }
 
-    function end(pointerId) {
+    function end(pointerId, cancelled = false) {
       if (gestureState.activePointerId === null) return;
       if (pointerId !== gestureState.activePointerId) return;
       const mode = gestureState.mode || modeFor(name);
-      const event = Modes.endScalarGesture(gestureState, { pointerId });
+      const event = Modes.endScalarGesture(gestureState, { pointerId, cancelled });
       applyGestureEvent(event, mode);
     }
 
     window.addEventListener('ableton-rc:pad-mode-change', () => {
+      configuredMode = modeFor(name);
       if (gestureState.activePointerId === null) return;
       const value = gestureState.value;
       gestureState.activePointerId = null;
       gestureState.mode = null;
       activeScalarBursts.delete(name);
       renderValue(value, modeFor(name), false);
+    });
+
+    function resetPad() {
+      activeScalarBursts.delete(name);latchedValues.delete(name);toggledStates.delete(name);
+      Object.assign(gestureState,Modes.createScalarGestureState());
+      clearVisual();
+      if(lastValue!==0) emit(0);
+    }
+    padStates.set(name,{reset:resetPad});
+    let configuredMode = modeFor(name);
+    window.RcControlConfig?.subscribe(event=>{
+      if(event.name!==name) return;
+      const mode=modeFor(name);
+      if(mode!==configuredMode) {resetPad();configuredMode=mode;}
     });
 
     bindPointerGesture(el, () => gestureState.activePointerId, {
@@ -371,7 +396,7 @@
       rememberModeState(value, modeFor(name));
       if (modeFor(name) === 'D' && value > 0.001) {
         if (!gestureState.burst) {
-          const shape = resolveBurstShape();
+          const shape = resolveBurstShape(name);
           gestureState.burst = {
             active: true,
             startTime: performance.now(),
@@ -446,20 +471,23 @@
   const BURST_FREE_ATTACK_MS = 70;
 
   function resolveBurstShape(name) {
+    const get = (key,fallback) => window.RcControlConfig?.get(name,key,fallback) ?? fallback;
     if (modulatorSyncMode(name) !== 'sync') {
-      return { durationMs: BURST_FREE_DURATION_MS, attackMs: BURST_FREE_ATTACK_MS };
+      const durationMs=get('burstDurationMs',BURST_FREE_DURATION_MS);
+      return { durationMs, attackMs: durationMs*get('burstAttackRatio',BURST_FREE_ATTACK_MS/BURST_FREE_DURATION_MS) };
     }
-    const beats = Number(window.syncSettings.burstSubdivision);
+    const beats = Number(get('burstSubdivision',window.syncSettings.burstSubdivision));
     const bpm = Number(window.currentBpm);
     // Live has not reported a tempo yet, or the setting was corrupted: fall
     // back rather than hand the envelope a NaN length.
     const safeBeats = Number.isFinite(beats) && beats > 0 ? beats : 1;
     const safeBpm = Number.isFinite(bpm) && bpm > 0 ? bpm : 120;
     const durationMs = safeBeats * (60000 / safeBpm);
-    const ratio = Number(window.syncSettings.burstAttackRatio);
+    const ratio = Number(get('burstAttackRatio',window.syncSettings.burstAttackRatio));
     const safeRatio = Number.isFinite(ratio) ? Math.min(0.5, Math.max(0.05, ratio)) : 0.135;
     return { durationMs, attackMs: durationMs * safeRatio };
   }
+  window.resolveBurstShape = resolveBurstShape;
 
   /**
    * How far into an attack-release burst a modulator is, as 0..1.
@@ -595,16 +623,17 @@
     const name = event?.name;
     const state = modulatorStates.get(name);
     if (!state) return;
+    const expired = state.burstUntil > 0 && performance.now() >= state.burstUntil;
+    if (expired) { state.active = false; state.value = 0; state.burstUntil = 0; }
     const nextKind = modulatorShape(name) === 'square' ? 'pulse' : 'lfo';
     if (state.kind !== nextKind) {
-      state.active = false;
-      emitModulatorState(name, state); // release the old engine before changing type
+      // The host replaces the motor on this same slot atomically. Keep the
+      // gate and burst deadline; selecting a waveform is not an OFF gesture.
       state.kind = nextKind;
       state.phase = nextKind === 'lfo' ? -Math.PI / 2 : 0;
       state.phaseTime = performance.now();
       state.phaseFrequency = undefined;
       state.syncAnchor = undefined;
-      state.burstUntil = 0;
     }
     const keys = event.patch ? Object.keys(event.patch) : ['shape','subdivision','phaseOffset','swing','syncMode','rate','depth','count'];
     for (const key of ['rate', 'depth', 'count']) {
@@ -615,7 +644,7 @@
     }
     renderModulator(state);
     if (keys.some(key => ['shape','subdivision'].includes(key))) renderLfoSettings();
-    if (state.active && !applyingPerformanceSettings) emitModulatorState(name, state);
+    if ((state.active || expired) && !applyingPerformanceSettings) emitModulatorState(name, state);
   }
   // control-config.js must already be loaded (index.html orders it before
   // this file). If a host page loads it later, subscribe once the DOM is
@@ -767,8 +796,16 @@
     for (const [name, state] of modulatorStates) emitModulatorState(name, state);
   }
 
+  function paintModulatorValue(el, value) {
+    const fill = el?.querySelector('.mod-val-bar');
+    const transform = `scaleY(${clamp(value,0,1)})`;
+    if (fill && fill.style.transform !== transform) fill.style.transform = transform;
+  }
+  function paintText(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
   function renderModulator(state) {
-    const el = document.querySelector(`.toggle[data-name="${state.name}"]`);
+    const el = state.element;
     if (!el) return;
     el.dataset.waveform = modulatorShape(state.name);
     el.classList.toggle('on', state.active);
@@ -779,8 +816,7 @@
     const modeLabel=el.querySelector('.modulator-mode-label');
     if(modeLabel) modeLabel.textContent=modeFor(state.name);
     if (!state.active) {
-      const fill = el.querySelector('.mod-val-bar');
-      if (fill) fill.style.height = '0%';
+      paintModulatorValue(el,0);
       for (const key of ['background-color','--modulator-pulse']) el.style.removeProperty(key);
     }
   }
@@ -788,7 +824,7 @@
     const name = el.dataset.name;
     const kind = modulatorShape(name) === 'square' ? 'pulse' : 'lfo';
     const config = (key, fallback) => window.RcControlConfig?.get(name, key, fallback) ?? fallback;
-    const state = { name, kind, active: false, rate: config('rate', .5), depth: config('depth', .5),
+    const state = { name, kind, element:el, readout:el.querySelector('.modulator-rate-readout'), active: false, rate: config('rate', .5), depth: config('depth', .5),
       count: config('count', 0), phase: kind === 'lfo' ? -Math.PI/2 : 0,
       value: 0, burstUntil: 0, pendingToggleOff: false, moved: false };
     modulatorStates.set(name, state);
@@ -845,8 +881,7 @@
       const prefix = state.kind === 'pulse' ? '--stut' : '--lfo';
       el.style.setProperty(prefix+'-drag-y', state.depth.toFixed(3));
       el.style.setProperty(prefix+'-drag-x', state.rate.toFixed(3));
-      const fill = el.querySelector('.mod-val-bar');
-      if (fill) fill.style.height = `${state.depth * 100}%`;
+      paintModulatorValue(el,state.depth);
       emitModulatorStateCoalesced(name, state);
     }
     function end(pointerId) {
@@ -872,8 +907,7 @@
       advance(performance.now()); state[key] = clamp(value, 0, 1); advance(performance.now());
       window.currentControlStates[`${name}.${key}`] = state[key];
       if (key === 'depth') {
-        const fill = el.querySelector('.mod-val-bar');
-        if (fill) fill.style.height = `${state.depth * 100}%`;
+        paintModulatorValue(el,state.depth);
       }
       emitModulatorState(name, state);
     };
@@ -894,7 +928,12 @@
           .map(key => [key, configured[key]]));
         slots[name] = { ...overrides, rate: state.rate, depth: state.depth, count: state.count ?? 0 };
       }
-      return { version: 2, slots, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
+      const pads={};
+      for(const name of padStates.keys()) {
+        const configured=window.RcControlConfig?.get(name) || {};
+        pads[name]=Object.fromEntries(PAD_CONFIG_FIELDS.filter(key=>Object.hasOwn(configured,key)).map(key=>[key,configured[key]]));
+      }
+      return { version: 2, slots, pads, xy: Object.fromEntries([...xyStates.keys()].map(name => [name, xySettings(name)])) };
     },
     apply(value, preserveValues = false) {
       if (value?.version !== 2 || !value.slots || typeof value.slots !== 'object') return;
@@ -910,6 +949,10 @@
         for (const name of xyStates.keys()) {
           const entry = value.xy?.[name] || window.RcXYEngine.defaults;
           window.RcControlConfig?.set(name, entry);
+        }
+        for(const name of padStates.keys()) {
+          const entry=value.pads?.[name];
+          window.RcControlConfig?.set(name,Object.fromEntries(PAD_CONFIG_FIELDS.map(key=>[key,entry?.[key] ?? null])));
         }
       } finally { applyingPerformanceSettings = false; }
     },
@@ -927,6 +970,7 @@
     const name = el.dataset.name;
     const dot = el.querySelector('.xy-dot');
     const trailLine=el.querySelector('.xy-trail-line');const trail=[];
+    let lastTrailPoints='';
     const readout = document.querySelector(`[data-readout="${name}"]`);
     const engine = window.RcXYEngine;
     const state = engine.create(); xyStates.set(name, state);
@@ -937,7 +981,8 @@
       if(sample && xySettings(name).behavior==='physics') {
         trail.push({x:state.x,y:state.y,time:now});if(trail.length>20)trail.shift();
       }
-      trailLine?.setAttribute('points',trail.length>1?trail.map(p=>`${p.x*100},${p.y*100}`).join(' '):'');
+      const points=trail.length>1?trail.map(p=>`${p.x*100},${p.y*100}`).join(' '):'';
+      if(points!==lastTrailPoints) {trailLine?.setAttribute('points',points);lastTrailPoints=points;}
     }
     function render() {
       el.dataset.behavior = xySettings(name).behavior;
@@ -1271,13 +1316,12 @@
     const hz = state.phaseFrequency;
     el.dataset.pulseView = state.active ? 'pulse' : 'off';
     el.style.setProperty('--modulator-pulse',state.active && gate ? '.22' : '0');
-    const fill=el.querySelector('.mod-val-bar');
-    if(fill) fill.style.height=state.active && gate ? `${state.depth*100}%` : '0%';
-    const rate = el.querySelector('.modulator-rate-readout');
+    paintModulatorValue(el,state.active && gate ? state.depth : 0);
+    const rate = state.readout;
     if (rate) {
       const timing = getPulseTiming(state);
-      rate.textContent = modulatorSyncMode(state.name) === 'sync'
-        ? formatMusicalRate(timing.subdivision / timing.ratchet) : `${hz.toFixed(2)} Hz`;
+      paintText(rate,modulatorSyncMode(state.name) === 'sync'
+        ? formatMusicalRate(timing.subdivision / timing.ratchet) : `${hz.toFixed(2)} Hz`);
     }
   }
 
@@ -1362,7 +1406,7 @@
     const now = performance.now();
     const performanceVisible = (document.body.dataset.page || activePage) === 'performance';
     const shapeLimit = document.getElementById('lfo-shape-limit');
-    if (shapeLimit) shapeLimit.textContent = `${window.syncSettings?.lfoShape || 'sine'} · MAX ${getLfoMaxHz()} Hz`;
+    paintText(shapeLimit,`${window.syncSettings?.lfoShape || 'sine'} · MAX ${getLfoMaxHz()} Hz`);
 
     const syncPanel = document.getElementById('sync-settings-overlay');
     if (syncPanel && !syncPanel.classList.contains('hidden')
@@ -1390,14 +1434,14 @@
 
     // 2. Run all eight configurable modulators.
     for (const [name, state] of modulatorStates) {
-      const el = document.querySelector(`.toggle[data-name="${name}"]`);
+      const el = state.element;
       const pulse = state.kind === 'pulse';
-      const readout = el?.querySelector('.modulator-rate-readout');
+      const readout = state.readout;
       if (readout && performanceVisible && !pulse) {
         const shape = modulatorShape(name);
-        readout.textContent = modulatorSyncMode(name) === 'sync'
+        paintText(readout,modulatorSyncMode(name) === 'sync'
           ? formatMusicalRate(getLfoSubdivision(state.rate, window.currentBpm, perInstanceSyncSubdivision(name), shape))
-          : `${(0.1 + state.rate * (getLfoMaxHz(shape) - .1)).toFixed(2)} Hz`;
+          : `${(0.1 + state.rate * (getLfoMaxHz(shape) - .1)).toFixed(2)} Hz`);
       }
       if (state.burstUntil > 0 && now >= state.burstUntil) {
         state.active = false; state.value = 0; state.burstUntil = 0;
@@ -1417,8 +1461,7 @@
         const phase = advanceLfoPhase(state,now);
         const wave = computeLfoWaveValue(modulatorShape(name),phase);
         state.value = .5 + wave * .5 * state.depth * burstEnvelopeFactor(state,now);
-        const fill = el?.querySelector('.mod-val-bar');
-        if (fill && performanceVisible) fill.style.height = `${state.value * 100}%`;
+        if (performanceVisible) paintModulatorValue(el,state.value);
       }
     }
 
@@ -1438,7 +1481,7 @@
     
     const playheadEl = document.getElementById('live-playhead');
     if (playheadEl) {
-      playheadEl.textContent = `${currentBar}.${currentBeat}.${currentSixteenth}`;
+      paintText(playheadEl,`${currentBar}.${currentBeat}.${currentSixteenth}`);
     }
     
     const elapsedSec = playheadTimeMs / 1000;
@@ -1447,7 +1490,7 @@
     const tenths = Math.floor((playheadTimeMs % 1000) / 100);
     const timeEl = document.getElementById('live-time');
     if (timeEl) {
-      timeEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+      paintText(timeEl,`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`);
     }
   }
 
@@ -2162,22 +2205,10 @@
   // refresh the visual state. Toggles/latched (B/C) keep their value.
   window.resetTransientControls = () => {
     for (const state of xyStates.values()) window.RcXYEngine.stop(state);
-    const mode = padMode;
-    if (mode !== 'A' && mode !== 'D') return;
-    for (const [name, burst] of activeScalarBursts.entries()) {
-      activeScalarBursts.delete(name);
-      burst.render({ value: 0, phase: 'burst-end', active: false });
+    for(const [name,pad] of padStates) if(['A','D'].includes(modeFor(name))) pad.reset();
+    for(const [name,state] of modulatorStates) if(['A','D'].includes(modeFor(name))) {
+      state.active=false;state.value=0;state.burstUntil=0;renderModulator(state);emitModulatorState(name,state);
     }
-    document.querySelectorAll('.pad').forEach((el) => {
-      el.classList.remove('active', 'latched', 'toggled', 'burst');
-      el.style.removeProperty('--pad-fill-alpha');
-      el.style.removeProperty('--pad-fill-color');
-    });
-    document.querySelectorAll('.toggle').forEach((el) => {
-      el.classList.remove('active');
-      el.style.removeProperty('--pad-fill-alpha');
-      el.style.removeProperty('--pad-fill-color');
-    });
   };
 
   // Host-confirmed soft-takeover feedback. It is intentionally rendered on

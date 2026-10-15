@@ -368,9 +368,10 @@ body.stage-mode .xy-readout {
 .toggle.on::after { opacity:var(--modulator-pulse,.10); }
 .toggle .num { font-size:10px; color:var(--text); z-index:2; pointer-events:none; letter-spacing:.05em; }
 .toggle.on .num { color:#fff; }
-.toggle .mod-val-bar { position:absolute; bottom:0; right:0; width:4px; height:0%; background:var(--modulator-mode-color); opacity:.65; pointer-events:none; }
-.modulator-wave-label { position:absolute; top:5px; left:4px; color:var(--text2); font-size:8px; pointer-events:none; }
-.modulator-mode-label { position:absolute; top:4px; right:4px; color:var(--text2); border:1px solid var(--border); font-size:8px; padding:0 2px; pointer-events:none; }
+.toggle .mod-val-bar { position:absolute; bottom:0; left:0; right:0; height:100%; transform:scaleY(0); transform-origin:bottom; background:var(--modulator-mode-color); opacity:.55; pointer-events:none; }
+.toggle.on .mod-val-bar { will-change:transform; }
+.modulator-wave-label { position:absolute; top:5px; left:4px; z-index:2; color:var(--text2); font-size:8px; pointer-events:none; }
+.modulator-mode-label { position:absolute; top:4px; right:4px; z-index:2; color:var(--text2); border:1px solid var(--border); font-size:8px; padding:0 2px; pointer-events:none; }
 .toggle.on .modulator-mode-label { color:var(--modulator-mode-color); border-color:var(--modulator-mode-color); }
 body.config-mode .toggle .modulator-mode-label { visibility:hidden; }
 .modulator-rate-readout { position:absolute; bottom:6px; left:2px; right:6px; z-index:2;
@@ -1996,8 +1997,12 @@ body.config-mode .page-mixer [data-name]:not(#control-config-menu *):not(.tabs *
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
-  min-width: 32px;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: inherit;
 }
+.cfg-segment-btn:disabled { opacity:.35; cursor:default; }
+.cfg-segment-btn:focus-visible, .cfg-grid-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 .cfg-segment-btn.on,
 .cfg-grid-btn.on {
   background: var(--accent);
@@ -4846,9 +4851,6 @@ body.mapping-mode [data-name].selected-control {
 #vision-loss-timeout { width: 100%; box-sizing: border-box; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); font: inherit; border-radius: 0; }
 #page-settings-overlay output { overflow-wrap: anywhere; }
 
-.cfg-select-row { display:flex; gap:8px; align-items:center; justify-content:space-between; min-height:44px; }
-.cfg-select-row .cfg-item-label { margin:0; flex:1; }
-.cfg-select { color-scheme:dark; min-width:0; width:58%; min-height:44px; padding:6px; font:inherit; color:var(--text); background:var(--surface-soft); border:1px solid var(--border); border-radius:0; }
 .cfg-details { border-top:1px solid var(--border); }
 .cfg-details > summary { min-height:44px; cursor:pointer; align-content:center; color:var(--text2); }
 .cfg-advanced-body { display:flex; flex-direction:column; gap:12px; padding:8px 0; }

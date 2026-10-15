@@ -98,6 +98,13 @@ test('a remote fader move is applied to the local surface', () => {
   assert.deepEqual(applied, [['fader-1', 0.25], ['knob-2', 0.8]]);
 });
 
+test('remote gate values follow each pad effective override instead of the shared mode',()=>{
+  const {context,applied}=loadApp({padMode:'B'});
+  context.getControlMode=name=>name==='pad-3'?'D':'C';
+  context.applyRemoteControlValues({'pad-3':1,'toggle-1':1});
+  assert.deepEqual(applied,[['toggle-1',1]],'override D must not retrigger from remote echo');
+});
+
 test('both axes of an XY pad are applied', () => {
   const { context, applied } = loadApp();
   context.window.applyRemoteControlValues({ 'xy-1.x': 0.4 });

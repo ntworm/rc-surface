@@ -574,17 +574,40 @@ directly from the phone.
 
 Tap CFG, then a control (or right-click on desktop). All eight LFO slots expose
 the same waveform/mode/timing controls; Square adds swing and ratchet. Both XY
-panels expose Static/Physics, friction, bounce and speed. Pads retain A/B/C/D,
+panels expose Static/Physics; friction, bounce and speed appear only in Physics.
+Switching to Static preserves those settings for later use. Pads retain A/B/C/D,
 knobs gesture range and faders reset value. Reset removes that control's override;
 long-press CFG lists overrides and offers Clear all. Escape or tap outside closes.
+
+Waveform, mode and timing use direct buttons, without dropdowns; picking one keeps
+the editor open. In SYNC, expand Subdivision to choose Global, Auto or a note
+value plus Straight/Dotted/Triplet. Only combinations supported by the effective
+waveform, BPM, swing and ratchet are offered, including when the waveform inherits
+Global. FREE hides this section. Advanced stays collapsed until opened. Toggle
+values animate across the full width in the A/B/C/D mode colour.
+
+Each pad now exposes settings for its effective mode, including Global inheritance:
+
+- A: touch level, drag travel (40–400 px) and Linear/Fine/Fast response; release stays zero.
+- B: drag travel/response and Keep value or Reset to zero on a tap without drag. Cancelled touches do not reset the latch.
+- C: drag travel/response and Remember last or Fixed On level. A tap still switches off to zero.
+- D: Global/SYNC/FREE timing, musical length or 40–10000 ms, attack ratio and peak. Effective duration/attack are shown; the existing minimum transmitted burst is one 30 Hz frame. Settings apply on the next gesture.
+
+Fine gives small movements more precision; Fast reaches larger changes sooner.
+These levels control the mapped signal, not MIDI note velocity. MIDI trigger threshold
+and velocity remain in MAP. Changing a pad mode safely releases its old state.
+Per-pad settings save with the performance profile and snapshots. Second right-click
+on the same control closes CFG; right-click elsewhere switches the editor.
+Live waveform changes, including Square, keep a toggle active without another tap;
+a mode-D burst keeps its original end time. Visual fill uses transforms and avoids
+rewriting unchanged labels/trails; actual device smoothness needs physical testing.
 
 Browser overrides use `ableton-rc:v3:control_config`. Modulator/XY settings also
 round-trip through the host performance preference in new project profiles and
 named presets. Saved performance configurations preserve Global inheritance; loading never
 turns a shared mode into a per-slot override. Snapshot capture
 includes the current settings and scalar values.
-They do not save the Live Set itself. Browser-only pad/knob/fader overrides still
-stay on the phone. Previous performance keys and formats are not loaded.
+They do not save the Live Set itself. Knob/fader overrides still stay on the phone. Previous performance keys and formats are not loaded.
 
 ## 10. SNP tab — Snapshots and morph
 

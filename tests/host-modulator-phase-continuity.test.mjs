@@ -88,7 +88,7 @@ test('SYNC LFO Auto rate changes preserve phase and only alter future cycle spee
   close(await app.tick(110), syncedSine((37.23 + 0.103 * 2) / 32 + 0.007 * 4));
 });
 
-test('HOST accepts dotted and triplet pins only for LFO', async t => {
+test('HOST accepts dotted and triplet pins for LFO and unified Square', async t => {
   const app = setup(t);
   for (const subdivision of [3, 8 / 3, 1.5, 4 / 3, 0.75, 2 / 3, 0.375, 1 / 3]) {
     app.update({ syncMode: 'sync', syncSubdivisionBeats: subdivision });
@@ -97,7 +97,7 @@ test('HOST accepts dotted and triplet pins only for LFO', async t => {
   updateHostModulator('phase-test', { kind: 'pulse', name: 'toggle-5', active: true,
     syncMode: 'sync', syncSubdivisionBeats: 0.75 });
   stopHostModulatorLoop();
-  assert.equal(hostModulators.get('phase-test::toggle-5').syncSubdivisionBeats, undefined);
+  assert.equal(hostModulators.get('phase-test::toggle-5').syncSubdivisionBeats, .75);
 });
 
 test('SDK clock LFO pin changes settle between ticks and seeks restore song alignment', async t => {

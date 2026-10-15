@@ -22,6 +22,8 @@
       startY: 0,
       startValue: value,
       rangePx: 100,
+      curve: 'linear',
+      latchTapReset: false,
       pendingToggleOff: false,
       moved: false,
       burst: null,
@@ -50,27 +52,38 @@
   // The surface emits at 30 Hz; one frame is the shortest thing it can send.
   const EMIT_FRAME_MS = 1000 / 30;
 
+  function calculatePadDragDelta(dy, rangePx, curve = 'linear') {
+    if (!Number.isFinite(dy) || dy === 0) return 0;
+    const range = Number.isFinite(rangePx) && rangePx > 0 ? rangePx : 150;
+    const magnitude = Math.min(1, Math.abs(dy / range));
+    const shaped = curve === 'fine' ? magnitude * magnitude
+      : curve === 'fast' ? Math.sqrt(magnitude) : magnitude;
+    return Math.sign(dy) * shaped;
+  }
+
   function valueFromDrag(state, y) {
     const dy = state.startY - y;
-    return clamp(state.startValue + dy / state.rangePx, 0, 1);
+    return clamp(state.startValue + calculatePadDragDelta(dy, state.rangePx, state.curve), 0, 1);
   }
 
   function beginScalarGesture(state, opts) {
     if (state.activePointerId !== null) return null;
 
     const mode = opts.mode || 'A';
-    const rangePx = Math.max(1, opts.rangePx || 100);
+    const rangePx = Number.isFinite(opts.rangePx) && opts.rangePx > 0 ? Math.max(1, opts.rangePx) : 100;
     state.mode = mode;
     state.activePointerId = opts.pointerId;
     state.startY = opts.y;
     state.rangePx = rangePx;
+    state.curve = ['linear', 'fine', 'fast'].includes(opts.curve) ? opts.curve : 'linear';
+    state.latchTapReset = opts.latchTapReset === true;
     state.pendingToggleOff = false;
     state.moved = false;
     state.burst = null;
 
     if (mode === 'A') {
-      state.startValue = 0;
-      return changedValue(state, 0, 'start', true);
+      state.startValue = Number.isFinite(opts.touchValue) ? clamp(opts.touchValue, 0, 1) : 0;
+      return changedValue(state, state.startValue, 'start', true);
     }
 
     if (mode === 'B') {
@@ -86,7 +99,7 @@
         return null;
       }
 
-      const defaultValue = typeof opts.defaultToggleValue === 'number'
+      const defaultValue = Number.isFinite(opts.defaultToggleValue)
         ? opts.defaultToggleValue
         : state.lastToggleValue;
       state.startValue = clamp(state.value > 0 ? state.value : defaultValue, 0, 1);
@@ -113,12 +126,14 @@
         durationMs * 0.9,
       ));
       state.startValue = 0;
+      const configuredPeak = Number.isFinite(opts.burstPeak) ? clamp(opts.burstPeak, 0.15, 1) : null;
       state.burst = {
         active: true,
         startTime: opts.now || 0,
         durationMs,
         attackMs,
-        peak: 1,
+        peak: configuredPeak ?? 1,
+        dragPeakBase: configuredPeak ?? 0.75,
       };
       return changedValue(state, 0, 'burst-start', true);
     }
@@ -133,7 +148,8 @@
     if (state.mode === 'D') {
       if (state.burst) {
         const dy = state.startY - opts.y;
-        state.burst.peak = clamp(0.75 + dy / state.rangePx, 0.15, 1);
+        const delta = calculatePadDragDelta(dy, state.rangePx, state.curve);
+        state.burst.peak = clamp(state.burst.dragPeakBase + delta, 0.15, 1);
       }
       state.moved = true;
       return null;
@@ -147,6 +163,8 @@
 
     const next = valueFromDrag(state, opts.y);
     if (roundValue(next) === roundValue(state.value)) return null;
+    // A value-changing B drag must latch even below C's 4px tap slop.
+    if (state.mode === 'B') state.moved = true;
 
     const event = changedValue(state, next, 'move', true);
     if (state.mode === 'C') {
@@ -168,6 +186,10 @@
     state.moved = false;
 
     if (mode === 'A') {
+      return changedValue(state, 0, 'release', false);
+    }
+
+    if (mode === 'B' && state.latchTapReset && !wasMoved && !opts.cancelled) {
       return changedValue(state, 0, 'release', false);
     }
 
@@ -207,6 +229,7 @@
   global.AbletonRcModes = {
     clamp,
     calculatePadRangePx,
+    calculatePadDragDelta,
     createScalarGestureState,
     beginScalarGesture,
     moveScalarGesture,

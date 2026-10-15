@@ -290,6 +290,18 @@ test('Escape closes the open menu', () => {
   assert.equal(cfg.state.openFor, null);
 });
 
+test('second right-click on the same control closes CFG; another control opens its own menu',()=>{
+  const {cfg,documentRef}=createConfigMode();
+  const a=documentRef.makeElement('div',{name:'pad-1'}),b=documentRef.makeElement('div',{name:'toggle-2'});
+  documentRef.makePage('performance',[a,b]);
+  const rightClick=target=>cfg._internals.onContextMenu({target,preventDefault(){},stopPropagation(){}});
+  rightClick(a);assert.equal(cfg.state.openFor,'pad-1');
+  rightClick(b);assert.equal(cfg.state.openFor,'toggle-2');
+  rightClick(b);assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,false);
+  cfg.on();cfg.open('pad-1');rightClick(a);
+  assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,true,'explicit CFG mode stays enabled');
+});
+
 test('register/render: builder is invoked with the control name and returns declarative items', () => {
   // The renderer is exercised end-to-end by Playwright (tests/ui/config-mode.spec.mjs).
   // The Node unit test only verifies that the builder contract works: name is
@@ -371,18 +383,24 @@ test('switching away from PERF/MIX turns CFG off automatically', () => {
   assert.equal(cfg.state.on, true);
 });
 
-test('compact select keeps numeric option types and details start collapsed',()=>{
+test('direct choices keep numeric types, selection and expanded rhythm editor across refresh',()=>{
   const {cfg,documentRef}=createConfigMode();let chosen;
   cfg.register('toggle-1',()=>[
-    {select:{label:'Subdivision',options:[{label:'Global',value:'Global'},{label:'1/16',value:.25}],get:()=>.25,set:v=>{chosen=v;}}},
-    {details:{label:'Advanced',items:[{info:{text:'Phase'}}]}},
+    {segment:{label:'Timing',refresh:true,options:[{label:'SYNC',value:'sync'}],get:()=>chosen,set:v=>{chosen=v;}}},
+    {details:{label:'Subdivision · '+chosen,items:[{segment:{refresh:true,options:[{label:'1/16',value:.25},{label:'Invalid',value:1,disabled:true}],get:()=>chosen,set:v=>{chosen=v;}}}]}},
   ]);
   cfg.open('toggle-1',{left:0,top:10,bottom:30});
-  const body=documentRef.getElementById('control-config-menu').children[1];
-  const select=body.children[0].children[1];
-  assert.equal(select.tagName,'SELECT');assert.equal(select.value,'1');
-  select._listeners.change();assert.equal(chosen,.25);
-  assert.equal(body.children[1].tagName,'DETAILS');assert.ok(!body.children[1].open);
+  const menu=documentRef.getElementById('control-config-menu');
+  const details=menu.children[1].children[1];
+  assert.equal(details.tagName,'DETAILS');assert.equal(details.open,false);
+  details.open=true;details._listeners.toggle();
+  const buttons=details.children[1].children[0].children[0].children;
+  buttons[1]._listeners.click();assert.equal(chosen,undefined);
+  buttons[0]._listeners.click();assert.equal(chosen,.25);
+  assert.equal(cfg.state.openFor,'toggle-1');
+  const refreshed=menu.children[1].children[1];
+  assert.equal(refreshed.open,true);
+  assert.equal(refreshed.children[1].children[0].children[0].children[0].getAttribute('aria-pressed'),'true');
 });
 
 test('small viewport bounds the whole popover rather than only its body',()=>{

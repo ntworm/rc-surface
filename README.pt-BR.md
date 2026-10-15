@@ -18,7 +18,9 @@ O lado do computador é feito sobre o SDK de Extensions do Ableton. O lado do ce
 
 **2.0.0 quebra compatibilidade:** projetos, presets, mappings e configurações de performance anteriores não são importados. Configure esta versão do zero. Arquivos existentes não são apagados. Candidato local; não é release publicada.
 
-Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0 até a amplitude, com swing/ratchet em Avançado; não há opção Stutter separada. CFG omite velocidade/amplitude controladas por toque e filtra subdivisões pelo teto real. Os dois XY com física têm rastro e atrito independente dos frames.
+Oito toggles uniformes começam em Global. Square é a única onda de pulso de 0 até a amplitude, com swing/ratchet em Avançado; não há opção Stutter separada. CFG omite velocidade/amplitude controladas por toque e filtra subdivisões pelo teto real. Os dois XY com física têm rastro e atrito independente dos frames. Trocar onda preserva a ativação, inclusive Square; o preenchimento usa transformações, sem redimensionar a cada frame.
+
+Onda, modo e tempo usam botões diretos no CFG. Subdivisão abre um editor compacto de valor da nota/ritmo conforme a onda efetiva em SYNC; FREE oculta esse campo. XY estático esconde os ajustes de física e os preserva para uma troca posterior. Os valores dos toggles preenchem toda a largura com a cor do modo.
 
 ## Destaques
 
@@ -234,3 +236,5 @@ Veja a [LICENSE](LICENSE) para o texto completo e o aviso obrigatório (em ingl�
 
 Ableton e Live são marcas registradas da Ableton AG. O RC Surface é um projeto
 independente, sem vínculo, endosso ou patrocínio da Ableton AG.
+
+O CFG individual do pad acompanha o modo A/B/C/D efetivo: A tem nível ao tocar; B, toque opcional para zerar; C, nível lembrado ou fixo ao ligar; A/B/C têm curso e curva do arrasto. D tem duração SYNC/FREE, ataque e pico próprios. Ajustes fazem parte de projetos, presets e snapshots; nível de saída não é velocity MIDI. Segundo clique direito no mesmo controle fecha o CFG.

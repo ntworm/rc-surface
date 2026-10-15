@@ -45,6 +45,15 @@
     "count",
     "behavior",
     "speed",
+    "padRange",
+    "padCurve",
+    "padTouchValue",
+    "padToggleValue",
+    "padLatchTapReset",
+    "burstSubdivision",
+    "burstDurationMs",
+    "burstAttackRatio",
+    "burstPeak",
   ]);
   const NUMERIC_RANGES = {
     friction: [0.002, 0.05],
@@ -58,6 +67,13 @@
     depth: [0, 1],
     count: [0, 1],
     speed: [.1, 4],
+    padRange: [40, 400],
+    padTouchValue: [0, 1],
+    padToggleValue: [.01, 1],
+    burstSubdivision: [.03125, 32],
+    burstDurationMs: [34, 10000],
+    burstAttackRatio: [.05, .5],
+    burstPeak: [.15, 1],
   };
 
   function clamp(value, min, max) {
@@ -83,6 +99,10 @@
         if (value === "sync" || value === "free") out.syncMode = value;
       } else if (key === "behavior") {
         if (value === "static" || value === "physics") out.behavior = value;
+      } else if (key === "padCurve") {
+        if (["linear", "fine", "fast"].includes(value)) out.padCurve = value;
+      } else if (key === "padLatchTapReset") {
+        if (typeof value === "boolean") out.padLatchTapReset = value;
       } else if (typeof value === "number" && Number.isFinite(value)) {
         const range = NUMERIC_RANGES[key];
         if (!range) continue;
@@ -115,6 +135,10 @@
         if (raw === "sync" || raw === "free") setFields.syncMode = raw;
       } else if (key === "behavior") {
         if (raw === "static" || raw === "physics") setFields.behavior = raw;
+      } else if (key === "padCurve") {
+        if (["linear", "fine", "fast"].includes(raw)) setFields.padCurve = raw;
+      } else if (key === "padLatchTapReset") {
+        if (typeof raw === "boolean") setFields.padLatchTapReset = raw;
       } else if (typeof raw === "number" && Number.isFinite(raw)) {
         const range = NUMERIC_RANGES[key];
         if (!range) continue;

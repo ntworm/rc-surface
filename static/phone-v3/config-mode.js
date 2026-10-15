@@ -40,6 +40,7 @@
       builders: new Map(),
       pointerDownAnchor: null,
       contextMenuOpen: false,
+      expanded: new Set(),
     };
 
     function button() {
@@ -139,11 +140,27 @@
         if (item.segment) renderSegment(container, item.segment);
         else if (item.grid) renderGrid(container, item.grid);
         else if (item.slider) renderSlider(container, item.slider);
-        else if (item.select) renderSelect(container, item.select);
         else if (item.details) renderDetails(container, item.details);
         else if (item.action) renderAction(container, item.action);
         else if (item.info) renderInfo(container, item.info);
       }
+    }
+
+    function refreshMenu() {
+      if (state.openFor) {
+        const scrollTop = menu().children[1]?.scrollTop || 0;
+        renderMenuFor(state.openFor, rectFor(closestDataName(state.openFor)));
+        menu().children[1].scrollTop = scrollTop;
+      }
+    }
+
+    function pick(item, value) {
+      if (typeof item.set !== 'function') return;
+      item.set(value);
+      if (item.refresh && state.openFor) {
+        refreshMenu();
+        menu().querySelector?.(`[data-cfg-choice="${cssEscape(item.label || '')}"] [data-value="${cssEscape(String(value))}"]`)?.focus?.();
+      } else close();
     }
 
     function renderSegment(container, item) {
@@ -157,6 +174,9 @@
       }
       const group = documentRef.createElement("div");
       group.className = "cfg-segment-group";
+      group.setAttribute('data-cfg-choice',item.label || '');
+      group.setAttribute('role','group');
+      if (item.label) group.setAttribute('aria-label',item.label);
       const options = Array.isArray(item.options) ? item.options : [];
       const current = item.get ? item.get() : null;
       for (const opt of options) {
@@ -165,12 +185,11 @@
         btn.className = "cfg-segment-btn";
         btn.textContent = opt.label || String(opt.value);
         btn.setAttribute("data-value", String(opt.value));
+        btn.disabled = Boolean(opt.disabled);
+        btn.setAttribute('aria-pressed',String(current === opt.value));
         if (current !== null && current === opt.value) btn.classList.add("on");
         btn.addEventListener("click", () => {
-          if (typeof item.set === "function") {
-            item.set(opt.value);
-            close();
-          }
+          if (!btn.disabled) pick(item,opt.value);
         });
         group.appendChild(btn);
       }
@@ -189,6 +208,7 @@
       }
       const group = documentRef.createElement("div");
       group.className = "cfg-grid-group";
+      group.setAttribute('data-cfg-choice',item.label || '');
       const options = Array.isArray(item.options) ? item.options : [];
       const current = item.get ? item.get() : null;
       for (const opt of options) {
@@ -197,12 +217,10 @@
         btn.className = "cfg-grid-btn";
         btn.textContent = opt.label || String(opt.value);
         btn.setAttribute("data-value", String(opt.value));
+        btn.setAttribute('aria-pressed',String(current === opt.value));
         if (current !== null && current === opt.value) btn.classList.add("on");
         btn.addEventListener("click", () => {
-          if (typeof item.set === "function") {
-            item.set(opt.value);
-            close();
-          }
+          pick(item,opt.value);
         });
         group.appendChild(btn);
       }
@@ -210,38 +228,11 @@
       container.appendChild(wrap);
     }
 
-    function renderSelect(container, item) {
-      const row = documentRef.createElement('label');
-      row.className = 'cfg-select-row';
-      const label = documentRef.createElement('span');
-      label.className = 'cfg-item-label';
-      label.textContent = item.label;
-      row.appendChild(label);
-      const input = documentRef.createElement('select');
-      input.className = 'cfg-select';
-      const options = item.options || [];
-      const current = item.get?.();
-      options.forEach((option, index) => {
-        const element = documentRef.createElement('option');
-        element.value = String(index);
-        element.textContent = option.label;
-        element.selected = option.value === current;
-        input.appendChild(element);
-      });
-      input.value = String(Math.max(0, options.findIndex(option => option.value === current)));
-      input.addEventListener('change', () => {
-        const option = options[Number(input.value)];
-        if (!option) return;
-        item.set?.(option.value);
-        close();
-      });
-      row.appendChild(input);
-      container.appendChild(row);
-    }
-
     function renderDetails(container, item) {
       const details = documentRef.createElement('details');
       details.className = 'cfg-details';
+      const key = item.label.split(' · ')[0];
+      details.open = state.expanded.has(key);
       const summary = documentRef.createElement('summary');
       summary.textContent = item.label;
       details.appendChild(summary);
@@ -250,6 +241,9 @@
       renderItems(body, item.items || []);
       details.appendChild(body);
       details.addEventListener('toggle', () => {
+        if (details.isConnected === false || !state.openFor) return;
+        if (details.open) state.expanded.add(key);
+        else state.expanded.delete(key);
         positionMenu(menu(), rectFor(closestDataName(state.openFor)));
       });
       container.appendChild(details);
@@ -267,6 +261,7 @@
       const input = documentRef.createElement("input");
       input.type = "range";
       input.className = "morph-slider";
+      input.setAttribute('aria-label',item.label || '');
       if (typeof item.min === "number") input.min = String(item.min);
       if (typeof item.max === "number") input.max = String(item.max);
       if (typeof item.step === "number") input.step = String(item.step);
@@ -291,6 +286,10 @@
         const v = Number(input.value);
         if (Number.isFinite(v) && typeof item.set === "function") item.set(v);
         valueLabel.textContent = format(v);
+      });
+      if (item.refresh) input.addEventListener('change',()=>{
+        refreshMenu();
+        menu()?.querySelector?.(`input[aria-label="${cssEscape(item.label || '')}"]`)?.focus?.();
       });
       row.appendChild(input);
       row.appendChild(valueLabel);
@@ -363,6 +362,7 @@
 
     function open(name, anchorRect) {
       if (!state.on) on();
+      state.expanded.clear();
       state.openFor = name;
       renderMenuFor(name, anchorRect || rectFor(closestDataName(name)));
     }
@@ -461,6 +461,10 @@
       if (!page) return;
       ev.preventDefault();
       if (typeof ev.stopPropagation === "function") ev.stopPropagation();
+      if (state.openFor === named.getAttribute("data-name")) {
+        close();
+        return;
+      }
       state.contextMenuOpen = true;
       open(named.getAttribute("data-name"), rectFor(named));
     }

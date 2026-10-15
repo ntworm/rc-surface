@@ -90,6 +90,43 @@ test('knobRange is clamped to the documented safe range', () => {
   assert.equal(cc.get('knob-1', 'knobRange', 150), 400);
 });
 
+const padRanges = {
+  padRange: [40, 400], padTouchValue: [0, 1], padToggleValue: [.01, 1],
+  burstSubdivision: [.03125, 32], burstDurationMs: [34, 10000],
+  burstAttackRatio: [.05, .5], burstPeak: [.15, 1],
+};
+
+test('pad numeric settings validate and clamp identically in stored entries and patches', () => {
+  for (const [key, [min, max]] of Object.entries(padRanges)) {
+    const storage = makeStorage();
+    const cc = create({ storage });
+    cc.set('pad-1', { [key]: min - 1 });
+    assert.equal(cc.get('pad-1', key), min, key);
+    cc.set('pad-1', { [key]: max + 1 });
+    assert.equal(cc.get('pad-1', key), max, key);
+    storage.setItem(cc.STORAGE_KEY, JSON.stringify({ 'pad-1': { [key]: max + 1 } }));
+    assert.equal(create({ storage }).get('pad-1', key), max, key);
+    for (const value of [NaN, Infinity, '1', true]) {
+      cc.set('pad-1', { [key]: value });
+      assert.equal(cc.get('pad-1', key), max, key);
+    }
+    cc.set('pad-1', { [key]: null });
+    assert.equal(cc.get('pad-1', key, 'inherit'), 'inherit');
+  }
+});
+
+test('pad curve and latch reset are strict enums/booleans and survive browser persistence', () => {
+  const storage = makeStorage();
+  const cc = create({ storage });
+  cc.set('pad-12', { mode: 'B', padCurve: 'fine', padLatchTapReset: false });
+  cc.set('pad-12', { padCurve: 'exponential', padLatchTapReset: 'true' });
+  assert.deepEqual(cc.get('pad-12'), { mode: 'B', padCurve: 'fine', padLatchTapReset: false });
+  cc.set('pad-12', { padCurve: 'fast', padLatchTapReset: true });
+  assert.deepEqual(create({ storage }).get('pad-12'), { mode: 'B', padCurve: 'fast', padLatchTapReset: true });
+  storage.setItem(cc.STORAGE_KEY, JSON.stringify({ 'pad-12': { padCurve: 'unknown', padLatchTapReset: 1 } }));
+  assert.equal(create({ storage }).size(), 0);
+});
+
 test('resetValue is clamped to 0..1', () => {
   const cc = makeStore();
   cc.set('fader-1', { resetValue: -1 });

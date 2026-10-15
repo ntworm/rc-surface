@@ -772,12 +772,13 @@
     if (!values || typeof values !== 'object') return;
     if (!window.controlSetters) return;
     const currentMode = document.body.dataset.padMode || 'A';
-    const momentaryMode = currentMode === 'A' || currentMode === 'D';
 
     const apply = () => {
       for (const [k, v] of Object.entries(values)) {
         if (typeof window.controlSetters[k] !== 'function') continue;
-        if (momentaryMode && /^(?:pad|toggle|button)-/.test(k)) continue;
+        const base=k.split('.')[0];
+        const mode=window.getControlMode?.(base) || window.RcControlConfig?.get(base,'mode',currentMode) || currentMode;
+        if ((mode==='A' || mode==='D') && /^(?:pad|toggle|button)-\d+$/.test(k)) continue;
         controlStream?.discard(k);
         try {
           window.controlSetters[k](v);
@@ -1125,33 +1126,59 @@
     cfg.register(/^xy-[12]$/, name => {
       const cc = window.RcControlConfig;
       const tr = (key, fallback) => window.RcSurfaceI18n?.t(key) ?? fallback;
+      const physics = cc.get(name,'behavior','static') === 'physics';
       return [
         {segment: {label: tr('cfg.xyBehavior','Behavior'), options: [
           {label: tr('cfg.xyStatic','Static'), value:'static'},
           {label: tr('cfg.xyPhysics','Physics'), value:'physics'}],
-          get: () => cc.get(name,'behavior','static'), set: value => cc.set(name,{behavior:value})}},
-        ...[['friction', 'cfg.frictionLabel', 'Friction', .002, .05, .001, .012],
+          refresh: true, get: () => cc.get(name,'behavior','static'), set: value => cc.set(name,{behavior:value})}},
+        ...(physics ? [['friction', 'cfg.frictionLabel', 'Friction', .002, .05, .001, .012],
           ['bounce','cfg.bounceLabel','Bounce',0,.95,.05,.75],
           ['speed','cfg.xySpeed','Speed',.1,4,.1,1]].map(([key,label,fallback,min,max,step,initial]) => ({slider: {
             label: tr(label,fallback), min,max,step, get: () => cc.get(name,key,initial),
             set: value => cc.set(name,{[key]:value}), format: value => value.toFixed(3),
-          }})),
+          }})) : []),
         {action: {label:tr('cfg.resetToDefault','Reset to default'), run:()=>cc.clear(name)}},
       ];
     });
     // PERF builders (mode / shape / pulse).
     cfg.register(/^pad-\d+$/, (name) => {
-      const mode = window.RcControlConfig.get(name, 'mode', 'Global');
-      return [
-        { segment: { label: 'Mode override', options: [
-          { label: 'Global', value: 'Global' },
-          { label: 'A', value: 'A' },
-          { label: 'B', value: 'B' },
-          { label: 'C', value: 'C' },
-          { label: 'D', value: 'D' },
-        ], get: () => mode, set: (v) => window.RcControlConfig.set(name, v === 'Global' ? { mode: null } : { mode: v }) } },
-        { action: { label: 'Clear this control', danger: true, run: () => window.RcControlConfig.clear(name) } },
-      ];
+      const cc=window.RcControlConfig;
+      const tr=(key,fallback)=>window.RcSurfaceI18n?.t(key) ?? fallback;
+      const get=(key,fallback)=>cc.get(name,key,fallback);
+      const global={label:tr('cfg.global','Global'),value:'Global'};
+      const choice=(key,label,options,fallback='Global')=>({segment:{label,options,refresh:true,
+        get:()=>get(key,fallback),set:value=>cc.set(name,{[key]:value==='Global'?null:value})}});
+      const slider=(key,label,min,max,step,fallback,format=value=>value.toFixed(2))=>({slider:{
+        label,min,max,step,refresh:true,get:()=>get(key,fallback),set:value=>cc.set(name,{[key]:value}),format}});
+      const mode=window.getControlMode?.(name) || get('mode',document.body.dataset.padMode || 'A');
+      const rows=[choice('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))])];
+      if(mode!=='D') {
+        rows.push(slider('padRange',tr('cfg.padRange','Drag travel'),40,400,10,150,value=>`${value}px`),
+          choice('padCurve',tr('cfg.padCurve','Response'),[['linear','Linear'],['fine','Fine'],['fast','Fast']].map(([value,label])=>({value,label:tr('cfg.'+value,label)})),'linear'));
+        if(mode==='A') rows.push(slider('padTouchValue',tr('cfg.touchLevel','Touch level'),0,1,.01,0));
+        if(mode==='B') rows.push(choice('padLatchTapReset',tr('cfg.tapAction','Tap without drag'),[
+          {label:tr('cfg.keepValue','Keep value'),value:false},{label:tr('cfg.resetZero','Reset to zero'),value:true}],false));
+        if(mode==='C') {
+          rows.push({segment:{label:tr('cfg.toggleOn','On level'),refresh:true,
+            options:[{label:tr('cfg.rememberLevel','Remember last'),value:'memory'},{label:tr('cfg.fixedLevel','Fixed'),value:'fixed'}],
+            get:()=>get('padToggleValue',null)===null?'memory':'fixed',set:value=>cc.set(name,{padToggleValue:value==='memory'?null:1})}});
+          if(get('padToggleValue',null)!==null)rows.push(slider('padToggleValue',tr('cfg.toggleOn','On level'),.01,1,.01,1));
+        }
+      } else {
+        rows.push(choice('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]));
+        if(get('syncMode',window.syncMode)==='sync') rows.push({details:{label:tr('cfg.burstLength','Burst length'),items:[
+          choice('burstSubdivision',tr('cfg.division','Subdivision'),[global,...[[4,'1'],[2,'1/2'],[1,'1/4'],[.5,'1/8'],[.25,'1/16'],[.125,'1/32'],[.0625,'1/64']].map(([value,label])=>({value,label}))]),
+        ]}});
+        else rows.push(slider('burstDurationMs',tr('cfg.burstDuration','Duration (ms)'),40,10000,10,520,value=>`${value}ms`));
+        rows.push(slider('burstAttackRatio',tr('cfg.burstAttack','Attack'),.05,.5,.005,
+          get('syncMode',window.syncMode)==='sync'?window.syncSettings.burstAttackRatio:70/520,value=>`${Math.round(value*100)}%`),
+        slider('burstPeak',tr('cfg.burstPeak','Peak level'),.15,1,.01,1));
+        const shape=window.resolveBurstShape?.(name);
+        if(shape)rows.push({info:{text:tr('cfg.effectiveBurst','Effective burst')+`: ${Math.max(1000/30,shape.durationMs).toFixed(0)}ms / ${tr('cfg.burstAttack','Attack')} ${Math.max(1,Math.min(shape.attackMs,Math.max(1000/30,shape.durationMs)*.9)).toFixed(0)}ms`}});
+      }
+      rows.push({action:{label:tr('cfg.resetToDefault','Reset to default'),run:()=>cc.clear(name)}});
+      return rows;
     });
     cfg.register(/^toggle-[1-8]$/, (name) => {
       const cc = window.RcControlConfig;
@@ -1159,7 +1186,7 @@
       const shape = window.getModulatorShape?.(name) || 'sine';
       const pulse = shape === 'square';
       const global = {label:tr('cfg.global','Global'),value:'Global'};
-      const select = (key,label,options) => ({select:{label,options,
+      const choices = (key,label,options) => ({segment:{label,options,refresh:true,
         get: () => {
           const value=cc.get(name,key,'Global');
           if(key==='subdivision' && typeof value==='number' && value>0) return window.getModulatorSubdivision(name);
@@ -1172,22 +1199,51 @@
         set:value=>cc.set(name,{[key]:value}),format:value=>value.toFixed(2),
       }});
       const rows = [
-        select('shape',tr('cfg.waveform','Waveform'),[global,
+        choices('shape',tr('cfg.waveform','Waveform'),[global,
           ...['sine','triangle','ramp_up','ramp_down','square'].map(value=>({
             label:tr({sine:'sync.sine',triangle:'sync.triangle',ramp_up:'sync.rampUp',ramp_down:'sync.rampDn',square:'sync.square'}[value],value),value,
           })),
         ]),
-        select('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))]),
-        select('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]),
+        choices('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))]),
+        choices('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]),
       ];
-      if((cc.get(name,'syncMode',window.syncMode))==='sync') rows.push(
-        select('subdivision',tr('cfg.division','Subdivision'),[global,{label:tr('sync.auto','Auto'),value:0},...window.getModulatorRhythms(name)]),
-      );
+      if((cc.get(name,'syncMode',window.syncMode))==='sync') {
+        // Group the motor's actual rhythm choices, without adding unsupported
+        // values or altering a saved pin merely by opening the editor.
+        const rhythms = window.getModulatorRhythms(name);
+        const groups = new Map();
+        for(const option of rhythms) {
+          const feel = option.label.endsWith(' D') ? 'dotted' : option.label.endsWith(' T') ? 'triplet' : 'straight';
+          const base = option.label.replace(/ [DT]$/,'');
+          if(!groups.has(base)) groups.set(base,new Map());
+          groups.get(base).set(feel,option.value);
+        }
+        const pin = cc.get(name,'subdivision','Global');
+        const effective = window.getModulatorSubdivision(name);
+        const selected = rhythms.find(option=>Math.abs(option.value-effective)<1e-8) || rhythms[0];
+        const base = selected.label.replace(/ [DT]$/,'');
+        const feel = selected.label.endsWith(' D') ? 'dotted' : selected.label.endsWith(' T') ? 'triplet' : 'straight';
+        const explicit = typeof pin === 'number' && pin > 0;
+        const status = pin === 'Global' ? global.label : pin === 0 ? tr('sync.auto','Auto') : selected.label;
+        rows.push({details:{label:`${tr('cfg.division','Subdivision')} · ${status}`,items:[
+          choices('subdivision','',[global,{label:tr('sync.auto','Auto'),value:0}]),
+          {grid:{label:tr('cfg.noteValue','Note value'),refresh:true,
+            options:Array.from(groups.keys(),value=>({label:value,value})),get:()=>explicit?base:null,
+            set:value=>{
+              const variants=groups.get(value);
+              cc.set(name,{subdivision:variants.get(feel) ?? variants.get('straight') ?? variants.values().next().value});
+            }}},
+          {segment:{label:tr('cfg.noteFeel','Rhythm'),refresh:true,
+            options:[['straight',tr('cfg.straight','Straight')],['dotted',tr('cfg.dotted','Dotted')],['triplet',tr('cfg.triplet','Triplet')]]
+              .map(([value,label])=>({value,label,disabled:!groups.get(base).has(value)})),
+            get:()=>explicit?feel:null,set:value=>cc.set(name,{subdivision:groups.get(base).get(value)})}},
+        ]}});
+      }
       const advanced=[slider('phaseOffset',tr('cfg.phase','Phase (beats)'),-4,4,.125,
         pulse?window.syncSettings.pulsePhaseOffset:window.syncSettings.lfoPhaseOffset)];
       if(pulse) advanced.push(
         slider('swing',tr('sync.swing','Swing'),0,.66,.01,window.syncSettings.pulseSwing),
-        select('count',tr('cfg.ratchet','Ratchet'),[1,2,3,4].map((n,i)=>({label:String(n),value:i/3}))),
+        choices('count',tr('cfg.ratchet','Ratchet'),[1,2,3,4].map((n,i)=>({label:String(n),value:i/3}))),
       );
       rows.push({details:{label:tr('cfg.advanced','Advanced'),items:advanced}});
       rows.push({ action: { label: tr('cfg.resetModulator', 'Restore shared defaults'), danger: false, run: () => cc.clear(name) } });
@@ -1251,7 +1307,7 @@
       window.RcControlConfig.subscribe(refreshBadges);
       let saveTimer;
       window.RcControlConfig.subscribe(({ name }) => {
-        if (!/^(?:toggle-[1-8]|xy-[12])$/.test(name) || window.PerformanceSettings?.applying) return;
+        if (!/^(?:toggle-[1-8]|xy-[12]|pad-(?:[1-9]|1[0-2]))$/.test(name) || window.PerformanceSettings?.applying) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
           window.sendPhoneCommand?.('saveProjectClientState', {
