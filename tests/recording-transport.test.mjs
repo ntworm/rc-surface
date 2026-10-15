@@ -33,7 +33,7 @@ test('REC canonical addresses match the public AbletonOSC Song contract', () => 
     setSongTime: '/live/song/set/current_song_time',
     setMetronome: '/live/song/set/metronome',
   });
-  assert.deepEqual(REC_PREROLL,{continuePlaying:'/live/song/continue_playing',setPunchIn:'/live/song/set/punch_in'});
+  assert.deepEqual(REC_PREROLL,{setPunchIn:'/live/song/set/punch_in'});
 });
 
 test('REC starts unknown and observes each field independently; legacy optimistic state is not evidence', t => {

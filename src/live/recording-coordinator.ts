@@ -9,7 +9,11 @@ import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 
 interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean }
-interface Song { tracks: readonly Track[]; cuePoints: readonly { name: string; time: number }[] }
+interface Cue { name: string; time: number; handle: { id: string | number | bigint } }
+interface Song {
+  tracks: readonly Track[]; cuePoints: readonly Cue[];
+  createCuePoint(time: number): Promise<Cue>; deleteCuePoint(cue: Cue): Promise<void>;
+}
 interface TrackRef { index: number; id: string; name: string }
 interface MarkerRef { name: string; time: number }
 interface MarkerRange { start: MarkerRef; end: MarkerRef | null; loop: boolean }
@@ -20,6 +24,10 @@ interface PreRoll {
   operation: Operation; song: Song; track: TrackRef; range: MarkerRange; bars: number;
   start: number; numerator: number; denominator: number; phase: 'preparing' | 'running' | 'complete';
   originalClick: boolean; originalLoopStart: number; clickOwned: boolean; punchOwned: boolean; loopStartOwned: boolean;
+  cue: {object:Cue; id:string; time:number; owned:boolean} | null;
+  cueCreating: Promise<void> | null; cueDeleting: Promise<void> | null;
+  cueOriginals: {id:string; name:string; time:number}[]; cueCleanup: boolean; generation: number;
+  cleanupContext?: CommandExecutionContext | undefined;
 }
 const flags = ['loop', 'punchIn', 'punchOut', 'overdub', 'backToArranger', 'sessionRecord'] as const;
 function fail(code: string): never { throw Error('REC:' + code); }
@@ -48,6 +56,7 @@ export class RecordingCoordinator extends EventEmitter {
   private preRoll: PreRoll | null = null;
   private preRollRequested = false;
   private preRollError: string | null = null;
+  private cueGeneration = 0;
 
   constructor(private readonly osc: OSCTransport, private readonly getSong: () => Song) {
     super();
@@ -56,6 +65,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
 
   private readonly lost = () => {
+    this.cueGeneration++;
     this.operation?.abort.abort(Error('REC:CONNECTION'));
     this.operation = null;
     this.preparedToken = null; this.observed.clear();
@@ -68,6 +78,7 @@ export class RecordingCoordinator extends EventEmitter {
   private currentSong(): Song {
     const song = this.getSong();
     if (this.song !== song) {
+      this.cueGeneration++;
       this.song = song; this.selected = null; this.point = null; this.preparedToken = null;
       this.lastAttempt = null; this.observed.clear();
       this.range = null; this.armedByRecorder = null;
@@ -361,7 +372,8 @@ export class RecordingCoordinator extends EventEmitter {
         if (!transport.metronome.fresh || transport.metronome.value === null || this.value('tempo') === null || this.value('loopStart') === null) fail('UNKNOWN');
         this.preRoll = {operation, song:this.currentSong(), track:{...track}, range, bars:preRollBars, start, numerator, denominator,
           phase:'preparing', originalClick:transport.metronome.value, originalLoopStart:Number(this.value('loopStart')),
-          clickOwned:false, punchOwned:false, loopStartOwned:false};
+          clickOwned:false, punchOwned:false, loopStartOwned:false, cue:null, cueCreating:null, cueDeleting:null,
+          cueOriginals:[], cueCleanup:false, generation:this.cueGeneration};
       }
       // The chosen Loop setting is explicit. Never silently clear Punch,
       // Session Record, other armed tracks, or Back to Arrangement.
@@ -407,9 +419,79 @@ export class RecordingCoordinator extends EventEmitter {
       getter:key === 'punchIn' ? REC_PREFLIGHT.punchIn : REC_LOOP.getStart, deadline:Date.now()+RECORDING_CONFIRM_MS, code:'PRE_ROLL_STATE'});
     this.ownPreRoll(owner, operation);
   }
+  private cueContext(owner: PreRoll, context = owner.cleanupContext ?? owner.operation.context): void {
+    this.requireContext(context);
+    if (owner.generation !== this.cueGeneration || this.getSong() !== owner.song) fail('IDENTITY');
+    if (!this.osc.state.available || !this.osc.state.connected) fail('CONNECTION');
+  }
+  private async cueDeadline(promise: Promise<void>): Promise<void> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([promise,new Promise<never>((_,reject) => {timer=setTimeout(() => reject(Error('REC:PRE_ROLL_LOCATOR')),RECORDING_CONFIRM_MS);})]);
+    } finally {clearTimeout(timer);}
+  }
+  private async clearPreRollCue(owner: PreRoll, context = owner.operation.context): Promise<void> {
+    owner.cueCleanup = true; owner.cleanupContext = context;
+    if (owner.cueCreating) await this.cueDeadline(owner.cueCreating);
+    const ref = owner.cue;
+    if (!ref?.owned) return;
+    this.cueContext(owner,context);
+    if (!owner.cueDeleting) {
+      const current = owner.song.cuePoints.find(cue => String(cue.handle.id) === ref.id);
+      if (!current || current.time !== ref.time) fail('PRE_ROLL_LOCATOR');
+      // Only the SDK handle returned by this attempt is eligible. Never
+      // toggle/delete by time, index or name, and never retry this write.
+      let deletion: Promise<void>;
+      try {deletion = owner.song.deleteCuePoint(ref.object);} catch (error) {deletion = Promise.reject(error);}
+      owner.cueDeleting = deletion.then(() => {
+        if (this.getSong() !== owner.song) fail('IDENTITY');
+        if (owner.song.cuePoints.some(cue => String(cue.handle.id) === ref.id)
+          || owner.cueOriginals.some(original => !owner.song.cuePoints.some(cue => String(cue.handle.id) === original.id && cue.name === original.name && cue.time === original.time))) fail('PRE_ROLL_LOCATOR');
+        owner.cue = null;
+      });
+    }
+    await this.cueDeadline(owner.cueDeleting);
+  }
+  private async positionPreRoll(owner: PreRoll, guard: () => void): Promise<void> {
+    guard(); this.stopped();
+    const song = owner.song;
+    owner.cueOriginals = song.cuePoints.map(cue => ({id:String(cue.handle.id),name:cue.name,time:cue.time}));
+    const existing = song.cuePoints.find(cue => cue.time === owner.start);
+    if (existing) owner.cue = {object:existing,id:String(existing.handle.id),time:existing.time,owned:false};
+    else {
+      owner.cueCreating = song.createCuePoint(owner.start).then(cue => {
+        const id = String(cue.handle.id);
+        if (owner.cueOriginals.some(original => original.id === id)) fail('PRE_ROLL_LOCATOR');
+        owner.cue = {object:cue,id,time:cue.time,owned:true};
+        // A bounded STOP/failure may finish before the SDK creation callback.
+        // Clean that exact late resource once only if the original session,
+        // Song and link are still valid. Loss permanently retires the owner.
+        if (owner.cueCleanup) void this.clearPreRollCue(owner,owner.cleanupContext).catch(() => {});
+      });
+      await this.cueDeadline(owner.cueCreating);
+      guard(); this.stopped();
+      if (owner.cue!.time !== owner.start) fail('PRE_ROLL_LOCATOR');
+      owner.cue!.object.name = 'RC pre-roll';
+    }
+    const ref = owner.cue!;
+    const cueGuard = () => {
+      guard();
+      const current = song.cuePoints.findIndex(cue => String(cue.handle.id) === ref.id && cue.time === ref.time);
+      if (current < 0 || current !== index) fail('PRE_ROLL_LOCATOR');
+    };
+    const index = song.cuePoints.findIndex(cue => String(cue.handle.id) === ref.id);
+    cueGuard();
+    await this.osc.recording.jumpToMarker(index,owner.start,cueGuard);
+    guard(); this.stopped();
+    await this.clearPreRollCue(owner);
+    guard(); this.stopped();
+  }
   private async startPreRoll(owner: PreRoll): Promise<void> {
     const operation = owner.operation;
     this.ownPreRoll(owner); this.preflight(false); this.markerRange(owner.range);
+    await this.positionPreRoll(owner,() => {
+      this.ownPreRoll(owner); this.identity(owner.track); this.conditions(false); this.markerRange(owner.range);
+    });
     if (!owner.range.loop && Math.abs(Number(this.value('loopStart')) - owner.range.start.time) >= .001) {
       owner.loopStartOwned = true;
       await this.setPreRollProperty(owner, REC_LOOP.setStart, owner.range.start.time, 'loopStart');
@@ -428,7 +510,7 @@ export class RecordingCoordinator extends EventEmitter {
       if (this.value('numerator') !== owner.numerator || this.value('denominator') !== owner.denominator
         || Math.abs(Number(this.value('loopStart'))-owner.range.start.time) >= .001) fail('PRE_ROLL_STATE');
     };
-    await this.osc.recording.continueFrom(owner.start, guard, () => {
+    await this.osc.recording.startPreRoll(owner.start, guard, () => {
       const tempo = this.value('tempo'); return typeof tempo === 'number' ? tempo : null;
     });
     guard();
@@ -481,6 +563,7 @@ export class RecordingCoordinator extends EventEmitter {
     }
   }
   private async restorePreRoll(owner: PreRoll, operation: Operation): Promise<void> {
+    await this.clearPreRollCue(owner,operation.context);
     this.ownPreRoll(owner, operation); await this.read(operation); this.ownPreRoll(owner, operation); this.stopped();
     let failure: unknown;
     const attempt = async (restore: () => Promise<void>) => {try {await restore();} catch (error) {failure ??= error;}};
@@ -505,7 +588,7 @@ export class RecordingCoordinator extends EventEmitter {
     // STOP now owns cleanup. An interrupted start/monitor must not discard
     // its ownership while the priority stop is awaiting fresh evidence.
     if (this.operation?.name === 'stop') return;
-    if (!owner.clickOwned && !owner.punchOwned && !owner.loopStartOwned && !this.armedByRecorder) {
+    if (!owner.clickOwned && !owner.punchOwned && !owner.loopStartOwned && !this.armedByRecorder && !owner.cue && !owner.cueCreating) {
       this.preRoll = null; this.preRollError = message; return;
     }
     if (this.operation === owner.operation && owner.operation.context?.isCurrent()

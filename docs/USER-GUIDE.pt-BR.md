@@ -1200,6 +1200,16 @@ a limpeza mesmo se parou o transporte no Live. Mudanças de estado necessário
 cancelam o pré-roll; perda de conexão/sessão ou um novo Set nunca repetem
 escritas de limpeza. Confira esses ajustes no Live depois de uma perda.
 
+Para definir o início real do playback, o pré-roll reutiliza um locator
+exatamente na posição anterior ou cria um locator temporário **RC pre-roll**
+pelo SDK. Salta nativamente para ele e remove somente o handle criado pela
+tentativa, confirmando a remoção e os locators originais antes de armar ou tocar.
+Um locator existente nunca é renomeado nem removido. Falha do SDK ou limpeza
+não confirmada bloqueia playback e gravação; STOP é enviado imediatamente
+mesmo com trabalho do SDK pendente. Se o host fechar ou a sessão/link/Set mudar
+na breve janela entre criar e remover, o locator temporário pode permanecer.
+Confira no Live: reconectar nunca procura nem apaga locators automaticamente.
+
 `count_in_duration` do Live é somente leitura na API suportada; esta função
 não o altera. A interação com count-in nativo e **Enable Only While Recording**
 do metrônomo ainda exige aceite físico no Live depois da instalação.

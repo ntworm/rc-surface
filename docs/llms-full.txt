@@ -1790,6 +1790,16 @@ STOP to finish cleanup even if you stopped transport in Live. Changes to require
 state cancel the lead-in; connection/session loss or a new Set never replays
 cleanup writes. Check the corresponding settings in Live after such a loss.
 
+To establish Live's playback start, pre-roll reuses a locator exactly at the
+lead-in position or creates a temporary **RC pre-roll** locator through the SDK.
+It jumps there natively and removes only the locator handle it created,
+confirming removal and the original locators before arming or playback.
+An existing locator is never renamed or removed. SDK failure or unconfirmed
+cleanup blocks playback and recording; STOP is sent immediately even while
+SDK work is pending. If the host crashes or the session/link/Set changes during
+the brief create/remove window, a temporary locator can remain. Check it in
+Live: reconnection never scans for or deletes locators automatically.
+
 Live's `count_in_duration` is read-only in the supported API; this feature does
 not set it. Interaction with native count-in and **Enable Only While Recording**
 for the metronome still requires physical Live acceptance after installation.

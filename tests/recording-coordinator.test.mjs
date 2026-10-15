@@ -17,14 +17,14 @@ test('REC conservative getter addresses match public AbletonOSC handlers literal
   });
 });
 
-function fixture(t) {
+function fixture(t,nativePositioning=false) {
   const osc = new OSCTransport();
   Object.assign(osc.state, { available: true, connected: true });
   let song = { tracks: [
     { name: 'Guitar', handle: { id: '11' }, arm: true },
     { name: 'Bass', handle: { id: '22' }, arm: false },
   ], cuePoints: [{ name: 'Verse', time: 8 }, { name: 'Chorus', time: 24 }] };
-  const values = { playing: false, record: false, position: 0, click: false, monitor: 1,
+  const values = { playing: false, record: false, position: 0, stoppedResume:0, insertion:0, click: false, monitor: 1,
     loop: false, loopStart:0, loopLength:4, punchIn: false, punchOut: false, overdub: false, backToArranger: false, sessionRecord: false,
     numerator:4, denominator:4, tempo:120 };
   const sent = [];
@@ -44,10 +44,10 @@ function fixture(t) {
     if (address === REC_LOOP.setStart) values.loopStart = args[0].value;
     if (address === REC_LOOP.setLength) values.loopLength = args[0].value;
     if (address === REC_PREROLL.setPunchIn) values.punchIn = args[0].value === 1;
-    if (address === REC_PREROLL.continuePlaying) values.playing = true;
-    if (address === CMD.startPlaying) values.playing = true;
-    if (address === CMD.stopPlaying) values.playing = false;
-    if (address === CMD.cuePointJump) values.position = song.cuePoints[args[0].value].time;
+    if (address === '/live/song/continue_playing') {values.position=values.stoppedResume;values.playing=true;}
+    if (address === CMD.startPlaying) {if(nativePositioning && !values.playing) values.position=values.insertion;values.playing=true;}
+    if (address === CMD.stopPlaying) {if(values.playing) values.stoppedResume=values.position;values.playing = false;}
+    if (address === CMD.cuePointJump) values.position = values.insertion = song.cuePoints[args[0].value].time;
     if (block === address) return;
     let response;
     if (address === GET.isPlaying) response = [values.playing];
@@ -661,14 +661,24 @@ test('STOP immediately inside the SDK arm setter disarms its track before confir
 
 function preRollFixture(t) {
   t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
-  const f=fixture(t);
+  const f=fixture(t,true);
   f.song.tracks[0].arm=false;
-  f.song.cuePoints=[{name:'Take',time:32},{name:'End',time:64}];
+  f.song.cuePoints=[{name:'Take',time:32,handle:{id:'cue-take'}},{name:'End',time:64,handle:{id:'cue-end'}}];
+  f.cueWrites=[];let cueId=0;
+  f.song.createCuePoint=async time=>{
+    const cue={name:'Locator',time,handle:{id:'own-cue-'+(++cueId)}};
+    f.song.cuePoints.push(cue);f.cueWrites.push(['create',cue.handle.id,time]);return cue;
+  };
+  f.song.deleteCuePoint=async cue=>{
+    f.cueWrites.push(['delete',cue.handle.id,cue.time]);
+    f.song.cuePoints=f.song.cuePoints.filter(item=>item.handle.id!==cue.handle.id);
+  };
+  f.values.stoppedResume=57.549;f.values.insertion=32;
   f.values.loopStart=4;
   f.range={start:{name:'Take',time:32},end:null,loop:false};
   return f;
 }
-const preRollWrites=f=>f.sent.filter(([address])=>address.includes('/set/') || address===REC_PREROLL.continuePlaying || address===CMD.stopPlaying);
+const preRollWrites=f=>f.sent.filter(([address])=>address.includes('/set/') || address===CMD.startPlaying || address===CMD.stopPlaying);
 
 test('REC pre-roll accepts only OFF/1/2/4 and refuses negative lead-in before writing or arming',async t=>{
   const f=preRollFixture(t);
@@ -693,9 +703,10 @@ for(const bars of [1,2,4]) test('REC pre-roll '+bars+' bars follows the observed
   assert.equal(state.pending,'record');assert.equal(f.values.position,32-bars*3);assert.equal(insertSeek,0);
   assert.equal(f.values.punchIn,true);assert.equal(f.values.click,true);assert.equal(f.values.loopStart,32);
   const sequence=preRollWrites(f).map(([address])=>address);
-  assert.ok(sequence.indexOf(REC_PREROLL.setPunchIn)<sequence.indexOf(REC_PREROLL.continuePlaying));
-  assert.ok(sequence.indexOf(REC_PREROLL.continuePlaying)<sequence.indexOf(REC.setRecordMode));
-  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===CMD.cuePointJump || address.includes('count_in_duration')),false);
+  assert.ok(sequence.indexOf(REC_PREROLL.setPunchIn)<sequence.indexOf(CMD.startPlaying));
+  assert.ok(sequence.indexOf(CMD.startPlaying)<sequence.indexOf(REC.setRecordMode));
+  assert.equal(f.sent.filter(([address])=>address===CMD.cuePointJump).length,1);
+  assert.equal(f.sent.some(([address])=>address==='/live/song/continue_playing' || address===REC.setSongTime || address.includes('count_in_duration')),false);
   await f.coordinator.stop(f.context);
   assert.equal(f.values.click,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);
 });
@@ -731,28 +742,28 @@ test('REC pre-roll preserves an originally enabled click and the explicitly sele
 
 test('REC pre-roll confirms still before marker immediately before Record ON and aborts a passed marker without late capture',async t=>{
   const f=preRollFixture(t),send=f.osc.send;f.values.tempo=240;
-  f.osc.send=(address,args)=>{send(address,args);if(address===REC_PREROLL.continuePlaying) {t.mock.timers.setTime(11000);f.values.position=32;}};
+  f.osc.send=(address,args)=>{send(address,args);if(address===CMD.startPlaying) {t.mock.timers.setTime(11000);f.values.position=32;}};
   await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_PASSED/);
   assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
   assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);
   assert.equal(f.values.loopStart,4);assert.equal(f.song.tracks[0].arm,false);assert.equal(f.coordinator.snapshot().preRoll,null);
 });
 
-for(const phase of ['continue confirmation','last pre-Record read']) for(const direction of ['forward','backward']) {
+for(const phase of ['play confirmation','last pre-Record read']) for(const direction of ['forward','backward']) {
   test('REC pre-roll rejects a startup '+direction+' seek below the marker during '+phase+' without Record ON',async t=>{
     const f=preRollFixture(t),send=f.osc.send;let continued=false,positionReads=0;
     f.osc.send=(address,args)=>{
-      if(address===REC_PREROLL.continuePlaying) continued=true;
-      if(address===GET.currentSongTime && continued && ++positionReads===(phase==='continue confirmation'?1:2)) f.values.position=direction==='forward'?31:27;
+      if(address===CMD.startPlaying) continued=true;
+      if(address===GET.currentSongTime && continued && ++positionReads===(phase==='play confirmation'?1:2)) f.values.position=direction==='forward'?31:27;
       // The startup observation must be rejected even if a later report
       // returns to the lead-in start before the final pre-Record read.
-      if(phase==='continue confirmation' && positionReads===2) f.values.position=28;
+      if(phase==='play confirmation' && positionReads===2) f.values.position=28;
       send(address,args);
     };
     await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_SEEK/);
     assert.equal(f.sent.some(([address,args])=>address===REC.setRecordMode && args[0]?.value===1),false);
-    assert.equal(f.sent.filter(([address])=>address===REC_PREROLL.continuePlaying).length,1,'never replay the native start');
-    assert.equal(f.sent.filter(([address])=>address===REC.setSongTime).length,1,'never retry the seek');
+    assert.equal(f.sent.filter(([address])=>address===CMD.startPlaying).length,1,'never replay the native start');
+    assert.equal(f.sent.filter(([address])=>address===CMD.cuePointJump).length,1,'never retry the seek');
     assert.equal(f.values.record,false);assert.equal(f.values.playing,false);assert.equal(f.song.tracks[0].arm,false);
   });
 }
@@ -760,7 +771,7 @@ for(const phase of ['continue confirmation','last pre-Record read']) for(const d
 for(const elapsed of [0,500]) test('REC pre-roll accepts plausible startup progress with '+elapsed+'ms observation latency',async t=>{
   const f=preRollFixture(t),send=f.osc.send;let continued=false,positionReads=0;
   f.osc.send=(address,args)=>{
-    if(address===REC_PREROLL.continuePlaying) continued=true;
+    if(address===CMD.startPlaying) continued=true;
     if(address===GET.currentSongTime && continued && ++positionReads<=2) {
       t.mock.timers.setTime(10000+positionReads*elapsed);
       f.values.position=elapsed?28+positionReads:28+positionReads*.2;
@@ -846,4 +857,114 @@ for(const changed of ['marker','meter','track','seek','clock']) test('REC pre-ro
   else assert.equal(f.song.tracks[0].arm,false,'only the original owned track is disarmed');
   assert.match(f.coordinator.snapshot().error,/REC:/);
   assert.equal(f.sent.filter(([address,args])=>address===REC.setRecordMode && args[0]?.value===1).length,1,'abort never restarts recording');
+});
+
+test('REC native pre-roll fixes insertion independently of current/last-stopped positions and removes its cue before arming or playback',async t=>{
+  const f=preRollFixture(t),originals=[...f.song.cuePoints],remove=f.song.deleteCuePoint,send=f.osc.send;
+  f.values.position=3.405;
+  f.song.deleteCuePoint=async cue=>{
+    assert.equal(cue.name,'RC pre-roll');assert.equal(f.song.tracks[0].arm,false);
+    assert.equal(f.values.click,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.playing,false);
+    return remove(cue);
+  };
+  f.osc.send=(address,args)=>{
+    if(address===CMD.startPlaying || address===REC.setRecordMode) assert.deepEqual(f.song.cuePoints,originals,'no temporary cue may remain at playback/Record ON');
+    send(address,args);
+  };
+  const state=await f.coordinator.record(recordingTrack,f.range,f.context,1);
+  assert.equal(state.preRoll.start,28);assert.equal(f.values.position,28);assert.equal(f.values.insertion,28);assert.equal(f.values.stoppedResume,57.549);
+  assert.deepEqual(f.cueWrites,[['create','own-cue-1',28],['delete','own-cue-1',28]]);
+  assert.deepEqual(f.song.cuePoints,originals);assert.equal(originals[0].name,'Take');
+  assert.equal(f.sent.some(([address])=>address==='/live/song/continue_playing' || address===REC.setSongTime),false);
+  await f.coordinator.stop(f.context);
+});
+
+test('REC native pre-roll reuses an exact existing cue without renaming or deleting it',async t=>{
+  const f=preRollFixture(t),cue={name:'Original lead-in',time:28,handle:{id:'existing-lead'}};
+  f.song.cuePoints.push(cue);const originals=[...f.song.cuePoints];
+  await f.coordinator.record(recordingTrack,f.range,f.context,1);await f.coordinator.stop(f.context);
+  assert.deepEqual(f.cueWrites,[]);assert.deepEqual(f.song.cuePoints,originals);assert.equal(cue.name,'Original lead-in');assert.equal(f.values.insertion,28);
+});
+
+test('REC native pre-roll SDK create rejection and a preexisting returned handle cannot arm, start or delete a user cue',async t=>{
+  const f=preRollFixture(t),originals=[...f.song.cuePoints];let creates=0;
+  f.song.createCuePoint=async()=>{creates++;throw Error('SDK create rejected');};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/SDK create rejected/);
+  f.song.createCuePoint=async()=>{creates++;return originals[0];};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_LOCATOR/);
+  assert.equal(creates,2);assert.deepEqual(f.cueWrites,[]);assert.deepEqual(f.song.cuePoints,originals);
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+for(const failure of ['reject','unconfirmed']) test('REC native pre-roll '+failure+' deletion blocks playback, never retries and preserves original cues',async t=>{
+  const f=preRollFixture(t),originals=[...f.song.cuePoints];let deletes=0;
+  f.song.deleteCuePoint=async()=>{deletes++;if(failure==='reject') throw Error('SDK delete rejected');};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),failure==='reject'?/SDK delete rejected/:/PRE_ROLL_LOCATOR/);
+  assert.equal(deletes,1);assert.ok(originals.every(cue=>f.song.cuePoints.includes(cue)));
+  assert.equal(f.song.tracks[0].arm,false);assert.equal(f.values.punchIn,false);assert.equal(f.values.click,false);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+test('REC native pre-roll priority STOP handles a late SDK creation once without later arming or starting',async t=>{
+  const f=preRollFixture(t),create=f.song.createCuePoint,originals=[...f.song.cuePoints];let resolveCreation;
+  f.song.createCuePoint=time=>new Promise(resolve=>{resolveCreation=()=>create(time).then(resolve);});
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context,1),rejected=assert.rejects(recording,/STOPPED/);
+  await flushRecording();const before=f.sent.length,stopping=f.coordinator.stop(f.context);
+  assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  resolveCreation();await stopping;await rejected;
+  assert.deepEqual(f.song.cuePoints,originals);assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,1);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===CMD.cuePointJump || address===REC_PREROLL.setPunchIn),false);
+});
+
+test('REC native pre-roll creation timeout is bounded and cleans its exact late resource while the same session remains valid',async t=>{
+  const f=preRollFixture(t),create=f.song.createCuePoint,originals=[...f.song.cuePoints];let resolveCreation,done=false;
+  f.song.createCuePoint=time=>new Promise(resolve=>{resolveCreation=()=>create(time).then(resolve);});
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context,1).then(()=>{done=true;return null;},error=>{done=true;return error;});
+  await flushRecording();t.mock.timers.tick(2001);await flushRecording();t.mock.timers.tick(2001);await flushRecording();
+  assert.equal(done,true,'neither creation nor cleanup can hold a command indefinitely');assert.match((await recording).message,/PRE_ROLL_LOCATOR/);
+  resolveCreation();await flushRecording();
+  assert.deepEqual(f.song.cuePoints,originals);assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,1);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+test('REC native pre-roll STOP preempts pending deletion and a missing SDK completion stays bounded without a second delete',async t=>{
+  const f=preRollFixture(t);let deletes=0,done=false;
+  f.song.deleteCuePoint=()=>{deletes++;return new Promise(()=>{});};
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context,1).then(()=>null,error=>error);
+  await flushRecording();const before=f.sent.length,stopping=f.coordinator.stop(f.context).then(()=>null,error=>{done=true;return error;});
+  assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  await flushRecording();t.mock.timers.tick(2001);await flushRecording();
+  assert.equal(done,true);assert.match((await stopping).message,/PRE_ROLL_LOCATOR/);await recording;
+  assert.equal(deletes,1);assert.equal(f.song.tracks[0].arm,false);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+test('REC native pre-roll verifies original cue identities after deletion and never undoes an operator edit',async t=>{
+  const f=preRollFixture(t),remove=f.song.deleteCuePoint,original=f.song.cuePoints[1];
+  f.song.deleteCuePoint=async cue=>{await remove(cue);original.name='Operator edit';};
+  await assert.rejects(f.coordinator.record(recordingTrack,f.range,f.context,1),/PRE_ROLL_LOCATOR/);
+  assert.equal(original.name,'Operator edit');assert.ok(f.song.cuePoints.includes(original));
+  assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,1);
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===REC_PREROLL.setPunchIn),false);
+});
+
+for(const loss of ['session','link','Song']) test('REC native pre-roll late creation after '+loss+' loss never cleans or starts in a retired owner',async t=>{
+  const f=preRollFixture(t),create=f.song.createCuePoint;let resolveCreation;
+  f.song.createCuePoint=time=>new Promise(resolve=>{resolveCreation=()=>create(time).then(resolve);});
+  const recording=f.coordinator.record(recordingTrack,f.range,f.context,1).then(()=>null,error=>error);
+  await flushRecording();
+  if(loss==='link') {
+    // Even after a bounded failure has dropped the active pre-roll object,
+    // a later loss must retire its still-pending SDK resource permanently.
+    t.mock.timers.tick(2001);await flushRecording();t.mock.timers.tick(2001);await flushRecording();
+  }
+  if(loss==='session') f.retire();
+  if(loss==='link') {f.osc.state.connected=false;f.osc.emit('link-lost');f.osc.state.connected=true;}
+  if(loss==='Song') {f.replaceSong({...f.song,cuePoints:[...f.song.cuePoints]});f.coordinator.snapshot();}
+  resolveCreation();await flushRecording();await recording;
+  assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,0);
+  Object.assign(f.osc.state,{connected:true,available:true});await f.coordinator.refresh();await flushRecording();
+  assert.equal(f.cueWrites.filter(([kind])=>kind==='delete').length,0,'reconnect never replays orphan cleanup');
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying || address===CMD.cuePointJump || address===REC_PREROLL.setPunchIn),false);
 });

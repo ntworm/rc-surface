@@ -196,15 +196,14 @@ export class RecordingTransport extends EventEmitter {
     });
   }
 
-  /** Continue from the observed current position, never Live's insert marker.
-   * Punch-in is configured by the coordinator before this record-OFF start. */
-  public async continueFrom(beats: number, guard: () => void = () => {}, tempo?: () => number | null): Promise<RecordingTransportState> {
+  /** The coordinator has positioned the native insert marker using a cue jump
+   * and removed its temporary cue before this record-OFF start. */
+  public async startPreRoll(beats: number, guard: () => void = () => {}, tempo?: () => number | null): Promise<RecordingTransportState> {
     if (!Number.isFinite(beats) || beats < 0) throw Error('REC:PRE_ROLL_RANGE');
-    return this.run('continue', async operation => {
+    return this.run('pre-roll', async operation => {
       guard(); this.requireStopped();
-      await this.wait(operation, ['songTimeBeats'], state => Math.abs((state.songTimeBeats.value ?? -1) - beats) < .001,
-        () => this.sendBatch([[REC.setSongTime, [{type:'float',value:beats}]], [GET.currentSongTime]]));
-      guard(); this.requireStopped();
+      const position = this.snapshot().songTimeBeats;
+      if (!position.fresh || position.value === null || Math.abs(position.value-beats) >= .001) throw Error('REC:PRE_ROLL_SEEK');
       await this.wait(operation, ['songTimeBeats','isPlaying','recordMode'], state =>
         state.recordMode.value === false && state.isPlaying.value === true && (tempo !== undefined || (state.songTimeBeats.value ?? -1) >= beats),
         () => {
@@ -212,7 +211,7 @@ export class RecordingTransport extends EventEmitter {
           // Anchor to the native start send, before any confirmation latency.
           const at = Date.now();
           this.preRollProgress = tempo ? {start:beats, startedAt:at, position:beats, observedAt:at, tempo} : null;
-          this.sendBatch([[REC_PREROLL.continuePlaying], [GET.currentSongTime], [GET.isPlaying], [REC.getRecordMode]]);
+          this.sendBatch([[CMD.startPlaying], [GET.currentSongTime], [GET.isPlaying], [REC.getRecordMode]]);
         });
       this.checkPreRollProgress(this.snapshot());
       guard(); return this.snapshot();

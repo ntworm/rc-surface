@@ -42,6 +42,7 @@
     'rec.preRolling': {en:"PRE-ROLL · Live",'pt-BR':"PRÉ-ROLL · Live"},
     'rec.reason.PRE_ROLL_RANGE': {en:"Not enough bars before this marker. Choose fewer bars or OFF.",'pt-BR':"Faltam compassos antes do marcador. Reduza ou use OFF."},
     'rec.reason.PRE_ROLL_STATE': {en:"Pre-roll state changed. Use STOP, then REC again.",'pt-BR':"Estado do pré-roll mudou. Use STOP e depois REC."},
+    'rec.reason.PRE_ROLL_LOCATOR': {en:"Pre-roll marker cleanup unconfirmed. Check Live and use STOP.",'pt-BR':"Limpeza do marcador de pré-roll não confirmada. Confira o Live e use STOP."},
     'rec.reason.PRE_ROLL_PASSED': {en:"Marker already passed. Use STOP, then REC again.",'pt-BR':"O marcador já passou. Use STOP e depois REC."},
     'rec.reason.PRE_ROLL_SEEK': {en:"Position changed during pre-roll. Use STOP, then REC again.",'pt-BR':"Posição mudou no pré-roll. Use STOP e depois REC."},
     'rec.reason.PRE_ROLL_CLOCK': {en:"Pre-roll clock stopped. Check Live and use STOP.",'pt-BR':"Relógio do pré-roll parou. Confira o Live e use STOP."},
