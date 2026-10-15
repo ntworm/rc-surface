@@ -63,7 +63,7 @@ To enable beat-accurate sync for toggle, the flashing metronome header, and the 
    - **macOS**: Right-click the Ableton Live app in Applications, choose **Show Package Contents**, and navigate to `Contents/App-Resources/MIDI Remote Scripts/`.
 3. Open Ableton Live's **Link/Tempo/MIDI** Preferences.
 4. Add **AbletonOSC** as a Control Surface in the list. Under **Input** and **Output**, leave them as **None**.
-5. Once configured, the extension will automatically detect it and sync using ports `11000` (outgoing) and `11001` (incoming).
+5. Once configured, the extension will automatically detect it and sync using ports `11000` (outgoing) and `11001` (incoming). Stock AbletonOSC replies only on `11001`: if another RC extension holds it while Live starts, the surface listens on a fallback port and moves back to `11001` as soon as it frees.
 
 ### Optional: Install RC-Midi-Receiver.amxd (for MIDI Trigger Notes)
 

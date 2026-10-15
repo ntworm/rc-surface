@@ -173,6 +173,66 @@ test("OSCTransport falls back when the preferred OSC port is occupied", async ()
   });
 });
 
+// Stock AbletonOSC answers on its fixed response port (11001) whatever port
+// asked, so a fallback listener taken while RC Setlist briefly held 11001
+// hears nothing until the surface moves back.
+const settle = (ms = 80) => new Promise((resolve) => setTimeout(resolve, ms));
+const occupy = async (port) => {
+  const socket = dgram.createSocket("udp4");
+  await new Promise((resolve, reject) => { socket.once("error", reject); socket.bind(port, "127.0.0.1", resolve); });
+  return socket;
+};
+const release = (socket) => new Promise((resolve) => socket.close(resolve));
+const sourcePortOf = (transport) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error("OSC packet not received")), 500);
+  testDestination.once("message", (_message, rinfo) => { clearTimeout(timer); resolve(rinfo.port); });
+  transport.send("/live/song/get/tempo");
+});
+
+test("OSCTransport returns to the preferred port once it frees while the fallback hears nothing", async () => {
+  const occupier = await occupy(testPorts[0]);
+  const transport = createTestTransport();
+  transport.start(); await settle();
+  assert.equal(transport.listenPort, testPorts[1]);
+  transport.heartbeatTick(); await settle();
+  assert.equal(transport.listenPort, testPorts[1], "still occupied: stay on the fallback");
+  await release(occupier);
+  transport.heartbeatTick(); await settle();
+  assert.equal(transport.listenPort, testPorts[0]);
+  assert.equal(transport.state.available, true);
+  assert.equal(await sourcePortOf(transport), testPorts[0], "requests leave from the preferred reply port");
+  const freed = await occupy(testPorts[1]); await release(freed);
+  const reply = osc.toBuffer({ oscType: "message", address: "/live/song/get/tempo", args: [{ type: "float", value: 121 }] });
+  testDestination.send(reply, testPorts[0], "127.0.0.1"); await settle();
+  assert.equal(transport.state.connected, true);
+  assert.equal(transport.state.tempo, 121);
+});
+
+test("OSCTransport keeps a fallback port that already receives replies", async () => {
+  const occupier = await occupy(testPorts[0]);
+  const transport = createTestTransport();
+  transport.start(); await settle();
+  transport.handleIncoming({ oscType: "message", address: "/live/song/get/tempo", args: [{ value: 120 }] });
+  await release(occupier);
+  transport.heartbeatTick(); await settle();
+  assert.equal(transport.listenPort, testPorts[1]);
+  assert.equal(await sourcePortOf(transport), testPorts[1]);
+});
+
+test("OSCTransport never moves a listener socket shared with a sibling extension", async () => {
+  const occupier = await occupy(testPorts[0]);
+  const first = createTestTransport();
+  first.start(); await settle();
+  const second = createTestTransport();
+  second.start(); await settle();
+  assert.equal(second.listenPort, testPorts[1]);
+  await release(occupier);
+  first.heartbeatTick(); second.heartbeatTick(); await settle();
+  assert.equal(first.listenPort, testPorts[1]);
+  assert.equal(second.listenPort, testPorts[1]);
+  assert.equal(await sourcePortOf(second), testPorts[1], "the shared socket stays open for every sibling");
+});
+
 test("OSCTransport stopPlayback waits for observed state and keeps socket open", async () => {
   const transport = createTestTransport();
   

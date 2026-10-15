@@ -113,6 +113,9 @@ export class OSCTransport extends EventEmitter {
   private targetHost: string = '127.0.0.1';
   private listenPort: number = 11001;
   private readonly listenPortCandidates = [11001, 11101, 11201];
+  /** True only for a listener this transport bound, never a sibling's. */
+  private ownsServer = false;
+  private rebinding = false;
   private pollInterval: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private requeryOnNextConnection = false;
@@ -193,6 +196,7 @@ export class OSCTransport extends EventEmitter {
         // Both socket and listener set must already exist; partial init by a
         // sibling extension would crash on `g.abletonOSCListeners.add(...)`.
         this.server = g.abletonOSCSocket;
+        this.ownsServer = false;
         g.abletonOSCListeners.add(this.onMessageCallback);
         const address = typeof g.abletonOSCSocket.address === 'function'
           ? g.abletonOSCSocket.address()
@@ -243,25 +247,12 @@ export class OSCTransport extends EventEmitter {
         serverSocket.once('error', onBindError);
         serverSocket.bind(port, '127.0.0.1', () => {
           serverSocket.off('error', onBindError);
-          serverSocket.on('error', (err) => {
-            this.state.error = err.message;
-            this.state.available = false;
-            this.markLinkLost();
-          });
-
-          g.abletonOSCSocket = serverSocket;
           g.abletonOSCListeners = new Set();
           g.abletonOSCListeners.add(this.onMessageCallback);
-
-          serverSocket.on('message', (msg) => {
-            if (g.abletonOSCListeners) {
-              for (const cb of g.abletonOSCListeners) {
-                try { cb(msg); } catch {}
-              }
-            }
-          });
+          this.serve(serverSocket);
 
           this.server = serverSocket;
+          this.ownsServer = true;
           this.listenPort = port;
           this.state.available = true;
           this.state.error = null;
@@ -282,6 +273,56 @@ export class OSCTransport extends EventEmitter {
       this.state.error = err instanceof Error ? err.message : String(err);
       this.dispose();
     }
+  }
+
+  /** Make `serverSocket` the shared listener that fans out to every callback. */
+  private serve(serverSocket: dgram.Socket): void {
+    const g = globalThis as any;
+    serverSocket.on('error', (err) => {
+      this.state.error = err.message;
+      this.state.available = false;
+      this.markLinkLost();
+    });
+    serverSocket.on('message', (msg) => {
+      if (g.abletonOSCListeners) {
+        for (const cb of g.abletonOSCListeners) {
+          try { cb(msg); } catch {}
+        }
+      }
+    });
+    g.abletonOSCSocket = serverSocket;
+  }
+
+  /**
+   * Stock AbletonOSC replies only to its fixed response port (11001), never
+   * to the port that asked. A fallback listener taken while a sibling held
+   * 11001 at startup therefore hears nothing. While no reply has arrived,
+   * move a listener this transport owns alone back once 11001 is free.
+   */
+  private retryPreferredPort(): void {
+    const g = globalThis as any, old = this.server, preferred = this.listenPortCandidates[0];
+    if (!old || !this.ownsServer || this.rebinding || this.state.connected || preferred === undefined || this.listenPort === preferred) return;
+    if (g.abletonOSCSocket !== old || g.abletonOSCListeners?.size !== 1 || !g.abletonOSCListeners.has(this.onMessageCallback)) return;
+    this.rebinding = true;
+    const socket = dgram.createSocket('udp4');
+    const busy = () => { this.rebinding = false; try { socket.close(); } catch {} };
+    socket.once('error', busy);
+    socket.bind(preferred, '127.0.0.1', () => {
+      socket.off('error', busy);
+      this.rebinding = false;
+      if (this.server !== old || g.abletonOSCSocket !== old || this.state.connected || g.abletonOSCListeners?.size !== 1) {
+        try { socket.close(); } catch {}
+        return;
+      }
+      this.serve(socket);
+      this.server = socket;
+      this.listenPort = preferred;
+      old.removeAllListeners('message');
+      try { old.close(); } catch {}
+      this.requeryOnNextConnection = true;
+      this.queryInitialState();
+      console.log(`[OSC-RC] OSC listener moved back to port ${preferred}`);
+    });
   }
 
   public dispose(): void {
@@ -315,6 +356,7 @@ export class OSCTransport extends EventEmitter {
       this.onMessageCallback = null;
     }
     this.server = null;
+    this.ownsServer = false;
     if (this.client) {
       try { this.client.close(); } catch {}
       this.client = null;
@@ -780,6 +822,7 @@ export class OSCTransport extends EventEmitter {
       this.globalQuantization = null;
       this.markLinkLost();
     }
+    this.retryPreferredPort();
     // Liveness probe. Anything arriving on the socket already refreshes
     // lastSeenAt, so while the push stream is flowing the link is proven and
     // the probe is pure noise. is_playing rides along to recover confirmed

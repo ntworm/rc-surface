@@ -63,7 +63,7 @@ precisa instalar e configurar o **AbletonOSC**:
    - **macOS**: clique com o botão direito no Ableton Live, na pasta Aplicativos, escolha **Mostrar Conteúdo do Pacote** (*Show Package Contents*) e vá até `Contents/App-Resources/MIDI Remote Scripts/`.
 3. Abra as preferências **Link/Tempo/MIDI** do Ableton Live.
 4. Adicione o **AbletonOSC** como Control Surface na lista. Em **Input** e **Output**, deixe **None**.
-5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada).
+5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada). O AbletonOSC original só responde na `11001`: se outra extensão RC estiver com ela quando o Live abre, a superfície escuta numa porta reserva e volta para a `11001` assim que ela libera.
 
 ### Opcional: instalar o RC-Midi-Receiver.amxd (para trigger notes MIDI)
 
