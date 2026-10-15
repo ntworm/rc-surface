@@ -4894,6 +4894,7 @@ body.mapping-mode [data-name].selected-control {
 
 /* AUT config occupies a separate touch row; the popover reserves the XY column. */
 #automation-config-menu { min-width:0; }
+#automation-config-menu .cfg-slider-row input[type="range"] { height:44px; min-height:44px; }
 .xy-aut-toolbar { display:none; align-items:center; justify-content:space-between; min-height:44px; flex-shrink:0; gap:6px; color:var(--accent); font-size:10px; }
 .xy-aut-config { min-width:44px; min-height:44px; padding:4px 8px; border:1px solid var(--accent); border-radius:0; background:var(--surface); color:var(--accent); font:inherit; font-size:11px; font-family:"Departure Mono",ui-monospace,"SF Mono",Menlo,monospace; touch-action:manipulation; cursor:pointer; }
 .xy-aut-config[aria-expanded="true"] { background:var(--accent-bg); }

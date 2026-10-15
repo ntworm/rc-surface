@@ -1071,6 +1071,13 @@ polegar oculto numa vista de perfil não é evidência confiável. Pequenas dobr
 dentro do mesmo estado mantêm tolerância aprendida. Capturas v9 são preservadas,
 inclusive bancos conflitantes; repare esses bancos deliberadamente. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
 O aviso de recaptura permanece após salvar, reiniciar a câmera e restaurar o projeto, até uma nova captura bem-sucedida ou um CLR explícito dessa pose.
+A dobra das articulações também fornece evidência local para cada dedo,
+inclusive o polegar: maioria de pelo menos duas capturas claras pode distinguir
+uma cadeia reta, uma dobra parcial e uma dobra profunda mesmo quando varia a
+projeção da ponta. Dobras intermediárias mantêm tolerância aprendida. Juntas
+colapsadas e palma de perfil não fornecem ângulos confiáveis. São usadas as
+coordenadas salvas, sem mudar formato do banco ou tempos de hold/release; isso
+não recupera um dedo oculto quando os landmarks da câmera mostram outra forma.
 Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---
@@ -1161,7 +1168,7 @@ playback parado:
 1. Arme as entradas nos cartões de tracks abaixo da timeline. Cada cartão
    mostra **ARM / SOLO / MUTE** observados. **ARM MULTI** é o padrão e mantém
    outras entradas armadas; **ARM EXCLUSIVE** desarma outras tracks somente
-   quando você aperta ARM de uma track. Trocar o modo ou tocar no nome não
+   quando você aperta ARM de uma track. Trocar o modo ou dar um toque simples no nome não
    altera o Live. Grupos têm SOLO/MUTE, mas não podem ser armados. A preferência
    global de arm do Live não muda; um resultado incompatível do host é informado.
 2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
@@ -1179,6 +1186,13 @@ REC grava exatamente as tracks armadas mostradas nos cartões. Fica desabilitado
 sem entradas armadas e confirma o conjunto inteiro antes de gravar. ARM fica
 bloqueado durante gravação ou pré-roll; SOLO/MUTE continuam disponíveis para
 escuta. Uma track de terceiro armada depois nunca entra na limpeza do STOP.
+
+Dê dois cliques no nome da faixa para editar ali mesmo (teclado: foque o nome
+e aperte Enter). Enter confirma; Escape cancela. Sair do campo não salva.
+O polling preserva o rascunho e o foco. Nomes usam 1–128 caracteres, sem espaços
+nas pontas nem caracteres de controle. Só o nome daquela identidade é alterado;
+renomeação externa, faixa substituída/reordenada ou troca de Set rejeita a edição
+antiga. Use STOP da superfície para encerrar REC/pré-roll antes de renomear.
 
 Para ouvir, clique em um marcador na faixa ou escolha o marcador inicial e use
 **Play no cabeçalho**. A seleção usa o salto nativo de marcador do Live para
@@ -1248,9 +1262,13 @@ e toque no celular ainda exigem aceitação no seu conjunto com Live.
 
 ## AUT: loops de movimento dos XY
 
+SYNC oferece cinco botões de compassos (1–5 compassos). FREE usa um slider de
+1–30 segundos em passos de um segundo. Os padrões continuam 2 compassos e
+10 segundos; loops salvos de 10 ou 20 segundos mantêm sua duração.
+
 **AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Com AUT ligado, os dois XY ficam destacados e cada um mostra um botão de configuração **AUT** acima da área de movimento, mesmo sem loop gravado. Toque nesse botão para abrir os ajustes, toque novamente para fechar ou use o botão do outro XY para trocar o alvo. O botão não inicia captura nem altera o loop. O estado LOOP/REC/contagem permanece dentro do XY, separado desse botão. Enter e Espaço também ativam o botão em foco.
 
-Para gravar, ative AUT e toque na área de movimento do XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Clique direito no XY (celular: segure 600ms sem mover) continua abrindo a configuração. Os ajustes incluem **SYNC / FREE**, **1/2/4 compassos** ou **10/20 segundos**, Gravar/substituir, Reproduzir, Parar e Apagar. Escolher uma ação do menu ou dispensar o menu devolve a performance normal; fechar pelo mesmo botão AUT mantém a seleção de alvos ativa. Abrir configuração não emite controle. MAP, AUT e CFG permanecem visíveis no topo. Suas seleções são exclusivas; sair da seleção AUT não para um loop existente.
+Para gravar, ative AUT e toque na área de movimento do XY: o modo de seleção fecha para seus próximos toques controlarem normalmente o painel. Três pulsos vermelhos contam 3–2–1, a borda vermelha contínua indica captura e o movimento completo entra em loop automaticamente. Clique direito no XY (celular: segure 600ms sem mover) continua abrindo a configuração. Os ajustes incluem **SYNC / FREE**, **1–5 compassos** ou **1–30 segundos em passos de um segundo**, Gravar/substituir, Reproduzir, Parar e Apagar. Escolher uma ação do menu ou dispensar o menu devolve a performance normal; fechar pelo mesmo botão AUT mantém a seleção de alvos ativa. Abrir configuração não emite controle. MAP, AUT e CFG permanecem visíveis no topo. Suas seleções são exclusivas; sair da seleção AUT não para um loop existente.
 
 SYNC usa posição, andamento e fórmula de compasso observados do playback do Live, com horário de recebimento preservado independentemente da renderização do MAP. Contagem/captura exigem Live tocando e relógio atualizado. Comandos Play/Pause aguardam confirmação do Live; mensagens de tempo/beat não confirmam esses comandos. Posição desatualizada é consultada independentemente de outras mensagens OSC recebidas. Os dados capturados ficam alinhados à grade da música. Durante reprodução, mudanças de posição e voltas do Loop do Live seguem a posição atual; STOP do Live pausa um loop SYNC habilitado e Play retoma na posição real. Relógio parado/desatualizado, mudança de posição, volta do Loop ou mudança de compasso durante a **captura** cancelam aquela tentativa e mantêm o buffer anterior completo. Para capturar vários compassos, deixe Arrangement Loop desligado até concluir. Mudança de compasso durante reprodução para o loop. FREE usa segundos decorridos e independe do transporte do Live.
 

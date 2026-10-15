@@ -353,6 +353,23 @@ it is observed only and never written by this command.
 
 ## 2.0 persistence and REC/AUT transport
 
+AUT accepts integer FREE durations of 1–30 seconds and SYNC lengths of 1–5 bars.
+Defaults remain 10 seconds/2 bars, with existing 10/20-second loops valid. The
+same validation applies to browser settings, host persistence, presets and imports;
+the saved loop format and 1024-pair maximum are unchanged. Passive menu opening
+never arms, plays or emits an XY value.
+
+`recordingRenameTrack` is a controller/admin `live-write` command with exact
+`{track:{index,id,name},name}` arguments. The reference name is the expected old
+name; the new name is trimmed, 1–128 characters, without C0/DEL/C1 controls.
+The SDK Track.name setter writes once after fresh identity/stopped-state checks;
+bounded native-name observation confirms it. Rename serializes with other REC writes,
+is blocked during an owned REC/pre-roll attempt, and yields to priority STOP.
+Cached cohort metadata alone does not lock it after STOP. Session/link/Set or
+track identity changes retire confirmation without replay. No arm, solo, mute or
+transport mutation accompanies rename. The client saves only on Enter, cancels
+with Escape and preserves drafts during polling; blur never saves.
+
 Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time.
 
 REC submits `tracks` as a nonempty ordered set of `{index,id,name}` refs (up to 256); the backend confirms all identities, armability, ARM and absence of outside ARM. Legacy single-track commands are normalized. ARM MULTI retains other inputs; EXCLUSIVE acts only on explicit ARM and confirms the whole set. SOLO/MUTE use serialized GET confirmation without interrupting pre-roll. Native STOP has priority and disarms only the attempt’s owned identities.
@@ -360,3 +377,9 @@ REC submits `tracks` as a nonempty ordered set of `{index,id,name}` refs (up to 
 Punch In has baseline/desired/expected and ownership by Song/session/link: ON for pre-roll, OFF for a direct start; restore only while owned without an observed external edit. Pre-roll uses observed meter and an exact existing locator or temporary SDK locator, removed and confirmed before arming/playback. `count_in_duration` is read-only. Session/link/Set loss never replays cleanup. Observed record mode does not prove audio capture or take preservation.
 
 VID exposes up to fifteen pose identities, three to six examples each. Capture warnings are advisory with no new hard veto; Note/Clip/Watchdog retain their existing contracts. PALM/FACE enter as 0–1 controls; FACE is palm/back orientation, not facial tracking. Missing/nonfinite samples emit `lost:true` through Safe loss without inventing a neutral measurement.
+
+Recognition additionally checks local finger-joint contradictions supported by
+a bank majority. Intermediate curl retains learned tolerance; collapsed or
+edge-on joints cannot establish new angular evidence. Descriptor/storage formats,
+distance, calibration, presets and hold/release/loss timing remain unchanged.
+This cannot recover anatomy hidden or misrepresented by camera landmarks.

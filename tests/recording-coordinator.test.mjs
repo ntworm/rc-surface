@@ -97,6 +97,163 @@ test('REC real OSC boolean replies preserve preflight flags and track armability
   assert.equal(f.sent.some(([address])=>address.includes('/set/')),false);
 });
 
+test('REC exact track rename trims once, confirms native names and changes no arm, solo, mute or transport',async t=>{
+  const f=fixture(t);await f.select();const track=f.song.tracks[0],writes=[];
+  for(const key of ['name','arm','solo','mute']) {
+    let value=track[key];Object.defineProperty(track,key,{get:()=>value,set:next=>{writes.push([key,next]);value=next;},configurable:true});
+  }
+  const before=f.sent.length,result=await f.coordinator.renameTrack({index:0,id:'11',name:'Guitar'},'  Lead Guitar  ',f.context);
+  assert.deepEqual(writes,[['name','Lead Guitar']]);assert.equal(result.tracks[0].name,'Lead Guitar');
+  assert.equal(result.selected.name,'Lead Guitar');assert.equal(result.attemptActive,false);assert.equal(result.pending,null);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.startPlaying||address===CMD.stopPlaying),false);
+  await f.coordinator.renameTrack({index:0,id:'11',name:'Lead Guitar'},'Lead Guitar',f.context);
+  assert.equal(writes.length,1,'same-name confirmation is a no-op');
+});
+
+test('REC rename rejects invalid names and exact identity mismatches without a setter call',async t=>{
+  const f=fixture(t);await f.coordinator.refresh();let writes=0,name='Guitar';
+  Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{writes++;name=value;},configurable:true});
+  const ref={index:0,id:'11',name:'Guitar'};
+  for(const value of ['', '  ', 'x'.repeat(129),'Line\nBreak','Tab\tName','DEL\u007f','C1\u0085',42,null]) {
+    await assert.rejects(f.coordinator.renameTrack(ref,value,f.context),/NAME/);
+  }
+  for(const track of [{...ref,id:'old'},{...ref,name:'Old name'},{...ref,index:1},{...ref,index:0.5},{...ref,extra:true}]) {
+    await assert.rejects(f.coordinator.renameTrack(track,'New',f.context),/IDENTITY/);
+  }
+  f.song.tracks[1].handle.id='11';await assert.rejects(f.coordinator.renameTrack(ref,'New',f.context),/IDENTITY/);
+  assert.equal(writes,0);f.song.tracks[1].handle.id='22';
+  await f.coordinator.renameTrack(ref,'x'.repeat(128),f.context);assert.equal(writes,1);
+});
+
+for(const kind of ['session','link','Song','reorder','replace','name'])test('REC rename rejects '+kind+' change before committing the SDK setter',async t=>{
+  const f=fixture(t);await f.coordinator.refresh();const send=f.osc.send,ref={index:0,id:'11',name:'Guitar'};let changed=false,writes=0;
+  let name='Guitar';Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{writes++;name=value;},configurable:true});
+  f.osc.send=(address,args)=>{
+    if(!changed&&address===CLIP.getTrackNames) {
+      changed=true;
+      if(kind==='session')f.retire();
+      if(kind==='link'){f.osc.state.connected=false;f.osc.emit('link-lost');}
+      if(kind==='Song')f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+      if(kind==='reorder')f.song.tracks.reverse();
+      if(kind==='replace')f.song.tracks[0]={...f.song.tracks[0],handle:{id:'replacement'}};
+      if(kind==='name')name='External';
+    }
+    send(address,args);
+  };
+  await assert.rejects(f.coordinator.renameTrack(ref,'New',f.context),/SESSION|CONNECTION|IDENTITY/);
+  assert.equal(writes,0);
+});
+
+test('REC rename SDK failure releases its slot so a corrected retry can succeed',async t=>{
+  const f=fixture(t);let name='Guitar',reject=true;
+  Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{if(reject)throw Error('sdk rejected');name=value;},configurable:true});
+  const ref={index:0,id:'11',name:'Guitar'};
+  await assert.rejects(f.coordinator.renameTrack(ref,'New',f.context),/sdk rejected/);
+  assert.equal(f.coordinator.snapshot().pending,null);reject=false;
+  assert.equal((await f.coordinator.renameTrack(ref,'New',f.context)).tracks[0].name,'New');
+});
+
+test('REC pending rename serializes writes and polling, remains bounded and yields immediately to STOP',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t);await f.select();let name='Guitar',writes=0;
+  Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{writes++;name=value;f.block(CLIP.getTrackNames);},configurable:true});
+  const ref={index:0,id:'11',name:'Guitar'},pending=f.coordinator.renameTrack(ref,'New',f.context),rejected=assert.rejects(pending,/STOPPED/);
+  await flushRecording();const before=f.sent.length;
+  assert.equal((await f.coordinator.refresh()).pending,'rename');assert.equal(f.sent.length,before);
+  await assert.rejects(f.coordinator.renameTrack({...ref,name:'New'},'Other',f.context),/BUSY/);
+  await assert.rejects(f.coordinator.trackControl({...ref,name:'New'},'solo',true,'multi',f.context),/BUSY/);
+  const stop=f.coordinator.stop(f.context);
+  assert.deepEqual(f.sent.slice(before,before+2),[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]);
+  await rejected;await stop;assert.equal(writes,1);assert.equal(f.coordinator.snapshot().pending,null);
+});
+
+test('REC rename confirmation timeout never replays and an external name wins',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t);let name='Guitar',writes=0;
+  Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{writes++;name=value;f.block(CLIP.getTrackNames);},configurable:true});
+  const pending=f.coordinator.renameTrack({index:0,id:'11',name:'Guitar'},'New',f.context),rejected=assert.rejects(pending,/RENAME_UNCONFIRMED/);
+  await flushRecording();t.mock.timers.tick(2001);await rejected;
+  name='External';f.block(undefined);await f.coordinator.refresh();
+  assert.equal(f.coordinator.snapshot().tracks[0].name,'External');assert.equal(writes,1);assert.equal(f.coordinator.snapshot().pending,null);
+});
+
+for(const outcome of ['timeout','STOP','external name','new Song','late external name','late new Song','SDK throw after apply'])test('REC rename recovery after '+outcome+' retires old selection and permits a fresh marker jump',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t),ref={index:0,id:'11',name:'Guitar'},range={start:{name:'Verse',time:8},end:null,loop:false};
+  const recording=await f.coordinator.record([ref],range,f.context);
+  assert.deepEqual(recording.selected,ref);assert.deepEqual(recording.cohort,[ref]);
+  await f.coordinator.stop(f.context);assert.deepEqual(f.coordinator.snapshot().selected,ref);
+  const track=f.song.tracks[0],writes=[];let name=track.name;
+  Object.defineProperty(track,'name',{get:()=>name,set:value=>{writes.push(['name',value]);name=value;f.block(CLIP.getTrackNames);if(outcome==='SDK throw after apply')throw Error('sdk applied then rejected');},configurable:true});
+  for(const key of ['arm','solo','mute']) {
+    let value=track[key];Object.defineProperty(track,key,{get:()=>value,set:next=>{writes.push([key,next]);value=next;},configurable:true});
+  }
+  const before=f.sent.length,pending=f.coordinator.renameTrack(ref,'Lead Guitar',f.context);
+  const rejected=assert.rejects(pending,outcome==='timeout'?/RENAME_UNCONFIRMED/:outcome==='STOP'?/STOPPED/:outcome==='SDK throw after apply'?/sdk applied then rejected/:/IDENTITY/);
+  await flushRecording();assert.deepEqual(writes,[['name','Lead Guitar']]);
+  let observedName='Lead Guitar';
+  if(outcome==='STOP')await f.coordinator.stop(f.context);
+  else if(outcome.endsWith('external name')) {
+    if(outcome.startsWith('late'))f.push(CLIP.getTrackNames,['Lead Guitar','Bass']);
+    name=observedName='External';if(!outcome.startsWith('late'))f.push(CLIP.getTrackNames,[name,'Bass']);
+  }
+  else if(outcome.endsWith('new Song')) {
+    if(outcome.startsWith('late'))f.push(CLIP.getTrackNames,['Lead Guitar','Bass']);
+    observedName='Different Set';f.replaceSong({...f.song,tracks:[{...track,name:observedName},f.song.tracks[1]]});
+    if(!outcome.startsWith('late'))f.push(CLIP.getTrackNames,['Lead Guitar','Bass']);
+  } else if(outcome==='timeout')t.mock.timers.tick(2001);
+  await rejected;f.block(undefined);
+  const refreshed=await f.coordinator.refresh();
+  assert.equal(refreshed.tracks[0].name,observedName);assert.equal(refreshed.pending,null);
+  const transportWrites=packets=>packets.filter(([address])=>address.includes('/set/')||[CMD.startPlaying,CMD.stopPlaying,CMD.cuePointJump].includes(address));
+  assert.deepEqual(transportWrites(f.sent.slice(before)),outcome==='STOP'?[[CMD.stopPlaying,[]],[REC.setRecordMode,[{type:'integer',value:0}]]]:[]);
+  const markerBefore=f.sent.length;await f.coordinator.seekMarker({name:'Chorus',time:24},f.context);
+  assert.equal(f.values.position,24);assert.equal(f.values.playing,false);assert.equal(f.values.record,false);
+  assert.deepEqual(transportWrites(f.sent.slice(markerBefore)),[[CMD.cuePointJump,[{type:'integer',value:1}]]]);
+  assert.deepEqual(writes,[['name','Lead Guitar']],'recovery and marker selection never replay the rename or mutate track controls');
+  assert.equal(refreshed.selected,null,'an unconfirmed rename must not leave or promote a cached selection');
+  assert.equal(refreshed.cohort,null);assert.equal(f.coordinator.snapshot().selected,null);
+});
+
+test('REC rename recovery retires a cached cohort from an attempt rejected before owning resources',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const f=fixture(t),ref={index:0,id:'11',name:'Guitar'},range={start:{name:'Verse',time:8},end:null,loop:false};
+  f.values.punchOut=true;await assert.rejects(f.coordinator.record([ref],range,f.context),/PUNCHOUT/);f.values.punchOut=false;
+  assert.deepEqual(f.coordinator.snapshot().cohort,[ref]);assert.equal(f.coordinator.snapshot().attemptActive,false);
+  let name='Guitar';Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{name=value;f.block(CLIP.getTrackNames);},configurable:true});
+  const pending=f.coordinator.renameTrack(ref,'Lead Guitar',f.context),rejected=assert.rejects(pending,/RENAME_UNCONFIRMED/);
+  await flushRecording();t.mock.timers.tick(2001);await rejected;f.block(undefined);
+  const refreshed=await f.coordinator.refresh();
+  await f.coordinator.seekMarker({name:'Chorus',time:24},f.context);assert.equal(f.values.position,24);
+  assert.equal(refreshed.selected,null);assert.equal(refreshed.cohort,null);
+});
+
+test('REC rename blocks owned direct/pre-roll attempts and permits a stopped recorder with cached cohort',async t=>{
+  const f=fixture(t),ref={index:0,id:'11',name:'Guitar'},range={start:{name:'Verse',time:8},end:null,loop:false};
+  await f.coordinator.record(ref,range,f.context);
+  assert.equal(f.coordinator.snapshot().attemptActive,true);
+  f.values.playing=false;f.values.record=false;await f.coordinator.refresh();
+  await assert.rejects(f.coordinator.renameTrack(ref,'New',f.context),/STOP_REQUIRED/);
+  await f.coordinator.stop(f.context);assert.equal(f.coordinator.snapshot().attemptActive,false);
+  f.coordinator.cohort=[ref];
+  await f.coordinator.renameTrack(ref,'New',f.context);assert.equal(f.song.tracks[0].name,'New');
+});
+
+for(const kind of ['session','link','Song','reorder','replace','name'])test('REC pending rename retires '+kind+' changes without a second write',async t=>{
+  const f=fixture(t);let name='Guitar',writes=0;
+  Object.defineProperty(f.song.tracks[0],'name',{get:()=>name,set:value=>{writes++;name=value;f.block(CLIP.getTrackNames);},configurable:true});
+  const pending=f.coordinator.renameTrack({index:0,id:'11',name:'Guitar'},'New',f.context),rejected=assert.rejects(pending,/SESSION|CONNECTION|IDENTITY/);
+  await flushRecording();assert.equal(writes,1);
+  if(kind==='session')f.retire();
+  if(kind==='link'){f.osc.state.connected=false;f.osc.emit('link-lost');}
+  if(kind==='Song')f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+  if(kind==='reorder')f.song.tracks.reverse();
+  if(kind==='replace')f.song.tracks[0]={...f.song.tracks[0],handle:{id:'replacement'}};
+  if(kind==='name')name='External';
+  f.push(CLIP.getTrackNames,f.song.tracks.map(track=>track.name));await rejected;
+  assert.equal(writes,1);assert.equal(f.coordinator.snapshot().pending,null);
+});
+
 test('REC background refresh keeps last valid observations and yields immediately to a user action', async t => {
   const f=fixture(t);await f.select();
   const pending=f.coordinator.refresh();const result=pending.catch(error=>error);

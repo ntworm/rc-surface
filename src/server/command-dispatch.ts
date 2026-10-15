@@ -66,6 +66,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   recordingLocator: "live-write",
   recordingArm: "live-write",
   recordingTrackControl: "live-write",
+  recordingRenameTrack: "live-write",
   recordingPrepare: "live-write",
   recordingStart: "live-write",
   recordingRecord: "live-write",

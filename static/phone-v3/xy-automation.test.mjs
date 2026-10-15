@@ -12,6 +12,57 @@ function load() {
 const clock=(time,overrides={})=>({valid:true,playing:true,beat:time/500,bpm:120,beatsPerBar:4,epoch:1,receivedAt:time,...overrides});
 const point={x:.25,y:.75};
 const plain=value=>JSON.parse(JSON.stringify(value));
+test('current EN/PT guides and landing describe the expanded AUT duration contract',()=>{
+  for(const name of ['../../README.md','../../README.pt-BR.md','../../docs/USER-GUIDE.md','../../docs/USER-GUIDE.pt-BR.md','../../docs/site-i18n.js','../../docs/index.html','../../docs/pt-br.html','../../.github/release-notes/v2.0.0.md']) {
+    const text=fs.readFileSync(new URL(name,import.meta.url),'utf8');
+    assert.match(text,/1–5 (?:bars|compassos)/,name);
+    assert.match(text,/1–30 (?:seconds|segundos)/,name);
+    assert.doesNotMatch(text,/10\/20 (?:seconds|segundos)|1\/2\/4 (?:bars|compassos)/,name);
+  }
+});
+test('AUT accepts every integer duration, preserving countdown, complete capture, bounds and stopped restore',()=>{
+  const e=load().RcXYAutomation;
+  assert.deepEqual(plain(e.defaults),{timing:'sync',bars:2,seconds:10});
+  for(const seconds of Array.from({length:30},(_,index)=>index+1)) {
+    const state=e.create({timing:'free',bars:5,seconds});e.arm(state,null,0);
+    assert.equal(state.pending.pairs,seconds*30);
+    for(let time=0;time<=(seconds+3)*1000;time+=50) {
+      const result=e.tick(state,null,time,{x:(time%1000)/1000,y:.5});
+      if(time===0 || time===1000 || time===2000)assert.equal(result.countdown,3-time/1000);
+      if(time===3000)assert.equal(state.stage,'recording');
+      if(time===(seconds+3)*1000)assert.equal(result.committed,true);
+    }
+    assert.equal(state.saved.points.length,seconds*60);
+    assert.equal(state.stage,'playing');
+    assert.equal(e.create(plain(state.saved)).stage,'stopped');
+  }
+  for(const bars of [1,2,3,4,5]) {
+    const state=e.create({timing:'sync',bars,seconds:30});e.arm(state,clock(0),0);
+    assert.equal(state.duration,bars*4);
+    for(let time=0;time<=(3+bars*4)*500;time+=50)e.tick(state,clock(time),time,point);
+    assert.equal(state.stage,'playing');assert.equal(state.saved.points.length,bars*120);
+  }
+  const bounded=e.create({timing:'sync',bars:5,seconds:30});e.arm(bounded,clock(0,{bpm:1,beatsPerBar:32}),0);
+  assert.equal(bounded.pending.pairs,e.MAX_PAIRS);
+  for(const seconds of [0,31,1.5,'3',true,NaN,Infinity])assert.throws(()=>e.validate({timing:'free',bars:2,seconds}));
+  for(const bars of [0,6,2.5,'3',true,NaN,Infinity])assert.throws(()=>e.validate({timing:'sync',bars,seconds:10}));
+});
+
+test('new AUT durations survive controller persistence and apply without autoplay or output',()=>{
+  const root=load(),stored=new Map(),emitted=[],changed=[];
+  const options={connection:()=>({}),permitted:()=>true,storage:{getItem:key=>stored.get(key),setItem:(key,value)=>stored.set(key,value)},changed:()=>changed.push(1)};
+  const original=root.RcXYAutomationController.create(options);
+  for(const name of ['xy-1','xy-2'])original.register(name,root.RcXYEngine.create(),null,()=>emitted.push(name));
+  original.configure('xy-1',{timing:'free',seconds:1,bars:3,points:[0,65535,65535,0]});
+  original.configure('xy-2',{timing:'sync',seconds:30,bars:5,points:[65535,0,0,65535]});
+  const saved=plain(original.capture()),restored=root.RcXYAutomationController.create(options);
+  for(const name of ['xy-1','xy-2'])restored.register(name,root.RcXYEngine.create(),null,()=>emitted.push(name));
+  assert.deepEqual(plain(restored.capture()),saved);
+  restored.apply(saved);restored.tick(0);
+  for(const name of ['xy-1','xy-2'])assert.equal(restored.get(name).stage,'stopped');
+  assert.deepEqual(emitted,[]);assert.equal(changed.length,2);
+});
+
 test('FREE countdown has three pulses, captures then loops without another command',()=>{
   const e=load().RcXYAutomation,s=e.create({timing:'free',bars:2,seconds:10});
   e.arm(s,null,0);

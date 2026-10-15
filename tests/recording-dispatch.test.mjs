@@ -10,6 +10,7 @@ const writes = {
   recordingSelectTrack:{index:0,id:'1',name:'Track'}, recordingSetPoint:{beats:0}, recordingLocator:{direction:'next'},
   recordingArm:{enabled:true,track:{index:0,id:'1',name:'Track'}},recordingPrepare:{},recordingStart:{token:'test'},recordingStop:{},
   recordingTrackControl:{track:{index:0,id:'1',name:'Track'},property:'arm',enabled:true,armMode:'multi'},
+  recordingRenameTrack:{track:{index:0,id:'1',name:'Track'},name:'Renamed'},
   recordingAudition:{disarm:true},recordingClick:{enabled:true},recordingMark:{mark:'good'},
   recordingRecord:{track:{index:0,id:'1',name:'Track'},range:{start:{name:'Start',time:0},end:null,loop:false}},
   recordingSeekMarker:{name:'Start',time:0},
@@ -43,6 +44,20 @@ test('REC grid dispatch forwards exact cohort and track controls and rejects mix
     result=await dispatchCommand('controller',{cmd,args},context);assert.equal(result.ok,false);assert.match(result.error,/ARGUMENTS/);
   }
   assert.equal(calls.length,count);
+});
+
+test('REC rename dispatch preserves exact reference and name and rejects extra mutation arguments',async t=>{
+  const original=recordingCoordinator.renameTrack,calls=[],context={clientId:'rename',isCurrent:()=>true};
+  recordingCoordinator.renameTrack=async(...args)=>{calls.push(args);return {observed:true};};
+  t.after(()=>{recordingCoordinator.renameTrack=original;});
+  const args=writes.recordingRenameTrack;
+  assert.equal((await dispatchCommand('controller',{cmd:'recordingRenameTrack',args},context)).ok,true);
+  assert.deepEqual(calls[0],[args.track,args.name,context]);
+  for(const invalid of [{track:args.track},{...args,enabled:true},{...args,armMode:'exclusive'}]) {
+    const result=await dispatchCommand('controller',{cmd:'recordingRenameTrack',args:invalid},context);
+    assert.equal(result.ok,false);assert.match(result.error,/ARGUMENTS/);
+  }
+  assert.equal(calls.length,1);
 });
 test('REC real dispatch routes STOP with the current socket and rejects extra arguments',async t => {
   const original = recordingCoordinator.stop;

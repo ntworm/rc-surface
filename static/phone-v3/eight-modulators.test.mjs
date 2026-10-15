@@ -542,3 +542,15 @@ test('AUT uses the real XY output, pointer override, restore and global frame lo
   ctx.PerformanceSettings.applyHost(saved);assert.equal(automation.get('xy-1').stage,'stopped');
   assert.equal(app.emitted.filter(event=>event.name==='xy-1' && event.lost).length,0,'disconnect does not send stale loss into another session');
 });
+
+test('PerformanceSettings snapshot restores expanded AUT duration settings without starting a loop',()=>{
+  const app=loadControls('toggle-5',{withXY:true,withAutomation:true}),ctx=app.context;
+  ctx.XYAutomation.configure('xy-1',{timing:'free',seconds:30,bars:5,points:[0,0,65535,65535]});
+  ctx.XYAutomation.configure('xy-2',{timing:'sync',seconds:1,bars:3,points:[65535,0,0,65535]});
+  const saved=JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture()));
+  ctx.XYAutomation.configure('xy-1',{seconds:10,bars:2});
+  ctx.PerformanceSettings.applyHost(saved);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture())),saved);
+  for(const name of ['xy-1','xy-2'])assert.equal(ctx.XYAutomation.get(name).stage,'stopped');
+  assert.equal(app.emitted.filter(event=>/^xy-[12]$/.test(event.name)).length,0);
+});

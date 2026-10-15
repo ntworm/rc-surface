@@ -384,8 +384,61 @@
     return { usable: true, state: null };
   }
 
+  // Projection alone cannot identify a partly curled finger: three varied
+  // takes may cross both projection cutoffs and leave no categorical veto.
+  // The turns at PIP/DIP (thumb IP) retain that local articulation without
+  // adding dimensions, changing saved banks or diluting it in a hand average.
+  function jointBend(descriptor, base, tip) {
+    const distance = (a, b) => Math.hypot(descriptor[a * 2] - descriptor[b * 2],
+      descriptor[a * 2 + 1] - descriptor[b * 2 + 1]);
+    const palm = MCP_LANDMARKS.reduce((sum, mcp) => sum + distance(0, mcp), 0) / 4;
+    if (palm < 1e-6 || distance(5, 17) / palm < .15) return null;
+    let previous = null, bend = 0;
+    for (let point = base; point < tip; point++) {
+      const segment = [descriptor[(point + 1) * 2] - descriptor[point * 2],
+        descriptor[(point + 1) * 2 + 1] - descriptor[point * 2 + 1]];
+      // A hidden/collapsed bone has no observable angle. Do not interpret it
+      // as a straight joint, even if other segments still give a valid reach.
+      if (Math.hypot(...segment) < palm * .015) return null;
+      if (previous) bend += Math.abs(Math.atan2(previous[0] * segment[1] - previous[1] * segment[0],
+        previous[0] * segment[0] + previous[1] * segment[1]));
+      previous = segment;
+    }
+    return bend * 180 / Math.PI;
+  }
+
+  function learnedJointEvidence(descriptor, samples, base, tip) {
+    const required = Math.max(2, Math.floor(samples.length / 2) + 1);
+    const learned = samples.map(sample => jointBend(sample, base, tip)).filter(value => value !== null);
+    // Degenerate legacy descriptors carry no joint evidence to infer.
+    if (learned.length < required) return { contradiction: false, fingerUncertain: false };
+    const current = jointBend(descriptor, base, tip);
+    if (current === null || (base === 2 && thumbState(descriptor).state === null)) {
+      return { contradiction: false, fingerUncertain: true };
+    }
+    let uncertain = false;
+    // Only separated, clearly different articulations veto. The wide gaps
+    // leave normal curl/foreshortening variation to the existing learned
+    // metric, including the supported loose Rock curl. Thumb IP is a single
+    // hinge; four-finger values sum two hinges and need a wider straight band.
+    for (const [low, high] of [[base === 2 ? 8 : 15, base === 2 ? 22 : 40], [75, 125]]) {
+      const lower = learned.filter(value => value <= low).length;
+      const upper = learned.filter(value => value >= high).length;
+      if ((lower >= required && current >= high) || (upper >= required && current <= low)) {
+        return { contradiction: true, fingerUncertain: false };
+      }
+      if (lower >= 2 && upper >= 2 && lower < required && upper < required) uncertain = true;
+    }
+    return { contradiction: false, fingerUncertain: uncertain };
+  }
+
   function learnedFingerEvidence(descriptor, samples) {
     let uncertain = false;
+    for (const [base, tip] of [[2, 4], [5, 8], [9, 12], [13, 16], [17, 20]]) {
+      const joints = learnedJointEvidence(descriptor, samples, base, tip);
+      if (joints.contradiction) return joints;
+      uncertain ||= joints.fingerUncertain;
+    }
     for (const base of MCP_LANDMARKS) {
       const current = fingerProjection(descriptor, base);
       const learned = samples.map((sample) => fingerProjection(sample, base));

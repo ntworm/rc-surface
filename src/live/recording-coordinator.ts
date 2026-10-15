@@ -113,6 +113,7 @@ export class RecordingCoordinator extends EventEmitter {
       captureVerified: false, preflightComplete: false,
       selected: this.selected, point: this.point, preparedToken: this.preparedToken, range: this.range,
       cohort: this.cohort, trackPending: this.trackMutation?.name ?? null,
+      attemptActive: Boolean(this.preRoll || this.punch || this.armedByRecorder.length),
       loopRegion: {start: this.value('loopStart'), length: this.value('loopLength')},
       safety: Object.fromEntries(flags.map(key => [key, this.value(key)])),
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
@@ -390,7 +391,7 @@ export class RecordingCoordinator extends EventEmitter {
   public async trackControl(expected: TrackRef, property: 'arm' | 'solo' | 'mute', enabled: boolean, armMode: 'multi' | 'exclusive' = 'multi', context?: CommandExecutionContext) {
     this.requireContext(context); const ref = this.trackRef(expected);
     if (!['arm','solo','mute'].includes(property) || typeof enabled !== 'boolean' || !['multi','exclusive'].includes(armMode)) fail('ARGUMENTS');
-    if (this.trackMutation || this.operation?.name === 'stop') fail('BUSY');
+    if (this.trackMutation || ['stop','rename'].includes(this.operation?.name ?? '')) fail('BUSY');
     if (property === 'arm') {
       this.idle(context);
       return this.run('tracks',context,async operation => {
@@ -431,6 +432,57 @@ export class RecordingCoordinator extends EventEmitter {
       await observe(enabled);this.check(operation);
     } finally {if(this.trackMutation===operation)this.trackMutation=null;}
     return this.snapshot();
+  }
+  public async renameTrack(expected: TrackRef, value: unknown, context?: CommandExecutionContext) {
+    this.requireContext(context);const ref=this.trackRef(expected);
+    if(typeof value!=='string' || !value.trim() || value.trim().length>128 || /[\u0000-\u001f\u007f-\u009f]/.test(value)) fail('NAME');
+    const name=value.trim();this.idle(context);
+    const idle=()=>{if(this.preRoll || this.punch || this.armedByRecorder.length)fail('STOP_REQUIRED');};
+    idle();
+    return this.run('rename',context,async operation=>{
+      const song=this.currentSong();
+      await this.read(operation);if(this.getSong()!==song)fail('IDENTITY');this.identities([ref]);this.stopped();idle();
+      const track=song.tracks[ref.index]!;
+      this.check(operation);if(this.getSong()!==song)fail('IDENTITY');
+      if(name===ref.name)return;
+      // Track.name is the SDK's transactional setter; never rename via an
+      // invented OSC endpoint or replay an unconfirmed name after reconnect.
+      const selected=this.selected;
+      // The setter may apply before throwing or confirmation may fail. Retire
+      // old names first; only fresh confirmation may restore the selection.
+      if(selected?.index===ref.index && selected.id===ref.id)this.selected=null;
+      this.cohort=null;this.strictCohort=false;
+      track.name=name;this.preparedToken=null;
+      await new Promise<void>((resolve,reject)=>{
+        let done=false,retry:ReturnType<typeof setTimeout>|undefined;
+        const revision=this.revision;
+        const finish=(error?:unknown)=>{if(done)return;done=true;clearTimeout(timer);clearTimeout(retry);this.off('observation',changed);operation.abort.signal.removeEventListener('abort',abort);if(error)reject(error);else resolve();};
+        const abort=()=>finish(operation.abort.signal.reason);
+        const guard=()=>{
+          this.check(operation);
+          const current=this.getSong();
+          if(current!==song || current.tracks[ref.index]!==track || String(track.handle.id)!==ref.id
+            || current.tracks.filter(item=>String(item.handle.id)===ref.id).length!==1
+            || ![ref.name,name].includes(track.name))fail('IDENTITY');
+        };
+        const changed=()=>{
+          try {
+            guard();if((this.observed.get('names')?.revision??0)<=revision)return;
+            const names=this.value('names');
+            if(!Array.isArray(names) || names.length!==song.tracks.length)return;
+            if(![ref.name,name].includes(names[ref.index]))fail('IDENTITY');
+            if(names[ref.index]===name && track.name===name)finish();
+          } catch(error){finish(error);}
+        };
+        const poll=()=>{if(done)return;try {guard();this.osc.send(CLIP.getTrackNames);if(!done)retry=setTimeout(poll,100);}catch(error){finish(error);}};
+        const timer=setTimeout(()=>finish(Error('REC:RENAME_UNCONFIRMED')),RECORDING_CONFIRM_MS);
+        this.on('observation',changed);operation.abort.signal.addEventListener('abort',abort,{once:true});poll();
+      });
+      this.check(operation);
+      if(this.getSong()!==song || song.tracks[ref.index]!==track)fail('IDENTITY');
+      this.identities([{...ref,name}]);
+      if(selected?.index===ref.index && selected.id===ref.id && this.selected===null)this.selected={...ref,name};
+    });
   }
   private punchContext(owner: PunchOwner, operation: Operation): void {
     this.check(operation);

@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 (function (root) {
   'use strict';
-  const WRITES = new Set(['recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
+  const WRITES = new Set(['recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
   function positionToBeats(bar, beat, meter) {
     const numerator = meter?.numerator, denominator = meter?.denominator;
@@ -103,6 +103,28 @@
       const tracks=view.state?.tracks;
       return view.fresh&&tracks?.every(track=>typeof track.arm==='boolean')?tracks.filter(track=>track.arm===true&&track.canArm===true):[];
     }
+    const canRename=view=>canControl(view,'arm') && !view.state?.attemptActive;
+    function editName(entry,index,id) {
+      const view=client.view(),track=view.state?.tracks.find(track=>track.index===index&&track.id===id);
+      if(entry.editor || !track || !canRename(view))return;
+      const input=doc.createElement('input');input.type='text';input.className='rec-track-name-input';input.maxLength=128;
+      input.value=track.name;input.setAttribute('aria-label',t('renameTrack'));
+      const editor={input,expected:{index,id,name:track.name},pending:false};entry.editor=editor;
+      const close=()=>{if(entry.editor!==editor)return;entry.editor=null;entry.name.replaceChildren();render(client.view());entry.name.focus?.();};
+      input.addEventListener('keydown',event=>{
+        if(!['Enter','Escape'].includes(event.key))return;
+        event.preventDefault();event.stopPropagation();
+        if(event.key==='Escape' && !editor.pending){close();return;}
+        if(event.key!=='Enter' || editor.pending || !canRename(client.view()))return;
+        editor.pending=true;input.readOnly=true;
+        client.command('recordingRenameTrack',{track:editor.expected,name:input.value}).then(close).catch(()=>{
+          if(entry.editor===editor){editor.pending=false;input.readOnly=!canRename(client.view());}
+        });
+      });
+      // Blur deliberately has no save behavior. Polling keeps this input and
+      // its draft intact; only Enter sends the exact reference captured here.
+      entry.name.replaceChildren(input);input.focus?.();input.select?.();
+    }
     function renderTracks(view) {
       const tracks=view.state?.tracks||[],signature=JSON.stringify(tracks.map(track=>[track.index,track.id]));
       for(const track of tracks) {
@@ -122,9 +144,16 @@
             row.appendChild(button);buttons[property]=button;
           }
           cards.set(key,{card,name,buttons});
+          const entry=cards.get(key);
+          name.tabIndex=0;name.setAttribute('role','button');
+          name.addEventListener('dblclick',()=>editName(entry,track.index,track.id));
+          name.addEventListener('keydown',event=>{if(event.target===name && event.key==='Enter'){event.preventDefault();editName(entry,track.index,track.id);}});
         }
         const entry=cards.get(key),label=(track.index+1)+' · '+track.name;
-        if(entry.name.textContent!==label)entry.name.textContent=label;entry.name.title=track.name;
+        if(!entry.editor && entry.name.textContent!==label)entry.name.textContent=label;
+        if(entry.editor)entry.editor.input.readOnly=entry.editor.pending || !canRename(view);
+        entry.name.title=track.name+' · '+t('renameTrack');entry.name.setAttribute('aria-label',t('renameTrack')+' · '+track.name);
+        entry.name.setAttribute('aria-disabled',String(!canRename(view)));
         for(const property of ['arm','solo','mute']) {
           const button=entry.buttons[property],label=t(property==='arm'?'armShort':property);
           if(button.textContent!==label)button.textContent=label;

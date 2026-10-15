@@ -51,7 +51,13 @@ test('REC plan draws a scaled timeline with end gutters, complete controls and t
 });
 
 test('PERF AUT and VID plan describe the accepted source options rather than retired page/bank inventories',()=>{
-  const automation=read('static/phone-v3/xy-automation.js');assert.match(automation,/\[1,2,4\]\.includes\(entry.bars\)/);assert.match(automation,/\[10,20\]\.includes\(entry.seconds\)/);
+  const automation={};vm.runInNewContext(read('static/phone-v3/xy-automation.js'),automation);
+  const {validate,create}=automation.RcXYAutomation;
+  assert.equal(create().saved.bars,2);assert.equal(create().saved.seconds,10);
+  for(const timing of ['sync','free'])for(const [bars,seconds] of [[1,1],[3,15],[5,30]]) {
+    const settings={timing,bars,seconds};assert.equal(JSON.stringify(validate(settings)),JSON.stringify(settings));
+  }
+  for(const settings of [{timing:'sync',bars:6,seconds:10},{timing:'free',bars:2,seconds:31},{timing:'free',bars:2,seconds:1.5}])assert.throws(()=>validate(settings));
   for(const file of ['docs/index.html','docs/pt-br.html']) {
     const perf=figure(read(file),'perf'),vid=figure(read(file),'vid');
     assert.match(perf,/data-aut-xy-controls="independent"/);assert.match(perf,/AUT · XY 1/);assert.match(perf,/AUT · XY 2/);
@@ -62,7 +68,7 @@ test('PERF AUT and VID plan describe the accepted source options rather than ret
     assert.match(vid,/PALM 0\.28/);assert.match(vid,/FACE -0\.60/);
   }
   for(const locale of ['en','pt-BR']) {
-    assert.match(catalog['lp.map.autFlow'][locale],/SYNC.*1\/2\/4.*FREE.*10\/20/);
+    assert.match(catalog['lp.map.autFlow'][locale],/SYNC.*1–5.*FREE.*1–30/);
     assert.match(catalog['lp.map.131'][locale],/0–1/);assert.match(catalog['lp.map.131'][locale],/Safe loss/);
   }
 });

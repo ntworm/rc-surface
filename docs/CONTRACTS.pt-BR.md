@@ -360,6 +360,23 @@ Quantização de clip tem enum separado (`0=Global`, `1=None`, `2..14`);
 
 ## Persistência e transporte REC/AUT 2.0
 
+AUT aceita FREE de 1–30 segundos inteiros e SYNC de 1–5 compassos. Os padrões
+continuam 10 segundos/2 compassos; loops anteriores de 10 ou 20 segundos seguem
+válidos. Navegador, persistência no host, presets e importação usam a mesma
+validação; formato salvo e limite de 1024 pares não mudam. Abrir ajustes
+passivamente não arma, toca nem emite valores XY.
+
+`recordingRenameTrack` é um comando `live-write` para controller/admin, com
+argumentos exatos `{track:{index,id,name},name}`. O nome na referência é o antigo
+esperado; o novo é aparado, com 1–128 caracteres e sem controles C0/DEL/C1.
+O setter SDK Track.name escreve uma vez após observar identidade/estado parado;
+observação limitada do nome nativo confirma a alteração. Renomear é serializado
+com outras escritas REC, bloqueia durante tentativa REC/pré-roll própria e cede ao
+STOP prioritário. Só metadados antigos do conjunto não bloqueiam após STOP.
+Mudanças de sessão/link/Set ou identidade aposentam a confirmação sem repetir.
+Renomear não altera arm, solo, mute ou transporte. Enter salva, Escape cancela;
+polling mantém rascunho/foco e sair do campo não salva.
+
 Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido.
 
 REC envia `tracks` como conjunto ordenado não vazio de referências `{index,id,name}` (até 256); o backend confirma todas as identidades, armabilidade, ARM e ausência de ARM externo. Comandos legados de uma faixa são normalizados. ARM MULTI preserva outras entradas; EXCLUSIVE age somente no ARM explícito e confirma o conjunto inteiro. SOLO/MUTE usam confirmação GET serializada sem interromper o pré-roll. STOP nativo tem prioridade e desarma apenas identidades pertencentes à tentativa.
@@ -367,3 +384,9 @@ REC envia `tracks` como conjunto ordenado não vazio de referências `{index,id,
 Punch In tem baseline/desired/expected e posse por Song/sessão/conexão: ON no pré-roll, OFF no início direto; restauração somente se ainda próprio e sem edição externa observada. Pré-roll usa compasso observado e locator existente exato ou SDK temporário, removido e confirmado antes de armar/tocar. `count_in_duration` é somente leitura. Perda de sessão/link/Set nunca repete cleanup. Captura de áudio e preservação de takes não são provadas pela observação de record mode.
 
 VID expõe até quinze identidades de pose, três a seis exemplos cada. Avisos de captura são orientativos, sem hard veto novo; Note/Clip/Watchdog mantêm seus contratos existentes. PALM e FACE entram como controles 0–1; FACE vem de orientação palma/dorso, não de rastreamento facial. Ausência/não finito emite `lost:true` e usa Safe loss, sem inventar uma medição neutra.
+
+O reconhecimento também verifica contradições locais nas articulações com apoio
+da maioria do banco. Dobras intermediárias mantêm tolerância aprendida; juntas
+colapsadas ou de perfil não fornecem nova evidência angular. Formato dos
+descritores/banco, distância, calibração, presets e tempos de hold/release/perda
+não mudam. Isso não recupera anatomia oculta ou incorreta nos landmarks da câmera.

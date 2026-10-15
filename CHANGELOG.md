@@ -6,6 +6,10 @@ intermediate release records are intentionally not published.
 
 ## 2.0.0 — local release preparation (unpublished)
 
+- Distinguish clearly different local finger bends, including the thumb, with majority-supported joint evidence so one finger cannot disappear in the whole-hand match. Preserve natural curl tolerance, saved descriptors, calibration and recognition/loss timing; hidden or incorrect camera landmarks remain a physical-test limit.
+- Expand AUT to integer FREE durations of 1–30 seconds via a themed slider and SYNC lengths of 1–5 bars. Preserve 10-second/2-bar defaults, old saved durations, bounded buffers and stopped restores across browser, project, preset and snapshot paths.
+- Rename REC tracks inline by double-clicking the name, Enter to confirm and Escape to cancel. Keep polling drafts/focus; validate exact index/id/old name, serialize the SDK name setter and confirm it without arm/solo/mute/transport writes. Block owned recording attempts and preserve priority STOP.
+
 - Add REC track cards with observed ARM/SOLO/MUTE, cumulative ARM MULTI and explicit ARM EXCLUSIVE. Record the verified armed input set, including ten-input workflows; STOP disarms only that attempt's identities. Configure and confirm Punch In automatically for both direct and pre-roll starts, restoring only the owned original setting.
 - Warn when three to six learned-pose captures have clear finger disagreements without a majority; general RETAKE reviews the latest capture and KEEP remains advisory. Preserve recognition evaluation and timing. Add PALM/FACE to the lower MAP strip and phone/panel/admin catalogs, with normalized parameter/note/clip inputs and existing Safe loss handling.
 - Fix pre-roll resuming at Live's previous stopped position despite a successful song-time readback. Establish the native playback start with an exact existing locator or a temporary SDK-owned locator, remove/verify the temporary locator before arming or Play, then start record-off playback before native Punch In. Preserve original locators and block unconfirmed cleanup; STOP stays immediate and SDK waits are bounded.

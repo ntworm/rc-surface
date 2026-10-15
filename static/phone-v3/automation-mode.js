@@ -36,7 +36,10 @@
         get:()=>saved[key],set:value=>perform(()=>automation.configure(name,{[key]:value}))}});
       return [
         choice('timing',tr('cfg.clock','Timing'),['sync','free']),
-        saved.timing==='sync'?choice('bars',tr('aut.bars','Bars'),[1,2,4]):choice('seconds',tr('aut.seconds','Seconds'),[10,20]),
+        saved.timing==='sync'?choice('bars',tr('aut.bars','Bars'),[1,2,3,4,5]):{slider:{
+          label:tr('aut.seconds','Seconds'),min:1,max:30,step:1,get:()=>saved.seconds,
+          set:value=>perform(()=>automation.configure(name,{seconds:value})),format:value=>value+' s',
+        }},
         {action:{label:tr('aut.record','Record / replace'),run:()=>perform(()=>{automation.arm(name);selecting=false;mode.close();})}},
         {action:{label:tr('aut.play','Play loop'),run:()=>perform(()=>automation.play(name))}},
         {action:{label:tr('aut.stop','Stop loop'),run:()=>automation.stop(name)}},

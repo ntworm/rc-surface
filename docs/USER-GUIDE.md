@@ -1055,6 +1055,13 @@ or FINGER SHAPE DIFFERS. Adjust the angle or repair conflicting captures;
 a thumb hidden in an edge-on view is not reliable evidence. Small curls
 within the same finger state retain learned tolerance. Existing v9 takes
 remain saved, including conflicting banks; repair those deliberately.
+Joint bends also provide local evidence for each finger, including the thumb:
+a majority of at least two clear captures can distinguish a straight chain,
+a partial bend and a deep curl even when the fingertip projection varies.
+Intermediate bends retain learned tolerance. Collapsed joints and an edge-on
+palm cannot supply reliable angles. This uses the saved coordinates without
+changing the bank format or hold/release times; it cannot recover a hidden
+finger when the camera landmarks describe a different shape.
 Missing-hand frames preserve an active pose; unconfirmed candidates expire after grace. Camera-corrected version 9 saves with 42/47 coordinates load without recapture; version 8 requires recapture. TEST uses the same compatibility check as live recognition.
 The recapture warning survives local saves, camera restarts and project restores until a successful new capture or an explicit CLR for that pose.
 Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
@@ -1147,7 +1154,7 @@ stopped:
 1. Use the track cards below the timeline to arm your inputs. Each card shows
    the observed **ARM / SOLO / MUTE** state. **ARM MULTI** is the default and
    keeps other inputs armed; **ARM EXCLUSIVE** disarms other tracks only when
-   you press a track's ARM. Changing this mode or clicking a name does not
+   you press a track's ARM. Changing this mode or single-clicking a name does not
    change Live. Groups have SOLO/MUTE but cannot be armed. Live's global arm
    preference is unchanged; an incompatible host arm result is reported.
 2. Choose the start marker. Each marker shows its **bar.beat** above its name.
@@ -1164,6 +1171,13 @@ REC records exactly the armed tracks shown in the cards. It is disabled with
 no armed inputs and verifies the entire set again before recording. ARM changes
 are blocked during recording or pre-roll; SOLO/MUTE remain available for
 listening. A newly armed third-party track is never adopted for STOP cleanup.
+
+Double-click a track name to edit it in place (keyboard: focus the name and
+press Enter). Enter confirms; Escape cancels. Leaving the field does not save.
+Polling preserves the draft and focus. Names use 1–128 characters, trimmed,
+without control characters. Renaming changes only that exact track's name;
+an external rename, replaced/reordered track or Set change rejects a stale edit.
+Stop an owned REC/pre-roll attempt with the surface STOP before renaming.
 
 To listen, click a marker in the strip or choose the start marker, then use
 **Play in the header**. Selecting a marker uses Live's native marker jump, so
@@ -1232,9 +1246,13 @@ and mobile touch still require acceptance on your Live setup.
 
 ## AUT: XY gesture loops
 
+SYNC offers five bar buttons (1–5 bars). FREE uses a slider for 1–30 seconds
+in steps of one second. Defaults remain 2 bars and 10 seconds; saved 10 or 20 second
+loops keep their duration.
+
 **AUT** beside MAP/CFG selects automation recording for XY1 or XY2. While AUT is on, both XY targets are highlighted and each has an **AUT** configuration button above its movement area, including empty XY loops. Tap that button to open settings, tap it again to close, or use the other XY's button to switch targets. It never starts capture or changes a loop. The LOOP/REC/countdown status stays inside the XY, separate from this button. Enter and Space also activate the focused button.
 
-To record, enable AUT and tap the XY movement area: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Right-click the XY (phone: hold without moving for 600ms) still opens configuration. Settings include **SYNC / FREE**, **1/2/4 bars** or **10/20 seconds**, Record/replace, Play, Stop and Clear. Choosing a menu action or dismissing the menu resumes normal performance; toggling the same AUT configuration button closed keeps target selection active. Opening configuration emits no control. MAP, AUT and CFG stay visible in the header. Their selections are exclusive; leaving AUT selection does not stop an existing loop.
+To record, enable AUT and tap the XY movement area: the selection mode closes so your next touches can perform normally. Three red pulses count 3–2–1, a steady red border marks capture, and the completed movement immediately loops. Right-click the XY (phone: hold without moving for 600ms) still opens configuration. Settings include **SYNC / FREE**, **1–5 bars** or **1–30 seconds in steps of one second**, Record/replace, Play, Stop and Clear. Choosing a menu action or dismissing the menu resumes normal performance; toggling the same AUT configuration button closed keeps target selection active. Opening configuration emits no control. MAP, AUT and CFG stay visible in the header. Their selections are exclusive; leaving AUT selection does not stop an existing loop.
 
 SYNC uses Live's observed playback position, tempo and time signature, with receipt time retained independently of MAP rendering. Count/capture require Live playing and a fresh clock. Play/pause commands wait for Live confirmation; unrelated tempo/beat messages cannot confirm them. A stale position listener is recovered independently of other incoming OSC traffic. Captured data is aligned to the song grid. During playback, seeks and Live loop wraps follow the current song position; Live STOP pauses an enabled SYNC loop, and Play resumes at the real position. A stopped/stale clock, seek, loop wrap or meter change during **capture** cancels that attempt and retains the previous completed buffer. For a capture spanning multiple bars, leave Live's Arrangement Loop off until capture completes. A meter change during playback stops the loop. FREE uses elapsed seconds and ignores the Live transport.
 

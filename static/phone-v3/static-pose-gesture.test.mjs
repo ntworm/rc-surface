@@ -8,7 +8,13 @@ import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 
 function load() {
-  const source = fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8');
+  let source = fs.readFileSync(path.join(import.meta.dirname, 'safe-input-layer.js'), 'utf8');
+  // Mutation proofs alter only this VM's source, never the product file.
+  if (process.env.RC_VISION_MUTATION) {
+    const mutation = JSON.parse(process.env.RC_VISION_MUTATION);
+    assert.ok(source.includes(mutation.from), 'mutation target exists');
+    source = source.replace(mutation.from, mutation.to);
+  }
   const context = { window: null, globalThis: null };
   context.window = context;
   context.globalThis = context;
@@ -84,6 +90,84 @@ function frames(descriptor, count = 8, jitter = 0.002) {
   return Array.from({ length: count }, (_, frame) => descriptor.map((value, index) =>
     value + Math.sin(frame * 1.7 + index * 0.31) * jitter));
 }
+
+// Independent joint-chain fixture: lengths stay fixed as the PIP/DIP (or
+// thumb IP) bend. Unlike a fingertip-only edit, every intermediate landmark
+// participates in the bend measured by the recognizer.
+function articulatedFinger(finger, bendDegrees, { mcpDegrees = 12, scale = 1, radians = 0 } = {}) {
+  const landmarks = handPose({ thumb: 1 });
+  const base = { thumb: 2, index: 5, middle: 9, ring: 13, pinky: 17 }[finger];
+  const count = finger === 'thumb' ? 2 : 3;
+  const lengths = Array.from({ length: count }, (_, index) => Math.hypot(
+    landmarks[base + index + 1].x - landmarks[base + index].x,
+    landmarks[base + index + 1].y - landmarks[base + index].y));
+  let angle = Math.atan2(landmarks[base + 1].y - landmarks[base].y,
+    landmarks[base + 1].x - landmarks[base].x) + (finger === 'thumb' ? -mcpDegrees : mcpDegrees) * Math.PI / 180;
+  for (let index = 0; index < count; index++) {
+    if (index) angle += bendDegrees * Math.PI / 180 / (count - 1);
+    landmarks[base + index + 1] = { x: landmarks[base + index].x + lengths[index] * Math.cos(angle),
+      y: landmarks[base + index].y + lengths[index] * Math.sin(angle), z: 0 };
+  }
+  return transform2D(landmarks, { scale, radians, x: .1, y: -.1 });
+}
+
+for (const finger of ['thumb', 'index', 'middle', 'ring', 'pinky']) {
+  test(`${finger} joint support distinguishes a partial bend from straight and deep curls`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const shape = (bend, options) => normalizeHandPose(articulatedFinger(finger, bend, options));
+    for (const target of [50, 145]) {
+      const library = new GestureLibrary(performanceOptions);
+      for (const [index, offset] of [-4, 0, 4].entries()) library.learn('G1', frames(shape(target + offset,
+        { mcpDegrees: 12 + index * 3, scale: .8 + index * .2, radians: index * .18 })));
+      assert.equal(library.evaluate(shape(target, { mcpDegrees: 17, scale: 1.3, radians: -.3 })).accepted, true,
+        'same bank accepts its target with natural angle/scale variation');
+      for (const other of target === 50 ? [0, 145] : [0, 50]) {
+        const wrong = shape(other);
+        assert.equal(library.evaluate(wrong).accepted, false, 'changing only one finger cannot inherit the whole-hand match');
+        assert.equal(library.evaluate(wrong).contradiction, true, 'visible joint contradiction also applies during HOLD');
+      }
+      const saved = JSON.parse(JSON.stringify(library.toJSON()));
+      for (const dims of [42, 47]) {
+        const copy = JSON.parse(JSON.stringify(saved));
+        copy.templates[0].samples = copy.templates[0].samples.map(sample => sample.slice(0, dims));
+        const restored = GestureLibrary.fromJSON(copy, performanceOptions);
+        assert.equal(restored.evaluate(shape(target)).accepted, true);
+        assert.equal(restored.evaluate(shape(target === 50 ? 145 : 50)).accepted, false);
+        assert.equal(restored.sampleCount('G1'), 3);
+      }
+    }
+  });
+
+  test(`${finger} joint support survives an extra opposing take and treats a collapsed joint as unknown`, () => {
+    const { GestureLibrary, normalizeHandPose } = load();
+    const shape = angle => normalizeHandPose(articulatedFinger(finger, angle));
+    const library = new GestureLibrary(performanceOptions);
+    for (const angle of [48, 52, 0]) library.learn('G1', frames(shape(angle)));
+    assert.equal(library.evaluate(shape(50)).accepted, true);
+    assert.equal(library.evaluate(shape(0)).accepted, false, 'two clear bends are still supported by a strict bank majority');
+    const hidden = articulatedFinger(finger, 50), base = { thumb: 2, index: 5, middle: 9, ring: 13, pinky: 17 }[finger];
+    hidden[base + 1] = { ...hidden[base] };
+    const evaluation = library.evaluate(normalizeHandPose(hidden));
+    assert.equal(evaluation.accepted, false, 'a collapsed observed bone is not evidence for a new onset');
+    assert.equal(evaluation.fingerUncertain, true);
+    assert.equal(library.recognize(shape(50), 0), null);
+    assert.equal(library.recognize(shape(50), 120)?.name, 'G1');
+    library.recognize(normalizeHandPose(hidden), 200);
+    assert.equal(library.activeName, 'G1', 'unknown geometry alone does not retrigger or immediately release');
+    library.recognize(shape(0), 300); library.recognize(shape(0), 441);
+    assert.equal(library.activeName, null, 'a persistent visible contradiction still releases with the original timer');
+  });
+}
+
+test('varied partial pinky captures cannot silently lose identity between projection classes', () => {
+  const { GestureLibrary, normalizeHandPose } = load();
+  const shape = pinky => normalizeHandPose(handPose({ thumb: 1, pinky }));
+  const library = new GestureLibrary(performanceOptions);
+  for (const curl of [.665, .7, .735]) library.learn('G1', frames(shape(curl)));
+  assert.equal(library.evaluate(shape(.7)).accepted, true);
+  assert.equal(library.evaluate(shape(1)).accepted, false);
+  assert.equal(library.evaluate(shape(1)).contradiction, true);
+});
 
 const performanceOptions = { threshold: .176, minimumConfidence: .52, ambiguityRatio: 1.25,
   holdMs: 120, releaseMs: 140, releaseRatio: 1.10, unknownGraceMs: 140 };

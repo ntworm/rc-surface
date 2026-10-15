@@ -23,6 +23,7 @@ test('REC phone viewer/read-only guard sends reads but blocks every write locall
   await assert.rejects(client.command('recordingStart',{token:'x'}),/SESSION/);
   await assert.rejects(client.command('recordingRecord',{}),/SESSION/);
   await assert.rejects(client.command('recordingTrackControl',{}),/SESSION/);
+  await assert.rejects(client.command('recordingRenameTrack',{}),/SESSION/);
   await assert.rejects(client.command('recordingSeekMarker',{name:'Verse',time:8}),/SESSION/);
   assert.equal(calls.length,0);
   const read=client.command('getRecordingState'); calls[0].cb({ok:true,result:{transport:{}}}); await read;
@@ -255,6 +256,45 @@ test('REC grid observes ten inputs, preserves cards/focus on polling and sends e
   h.calls.at(-1).cb({ok:true,result:{...state,pending:'record',preRoll:{phase:'running'},transport:{...state.transport,isPlaying:{value:true,fresh:true},recordMode:{value:true,fresh:true}}}});await h.flush();
   assert.equal(arm.disabled,true);assert.equal(h.buttons(0)[1].disabled,false);assert.equal(h.buttons(0)[2].disabled,false);
   h.buttons(0)[2].listeners.get('click')();assert.equal(h.calls.at(-1).args.property,'mute');assert.equal(h.calls.at(-1).args.enabled,true);
+});
+
+test('REC name editor preserves its draft through polling, saves only Enter and cancels with Escape',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();await h.seed(state);
+  const card=h.node('rec-track-grid').children[0],name=card.children[0],event=key=>({key,preventDefault(){},stopPropagation(){}});
+  let before=h.calls.length;name.listeners.get('dblclick')();assert.equal(h.calls.length,before);
+  const input=name.children[0];assert.equal(input.value,'Input 1');input.value='Drum Bus';
+  await h.seed({...state,tracks:state.tracks.map(track=>({...track,solo:true}))});
+  assert.equal(name.children[0],input);assert.equal(input.value,'Drum Bus');
+  input.listeners.get('keydown')(event('Escape'));assert.equal(name.children.length,0);
+  name.listeners.get('dblclick')();const retry=name.children[0];retry.value='Drum Bus';
+  before=h.calls.length;retry.listeners.get('keydown')(event('Enter'));
+  assert.equal(h.calls.length,before+1);assert.equal(h.calls.at(-1).name,'recordingRenameTrack');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.calls.at(-1).args)),{track:{index:0,id:'11',name:'Input 1'},name:'Drum Bus'});
+  assert.equal(retry.readOnly,true);await h.client.command('getRecordingState');assert.equal(h.calls.length,before+1);
+  const updated={...state,tracks:state.tracks.map((track,index)=>index?track:{...track,name:'Drum Bus'})};
+  h.calls.at(-1).cb({ok:true,result:updated});await h.flush();
+  assert.equal(name.children.length,0);assert.equal(name.textContent,'1 · Drum Bus');assert.equal(h.node('rec-track-grid').children[0],card);
+});
+
+test('REC editor keeps an externally stale name as a draft and sends its original identity, never a blur save',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();await h.seed(state);
+  const name=h.node('rec-track-grid').children[0].children[0];name.listeners.get('dblclick')();const input=name.children[0];input.value='Draft';
+  await h.seed({...state,tracks:state.tracks.map((track,index)=>index?track:{...track,name:'External'})});
+  assert.equal(name.children[0],input);assert.equal(input.value,'Draft');assert.equal(input.listeners.has('blur'),false);
+  input.listeners.get('keydown')({key:'Enter',preventDefault(){},stopPropagation(){}});
+  assert.equal(h.calls.at(-1).args.track.name,'Input 1');
+  h.calls.at(-1).cb({ok:false,error:'REC:IDENTITY'});await h.flush();assert.equal(input.value,'Draft');
+  input.listeners.get('keydown')({key:'Escape',preventDefault(){},stopPropagation(){}});
+  assert.equal(name.textContent,'1 · External');
+});
+
+test('REC name editing rechecks permissions, stale state and active ownership without blocking a cached cohort',async t=>{
+  const h=gridHarness(t);h.client.session(true,'viewer');const state=h.state();await h.seed(state);
+  const name=h.node('rec-track-grid').children[0].children[0];name.listeners.get('dblclick')();assert.equal(name.children.length,0);
+  h.client.session(true,'controller');await h.seed({...state,attemptActive:true});
+  const current=h.node('rec-track-grid').children[0].children[0];current.listeners.get('dblclick')();assert.equal(current.children.length,0);
+  await h.seed({...state,attemptActive:false,cohort:[state.tracks[0]]});h.age();current.listeners.get('dblclick')();assert.equal(current.children.length,0);
+  await h.seed({...state,attemptActive:false,cohort:[state.tracks[0]]});current.listeners.get('dblclick')();assert.equal(current.children.length,1);
 });
 test('REC grid rejects viewer/stale/busy/playing ARM, keeps group SOLO/MUTE, and retires old clicks',async t=>{
   const h=gridHarness(t);h.client.session(true,'viewer');let state=h.state();state.tracks[1].canArm=false;await h.seed(state);

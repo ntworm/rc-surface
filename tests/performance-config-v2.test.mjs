@@ -16,6 +16,8 @@ const performance = {
   }])),
   xy: {'xy-1':{behavior:'physics',friction:.004,bounce:.7,speed:2},
     'xy-2':{behavior:'static',friction:.04,bounce:.3,speed:.5}},
+  automation:{version:1,xy:{'xy-1':{timing:'free',bars:3,seconds:1,points:[0,0,65535,65535]},
+    'xy-2':{timing:'sync',bars:5,seconds:30,points:[65535,0,0,65535]}}},
 };
 test('version 2 project and preset round-trip all eight slots and both independent XY configurations', async()=>{
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'rc-performance-v2-'));
@@ -36,6 +38,9 @@ test('version 2 project and preset round-trip all eight slots and both independe
     await commands.saveProjectClientState.handler({preferences:{performance:{version:2,slots:{}}}});
     await commands.loadPreset.handler({name:'complete'});
     assert.deepEqual(getProjectConfigStatus().preferences.performance,performance);
+    await commands.saveProjectClientState.handler({preferences:{performance:{version:2,slots:{}}}});
+    await commands.importProjectConfig.handler({content:exported.content});
+    assert.deepEqual(getProjectConfigStatus().preferences.performance,performance,'project import keeps expanded AUT durations');
     assert.equal(controlMappings.get('toggle-8')[0].outMin,48);
     assert.equal(await fs.readFile(path.join(dir,'mappings.json'),'utf8'),'legacy data left untouched');
     await assert.rejects(commands.importProjectConfig.handler({content:{...project,version:1}}),/Invalid .rcsurface/);
@@ -67,8 +72,15 @@ test('automation bank persists bounded XY data only, never runtime flags or fore
   const automation={version:1,xy:{'xy-1':{timing:'sync',bars:2,seconds:10,points:[0,0,65535,65535]}}};
   assert.equal(validatePerformanceSettings({version:2,slots:{},automation}).automation,automation);
   for(const entry of [{...automation.xy['xy-1'],playing:true},{...automation.xy['xy-1'],points:Array(2050).fill(0)},
-    {...automation.xy['xy-1'],points:[0,0,NaN,0]}, {...automation.xy['xy-1'],bars:3}]) {
+    {...automation.xy['xy-1'],points:[0,0,NaN,0]}, {...automation.xy['xy-1'],bars:6}]) {
     assert.throws(()=>validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'xy-1':entry}}}));
   }
   assert.throws(()=>validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'pad-1':automation.xy['xy-1']}}}));
+  for(const seconds of Array.from({length:30},(_,index)=>index+1))for(const bars of [1,2,3,4,5]) {
+    const entry={...automation.xy['xy-1'],seconds,bars};
+    assert.equal(validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'xy-1':entry}}}).automation.xy['xy-1'],entry);
+  }
+  for(const [key,values]of [['seconds',[0,31,1.5,'10',true,NaN,Infinity]],['bars',[0,6,2.5,'3',true,NaN,Infinity]]])for(const bad of values) {
+    assert.throws(()=>validatePerformanceSettings({version:2,slots:{},automation:{version:1,xy:{'xy-1':{...automation.xy['xy-1'],[key]:bad}}}}));
+  }
 });

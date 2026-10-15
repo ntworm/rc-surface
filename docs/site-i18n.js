@@ -1643,8 +1643,8 @@
       'pt-BR': "AUT · loops de movimento XY",
     },
     'lp.map.autFlow': {
-      en: "AUT selects XY1/XY2; their separate AUT buttons open settings without recording. SYNC captures 1/2/4 bars from Live’s fresh playing clock; FREE captures 10/20 seconds. Play/Stop are explicit; manual touch overrides a playing loop until release. Saved points never auto-play after reconnect. This loops control data, not native Arrangement automation.",
-      'pt-BR': "AUT seleciona XY1/XY2; os botões AUT separados abrem ajustes sem gravar. SYNC captura 1/2/4 compassos pelo clock atual do Live tocando; FREE captura 10/20 segundos. Reproduzir/Parar são explícitos; o toque assume o loop até soltar. Pontos salvos não retomam após reconectar. São dados de controle, não automação nativa do Arrangement.",
+      en: "AUT selects XY1/XY2; their separate AUT buttons open settings without recording. SYNC captures 1–5 bars from Live’s fresh playing clock; FREE captures 1–30 seconds in steps of one second. Play/Stop are explicit; manual touch overrides a playing loop until release. Saved points never auto-play after reconnect. This loops control data, not native Arrangement automation.",
+      'pt-BR': "AUT seleciona XY1/XY2; os botões AUT separados abrem ajustes sem gravar. SYNC captura 1–5 compassos pelo clock atual do Live tocando; FREE captura 1–30 segundos em passos de um segundo. Reproduzir/Parar são explícitos; o toque assume o loop até soltar. Pontos salvos não retomam após reconectar. São dados de controle, não automação nativa do Arrangement.",
     },
     'lp.rec.title': {
       en: "REC — Arrangement recording",

@@ -7,8 +7,9 @@
   const mod=(value,total)=>((value%total)+total)%total;
   const clamp=value=>Math.max(0,Math.min(1,value));
   function validate(entry) {
-    if(!entry || !['sync','free'].includes(entry.timing) || ![1,2,4].includes(entry.bars)
-      || ![10,20].includes(entry.seconds) || Object.keys(entry).some(key=>!['timing','bars','seconds','points'].includes(key))) throw new Error('Invalid XY automation settings');
+    if(!entry || !['sync','free'].includes(entry.timing) || !Number.isInteger(entry.bars) || entry.bars<1 || entry.bars>5
+      || !Number.isInteger(entry.seconds) || entry.seconds<1 || entry.seconds>30
+      || Object.keys(entry).some(key=>!['timing','bars','seconds','points'].includes(key))) throw new Error('Invalid XY automation settings');
     if(entry.points!==undefined && (!Array.isArray(entry.points) || entry.points.length<4
       || entry.points.length>MAX_PAIRS*2 || entry.points.length%2
       || entry.points.some(value=>!Number.isInteger(value) || value<0 || value>65535))) throw new Error('Invalid XY automation points');
