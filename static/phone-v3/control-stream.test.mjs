@@ -130,3 +130,17 @@ test('congested/overflowing discrete events close for host safe loss rather than
   for (let i = 0; i < 140; i++) flood.stream.push({ name: 'pad-1', value: i % 2 });
   assert.equal(flood.socket.readyState, 3);
 });
+
+
+test('tracking metadata reaches the host for added poses G4 through G15',()=>{
+  const f=fixture();
+  for(let i=4;i<=15;i++) {
+    f.stream.push({name:`sensor.vision.gesture.${i}`,value:1,tracking:{seq:i,qualified:true,graceMs:140}});
+    f.tick(8);
+  }
+  const controls=f.sent.flatMap(frame=>frame.controls);
+  assert.equal(controls.length,12);
+  assert.ok(controls.every((control,i)=>control.tracking.seq===i+4));
+  f.stream.push({name:'sensor.vision.gesture.16',value:1,tracking:{seq:16,qualified:true,graceMs:140}});
+  f.tick(8);assert.equal(f.sent.flatMap(frame=>frame.controls).length,12);
+});

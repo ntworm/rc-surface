@@ -425,6 +425,7 @@
 
     function onPointerDownCapture(ev) {
       if (!state.on) return;
+      if (ev.button !== undefined && ev.button !== 0) {state.pointerDownAnchor=null;return;}
       if (!isCfgPageTarget(ev.target)) return;
       // Already inside the menu: let it through so close button works.
       if (ev.target.closest && ev.target.closest(`#${MENU_ID}`)) return;
@@ -436,6 +437,7 @@
 
     function onPointerUpCapture(ev) {
       if (!state.on) return;
+      if (ev.button !== undefined && ev.button !== 0) return;
       if (!state.pointerDownAnchor) return;
       const startName = controlName(documentRef.querySelector && documentRef.querySelector(`[data-name="${cssEscape(controlNameFromTarget(ev.target) || "")}"]`));
       const name = startName || controlName(ev.target);
@@ -471,6 +473,7 @@
 
     function onOutsidePointerDown(ev) {
       if (!state.on || !state.openFor) return;
+      if (ev.button === 2 && isCfgPageTarget(ev.target)) return;
       if (!menu()) return;
       if (ev.target.closest && ev.target.closest(`#${MENU_ID}`)) return;
       close();

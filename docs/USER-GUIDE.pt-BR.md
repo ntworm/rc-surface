@@ -973,9 +973,9 @@ cor do quadro inteiro são diagnóstico interno e não são canais de mapeamento
 A ausência da mão preserva a pose aprendida ativa como **LAST KNOWN**. Um
 candidato ainda não confirmado expira depois de `unknownGraceMs` (140 ms por
 padrão); após uma ausência longa, precisa cumprir o hold completo para seu
-primeiro ON. Eixos e detectores básicos informam perda imediatamente. G1–G3
+primeiro ON. Eixos e detectores básicos informam perda imediatamente. G1–G15
 informam perda somente após essa tolerância; cada mapping aplica Safe loss.
-VID → ⚙ oferece três políticas para gates de notas G1–G3: **Manter sem limite**,
+VID → ⚙ oferece três políticas para gates de notas G1–G15: **Manter sem limite**,
 **Manter com prazo** e **Soltar na perda**. Projetos novos usam **10 s**;
 o campo aceita 0,1–30 s, passo 0,1 s. Projetos antigos conservam comportamento
 herdado até escolha explícita. Safe loss por alvo pode soltar antes; hold do alvo
@@ -1139,3 +1139,12 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 Para problemas mais complexos de instalação (certificados, rede, instalação), veja
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
+
+
+## Performance 2.0: configurações individuais e banco de poses
+
+Clique direito novamente no mesmo controle fecha seu CFG. Clique direito em outro controle troca diretamente para sua configuração. Arrasto oferece Muito curto (60px), Curto (100px), Médio (150px) e Longo (300px); Nível ao tocar oferece Zero, Baixo (25%), Médio (50%) e Máximo. Curvas de resposta A/B/C e C Lembrar último / Fixo continuam individuais. Esses valores controlam o nível enviado ao destino, não a velocidade das notas MIDI.
+
+No modo D, cada toggle tem **Duração do burst** e ataque próprios, independentes da subdivisão da onda (período de cada ciclo). A duração pode seguir o ajuste compartilhado, usar valor musical fixo em SYNC ou milissegundos em FREE. A seção recolhida mostra a duração selecionada. O modo D herdado de Global apresenta os mesmos ajustes. Pins persistem em projetos, presets e snapshots; abrir CFG nunca dispara controles.
+
+VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta slots até G15. O banco tem rolagem vertical; os cards mantêm a altura antes da captura, após reconhecimento, durante avisos sobre exemplos e depois de CLR. CLR apaga exemplos da pose, preservando seu slot e ID de mapping. Nomes e exemplos existentes são preservados. Cada pose continua exigindo três exemplos e aceita até seis. Novos slots usam `sensor.vision.gesture.4` até `.15` no MAP e no painel da extensão, com as mesmas regras de qualificação, MIDI e perda de tracking dos três slots iniciais. Esta expansão de interface não reajusta classificador, guardas de polegar nem tempos de captura/reconhecimento. Aceite físico da câmera continua necessário.

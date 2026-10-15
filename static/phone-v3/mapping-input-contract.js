@@ -46,7 +46,7 @@
         'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
         'sensor.vision.rotateVal', 'sensor.vision.open',
         'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',
-        'sensor.vision.gesture.1', 'sensor.vision.gesture.2', 'sensor.vision.gesture.3',
+        ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`),
       ]),
     }),
   ]);

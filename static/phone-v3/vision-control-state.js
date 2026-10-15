@@ -6,7 +6,8 @@
   'use strict';
 
   const DETECTORS = ['open', 'fist', 'pinch', 'victory'];
-  const SLOT_COUNT = 3;
+  const INITIAL_SLOTS = 3;
+  const MAX_SLOTS = 15;
 
   function cleanName(value) {
     return typeof value === 'string' ? value.trim().slice(0, 32) : '';
@@ -14,7 +15,7 @@
 
   function normalizeVisionGestureTemplates(templates) {
     if (!Array.isArray(templates)) return [];
-    return templates.slice(0, SLOT_COUNT).map((template) => ({
+    return templates.slice(0, MAX_SLOTS).map((template) => ({
       ...template,
       samples: Array.isArray(template?.samples) ? template.samples.slice(0, 6) : [],
     }));
@@ -27,7 +28,8 @@
       const templateNames = Array.isArray(gestureTemplates)
         ? gestureTemplates.map((template) => cleanName(template?.name)).filter(Boolean)
         : [];
-      this.slots = Array.from({ length: SLOT_COUNT }, (_, index) => ({
+      const count = Math.min(MAX_SLOTS,Math.max(INITIAL_SLOTS,savedSlots.length,templateNames.length));
+      this.slots = Array.from({ length: count }, (_, index) => ({
         id: index + 1,
         name: cleanName(savedSlots[index]?.name) || templateNames[index] || `Gesture ${index + 1}`,
       }));
@@ -50,13 +52,21 @@
       return slot;
     }
 
+    addSlot() {
+      if (this.slots.length >= MAX_SLOTS) return null;
+      const id=this.slots.length+1;
+      const slot={id,name:`Gesture ${id}`};
+      this.slots.push(slot);
+      return slot;
+    }
+
     slotForGesture(name) {
       const normalized = cleanName(name).toLowerCase();
       return this.slots.find((slot) => slot.name.toLowerCase() === normalized) || null;
     }
 
     controlForSlot(id) {
-      return id >= 1 && id <= SLOT_COUNT ? `sensor.vision.gesture.${id}` : null;
+      return Number.isInteger(id) && id >= 1 && id <= this.slots.length ? `sensor.vision.gesture.${id}` : null;
     }
 
     describeHand(hand) {
@@ -79,5 +89,6 @@
 
   global.VisionControlState = VisionControlState;
   global.VISION_DETECTORS = DETECTORS.slice();
+  global.VISION_MAX_LEARNED_POSES = MAX_SLOTS;
   global.normalizeVisionGestureTemplates = normalizeVisionGestureTemplates;
 })(typeof window !== 'undefined' ? window : globalThis);

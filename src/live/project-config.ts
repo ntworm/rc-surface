@@ -87,6 +87,7 @@ export function validatePerformanceSettings(value: unknown): Record<string, any>
   const ranges: Record<string, [number, number]> = {
     rate: [0, 1], depth: [0, 1], count: [0, 1], subdivision: [0, 32],
     swing: [0, .66], phaseOffset: [-4, 4],
+    burstSubdivision:[.03125,32],burstDurationMs:[34,10000],burstAttackRatio:[.05,.5],
   };
   const shapes = new Set(['sine', 'triangle', 'ramp_up', 'ramp_down', 'square']);
   for (const [name, entry] of Object.entries(value.slots)) {

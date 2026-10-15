@@ -137,7 +137,7 @@ test('admin mappings expose only current canonical phone controls', () => {
     'sensor.vision.fist', 'sensor.vision.pinch', 'sensor.vision.victory',
     'sensor.vision.rotateVal', 'sensor.vision.open',
     'sensor.vision.pinch_x', 'sensor.vision.pinch_y', 'sensor.vision.pinch_z',
-    'sensor.vision.gesture.1', 'sensor.vision.gesture.2', 'sensor.vision.gesture.3',
+    ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`),
   ]);
   assert.equal(byGroup.has('Expression (' + 'Rib' + 'bons 1-2)'), false);
   const controls = groups.flatMap((g) => g.items);
@@ -184,8 +184,8 @@ test('admin project refresh keeps numbered learned gesture slots', () => {
   assert.ok(vision);
   assert.deepEqual(
     Array.from(vision.items.filter((name) => name.startsWith('sensor.vision.gesture.'))),
-    ['sensor.vision.gesture.1', 'sensor.vision.gesture.2', 'sensor.vision.gesture.3'],
-    'template names label the three learned slots; they must not create wire IDs the phone never emits',
+    Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`),
+    'template names label stable learned slots; they must not create wire IDs the phone never emits',
   );
 });
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {VisionLossWatchdog, visionLossPolicy, validVisionTracking} from '../src/live/vision-loss.ts';
+import {VisionLossWatchdog, visionLossPolicy, validVisionTracking, learnedPose} from '../src/live/vision-loss.ts';
 function rig(mode='timeout') {
   let now=0, policy=visionLossPolicy(), seq=0, id=0;
   policy.mode=mode;
@@ -61,4 +61,18 @@ test('shortening/increasing/switching policy keeps the original qualified deadli
   assert.equal(long.released.length,0);long.advance(20000);assert.equal(long.released.length,1);
   const hold=rig();hold.sample();hold.advance(1000);hold.policy.mode='hold';hold.watchdog.refresh();hold.advance(30000);
   assert.equal(hold.released.length,0);hold.policy.mode='release';hold.watchdog.refresh();hold.advance(30000);assert.equal(hold.released.length,1);
+});
+
+
+test('every added learned pose retains qualification, deadline and release semantics',()=>{
+  const r=rig();
+  for(let i=1;i<=15;i++) {
+    const name=`sensor.vision.gesture.${i}`;
+    assert.equal(r.watchdog.observe('a',name,1,false,{seq:i*2-1,qualified:false,graceMs:140}),false);
+    assert.equal(r.watchdog.observe('a',name,1,false,{seq:i*2,qualified:true,graceMs:140}),true);
+  }
+  r.advance(10000);
+  assert.equal(r.released.length,15);
+  assert.deepEqual(r.released.map(args=>args[1]),Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`));
+  assert.equal(learnedPose('sensor.vision.gesture.16'),false);
 });

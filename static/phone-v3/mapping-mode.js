@@ -2096,7 +2096,7 @@
     // Safe loss notice
     const safeLossNotice = document.createElement('div');
     safeLossNotice.className = 'map-safe-loss-note';
-    safeLossNotice.textContent = state.selectedControl && /^sensor\.vision\.gesture\.[123]$/.test(state.selectedControl)
+    safeLossNotice.textContent = state.selectedControl && /^sensor\.vision\.gesture\.(?:[1-9]|1[0-5])$/.test(state.selectedControl)
       ? T('settings.ceiling', 'Applies to learned-pose note gates. Safe loss per target can release earlier.')
       : T('mm.safeLossNote', 'Signal loss releases active notes and cancels pending triggers.');
     advBody.appendChild(safeLossNotice);

@@ -1,4 +1,4 @@
-// Copyright © 2026 Gabriel Worm
+// Copyright Â© 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Source: https://github.com/ntworm/rc-surface
 //
@@ -127,7 +127,7 @@ class FakeElement {
   }
   // Closest walks up parentNode looking for an element matching
   // selector. Uses matchesSelector() which supports tag.class, .cls,
-  // #id and [attr="value"] — enough for the bumpGroupActivity path and
+  // #id and [attr="value"] â€” enough for the bumpGroupActivity path and
   // any future test that needs parent-chain resolution.
   closest(selector) {
     let cur = this;
@@ -140,8 +140,8 @@ class FakeElement {
   matchesSelector(selector) {
     const sel = selector;
     // Compound selector support for the patterns bumpGroupActivity and
-    // friends actually use. We split on the parts that matter — class
-    // tokens and `[attr="value"]` selectors — and require every one to
+    // friends actually use. We split on the parts that matter â€” class
+    // tokens and `[attr="value"]` selectors â€” and require every one to
     // match. Wildcards and combinators are intentionally not handled
     // because the production code never asks for them in tests.
     const parts = sel.split(/(?=[.[])/).filter(Boolean);
@@ -158,7 +158,7 @@ class FakeElement {
       const attrMatch = part.match(/^\[([a-zA-Z0-9_-]+)(?:=["']?([^"']*)["']?)?]$/);
       if (attrMatch) {
         const [, name, value] = attrMatch;
-        // Real DOM maps `data-control-key` ↔ `dataset.controlKey` (camel
+        // Real DOM maps `data-control-key` â†” `dataset.controlKey` (camel
         // case). Probe several spellings so attribute selectors match
         // either convention; see the module-level helper for the same
         // behaviour.
@@ -248,7 +248,7 @@ function matchesSelector(el, selector) {
   // Mirror of the FakeElement.matchesSelector() prototype method, kept
   // as a top-level helper so queryWithin() can call it without spinning
   // through the class every time. Keep both implementations in lockstep
-  // when adding new selector shapes — they cover the same surface.
+  // when adding new selector shapes â€” they cover the same surface.
   if (selector === '[data-url]') return Object.prototype.hasOwnProperty.call(el.dataset, 'url');
   if (selector.startsWith('.')) {
     // Allow compound `.cls[attr="value"]` selectors that the live code
@@ -263,7 +263,7 @@ function matchesSelector(el, selector) {
       const attrMatch = part.match(/^\[([a-zA-Z0-9_-]+)(?:=["']?([^"']*)["']?)?]$/);
       if (attrMatch) {
         const [, name, value] = attrMatch;
-        // Real DOM maps `data-control-key` ↔ `dataset.controlKey` (camel
+        // Real DOM maps `data-control-key` â†” `dataset.controlKey` (camel
         // case). Our FakeElement stores dataset as a plain object so the
         // key was set as `dataset.controlKey = "pad-1"` and never as
         // `data-control-key`. Build a small set of candidate spellings
@@ -405,7 +405,7 @@ test('Connect control groups render expanded controls as sensor cells with corre
   // Four legacy channels (rms, envelope, gate, attack) plus the twelve
   // descriptors; the pitch lane is dormant and no longer offered.
   assert.equal(byGroup.get('AUDIO')?.dataset.count, '16');
-  assert.equal(byGroup.get('HANDS')?.dataset.count, '14');
+  assert.equal(byGroup.get('HANDS')?.dataset.count, '26');
   assert.equal(byGroup.get('PADS')?.dataset.count, '12');
   assert.equal(byGroup.get('XY PADS')?.dataset.count, '4');
   assert.equal(byGroup.get('LFOs')?.dataset.count, '8');
@@ -724,7 +724,7 @@ test('setTextIfPresent skips writes when the DOM id is missing (A1 followup)', (
   // 'absent' was a no-op; absence of throw above is the proof.
 });
 
-// ─── A5 empty / inactive states ────────────────────────────────────────────
+// â”€â”€â”€ A5 empty / inactive states â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 test('A5: a freshly rendered ctrl-group starts Inactive and switches to Active on first live value', () => {
@@ -733,7 +733,7 @@ test('A5: a freshly rendered ctrl-group starts Inactive and switches to Active o
   const padsGroup = document.getElementById('ctrl-groups').children
     .find((g) => g.dataset && g.dataset.group === 'PADS');
   assert.ok(padsGroup, 'PADS group must render in buildCtrlGroups');
-  // Default state — no live values have flowed yet.
+  // Default state â€” no live values have flowed yet.
   assert.equal(padsGroup.dataset.active, '0');
   assert.equal(padsGroup.dataset.hasData, undefined,
     'no data-has-data should be set on a never-bumped group');
@@ -742,8 +742,8 @@ test('A5: a freshly rendered ctrl-group starts Inactive and switches to Active o
   assert.equal(statusEl.textContent, 'Inactive');
 
   // Drive the live-update path through processClientSensors so the test
-  // exercises the same path users hit (control update → updateControlCell
-  // → bumpGroupActivity) rather than poking at internals directly.
+  // exercises the same path users hit (control update â†’ updateControlCell
+  // â†’ bumpGroupActivity) rather than poking at internals directly.
   context.processClientSensors({
     latest: {
       sensors: {},
@@ -798,7 +798,9 @@ test('dashboard catalog keeps public audio descriptors and only stable vision ge
   for (const descriptor of ['transient', 'kick', 'snare', 'brightness', 'centroid', 'flux', 'flatness', 'spread', 'rolloff', 'low', 'mid', 'high']) {
     assert.ok(keys.includes('sensor.audio.' + descriptor));
   }
-  for (const slot of [1, 2, 3]) assert.match(source, new RegExp(`sensor\\.vision\\.gesture\\.${slot}`));
+  const hands=document.getElementById('ctrl-groups').children.find(g=>g.dataset.group==='HANDS');
+  const handKeys=hands.querySelector('.ctrl-group-list').children.map(cell=>cell.dataset.controlKey);
+  for(let slot=1;slot<=15;slot++) assert.ok(handKeys.includes(`sensor.vision.gesture.${slot}`));
   for (const dormant of ['sensor.audio.pitch', 'sensor.audio.note', 'sensor.audio.bpm',
     'sensor.audio.clarity', 'sensor.audio.whistle.bend']) {
     assert.ok(!keys.includes(dormant), dormant + ' is dormant and must not be offered for mapping');
@@ -817,7 +819,7 @@ test('Connect HANDS group exposes only intentional camera controls', () => {
   assert.ok(hands, 'HANDS group must render');
   assert.equal(
     hands.dataset.count,
-    '14',
+    '26',
     'HANDS must carry hand X/Y/Z, opt-in detectors, rotate, pinch clutch, and learned gestures',
   );
   for (const retired of ['sensor.vision.palm', 'sensor.vision.face', 'sensor.vision.fingers']) {

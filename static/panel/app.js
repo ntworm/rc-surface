@@ -157,7 +157,7 @@ const allControlsGrouped = {
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
     "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
     "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
-    "sensor.vision.gesture.1", "sensor.vision.gesture.2", "sensor.vision.gesture.3"
+    ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`)
   ],
 
   Pads: [
@@ -237,9 +237,7 @@ function getControlDisplayName(ctrl) {
       rotateVal: "Victory Rotate",
       open:    "Open",
       fingers: "Fingers",
-      "gesture.1": "Gesture Slot 1",
-      "gesture.2": "Gesture Slot 2",
-      "gesture.3": "Gesture Slot 3",
+      ...Object.fromEntries(Array.from({length:15},(_,i)=>[`gesture.${i+1}`,`Gesture Slot ${i+1}`])),
       "color.r": "Color R",
       "color.g": "Color G",
       "color.b": "Color B",
@@ -605,7 +603,7 @@ function buildCtrlGroups() {
     "sensor.vision.x", "sensor.vision.y", "sensor.vision.z",
     "sensor.vision.fist", "sensor.vision.pinch", "sensor.vision.victory", "sensor.vision.rotateVal", "sensor.vision.open",
     "sensor.vision.pinch_x", "sensor.vision.pinch_y", "sensor.vision.pinch_z",
-    "sensor.vision.gesture.1", "sensor.vision.gesture.2", "sensor.vision.gesture.3"
+    ...Array.from({length:15},(_,i)=>`sensor.vision.gesture.${i+1}`)
   ];
   const audioKeys = [
     // The pitch lane (pitch, note, bpm, clarity, whistle bend) is dormant: it
@@ -870,7 +868,7 @@ function processClientSensors(msg) {
       updateSensorLiveControl("sensor.vision.pinch_x", controlsMap.get("sensor.vision.pinch_x") ?? 0.5);
       updateSensorLiveControl("sensor.vision.pinch_y", controlsMap.get("sensor.vision.pinch_y") ?? 0.5);
       updateSensorLiveControl("sensor.vision.pinch_z", controlsMap.get("sensor.vision.pinch_z") ?? 0.5);
-      for (let slot = 1; slot <= 3; slot += 1) {
+      for (let slot = 1; slot <= 15; slot += 1) {
         const key = `sensor.vision.gesture.${slot}`;
         updateSensorLiveControl(key, controlsMap.get(key) ?? 0);
       }

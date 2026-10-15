@@ -1101,6 +1101,7 @@
     const cfg = window.RcConfigMode.create({
       controlConfig: window.RcControlConfig.create({ storage: window.localStorage }),
     });
+    const burstDivisions=[[32,'8'],[16,'4'],[8,'2'],[4,'1'],[2,'1/2'],[1,'1/4'],[.5,'1/8'],[.25,'1/16'],[.125,'1/32'],[.0625,'1/64']];
     // Register MIX builders: knob / fader / XY1 / XY2.
     cfg.register(/^knob-\d+$/, (name) => {
       const isMacro = (document.querySelector(`[data-name="${name}"]`)?.classList || { contains: () => false }).contains('macro');
@@ -1154,9 +1155,11 @@
       const mode=window.getControlMode?.(name) || get('mode',document.body.dataset.padMode || 'A');
       const rows=[choice('mode',tr('cfg.mode','Mode'),[global,...['A','B','C','D'].map(value=>({label:value,value}))])];
       if(mode!=='D') {
-        rows.push(slider('padRange',tr('cfg.padRange','Drag travel'),40,400,10,150,value=>`${value}px`),
+        rows.push(choice('padRange',tr('cfg.padRange','Drag travel'),[[60,'veryShort','Very short'],[100,'short','Short'],[150,'medium','Medium'],[300,'long','Long']]
+          .map(([value,key,label])=>({value,label:tr('cfg.'+key,label)})),150),
           choice('padCurve',tr('cfg.padCurve','Response'),[['linear','Linear'],['fine','Fine'],['fast','Fast']].map(([value,label])=>({value,label:tr('cfg.'+value,label)})),'linear'));
-        if(mode==='A') rows.push(slider('padTouchValue',tr('cfg.touchLevel','Touch level'),0,1,.01,0));
+        if(mode==='A') rows.push(choice('padTouchValue',tr('cfg.touchLevel','Touch level'),[[0,'zero','Zero'],[.25,'low','Low'],[.5,'medium','Medium'],[1,'maximum','Maximum']]
+          .map(([value,key,label])=>({value,label:tr('cfg.'+key,label)})),0));
         if(mode==='B') rows.push(choice('padLatchTapReset',tr('cfg.tapAction','Tap without drag'),[
           {label:tr('cfg.keepValue','Keep value'),value:false},{label:tr('cfg.resetZero','Reset to zero'),value:true}],false));
         if(mode==='C') {
@@ -1167,15 +1170,18 @@
         }
       } else {
         rows.push(choice('syncMode',tr('cfg.clock','Timing'),[global,{label:'SYNC',value:'sync'},{label:'FREE',value:'free'}]));
-        if(get('syncMode',window.syncMode)==='sync') rows.push({details:{label:tr('cfg.burstLength','Burst length'),items:[
-          choice('burstSubdivision',tr('cfg.division','Subdivision'),[global,...[[4,'1'],[2,'1/2'],[1,'1/4'],[.5,'1/8'],[.25,'1/16'],[.125,'1/32'],[.0625,'1/64']].map(([value,label])=>({value,label}))]),
-        ]}});
+        if(get('syncMode',window.syncMode)==='sync') {
+          const values=burstDivisions;
+          const beats=get('burstSubdivision',window.syncSettings.burstSubdivision);
+          const label=values.find(([value])=>value===beats)?.[1] || String(beats);
+          rows.push({details:{label:`${tr('cfg.burstLength','Burst length')} · ${label}`,items:[
+            choice('burstSubdivision',tr('cfg.division','Subdivision'),[global,...values.map(([value,label])=>({value,label}))]),
+          ]}});
+        }
         else rows.push(slider('burstDurationMs',tr('cfg.burstDuration','Duration (ms)'),40,10000,10,520,value=>`${value}ms`));
         rows.push(slider('burstAttackRatio',tr('cfg.burstAttack','Attack'),.05,.5,.005,
           get('syncMode',window.syncMode)==='sync'?window.syncSettings.burstAttackRatio:70/520,value=>`${Math.round(value*100)}%`),
         slider('burstPeak',tr('cfg.burstPeak','Peak level'),.15,1,.01,1));
-        const shape=window.resolveBurstShape?.(name);
-        if(shape)rows.push({info:{text:tr('cfg.effectiveBurst','Effective burst')+`: ${Math.max(1000/30,shape.durationMs).toFixed(0)}ms / ${tr('cfg.burstAttack','Attack')} ${Math.max(1,Math.min(shape.attackMs,Math.max(1000/30,shape.durationMs)*.9)).toFixed(0)}ms`}});
       }
       rows.push({action:{label:tr('cfg.resetToDefault','Reset to default'),run:()=>cc.clear(name)}});
       return rows;
@@ -1238,6 +1244,17 @@
               .map(([value,label])=>({value,label,disabled:!groups.get(base).has(value)})),
             get:()=>explicit?feel:null,set:value=>cc.set(name,{subdivision:groups.get(base).get(value)})}},
         ]}});
+      }
+      if(window.getControlMode?.(name)==='D') {
+        const sync=cc.get(name,'syncMode',window.syncMode)==='sync';
+        const beats=cc.get(name,'burstSubdivision',window.syncSettings.burstSubdivision);
+        const value=sync ? burstDivisions.find(([value])=>value===beats)?.[1] || String(beats)
+          : `${cc.get(name,'burstDurationMs',520)}ms`;
+        const items=sync ? [choices('burstSubdivision',tr('cfg.division','Subdivision'),[global,...burstDivisions.map(([value,label])=>({value,label}))])]
+          : [slider('burstDurationMs',tr('cfg.burstDuration','Duration (ms)'),40,10000,10,520)];
+        items.push(slider('burstAttackRatio',tr('cfg.burstAttack','Attack'),.05,.5,.005,
+          sync?window.syncSettings.burstAttackRatio:70/520));
+        rows.push({details:{label:`${tr('cfg.burstLength','Burst length')} · ${value}`,items}});
       }
       const advanced=[slider('phaseOffset',tr('cfg.phase','Phase (beats)'),-4,4,.125,
         pulse?window.syncSettings.pulsePhaseOffset:window.syncSettings.lfoPhaseOffset)];
@@ -1842,7 +1859,7 @@
     };
     window.onVisionTriggerNoteState = (message) => {
       if (!String(message?.control || '').startsWith('sensor.vision.')) return;
-      if (badgePose && /^sensor\.vision\.gesture\.[123]$/.test(message.control)
+      if (badgePose && /^sensor\.vision\.gesture\.(?:[1-9]|1[0-5])$/.test(message.control)
         && badgePose !== `G${String(message.control).split('.').at(-1)}`) return;
       const next = String(message.state || '');
       badgeNoteState = ['pending', 'held', 'sent', 'cancelled', 'unavailable'].includes(next)
@@ -1867,9 +1884,7 @@
       { name: 'sensor.vision.pinch_x', value: 0.5 },
       { name: 'sensor.vision.pinch_y', value: 0.5 },
       { name: 'sensor.vision.pinch_z', value: 0.5 },
-      { name: 'sensor.vision.gesture.1', value: 0 },
-      { name: 'sensor.vision.gesture.2', value: 0 },
-      { name: 'sensor.vision.gesture.3', value: 0 },
+      ...Array.from({length:15},(_,i)=>({name:`sensor.vision.gesture.${i+1}`,value:0})),
     ]);
     const emitVisionSignalLoss = (includePoses = true) => {
       if (!window.onControl) return;
@@ -2117,6 +2132,7 @@
         visionLoss,
       };
       visionControls = new window.VisionControlState(visionSafetyConfig.visionControls, visionSafetyConfig.gestures?.templates || []);
+      syncGestureSlotCards();
       if (confidenceSelect) {
         let conf = visionSafetyConfig.confidence;
         if (conf === 0.2) conf = 'low';
@@ -2321,7 +2337,9 @@
       poseCaptureTimer = setTimeout(() => finishGestureCapture(false), POSE_CAPTURE_MS);
     };
 
-    gestureSlotCards.forEach((card) => {
+    function bindGestureSlotCard(card) {
+      if(card.dataset.poseBound) return;
+      card.dataset.poseBound='1';
       const slotId = Number(card.dataset.gestureSlot);
       const learnButton = card.querySelector('.vision-slot-learn');
       const testButton = card.querySelector('.vision-slot-test');
@@ -2402,6 +2420,37 @@
         persistVisionSafety();
         renderVisionControlState();
       });
+    }
+    function syncGestureSlotCards() {
+      const container=document.querySelector('.vision-pose-grid');
+      const template=gestureSlotCards[0];
+      if(!container || !template) return;
+      for(const card of [...gestureSlotCards]) if(Number(card.dataset.gestureSlot)>visionControls.slots.length) {
+        card.remove();gestureSlotCards.splice(gestureSlotCards.indexOf(card),1);
+      }
+      for(const slot of visionControls.slots) {
+        if(gestureSlotCards.some(card=>Number(card.dataset.gestureSlot)===slot.id)) continue;
+        const card=template.cloneNode(true);
+        card.dataset.gestureSlot=String(slot.id);card.dataset.name=`sensor.vision.gesture.${slot.id}`;
+        delete card.dataset.poseBound;
+        card.querySelector('header span').textContent=`G${slot.id}`;
+        card.classList.remove('recording','testing','recognized');
+        const learn=card.querySelector('.vision-slot-learn');
+        if(learn) learn.textContent=T('js.capturePose', 'CAPTURE POSE');
+        const test=card.querySelector('.vision-slot-test');
+        test?.classList.remove('active');test?.setAttribute('aria-pressed','false');
+        card.querySelector('.vision-slot-neighbor')?.classList.add('hidden');
+        container.appendChild(card);gestureSlotCards.push(card);bindGestureSlotCard(card);
+      }
+      const add=document.getElementById('btn-add-learned-pose');
+      if(add) add.disabled=visionControls.slots.length>=window.VISION_MAX_LEARNED_POSES;
+    }
+    gestureSlotCards.forEach(bindGestureSlotCard);
+    syncGestureSlotCards();
+    document.getElementById('btn-add-learned-pose')?.addEventListener('click',()=>{
+      if(!visionControls.addSlot()) return;
+      syncGestureSlotCards();persistVisionSafety();renderVisionControlState();
+      gestureSlotCards.at(-1)?.scrollIntoView?.({block:'nearest'});
     });
     renderVisionControlState();
 

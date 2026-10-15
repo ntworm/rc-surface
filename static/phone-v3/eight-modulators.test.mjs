@@ -482,3 +482,41 @@ test('first candidate forced mode overrides and retired waveform are not restore
  assert.equal(ctx.RcControlConfig.get('toggle-1','mode',null),null);
  assert.equal(ctx.getModulatorShape('toggle-1'),'sine');
 });
+
+
+test('pad travel and touch level are four direct choices without sliders or helper copy',()=>{
+  const ctx=loadControls('toggle-5',{withPads:true}).context;
+  ctx.RcControlConfig.set('pad-1',{mode:'A'});
+  const rows=configRows(ctx,'pad-1');
+  const travel=rows.find(row=>row.segment?.label==='Drag travel').segment;
+  const touch=rows.find(row=>row.segment?.label==='Touch level').segment;
+  assert.deepEqual(Array.from(travel.options,option=>option.value),[60,100,150,300]);
+  assert.deepEqual(Array.from(touch.options,option=>option.value),[0,.25,.5,1]);
+  travel.set(60);touch.set(.5);
+  assert.equal(ctx.RcControlConfig.get('pad-1','padRange'),60);
+  assert.equal(ctx.RcControlConfig.get('pad-1','padTouchValue'),.5);
+  assert.equal(rows.some(row=>row.info || row.slider),false);
+});
+
+test('toggle D burst duration is separate from wave subdivision and survives restore',()=>{
+  const app=loadControls();const ctx=app.context;
+  ctx.RcControlConfig.set('toggle-1',{mode:'D',syncMode:'sync',subdivision:.5});
+  const burst=()=>configRows(ctx,'toggle-1').find(row=>row.details?.label.startsWith('Burst length'))?.details;
+  burst().items[0].segment.set(32);
+  burst().items[1].slider.set(.5);
+  assert.equal(ctx.RcControlConfig.get('toggle-1','subdivision'),.5);
+  ctx.controlSetters['toggle-1'](1);
+  assert.equal(ctx.modulatorStates.get('toggle-1').burstUntil,16000);
+  const saved=JSON.parse(JSON.stringify(ctx.PerformanceSettings.capture()));
+  assert.equal(saved.slots['toggle-1'].burstSubdivision,32);
+  assert.equal(saved.slots['toggle-1'].burstAttackRatio,.5);
+  ctx.RcControlConfig.clear('toggle-1');ctx.PerformanceSettings.applyHost(saved);
+  assert.equal(ctx.RcControlConfig.get('toggle-1','burstSubdivision'),32);
+  ctx.RcControlConfig.set('toggle-1',{syncMode:'free'});
+  burst().items[0].slider.set(2000);
+  assert.equal(ctx.RcControlConfig.get('toggle-1','burstDurationMs'),2000);
+  ctx.RcControlConfig.set('toggle-1',{mode:'A'});
+  assert.equal(burst(),undefined);
+  ctx.RcControlConfig.set('toggle-1',{mode:null});ctx.setPadMode('D');
+  assert.ok(burst(),'Global D also exposes its burst settings');
+});

@@ -3835,40 +3835,45 @@ body.mapping-mode [data-name].selected-control {
 }
 .vision-studio-head span { font-size: 10px; color: #8e8e8e; }
 
-/* Three stacked rows: one line per pose leaves the width to the camera. */
-.vision-gesture-slots {
-  flex: 1 1 0;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-}
+/* Pose cards keep a stable footprint; the bank scrolls as poses are added. */
+.vision-gesture-slots,
 .vision-pose-grid {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  grid-auto-rows: 248px;
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
-
+#btn-add-learned-pose {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  background: var(--surface-soft);
+  font: inherit;
+}
 /*
- * One slot = one row.
- *
- *   [ G1 ] [ CAP ] [ TEST ] [ DEL LAST ] [ CLR ]
- *   [ 0/3] Empty · capture 3...                  <-- status line
+ * Stable card geometry reserves status, neighbor and outlier feedback rows.
+ * Only the list scrolls; capture and CLR do not resize individual cards.
  */
 .vision-gesture-slot {
   min-width: 0;
-  min-height: 0;
+  min-height: 248px;
+  height: 248px;
+  box-sizing: border-box;
   overflow: hidden;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: 91px 20px 32px 64px;
   align-items: stretch;
-  gap: 2px 6px;
-  padding: 3px 5px;
+  gap: 4px 6px;
+  padding: 8px;
   border-radius: 0;
   background: #1f1f1f;
   border: 1px solid #34343a;
@@ -3901,7 +3906,7 @@ body.mapping-mode [data-name].selected-control {
   border-radius: 0;
 }
 
-/* ── Slot action buttons: one row of four ─────────────────────────────── */
+/* Four actions in two rows keep touch targets usable on narrow phones. */
 .vision-slot-actions {
   grid-column: 2;
   grid-row: 1;
@@ -3909,14 +3914,14 @@ body.mapping-mode [data-name].selected-control {
   min-height: 0;
   display: grid;
   /* CAPTURE carries the longest label in both languages (CAPTURAR). */
-  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(44px, 1fr));
   gap: 3px;
 }
 .vision-slot-actions button {
   min-width: 0;
   height: 100%;
-  min-height: 30px;
+  min-height: 44px;
   padding: 1px 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0;
@@ -4572,11 +4577,11 @@ body.mapping-mode [data-name].selected-control {
   .vision-detector-section header strong { font-size: 14px; }
   .vision-studio-head span,
   .vision-detector-section header span { font-size: 12px; }
-  .vision-gesture-slots { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .vision-gesture-slots { gap: 8px; }
   .vision-gesture-slot {
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) 18px;
+    grid-template-rows: 91px 20px 32px 64px;
     padding: 8px;
     gap: 6px 10px;
   }
@@ -4587,12 +4592,12 @@ body.mapping-mode [data-name].selected-control {
     grid-column: 2;
     grid-row: 1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(44px, 1fr));
     height: 100%;
     max-height: 160px;
     align-self: center;
   }
-  .vision-slot-actions button { min-width: 0; min-height: 40px; font-size: 14px; }
+  .vision-slot-actions button { min-width: 0; min-height: 44px; font-size: 14px; }
   .vision-slot-status { grid-column: 2; grid-row: 2; font-size: 12px; text-align: center; }
   .vision-gesture-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .vision-gesture-list button { min-height: 40px; font-size: 14px; }
@@ -4804,7 +4809,7 @@ body.mapping-mode [data-name].selected-control {
 .map-clip-list-item .map-mini-btn,
 .map-clip-add { min-height: 44px; }
 
-.vision-slot-consistency { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
+.vision-slot-consistency { grid-column: 1 / -1; grid-row: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #ffce73; font-size: 12px; white-space: normal; }
 .vision-slot-consistency.hidden { display: none; }
 .vision-slot-consistency button { min-height: 44px; padding: 4px 8px; }
 
@@ -4829,19 +4834,9 @@ body.mapping-mode [data-name].selected-control {
   }
 }
 
-.vision-slot-neighbor { grid-column: 1 / -1; white-space: normal; font-size: 11px; line-height: 1.35; }
+.vision-slot-neighbor { grid-column: 1 / -1; grid-row: 3; overflow-y: auto; white-space: normal; font-size: 11px; line-height: 1.35; }
 .vision-slot-neighbor.hidden { display: none; }
 
-/* Optional diagnostic rows need their full height. Scroll the pose bank on
-   short screens instead of clipping the warning's RETAKE / KEEP actions. */
-.vision-pose-grid:has(.vision-slot-neighbor:not(.hidden), .vision-slot-consistency:not(.hidden)) {
-  grid-template-rows: repeat(3, max-content);
-  align-content: start;
-  overflow-y: auto;
-}
-.vision-pose-grid:has(.vision-slot-neighbor:not(.hidden), .vision-slot-consistency:not(.hidden)) .vision-gesture-slot {
-  grid-template-rows: auto auto;
-}
 /* Context settings reuse the existing flat modal and live controls. */
 #page-settings-overlay { animation: fadeIn 180ms ease; }
 #page-settings-overlay .transport-modal { background: #222222; box-shadow: none; }

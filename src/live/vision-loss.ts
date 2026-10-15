@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 export type VisionLossPolicy = {version: 1; mode: 'hold' | 'timeout' | 'release'; timeoutMs: number; legacy: boolean};
 export type VisionTracking = {seq: number; qualified: boolean; graceMs: number; activation?: boolean};
-export const learnedPose = (name: string): boolean => /^sensor\.vision\.gesture\.[123]$/.test(name);
+export const learnedPose = (name: string): boolean => /^sensor\.vision\.gesture\.(?:[1-9]|1[0-5])$/.test(name);
 export function visionLossPolicy(value?: unknown, restored = false): VisionLossPolicy {
   if (value == null) return {version: 1, mode: restored ? 'hold' : 'timeout', timeoutMs: 10000, legacy: restored};
   const p = value as VisionLossPolicy;

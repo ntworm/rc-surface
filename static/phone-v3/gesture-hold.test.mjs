@@ -257,15 +257,10 @@ test('TEST mode suppresses MIDI emission', () => {
 });
 
 // Hand lost / camera stop: must emit OFF for any currently-held gesture.
-test('signal loss emits OFF for held gesture channel', () => {
-  // This test verifies that VISION_LOSS_CHANNELS includes gesture slots
-  // so emitVisionSignalLoss() clears them on hand loss.
-  const lossChannels = ['sensor.vision.gesture.1', 'sensor.vision.gesture.2', 'sensor.vision.gesture.3'];
-  for (const ch of lossChannels) {
-    assert.match(
-      appSource,
-      new RegExp(`'${ch.replace(/\./g, '\\.')}'|"${ch.replace(/\./g, '\\.')}"`, 'u'),
-      `${ch} must appear in VISION_LOSS_CHANNELS or emitVisionSignalLoss body`,
-    );
-  }
+test('signal loss emits OFF for every held gesture channel through G15', () => {
+  const body=appSource.slice(appSource.indexOf('const VISION_LOSS_CHANNELS'),appSource.indexOf('const VISION_LOSS_CHANNELS')+1800);
+  const generated=body.match(/Array.from\(\{length:(\d+)\},/);
+  assert.ok(generated);
+  assert.equal(Number(generated[1]),15);
+  assert.match(body,/name:`sensor.vision.gesture.\$\{i\+1\}`,value:0/);
 });

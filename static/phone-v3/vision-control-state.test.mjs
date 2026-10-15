@@ -30,16 +30,31 @@ test('vision detectors are opt-in and persist only explicit choices', () => {
   assert.equal(state.toJSON().detectors.victory, true);
 });
 
-test('vision learned gestures have exactly three stable numbered controls', () => {
+test('restored learned gestures keep every numbered control through fifteen', () => {
   const { VisionControlState } = load();
   const state = new VisionControlState({}, [
     { name: 'Wave' }, { name: 'Circle' }, { name: 'Push' }, { name: 'Ignored' },
   ]);
-  assert.equal(state.slots.length, 3);
-  assert.deepEqual(Array.from(state.slots, (slot) => slot.name), ['Wave', 'Circle', 'Push']);
+  assert.equal(state.slots.length, 4);
+  assert.deepEqual(Array.from(state.slots, (slot) => slot.name), ['Wave', 'Circle', 'Push', 'Ignored']);
   assert.equal(state.controlForSlot(1), 'sensor.vision.gesture.1');
   assert.equal(state.controlForSlot(3), 'sensor.vision.gesture.3');
   assert.equal(state.slotForGesture('circle').id, 2);
+});
+
+test('Add pose appends stable IDs, persists the list and stops at fifteen', () => {
+  const { VisionControlState, normalizeVisionGestureTemplates } = load();
+  const state = new VisionControlState();
+  for (let id = 4; id <= 15; id++) {
+    assert.equal(state.addSlot().id, id);
+    assert.equal(state.controlForSlot(id), `sensor.vision.gesture.${id}`);
+  }
+  assert.equal(state.addSlot(), null);
+  for (const id of [0, 16, 1.5, NaN]) assert.equal(state.controlForSlot(id), null);
+  const restored = new VisionControlState(JSON.parse(JSON.stringify(state.toJSON())));
+  assert.deepEqual(JSON.parse(JSON.stringify(restored.toJSON())), JSON.parse(JSON.stringify(state.toJSON())));
+  assert.equal(normalizeVisionGestureTemplates(Array.from({length: 16}, (_, i) => ({name: `Gesture ${i + 1}`, samples: [i]}))).length, 15);
+  assert.equal(new VisionControlState({slots: Array(20).fill({})}).slots.length, 15);
 });
 
 test('new learned gesture slots have fixed names and need no performer text input', () => {

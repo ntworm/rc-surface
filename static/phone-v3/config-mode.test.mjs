@@ -184,10 +184,11 @@ function createConfigMode() {
   return { cfg, documentRef, windowRef };
 }
 
-function dispatchPointerDownCapture(documentRef, target) {
+function dispatchPointerDownCapture(documentRef, target, button = 0) {
   const ev = {
     target,
     type: 'pointerdown',
+    button,
     preventDefault() { this._prevented = true; },
     stopPropagation() { this._stopped = true; },
     stopImmediatePropagation() { this._stoppedImmediate = true; },
@@ -197,10 +198,11 @@ function dispatchPointerDownCapture(documentRef, target) {
   return ev;
 }
 
-function dispatchPointerUpCapture(documentRef, target) {
+function dispatchPointerUpCapture(documentRef, target, button = 0) {
   const ev = {
     target,
     type: 'pointerup',
+    button,
     preventDefault() { this._prevented = true; },
     stopPropagation() { this._stopped = true; },
     stopImmediatePropagation() { this._stoppedImmediate = true; },
@@ -300,6 +302,22 @@ test('second right-click on the same control closes CFG; another control opens i
   rightClick(b);assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,false);
   cfg.on();cfg.open('pad-1');rightClick(a);
   assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,true,'explicit CFG mode stays enabled');
+});
+
+for(const contextBeforeUp of [true,false]) test(`right mouse sequence switches controls without toggling the new menu off (${contextBeforeUp?'context-first':'up-first'})`,()=>{
+  const {cfg,documentRef}=createConfigMode();
+  const a=documentRef.makeElement('div',{name:'pad-1'}),b=documentRef.makeElement('div',{name:'pad-2'});
+  documentRef.makePage('performance',[a,b]);
+  const right=target=>{
+    dispatchPointerDownCapture(documentRef,target,2);
+    const context=()=>cfg._internals.onContextMenu({target,button:2,preventDefault(){},stopPropagation(){}});
+    if(contextBeforeUp)context();
+    dispatchPointerUpCapture(documentRef,target,2);
+    if(!contextBeforeUp)context();
+  };
+  right(a);assert.equal(cfg.state.openFor,'pad-1');
+  right(b);assert.equal(cfg.state.openFor,'pad-2');
+  right(b);assert.equal(cfg.state.openFor,null);
 });
 
 test('register/render: builder is invoked with the control name and returns declarative items', () => {

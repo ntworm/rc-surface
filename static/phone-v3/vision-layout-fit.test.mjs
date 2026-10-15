@@ -6,7 +6,7 @@
 //
 // These tests guard the layout contract that keeps the page usable on a
 // phone held sideways: the camera owns the left column at the full height,
-// and the controls column carries the camera commands, the three learned-pose
+// and the controls column carries the camera commands, the scrolling learned-pose
 // rows, the detectors and the readouts. Secondary copy compresses or hides
 // when space is tight; the pose actions never do.
 //
@@ -60,7 +60,8 @@ test('a slot is contained and cannot spill out of its row', () => {
 
   assert.match(slot, /overflow:\s*hidden/, 'nothing may draw outside the slot');
   assert.match(slot, /min-width:\s*0/);
-  assert.match(slot, /min-height:\s*0/);
+  assert.match(slot, /min-height:\s*248px/);
+  assert.match(slot, /height:\s*248px/);
   assert.match(slot, /display:\s*grid/, 'slot lays out its label, actions and status on a grid');
 });
 
@@ -82,30 +83,32 @@ test('the secondary sections cannot squeeze the slots out', () => {
   assert.match(cssBlock(css, '.vision-sensor-deck .vision-readout-card'), /overflow:\s*hidden/);
 });
 
-test('the three slots stack as equal rows, leaving the width to the camera', () => {
+test('the pose list scrolls at a stable card height, independent of capture or warning state', () => {
   const css = read('style.css');
-  for (const selector of ['.vision-gesture-slots', '.vision-pose-grid']) {
+  for (const selector of ['.vision-pose-grid']) {
     const block = cssBlock(css, selector);
     assert.match(block, /grid-template-columns:\s*minmax\(0,\s*1fr\)/, `${selector} is one column`);
     assert.match(
       block,
-      /grid-template-rows:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
-      `${selector} must give each slot an equal, shrinkable row`,
+      /grid-auto-rows:\s*248px/,
+      `${selector} retains card height when the number of poses changes`,
     );
+    assert.match(block, /overflow-y:\s*auto/);
+    assert.match(block, /min-height:\s*0/);
   }
+  assert.doesNotMatch(css, /\.vision-gesture-slot:has\(/, 'warnings cannot resize the cards');
 });
 
-test('the four slot actions share one row and keep a touch floor', () => {
+test('the four slot actions form two rows and keep a touch floor', () => {
   const css = read('style.css');
   const actions = cssBlock(css, '.vision-slot-actions');
   const buttons = cssBlock(css, '.vision-slot-actions button');
 
-  assert.match(actions, /grid-template-columns:\s*minmax\(0,\s*1\.3fr\)\s+repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
-    'CAPTURE gets the extra width its longest label needs');
-  assert.match(actions, /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
+  assert.match(actions, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(actions, /grid-template-rows:\s*repeat\(2,\s*minmax\(44px,\s*1fr\)\)/);
   assert.match(actions, /min-width:\s*0/);
   assert.match(buttons, /min-width:\s*0/);
-  assert.match(buttons, /min-height:\s*30px/, 'the smallest phones still get a thumb-sized action');
+  assert.match(buttons, /min-height:\s*44px/, 'the smallest phones still get a thumb-sized action');
 });
 
 test('compact card labels and controls survive the primary short-screen layout', () => {

@@ -922,7 +922,7 @@
       const slots = {};
       for (const [name, state] of modulatorStates) {
         const configured = window.RcControlConfig?.get(name) || {};
-        const fields = ['shape', 'mode', 'syncMode', 'subdivision', 'phaseOffset', 'swing'];
+        const fields = ['shape', 'mode', 'syncMode', 'subdivision', 'phaseOffset', 'swing','burstSubdivision','burstDurationMs','burstAttackRatio'];
         const overrides = Object.fromEntries(fields
           .filter(key => Object.hasOwn(configured, key))
           .map(key => [key, configured[key]]));
@@ -942,7 +942,7 @@
         for (const name of modulatorStates.keys()) {
           const entry = value.slots[name];
           if (entry !== undefined && (!entry || typeof entry !== 'object')) continue;
-          const fields = ['shape','mode','syncMode','subdivision','phaseOffset','swing', ...preserveValues ? [] : ['rate','depth','count']];
+          const fields = ['shape','mode','syncMode','subdivision','phaseOffset','swing','burstSubdivision','burstDurationMs','burstAttackRatio', ...preserveValues ? [] : ['rate','depth','count']];
           const patch = Object.fromEntries(fields.map(key => [key, entry?.[key] ?? null]));
           window.RcControlConfig?.set(name, patch);
         }

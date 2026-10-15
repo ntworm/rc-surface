@@ -714,7 +714,7 @@ export async function retireLearnedPoseSession(clientId: string): Promise<void> 
   // Retire identity synchronously, before the replacement socket can send ON.
   mappingClientSessions.delete(clientId);
   visionLossWatchdog.forget(clientId);
-  await Promise.all([1,2,3].map(slot => releaseLearnedGate(clientId, `sensor.vision.gesture.${slot}`)));
+  await Promise.all(Array.from({length:15},(_,i)=>i+1).map(slot => releaseLearnedGate(clientId, `sensor.vision.gesture.${slot}`)));
 }
 
 export const triggerNoteClock = new TriggerNoteClock();

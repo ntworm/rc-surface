@@ -132,7 +132,6 @@ test('vision performance layout fits one screen with compact controls and fixed 
   for (const shrinkable of [
     '.vision-camera-stage',
     '.vision-pose-grid',
-    '.vision-gesture-slots',
     '.vision-gesture-studio',
   ]) {
     const block = cssBlock(css, shrinkable);
@@ -144,7 +143,7 @@ test('vision performance layout fits one screen with compact controls and fixed 
   // cards, while vision-layout-fit.test.mjs holds the containment contract
   // that keeps every card inside its row.
   const slot = cssBlock(css, '.vision-gesture-slot');
-  assert.match(slot, /min-height:\s*0/);
+  assert.match(slot, /min-height:\s*248px/);
   assert.match(slot, /display:\s*grid/);
   assert.doesNotMatch(slot, /height:\s*auto/);
   // The focused full-width deck gives MAP and CLUTCH explicit track counts.
@@ -158,8 +157,8 @@ test('vision performance layout fits one screen with compact controls and fixed 
   assert.doesNotMatch(cssBlock(css, '.vision-sensor-deck'), /grid-template-rows:\s*auto\s+1fr/);
   // On a phone the four slot actions share one row, so a pose costs one line
   // of height and the camera keeps the width.
-  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-columns:\s*minmax\(0,\s*1\.3fr\)\s+repeat\(3,/);
-  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
+  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-columns:\s*repeat\(2,/);
+  assert.match(cssBlock(css, '.vision-slot-actions'), /grid-template-rows:\s*repeat\(2,\s*minmax\(44px,\s*1fr\)\)/);
 });
 
 test('camera is non-interactive and boxed into its own column, never over the signal strip', () => {

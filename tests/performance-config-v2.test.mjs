@@ -52,3 +52,12 @@ test('performance schema rejects retired slot IDs, unsupported versions and inva
   assert.throws(()=>validatePerformanceSettings({version:2,slots:{'button-1':{shape:'square'}}}),/Invalid modulator slot/);
   assert.throws(()=>validatePerformanceSettings({...performance,xy:{'xy-1':{...performance.xy['xy-1'],speed:99}}}),/Invalid XY speed/);
 });
+
+
+test('toggle D accepts independent burst settings and rejects invalid durations and attack',()=>{
+  const value={version:2,slots:{'toggle-1':{mode:'D',subdivision:.5,burstSubdivision:32,burstDurationMs:2000,burstAttackRatio:.5}}};
+  assert.equal(validatePerformanceSettings(value),value);
+  for(const [key,bad]of [['burstSubdivision',0],['burstDurationMs',10001],['burstAttackRatio',.51]]) {
+    assert.throws(()=>validatePerformanceSettings({...value,slots:{'toggle-1':{...value.slots['toggle-1'],[key]:bad}}}));
+  }
+});
