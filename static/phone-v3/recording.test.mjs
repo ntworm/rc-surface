@@ -29,6 +29,23 @@ test('REC phone viewer/read-only guard sends reads but blocks every write locall
   const read=client.command('getRecordingState'); calls[0].cb({ok:true,result:{transport:{}}}); await read;
   assert.equal(calls[0].cmd,'getRecordingState');
 });
+
+test('REC phone keeps passive observations fresh while recordingRecord is awaiting confirmation',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:10000});
+  const context=vm.createContext({setTimeout,clearTimeout,Date});vm.runInContext(source,context);
+  const calls=[],client=context.RcRecording.createClient({send:(cmd,args,cb)=>calls.push({cmd,args,cb})});
+  client.session(true,'controller');t.after(()=>client.session(false));
+  const start=client.command('recordingRecord',{});
+  t.mock.timers.tick(5500);
+  const read=client.command('getRecordingState');
+  assert.equal(calls.at(-1).cmd,'getRecordingState','busy REC must not suppress passive phone reads');
+  const observed={transport:{connected:true,isPlaying:{value:true,fresh:true},recordMode:{value:true,fresh:true}},tracks:[{volume:.39}],pending:'record'};
+  calls.at(-1).cb({ok:true,result:observed});await read;
+  assert.equal(client.view().fresh,true);assert.equal(client.view().state.tracks[0].volume,.39);
+  assert.equal(client.view().busy,true);assert.equal(client.view().pendingCommand,'recordingRecord');
+  calls[0].cb({ok:true,result:observed});await start;
+  assert.equal(client.view().busy,false);assert.equal(calls.filter(call=>call.cmd==='recordingRecord').length,1);
+});
 test('REC phone STOP stays immediate while preparation is pending and ignores old callback',async t => {
   const {client,calls}=api(t); client.session(true,'controller');
   const prep=client.command('recordingPrepare'), rejected=assert.rejects(prep,/SESSION/);
@@ -36,6 +53,16 @@ test('REC phone STOP stays immediate while preparation is pending and ignores ol
   calls[1].cb({ok:true,result:{stopped:true}}); await stop;
   calls[0].cb({ok:true,result:{preparedToken:'late'}}); await rejected;
   assert.equal(client.view().state.stopped,true); assert.equal(client.view().state.preparedToken,undefined);
+});
+
+test('REC phone retires a passive reply older than the confirmed recording action',async t=>{
+  const {client,calls}=api(t);client.session(true,'controller');
+  const recording=client.command('recordingRecord');const read=client.command('getRecordingState');
+  const retired=assert.rejects(read,/SESSION/);
+  calls[0].cb({ok:true,result:{transport:{recordMode:{value:true,fresh:true}},tracks:[{volume:.4}]}});await recording;
+  calls[1].cb({ok:true,result:{transport:{recordMode:{value:false,fresh:true}},tracks:[{volume:0}]}});await retired;
+  assert.equal(client.view().state.transport.recordMode.value,true);assert.equal(client.view().state.tracks[0].volume,.4);
+  assert.equal(client.view().busy,false);
 });
 test('REC phone reconnect/timeout do not replay writes or fabricate successful state',async t => {
   const {client,calls}=api(t); client.session(true,'controller');

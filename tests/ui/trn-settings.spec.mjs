@@ -32,8 +32,8 @@ for(const locale of ['en','pt-BR'])test(`TRN shows and changes Live global quant
   const t=key=>page.evaluate(key=>window.RcSurfaceI18n.t(key),key);
   await page.locator('#btn-trn-mode').click();
   for(const id of ['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next','btn-trn-refresh','locator-search'])await expect(page.locator('#'+id)).toBeVisible();
-  await expect(page.locator('#trn-settings')).toBeHidden();
-  await page.locator('#btn-trn-settings').click();
+  await expect(page.locator('#btn-trn-settings')).toHaveCount(0);
+  await expect(page.locator('#trn-settings')).toBeVisible();
   const select=page.locator('#trn-quantization'),click=page.locator('#trn-metronome');
   await expect(select).toHaveValue('4');await expect(select).toBeEnabled();
   await expect(page.locator('#trn-quantization-status')).toContainText(await t('lc.quantOneBar'));
@@ -62,7 +62,7 @@ for(const locale of ['en','pt-BR'])test(`TRN shows and changes Live global quant
 test('TRN settings: viewer reads without writing; disconnect clears state and never replays a write',async({page})=>{
   const mock=liveMock(page,{role:'viewer'});await mock.ready;
   await page.setViewportSize({width:568,height:320});await page.goto('/?lang=en');
-  await page.locator('#btn-trn-mode').click();await page.locator('#btn-trn-settings').click();
+  await page.locator('#btn-trn-mode').click();
   await expect(page.locator('#trn-quantization')).toHaveValue('4');
   await expect(page.locator('#trn-quantization')).toBeDisabled();await expect(page.locator('#trn-metronome')).toBeDisabled();
   await expect(page.locator('#trn-metronome-status')).toContainText('Viewer');
@@ -79,3 +79,20 @@ test('TRN settings: viewer reads without writing; disconnect clears state and ne
   await expect(page.locator('#trn-quantization')).toHaveValue('4',{timeout:8000});
   expect(mock.writes).toHaveLength(0);
 });
+
+for(const locale of ['en','pt-BR'])for(const viewport of [{width:568,height:320},{width:851,height:393},{width:1280,height:800}])
+  test(`TRN CLICK and quantization stay in the main row before REFRESH (${locale} ${viewport.width})`,async({page})=>{
+    const mock=liveMock(page);await mock.ready;await page.setViewportSize(viewport);await page.goto('/?lang='+locale);
+    await page.locator('#btn-trn-mode').click();await expect(page.locator('#trn-quantization')).toHaveValue('4');
+    await expect(page.locator('#btn-trn-settings')).toHaveCount(0);
+    const ids=['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next','trn-metronome','trn-quantization','btn-trn-refresh'];
+    let previous=null;
+    for(const id of ids){
+      const control=page.locator('#'+id);await expect(control).toBeVisible();
+      const box=await control.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
+      if(previous){expect(box.x).toBeGreaterThanOrEqual(previous.x+previous.width-1);expect(Math.abs(box.y+box.height/2-previous.y-previous.height/2)).toBeLessThanOrEqual(1);}
+      previous=box;
+    }
+    await expect(page.locator('#locator-search')).toBeVisible();await expect(page.locator('#locator-list')).toContainText('B');
+  });

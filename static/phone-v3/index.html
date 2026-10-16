@@ -719,7 +719,6 @@
       <header class="transport-head">
         <span class="transport-title" data-i18n="trn.title">TRANSPORT LITE</span>
         <span id="osc-status" class="osc-status free" data-i18n="trn.free">FREE</span>
-        <button id="btn-trn-settings" class="trn-settings-btn" type="button" aria-expanded="false" aria-controls="trn-settings" title="Transport settings" aria-label="Transport settings" data-i18n-title="trn.settings" data-i18n-aria-label="trn.settings">&#9881;</button>
         <button id="btn-trn-close" class="trn-close-btn" type="button">&times;</button>
       </header>
       
@@ -728,19 +727,19 @@
         <button id="btn-trn-stop" class="trn-ctrl-btn stop" type="button" aria-label="Stop" data-i18n-aria-label="common.stop"><span class="transport-symbol transport-symbol-stop" aria-hidden="true"></span><span data-i18n="trn.stop">STOP</span></button>
         <button id="btn-trn-prev" class="trn-ctrl-btn prev" type="button" aria-label="Previous Locator" data-i18n-aria-label="trn.prevLocator"><span class="transport-symbol transport-symbol-prev" aria-hidden="true"></span><span data-i18n="trn.prev">PREV</span></button>
         <button id="btn-trn-next" class="trn-ctrl-btn next" type="button" aria-label="Next Locator" data-i18n-aria-label="trn.nextLocator"><span class="transport-symbol transport-symbol-next" aria-hidden="true"></span><span data-i18n="trn.next">NEXT</span></button>
-        <button id="btn-trn-refresh" class="trn-ctrl-btn refresh" type="button"><span class="transport-symbol transport-symbol-refresh" aria-hidden="true"></span><span data-i18n="trn.refresh">REFRESH</span></button>
-      </div>
-      
-      <section id="trn-settings" class="trn-settings" hidden>
-        <label class="trn-setting">
-          <span data-i18n="trn.quantization">GLOBAL QUANTIZATION</span>
-          <select id="trn-quantization" class="setting-select"></select>
-        </label>
-        <output id="trn-quantization-status" class="trn-setting-status" role="status" aria-live="polite"></output>
         <div class="trn-setting">
           <span data-i18n="trn.metronome">METRONOME</span>
           <button id="trn-metronome" type="button" class="grid-btn" aria-pressed="mixed">CLICK · ?</button>
         </div>
+        <label class="trn-setting">
+          <span data-i18n="trn.quantization">GLOBAL QUANTIZATION</span>
+          <select id="trn-quantization" class="setting-select"></select>
+        </label>
+        <button id="btn-trn-refresh" class="trn-ctrl-btn refresh" type="button"><span class="transport-symbol transport-symbol-refresh" aria-hidden="true"></span><span data-i18n="trn.refresh">REFRESH</span></button>
+      </div>
+
+      <section id="trn-settings" class="trn-settings">
+        <output id="trn-quantization-status" class="trn-setting-status" role="status" aria-live="polite"></output>
         <output id="trn-metronome-status" class="trn-setting-status" role="status" aria-live="polite"></output>
         <p class="setting-note" data-i18n="trn.metronomeGap">Same Live metronome as REC CLICK. Its sound, rhythm and count-in are not exposed to extensions: set them in Live. REC PRE-ROLL gives a count-off.</p>
       </section>

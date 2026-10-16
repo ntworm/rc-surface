@@ -36,13 +36,12 @@
    * replayed after a reconnect. REC CLICK drives the same metronome.
    */
   function setupTransportSettings(overlay) {
-    const toggle = document.getElementById('btn-trn-settings');
     const panel = document.getElementById('trn-settings');
     const select = document.getElementById('trn-quantization');
     const quantStatus = document.getElementById('trn-quantization-status');
     const click = document.getElementById('trn-metronome');
     const clickStatus = document.getElementById('trn-metronome-status');
-    if (!toggle || !panel || !select || !click) return;
+    if (!panel || !select || !click) return;
     let connected = false, quant = null, quantBusy = false, quantError = '', metronome = null, clickBusy = false, clickError = '';
     let timer = null, epoch = 0;
     const writable = () => connected && ['controller', 'admin'].includes(window.state?.role);
@@ -112,12 +111,6 @@
       refresh();
       timer = setTimeout(schedule, 1000);
     }
-    toggle.addEventListener('click', () => {
-      panel.hidden = !panel.hidden;
-      toggle.setAttribute('aria-expanded', String(!panel.hidden));
-      quantError = ''; clickError = '';
-      renderOptions(); render(); schedule();
-    });
     document.getElementById('btn-trn-mode')?.addEventListener('click', () => setTimeout(schedule, 0));
     select.addEventListener('change', () => {
       const value = Number(select.value);

@@ -275,10 +275,13 @@ para os controles.
 O cabeçalho mostra só o que age na aba atual: **AUT** no PERF (loops do XY 1/XY
 2), **CFG** no PERF e no MIX, e **MAP** em todas as abas menos REC. Sair de uma
 aba desliga o modo que ela não aceita; um MAP aberto fecha ao entrar no REC, sem
-mudar mappings. Assim **STAGE/SAIR** e o status continuam na tela.
+mudar mappings. Botões ocultos reservam suas células: controles comuns mantêm
+a posição entre abas. **STAGE/SAIR** e status continuam visíveis, inclusive no
+Stage Mode e em telas estreitas na horizontal.
 
-**TRN** abre o Transporte Lite. O botão **⚙** acrescenta dois ajustes nativos do
-Live: **QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera a
+**TRN** abre o Transporte Lite. **CLICK** e **QUANTIZAÇÃO GLOBAL** ficam sempre
+visíveis na linha principal, antes de **REFRESH**, sem botão de ajustes:
+**QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera a
 `clip_trigger_quantization` do Set (um clip com quantização própria mantém a
 dele), e **METRÔNOMO** liga ou desliga o click do Live. É o mesmo metrônomo do
 **CLICK** do REC; uma mudança feita no TRN, no REC ou no Live aparece nos dois
@@ -1185,6 +1188,9 @@ no Live. O arco ao redor mostra o nível normalizado sem rótulo numérico; tecl
 e leitor de tela mantêm a indicação em porcentagem, não dB. Valor desconhecido ou
 vencido bloqueia o controle. Mudanças externas aparecem na próxima leitura;
 troca de conexão ou Set cancela o gesto. STOP mantém prioridade sobre volume.
+A leitura nativa de volume continua durante play, REC e pré-roll, independente
+de timeout em outras leituras do transporte. ARM/desarme exigem transporte
+parado: armar durante gravação começaria a gravar aquela track no Live.
 
 Escolha **ARRANGEMENT / CLIP** dentro de REC. Abrir a página, trocar o destino,
 selecionar cena ou abrir CFG nunca arma faixa nem inicia playback/gravação.

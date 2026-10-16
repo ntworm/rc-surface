@@ -917,6 +917,100 @@ const drainCapture=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setI
 async function captureAdvance(t,f,position){f.values.position=position;t.mock.timers.tick(250);f.push(GET.currentSongTime,[position]);await drainCapture();}
 function captureFixture(t){const f=preRollFixture(t);f.song.tracks[0].arm=true;f.range.end={name:'End',time:64};return f;}
 
+test('REC real command and SDK path keep the phone fresh through slow start, active capture and play',async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f),callbacks=[];
+  const sandbox=vm.createContext({setTimeout,clearTimeout,Date});
+  vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording.js',import.meta.url),'utf8'),sandbox);
+  const client=sandbox.RcRecording.createClient({send:(cmd,args,cb)=>{
+    callbacks.push(cmd);
+    const action=cmd==='recordingRecord'?()=>f.coordinator.record([recordingTrack],f.range,f.context,0,1)
+      :cmd==='recordingTrackVolume'?()=>f.coordinator.setVolume(args.track,args.volume,f.context)
+      :()=>f.coordinator.refresh().catch(()=>f.coordinator.snapshot());
+    action().then(result=>cb({ok:true,result}),error=>cb({ok:false,error:error.message}));
+  }});
+  client.session(true,'controller');t.after(()=>client.session(false));
+  await client.command('getRecordingState');
+  const send=f.osc.send;let slowReads=0;
+  f.osc.send=(address,args=[])=>{
+    if(address===REC_PREFLIGHT.overdub)setTimeout(()=>send(address,args),++slowReads<=2?1300:700);
+    else send(address,args);
+  };
+  let settled=false;const recording=client.command('recordingRecord').finally(()=>{settled=true;});
+  await drainCapture();let polls=0;
+  for(let step=0;step<48&&!settled;step++){
+    t.mock.timers.tick(250);await drainCapture();
+    if(settled)break;
+    volume.external(.39);
+    await client.command('getRecordingState');polls++;
+    assert.equal(client.view().fresh,true);assert.equal(client.view().state.transport.connected,true);
+    assert.equal(client.view().state.transport.isPlaying.fresh,true);
+    assert.equal(client.view().state.tracks[0].volume,.39);
+  }
+  f.osc.send=send;await recording;assert.ok(polls>20,'exercise a real pending REC command longer than the phone freshness window');
+  assert.equal(client.view().state.capture.phase,'recording');
+  assert.equal(client.view().state.transport.recordMode.value,true);
+  await client.command('recordingTrackVolume',{track:recordingTrack,volume:.55});
+  assert.equal(client.view().state.tracks[0].volume,.55);assert.deepEqual(volume.writes,[.55]);
+  await assert.rejects(f.coordinator.trackControl(recordingTrack,'arm',false,'multi',f.context),/NOT_STOPPED/);
+  f.values.record=false;f.push(REC.getRecordMode,[false]);
+  await client.command('recordingTrackVolume',{track:recordingTrack,volume:.57});
+  assert.equal(f.values.playing,true);assert.equal(client.view().state.tracks[0].volume,.57);
+  assert.equal(callbacks.filter(cmd=>cmd==='recordingRecord').length,1);
+});
+
+test('REC native volume stays observed while the real pre-roll recording operation owns the coordinator',async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f);await f.coordinator.refresh();
+  await f.coordinator.record([recordingTrack],f.range,f.context,4,1);
+  for(let position=16.5;position<=22;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().pending,'record');
+  assert.equal(f.coordinator.snapshot().preRoll.phase,'running');
+  volume.external(.39);const before=f.sent.length,state=await f.coordinator.refresh();
+  assert.equal(state.tracks[0].volume,.39,'busy REC must sample the native SDK parameter instead of returning expired cache');
+  assert.equal(state.transport.connected,true);assert.equal(state.transport.isPlaying.fresh,true);
+  assert.equal(state.transport.recordMode.fresh,true);assert.equal(state.pending,'record');
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+  await f.coordinator.setVolume(recordingTrack,.47,f.context);assert.deepEqual(volume.writes,[.47]);
+  assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+  await assert.rejects(f.coordinator.trackControl(recordingTrack,'arm',false,'multi',f.context),/BUSY|PRE_ROLL|NOT_STOPPED/);
+});
+
+test('REC active capture reads native volume even when an unrelated metronome reply times out',async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f);await f.coordinator.refresh();
+  f.range.loop=true;await f.coordinator.record([recordingTrack],f.range,f.context,0,null);
+  f.block(GET.metronome);volume.external(.41);
+  const reading=f.coordinator.refresh().catch(()=>f.coordinator.snapshot());
+  await drainCapture();
+  for(let position=32.5;position<=36.5;position+=.5)await captureAdvance(t,f,position);
+  const state=await reading;
+  assert.equal(state.tracks[0].volume,.41,'optional transport timeout cannot prevent independent SDK volume observation');
+  assert.equal(state.transport.connected,true);assert.equal(state.transport.recordMode.fresh,true);
+  assert.equal(state.capture.phase,'recording');assert.equal(f.values.record,true);
+  await f.coordinator.setVolume(recordingTrack,.53,f.context);assert.deepEqual(volume.writes,[.53]);
+});
+
+test('REC pending passive SDK read cannot overwrite a newer confirmed volume write',async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f);await f.coordinator.refresh();
+  await f.coordinator.record([recordingTrack],f.range,f.context,4,1);
+  const get=volume.parameter.getValue.bind(volume.parameter);let release,first=true;
+  volume.parameter.getValue=()=>{if(!first)return get();first=false;return new Promise(resolve=>{release=resolve;});};
+  const reading=f.coordinator.refresh(),retired=assert.rejects(reading,/READ_SUPERSEDED/);await drainCapture();
+  await f.coordinator.setVolume(recordingTrack,.61,f.context);await retired;
+  release(.17);await drainCapture();assert.equal(f.coordinator.snapshot().tracks[0].volume,.61);
+  assert.deepEqual(volume.writes,[.61]);assert.equal(f.values.record,true);
+});
+
+for(const interruption of ['STOP','link loss','Set change'])test('REC busy display cancels pending SDK observation on '+interruption,async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f);await f.coordinator.refresh();
+  await f.coordinator.record([recordingTrack],f.range,f.context,4,1);
+  let release;volume.parameter.getValue=()=>new Promise(resolve=>{release=resolve;});
+  const reading=f.coordinator.refresh(),retired=assert.rejects(reading,/STOPPED|CONNECTION|IDENTITY/);await drainCapture();
+  if(interruption==='STOP')await f.coordinator.stop(f.context);
+  else if(interruption==='link loss')f.osc.emit('link-lost');
+  else {f.replaceSong({tracks:[],cuePoints:[]});f.coordinator.snapshot();}
+  await retired;release(.99);await drainCapture();
+  assert.notEqual(f.coordinator.snapshot().tracks[0]?.volume,.99);assert.deepEqual(volume.writes,[]);
+});
+
 test('REC free capture at a fixed cursor needs no markers and moves the native insertion point once',async t=>{
   const f=captureFixture(t);f.song.cuePoints=[];
   const range={start:{source:'cursor',time:20},end:null,loop:false};

@@ -62,6 +62,7 @@ export class RecordingCoordinator extends EventEmitter {
   private starting: { token: string; promise: Promise<ReturnType<RecordingCoordinator['snapshot']>> } | null = null;
   private stopping: Promise<ReturnType<RecordingCoordinator['snapshot']>> | null = null;
   private refreshing: Promise<ReturnType<RecordingCoordinator['snapshot']>> | null = null;
+  private displayRead: Operation | null = null;
   private revision = 0;
   private observed = new Map<string, Observed>();
   private song: Song | null = null;
@@ -87,6 +88,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
 
   private readonly lost = () => {
+    this.displayRead?.abort.abort(Error('REC:CONNECTION'));this.displayRead=null;
     this.retireCapture();
     this.session.reset();
     this.cueGeneration++;
@@ -103,6 +105,7 @@ export class RecordingCoordinator extends EventEmitter {
   private currentSong(): Song {
     const song = this.getSong();
     if (this.song !== song) {
+      this.displayRead?.abort.abort(Error('REC:IDENTITY'));this.displayRead=null;
       this.retireCapture();this.capture=null;
       this.session.reset();
       this.cueGeneration++;
@@ -191,7 +194,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
   private check(operation: Operation): void {
     if (operation.abort.signal.aborted) throw operation.abort.signal.reason;
-    if (operation !== this.operation && operation !== this.trackMutation) fail('STOPPED');
+    if (operation !== this.operation && operation !== this.trackMutation && operation !== this.displayRead) fail('STOPPED');
     if (operation.context) this.requireContext(operation.context);
     if (operation.name !== 'stop' && (!this.osc.state.available || !this.osc.state.connected)) fail('CONNECTION');
   }
@@ -230,6 +233,7 @@ export class RecordingCoordinator extends EventEmitter {
     if(this.session.active)fail('STOP_REQUIRED');
   }
   private interruptRead(): void {
+    this.displayRead?.abort.abort(Error('REC:READ_SUPERSEDED'));this.displayRead=null;
     if (this.operation?.name !== 'read') return;
     const operation = this.operation;
     this.operation = null;
@@ -301,18 +305,41 @@ export class RecordingCoordinator extends EventEmitter {
   }
   public async refresh() {
     this.currentSong();
-    if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
-    // Capture owns transport writes; passive card/volume reads must continue
-    // during a take so freshness never expires just because REC is active.
-    if (this.operation || this.trackMutation) return this.snapshot();
-    const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);await this.readVolumes(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    if (this.refreshing) return this.refreshing;
+    if (this.trackMutation) return this.snapshot();
+    if (this.operation && this.operation.name!=='record') return this.snapshot();
+    // A committed pre-roll/start may still own the write coordinator. Observe
+    // cards and native volume separately without taking the transport lock.
+    const promise = this.operation ? this.refreshBusyDisplay() : this.run('read', undefined, async operation => {
+      await this.readDisplayAndVolumes(operation);
+      if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);
+    });
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
+  }
+  private async readDisplayAndVolumes(operation:Operation):Promise<void> {
+    // An unrelated OSC timeout must not skip the native SDK read. Wait for
+    // both readers before releasing their guard, including the failure path.
+    const results=await Promise.allSettled([this.readDisplay(operation),this.readVolumes(operation)]);
+    this.check(operation);
+    for(const result of results)if(result.status==='rejected')throw result.reason;
+  }
+  private async refreshBusyDisplay() {
+    const operation:Operation={name:'display-read',abort:new AbortController()};this.displayRead=operation;
+    try {
+      this.check(operation);
+      for(const address of [GET.currentSongTime,GET.metronome,GET.tempo])this.osc.send(address);
+      for(let index=0;index<this.currentSong().tracks.length;index++)for(const address of [REC_PREFLIGHT.trackSolo,REC_PREFLIGHT.trackMute])this.osc.send(address,[{type:'integer',value:index}]);
+      const results=await Promise.allSettled([this.readArms(operation),this.readVolumes(operation)]);
+      this.check(operation);
+      for(const result of results)if(result.status==='rejected')throw result.reason;
+      return this.snapshot();
+    }finally{if(this.displayRead===operation)this.displayRead=null;}
   }
   public async refreshSession(offset:unknown) {
     this.currentSong();this.session.window(offset);
     if(this.operation || this.trackMutation)return this.snapshot();
-    return this.run('read',undefined,async operation=>{await this.readDisplay(operation);await this.readVolumes(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    return this.run('read',undefined,async operation=>{await this.readDisplayAndVolumes(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
   }
   public async recordSession(request:unknown,context?:CommandExecutionContext) {
     this.idle(context);if(this.punch || this.armedByRecorder.length)fail('STOP_REQUIRED');
@@ -1149,6 +1176,7 @@ export class RecordingCoordinator extends EventEmitter {
     if (this.operation?.name === 'stop' && this.stopping) return this.stopping;
     const preRoll = this.preRoll;
     this.trackMutation?.abort.abort(Error('REC:STOPPED'));this.trackMutation=null;
+    this.displayRead?.abort.abort(Error('REC:STOPPED'));this.displayRead=null;
     this.operation?.abort.abort(Error('REC:STOPPED')); this.operation = null; this.preparedToken = null;
     const promise = this.run('stop', context, async operation => {
       await this.osc.recording.stopRecording();

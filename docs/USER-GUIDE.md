@@ -283,9 +283,12 @@ the largest possible surface for the controls.
 The header shows only what acts on the current tab: **AUT** on PERF (XY 1/XY 2
 loops), **CFG** on PERF and MIX, and **MAP** on every tab except REC. Leaving a
 tab turns off a mode it does not support; an open MAP closes when you enter REC,
-without changing mappings. This keeps **STAGE/EXIT** and the status on screen.
+without changing mappings. Hidden buttons reserve their cells: common controls
+keep the same position between tabs. **STAGE/EXIT** and status remain visible,
+including in Stage Mode and narrow landscape screens.
 
-**TRN** opens Transport Lite. Its **⚙** button adds two native Live settings:
+**TRN** opens Transport Lite. **CLICK** and **GLOBAL QUANTIZATION** stay visible
+in its main control row, before **REFRESH**, without a settings button:
 **GLOBAL QUANTIZATION** shows the value Live confirmed and changes the Set's
 `clip_trigger_quantization` (a clip with its own quantization keeps it), and
 **METRONOME** turns Live's click on or off. It is the same metronome as REC
@@ -1170,7 +1173,10 @@ vertically or use arrow keys; double-click restores Live's parameter default.
 The surrounding arc shows normalized level without a numeric label; keyboard
 and screen-reader feedback remain in percent, not dB. Unknown or stale values disable the
 control. External mixer changes appear on the next read; connection or Set
-changes cancel a gesture. STOP keeps priority over volume adjustment.
+changes cancel a gesture. STOP keeps priority over volume adjustment. Native
+volume reads continue during play, REC and a running pre-roll, independently
+of unrelated transport-read timeouts. ARM/disarm require stopped transport;
+arming during recording would start recording that track in Live.
 
 Select **ARRANGEMENT / CLIP** inside REC. Opening the page, changing destination,
 choosing a scene or opening CFG never arms a track or starts playback/recording.

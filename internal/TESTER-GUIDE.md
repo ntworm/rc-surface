@@ -13,7 +13,7 @@ on VID. VID: + ADD POSE beside REC, smaller Open/Fist/Pinch/Victory and MAP/
 CLUTCH strips, G1 card whole. MAP and Burst: scroll across the curve without
 editing, then hold a point ~0.6 s, drag and lift; only that point changes. CFG
 on PERF/MIX and the Deep Sync gear are smaller; Swing/Phase Offset sliders are
-flat. TRN ⚙: change global quantization and the metronome, then confirm REC
+flat. TRN main row: change global quantization and CLICK before REFRESH, then confirm REC
 CLICK shows the same state and a change made in Live appears within a second.
 Active-recording follow-up: select START/END, pre-roll 1 and one pass, then
 repeat with infinity. During a take longer than six seconds the cursor must
@@ -58,6 +58,21 @@ VID supports fifteen cards, 3–6 takes each, RETAKE/KEEP and PALM/FACE MAP inpu
 - Recognition, MIDI, loss and the two Max companions retain the previous source; repeat physical regressions separately.
 
 The sections below describe historical 1.0.2 kit procedures, not 2.0.0 physical approval.
+
+### Physical follow-up — 2026-10-16, second mobile fixes
+
+Previous package cc2537aa has partial physical approval. This follow-up keeps
+those accepted functions and needs its own physical acceptance. In English
+and Portuguese, test 568×320, 851×393 and 1280×800, then STAGE: switch every
+tab and confirm common header buttons stay put, contextual buttons remain
+correct, and EXIT/status remain visible. In REC, use a four-bar pre-roll,
+then record longer than ten seconds and change each track volume, SOLO and
+MUTE. Stop REC, keep playback running and test volume again. Confirm real
+Live mixer values and external mixer changes; ARM/disarm must stay blocked
+until transport stops. Repeat with one pass and infinity, then STOP/restart.
+Open TRN: CLICK and Global Quantization must be visible in the main row
+before REFRESH, with no tool button. Change each here and in Live; confirm
+REC CLICK agrees. A viewer cannot write; reconnect must replay no writes.
 
 ## Historical kit: 1.0.2
 

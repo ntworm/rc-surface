@@ -38,9 +38,9 @@
     function command(name, args = {}) {
       if (!connected || (WRITES.has(name) && !view().writable)) return Promise.reject(Error('REC:SESSION'));
       const read = ['getRecordingState','getSessionRecordingState'].includes(name),stop=['recordingStop','recordingSessionStop'].includes(name);
-      if (read && busy) return Promise.resolve(view().state);
+      if (read && busy && pendingCommand!=='recordingRecord') return Promise.resolve(view().state);
       if (read && reading) return reading;
-      if (busy && !stop) return Promise.reject(Error('REC:BUSY'));
+      if (busy && !read && !stop) return Promise.reject(Error('REC:BUSY'));
       if (!read) {generation++; reading = null;}
       const epoch = generation;
       if (!read) {busy = true; pendingCommand=name; error = null; notify();}
@@ -49,7 +49,9 @@
         function finish(response) {
           if (settled) return; settled = true; clearTimeout(timer);
           if (epoch !== generation) { reject(Error('REC:SESSION')); return; }
-          if (!read) {busy = false;pendingCommand=null;}
+          // Retire passive reads issued before this action was confirmed: an
+          // older reply cannot overwrite the action's observed result.
+          if (!read) {generation++;reading=null;busy = false;pendingCommand=null;}
           if (response?.ok && response.result) {
             state = response.result; receivedAt = Date.now();
             if(read && error?.includes('REC:SESSION_STOP_PENDING') && state.session?.active===false)error=null;
@@ -611,7 +613,7 @@
     function poll() {
       clearTimeout(refreshTimer);if(frame!=null) root.cancelAnimationFrame?.(frame);frame=null;
       if(doc.body.dataset.page!=='recording' || doc.hidden || !client.view().connected) return;
-      if(!client.view().busy) invoke(destination==='clip'?'getSessionRecordingState':'getRecordingState',destination==='clip'?{offset:sceneOffset}:{});
+      invoke(destination==='clip'?'getSessionRecordingState':'getRecordingState',destination==='clip'?{offset:sceneOffset}:{});
       render(client.view());
       animate();refreshTimer=setTimeout(poll,750);
     }

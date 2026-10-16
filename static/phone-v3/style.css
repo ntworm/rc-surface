@@ -58,7 +58,7 @@ body { display: flex; flex-direction: column; touch-action: none; }
 #btn-calibrate-sensors-header[data-calibration="running"] { color: var(--accent); border-color: var(--accent); }
 
 /* ---- Top bar (tabs + status) ---- */
-.topbar { display: flex; align-items: center; padding: 3px 6px;
+.topbar { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr) 90px; align-items: center; padding: 3px 6px;
            background: var(--bg2); border-bottom: 1px solid var(--border);
            flex-shrink: 0; gap: 6px; height: 32px; justify-content: space-between; }
 .tabs { display: flex; gap: 3px; }
@@ -69,6 +69,7 @@ body { display: flex; flex-direction: column; touch-action: none; }
 
 /* ---- Ableton Live Info Panel ---- */
 .ableton-panel {
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -96,6 +97,7 @@ body { display: flex; flex-direction: column; touch-action: none; }
 
 /* ---- Sync Mode Toggle ---- */
 .sync-mode-block {
+  justify-self: end;
   display: flex;
   align-items: center;
 }
@@ -144,18 +146,17 @@ body { display: flex; flex-direction: column; touch-action: none; }
   .topbar .sync-mode-block { gap: 3px !important; }
   .topbar .status { max-width: 42px; }
 }
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
   .topbar, body.stage-mode .topbar {
-    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "tabs status" "transport sync";
-    height: auto; min-height: 58px; gap: 3px 6px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 26px 24px; grid-template-areas: "transport status" "tabs sync";
+    height: auto; min-height: 60px; gap: 3px 6px;
   }
   .topbar .tabs { grid-area: tabs; }
   .topbar .ableton-panel { grid-area: transport; justify-self: start; }
   .topbar .sync-mode-block { grid-area: sync; justify-self: end; }
   .topbar .status-block { grid-area: status; justify-self: end; }
-  /* STAGE hides the status badge and widens the tabs; let the tabs take the
-     whole first row so EXIT never shares a column with them and gets cut. */
-  body.stage-mode .topbar { grid-template-areas: "tabs tabs" "transport sync"; }
+  body.stage-mode .topbar { grid-template-areas: "transport status" "tabs sync"; }
+  body.stage-mode .topbar .tab { min-width: 40px; }
   .calibration-strip { top: 64px; }
 }
 
@@ -228,7 +229,7 @@ body.stage-mode .topbar {
     calc(8px + env(safe-area-inset-left));
 }
 body.stage-mode .status-block {
-  display: none;
+  display: flex;
 }
 body.stage-mode .tab {
   min-width: 46px;
@@ -1552,13 +1553,13 @@ body.stage-mode .fader {
   box-sizing: border-box;
   transition: background 0.08s, transform 0.08s, border-color 0.08s;
 }
-/* Contextual header: AUT drives the PERF XY pads only, CFG edits PERF/MIX
-   controls only, and REC owns its own transport row without MAP. Keeping the
-   row short is also what keeps STAGE/EXIT and the status visible on VID. */
+/* Reserve contextual cells so every common control keeps its geometry.
+   Hidden controls cannot receive focus or clicks; tabs retain their rules. */
 body[data-header-page]:not([data-header-page="performance"]) #btn-aut-mode,
 body[data-header-page]:not([data-header-page="performance"]):not([data-header-page="mixer"]) #btn-cfg-mode,
 body[data-header-page="recording"] #btn-map-mode {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 .ablt-map-btn.on {
   background: rgba(255, 161, 51, 0.16);
@@ -5101,29 +5102,27 @@ body.automation-mode .xy-pad { cursor:crosshair; }
   #sync-settings-overlay .sync-slider { height: 24px; }
 }
 
-/* ── TRN settings: Live global quantization and metronome (2026-10-16) ── */
-.trn-settings-btn {
-  min-width: 32px;
-  min-height: 28px;
-  margin-left: auto;
-  margin-right: 4px;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
+/* Transport Light: one fixed row, with observed CLICK and quantization. */
+#transport-lite-overlay .transport-modal { max-width: 920px; }
+#transport-lite-overlay .transport-main-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(76px, 1.4fr) minmax(128px, 2fr) minmax(60px, 1.2fr);
+  align-items: center;
+  padding: 8px;
+  gap: 4px;
 }
-.trn-settings-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+#transport-lite-overlay .transport-main-controls .refresh { grid-column: auto; }
+#transport-lite-overlay .trn-ctrl-btn { min-width: 0; min-height: 32px; padding: 6px 2px; font-size: 9px; gap: 2px; }
+#transport-lite-overlay .transport-main-controls .trn-setting { position: relative; padding-top: 14px; }
+#transport-lite-overlay .trn-setting > span { position: absolute; top: 0; font-size: 8px; white-space: nowrap; }
+#transport-lite-overlay .transport-main-controls > .trn-ctrl-btn { margin-top: 14px; }
 .trn-settings {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 4px 8px;
-  padding: 6px 16px 8px;
+  padding: 0 8px 6px;
   border-bottom: 1px solid var(--border);
-  background: #141416;
+  background: var(--bg2);
 }
-.trn-settings[hidden] { display: none; }
 .trn-setting {
   display: flex;
   flex-direction: column;
@@ -5137,7 +5136,7 @@ body.automation-mode .xy-pad { cursor:crosshair; }
 .trn-setting .setting-select { padding: 4px 6px; font-size: 11px; min-height: 30px; }
 #trn-metronome { min-height: 30px; font-size: 11px; }
 #trn-metronome[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-.trn-setting-status { grid-row: 2; font-size: 9px; color: var(--text2); min-height: 11px; overflow-wrap: anywhere; }
+.trn-setting-status { grid-row: 1; font-size: 9px; color: var(--text2); min-height: 11px; overflow-wrap: anywhere; }
 #trn-quantization-status { grid-column: 1; }
 #trn-metronome-status { grid-column: 2; }
 .trn-setting-status[data-state="error"] { color: #ff8a8a; }
