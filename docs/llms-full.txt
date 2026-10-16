@@ -1739,6 +1739,12 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 
 ## 16. REC: Arrangement / CLIP
 
+Each track's volume knob controls its native mixer level, not input gain. Drag
+vertically or use arrow keys; double-click restores Live's parameter default.
+The label is normalized percent, not dB. Unknown or stale values disable the
+control. External mixer changes appear on the next read; connection or Set
+changes cancel a gesture. STOP keeps priority over volume adjustment.
+
 Select **ARRANGEMENT / CLIP** inside REC. Opening the page, changing destination,
 choosing a scene or opening CFG never arms a track or starts playback/recording.
 Destination changes are blocked while a REC attempt is owned. STOP follows its
@@ -3371,9 +3377,13 @@ with Escape and preserves drafts during polling; blur never saves.
 
 `recordingTrackVolume` is a controller/admin `live-write` command with exact
 `{track:{index,id,name},volume:number}` arguments, where volume is in `[0, 1]`.
-The SDK `mixer_device.volume.value` setter writes after fresh identity checks.
-Volume updates serialize with other REC writes, yield to priority STOP, and
-preserve ARM/SOLO/MUTE state. Client double-click resets to 0.85 (0.0 dB).
+The SDK `mixer.volume.getValue()` / `setValue()` methods read and write the native
+parameter, normalized using its declared min/max. Readback confirms each write;
+missing, stale or unconfirmed values stay unknown. Updates serialize with other
+REC track writes, yield to priority STOP, and preserve ARM/SOLO/MUTE. Double-click
+uses the native `defaultValue`. The UI shows normalized percent: the SDK exposes
+no formatted dB curve. Gestures cancel on Set/session/identity change or loss;
+only the latest target from the same current gesture may follow an in-flight write.
 
 Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time. XY pad configuration opens via mobile long-press or desktop right-click without shrinking pad dimensions or altering automation loops.
 

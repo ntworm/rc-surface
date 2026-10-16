@@ -34,7 +34,7 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-workspace [hidden] { display:none; }
 .rec-track-heading { justify-content:space-between; font-size:11px; color:var(--text2); }
 .rec-workspace #rec-arm-mode { min-height:44px; padding:6px 10px; font-size:11px; }
-.rec-track-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; min-width:0; }
+.rec-track-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:8px; min-width:0; }
 .rec-track-card { min-width:0; padding:8px; border:1px solid var(--border); background:var(--surface); }
 .rec-track-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; align-content:center; font-size:11px; }
 .rec-track-name { cursor:text; touch-action:manipulation; }

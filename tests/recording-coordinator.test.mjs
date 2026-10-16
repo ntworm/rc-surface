@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import { DeviceParameter } from '@ableton-extensions/sdk';
 import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
@@ -84,6 +85,56 @@ function fixture(t,nativePositioning=false) {
   return { osc, coordinator, song, values, sent, context, select, push,
     block: address => { block = address; }, retire: () => { current = false; }, replaceSong: replacement => { song = replacement; } };
 }
+
+function nativeVolume(f, value=0.17) {
+  const writes=[];
+  const parameter=new DeviceParameter({id:'volume-11'}, {
+    deviceParameterGetInternalMin:()=>0,deviceParameterGetInternalMax:()=>1,
+    deviceParameterGetDefaultValue:()=>0.73,
+    deviceParameterGetInternalValue:(_handle,done)=>done(value),
+    deviceParameterSetInternalValue:(_handle,next,done)=>{writes.push(next);value=next;done();},
+    withinTransaction:body=>body(),
+  }, {});
+  f.song.tracks[0].mixer={volume:parameter};
+  return {writes,parameter,external:next=>{value=next;}};
+}
+
+test('REC volume reads the actual SDK asynchronous parameter and follows external changes',async t=>{
+  const f=fixture(t),v=nativeVolume(f);
+  let state=await f.coordinator.refresh();
+  assert.equal(state.tracks[0].volume,0.17);
+  assert.equal(state.tracks[0].volumeDefault,0.73);
+  assert.equal(state.tracks[1].volume,null,'missing parameter cannot invent unity');
+  v.external(0.31);state=await f.coordinator.refresh();assert.equal(state.tracks[0].volume,0.31);
+  assert.deepEqual(v.writes,[],'display polling never writes');
+});
+
+test('REC volume writes only the exact SDK parameter during recording, without touching transport or ARM',async t=>{
+  const f=fixture(t),v=nativeVolume(f);await f.coordinator.refresh();
+  f.values.playing=true;f.values.record=true;const before=f.sent.length;
+  const result=await f.coordinator.setVolume({index:0,id:'11',name:'Guitar'},0.42,f.context);
+  assert.deepEqual(v.writes,[0.42]);assert.equal(result.tracks[0].volume,0.42);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.values.record,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
+
+test('REC volume refuses disconnected, unavailable or stale native destinations without writes',async t=>{
+  const f=fixture(t),v=nativeVolume(f);await f.coordinator.refresh();const ref={index:0,id:'11',name:'Guitar'};
+  f.osc.state.connected=false;
+  await assert.rejects(f.coordinator.setVolume(ref,0.4,f.context),/CONNECTION/);
+  f.osc.state.connected=true;f.song.tracks[0].mixer=null;
+  await assert.rejects(f.coordinator.setVolume(ref,0.4,f.context),/VOLUME|UNKNOWN/);
+  assert.deepEqual(v.writes,[]);assert.equal('volume' in f.song.tracks[0],false,'no synthetic track property');
+});
+
+test('REC volume invalidates an unconfirmed write and STOP cancels its readback without replay',async t=>{
+  const f=fixture(t),v=nativeVolume(f);await f.coordinator.refresh();
+  let release;v.parameter.getValue=()=>new Promise(resolve=>{release=resolve;});
+  const pending=f.coordinator.setVolume({index:0,id:'11',name:'Guitar'},0.4,f.context);
+  const rejected=assert.rejects(pending,/STOPPED/);await new Promise(resolve=>setImmediate(resolve));
+  await f.coordinator.stop(f.context);release?.(0.4);await rejected;
+  assert.deepEqual(v.writes,[0.4]);assert.equal(f.coordinator.snapshot().tracks[0].volume,null);
+});
 
 test('REC real OSC boolean replies preserve preflight flags and track armability', async t => {
   const f = fixture(t);

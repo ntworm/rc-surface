@@ -513,42 +513,71 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
   assert.equal(node('rec-zoom').value,'2','manual zoom retained and not overwritten');
 });
 
-test('REC formatVolumeDb calculates dB string matching Ableton mixer scale',t=>{
+test('REC volume label reports native normalized units without inventing a dB curve',t=>{
   const {api:a}=api(t);
-  assert.equal(a.formatVolumeDb(0),'-inf dB');
-  assert.equal(a.formatVolumeDb(0.00001),'-inf dB');
-  assert.equal(a.formatVolumeDb(0.85),'0.0 dB');
-  assert.equal(a.formatVolumeDb(1),'+6.0 dB');
-  assert.match(a.formatVolumeDb(0.5),/^-\d+\.\d dB$/);
+  assert.equal(a.formatVolumeDb(null),'?');
+  assert.equal(a.formatVolumeDb(0),'0%');
+  assert.equal(a.formatVolumeDb(0.85),'85%');
+  assert.equal(a.formatVolumeDb(1),'100%');
 });
 
 test('REC track volume knob adjusts native mixer volume and resets on double click',async t=>{
   const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
-  state.tracks[0].volume=0.85;await h.seed(state);
+  state.tracks[0].volume=0.85;state.tracks[0].volumeDefault=0.73;await h.seed(state);
   const card=h.node('rec-track-grid').children[0];
   const volBox=card.children[1].children.find(c=>c.className==='rec-track-vol' || c.role==='slider');
   assert.ok(volBox,'track volume knob exists immediately before arm button');
   assert.equal(volBox.role,'slider');
   assert.equal(volBox['aria-valuenow'],'0.85');
-  assert.equal(volBox['aria-valuetext'],'0.0 dB');
+  assert.equal(volBox['aria-valuetext'],'85%');
 
   volBox.listeners.get('dblclick')({stopPropagation(){},preventDefault(){}});
   assert.equal(h.calls.at(-1).name,'recordingTrackVolume');
   assert.equal(h.calls.at(-1).args.track.id,state.tracks[0].id);
-  assert.equal(h.calls.at(-1).args.volume,0.85);
-  h.calls.at(-1).cb({ok:true,result:state});
+  assert.equal(h.calls.at(-1).args.volume,0.73);
+  h.calls.at(-1).cb({ok:true,result:state});await h.flush();
 
   volBox.listeners.get('keydown')({key:'ArrowUp',preventDefault(){},stopPropagation(){}});
   assert.equal(h.calls.at(-1).name,'recordingTrackVolume');
   assert.equal(h.calls.at(-1).args.volume,0.87);
-  h.calls.at(-1).cb({ok:true,result:state});
+  h.calls.at(-1).cb({ok:true,result:state});await h.flush();
 
   volBox.listeners.get('keydown')({key:'Home',preventDefault(){},stopPropagation(){}});
   assert.equal(h.calls.at(-1).args.volume,0);
-  h.calls.at(-1).cb({ok:true,result:state});
+  h.calls.at(-1).cb({ok:true,result:state});await h.flush();
 
   volBox.listeners.get('keydown')({key:'End',preventDefault(){},stopPropagation(){}});
   assert.equal(h.calls.at(-1).args.volume,1);
   h.calls.at(-1).cb({ok:true,result:state});
+});
+
+test('REC volume gesture keeps final target but never replays after disconnect or Set change',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
+  state.session={songId:'original',scenes:[],rows:[],owned:[]};state.tracks[0].volume=0.3;await h.seed(state);
+  const box=h.node('rec-track-grid').children[0].children[1].children[0];
+  const event=(y=100)=>({button:0,pointerId:9,clientY:y,preventDefault(){},stopPropagation(){}});
+  box.listeners.get('pointerdown')(event());box.listeners.get('pointermove')(event(85));
+  const first=h.calls.at(-1);assert.equal(first.args.volume,0.4);
+  box.listeners.get('pointermove')(event(55));box.listeners.get('pointerup')(event(55));
+  first.cb({ok:true,result:{...state,tracks:state.tracks.map((track,index)=>index?track:{...track,volume:0.4})}});await h.flush();
+  assert.equal(h.calls.at(-1).args.volume,0.6,'final movement reaches native command after in-flight write');
+  h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  box.listeners.get('pointerdown')(event());box.listeners.get('pointermove')(event(85));const old=h.calls.at(-1);
+  box.listeners.get('pointermove')(event(55));h.client.session(false);h.client.session(true,'controller');
+  await h.seed({...state,session:{...state.session,songId:'replacement'}});const count=h.calls.length;
+  old.cb({ok:true,result:state});await h.flush();box.listeners.get('pointermove')(event(25));
+  assert.equal(h.calls.length,count,'stale pointer cannot write into replacement Set');
+});
+
+test('REC unknown volume, stale snapshot and viewer disable keyboard and reset writes',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');let state=h.state();await h.seed(state);
+  const box=()=>h.node('rec-track-grid').children[0].children[1].children[0];
+  const event={key:'ArrowUp',preventDefault(){},stopPropagation(){}};
+  let count=h.calls.length;box().listeners.get('keydown')(event);assert.equal(h.calls.length,count);
+  assert.equal(box()['aria-disabled'],'true');
+  state.tracks[0].volume=0.2;await h.seed(state);h.age();count=h.calls.length;
+  box().listeners.get('keydown')(event);assert.equal(h.calls.length,count);
+  h.client.session(true,'viewer');await h.seed(state);count=h.calls.length;
+  box().listeners.get('dblclick')(event);assert.equal(h.calls.length,count);
 });
 

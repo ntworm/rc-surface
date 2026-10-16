@@ -1148,6 +1148,12 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 
 ## 16. REC: Arrangement / CLIP
 
+Each track's volume knob controls its native mixer level, not input gain. Drag
+vertically or use arrow keys; double-click restores Live's parameter default.
+The label is normalized percent, not dB. Unknown or stale values disable the
+control. External mixer changes appear on the next read; connection or Set
+changes cancel a gesture. STOP keeps priority over volume adjustment.
+
 Select **ARRANGEMENT / CLIP** inside REC. Opening the page, changing destination,
 choosing a scene or opening CFG never arms a track or starts playback/recording.
 Destination changes are blocked while a REC attempt is owned. STOP follows its

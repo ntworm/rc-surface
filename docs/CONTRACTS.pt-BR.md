@@ -448,9 +448,13 @@ polling mantém rascunho/foco e sair do campo não salva.
 
 `recordingTrackVolume` é um comando `live-write` para controller/admin, com
 argumentos exatos `{track:{index,id,name},volume:number}`, com volume em `[0, 1]`.
-O setter SDK `mixer_device.volume.value` grava após checar identidade recente.
-Volume serializa com outras gravações REC, cede ao STOP prioritário e preserva
-ARM/SOLO/MUTE. Duplo-clique no cliente redefine para 0.85 (0.0 dB).
+Os métodos SDK `mixer.volume.getValue()` / `setValue()` leem e escrevem o parâmetro
+nativo, normalizado pelo min/max declarado. A releitura confirma cada escrita;
+valor ausente, vencido ou não confirmado permanece desconhecido. Volume serializa
+com outras escritas de track REC, cede ao STOP prioritário e preserva ARM/SOLO/MUTE.
+Duplo-clique usa o `defaultValue` nativo. A tela mostra porcentagem normalizada:
+o SDK não fornece curva de dB formatada. Troca de Set/sessão/identidade ou perda
+cancela o gesto; apenas o último alvo do mesmo gesto atual pode seguir uma escrita em andamento.
 
 Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido. Configuração dos pads XY abre por toque longo no celular ou clique direito no desktop sem reduzir as dimensões dos pads ou alterar loops de automação.
 

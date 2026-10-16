@@ -9,7 +9,8 @@ import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 import {SessionRecording,type SessionSong} from './session-recording.js';
 
-interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: any; volume?: number }
+interface VolumeParameter { min:number; max:number; defaultValue:number; getValue():Promise<number>; setValue(value:number):Promise<void> }
+interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: {volume?:VolumeParameter} }
 interface Cue { name: string; time: number; handle: { id: string | number | bigint } }
 interface Song {
   tracks: readonly Track[]; cuePoints: readonly Cue[];
@@ -68,6 +69,7 @@ export class RecordingCoordinator extends EventEmitter {
   private preRollError: string | null = null;
   private cueGeneration = 0;
   private readonly session:SessionRecording;
+  private readonly volumes=new Map<Track,{value:number;defaultValue:number|null;at:number}>();
 
   constructor(private readonly osc: OSCTransport, private readonly getSong: () => Song) {
     super();
@@ -82,7 +84,7 @@ export class RecordingCoordinator extends EventEmitter {
     this.operation?.abort.abort(Error('REC:CONNECTION'));
     this.operation = null;
     this.trackMutation?.abort.abort(Error('REC:CONNECTION')); this.trackMutation = null; this.punch = null;
-    this.preparedToken = null; this.observed.clear();
+    this.preparedToken = null; this.observed.clear(); this.volumes.clear();
     if (this.preRoll) { this.preRoll = null; this.preRollError = 'REC:CONNECTION'; }
     this.preRollRequested = false;
   };
@@ -95,7 +97,7 @@ export class RecordingCoordinator extends EventEmitter {
       this.session.reset();
       this.cueGeneration++;
       this.song = song; this.selected = null; this.point = null; this.preparedToken = null;
-      this.lastAttempt = null; this.observed.clear();
+      this.lastAttempt = null; this.observed.clear(); this.volumes.clear();
       this.range = null; this.armedByRecorder = []; this.cohort = null; this.strictCohort = false; this.punch = null;
       this.trackMutation?.abort.abort(Error('REC:IDENTITY')); this.trackMutation = null;
       if (this.preRoll) {
@@ -115,14 +117,39 @@ export class RecordingCoordinator extends EventEmitter {
     const arm = this.value('arm:' + index);
     return arm === null && this.value('canArm:' + index) === false ? false : arm;
   }
-  private trackVolume(track: any): number {
-    const mixer = track.mixer;
-    if (mixer && mixer.volume) {
-      if (typeof mixer.volume.value === 'number') return mixer.volume.value;
-      if (typeof mixer.volume._value === 'number') return mixer.volume._value;
-    }
-    if (typeof track.volume === 'number') return track.volume;
-    return 0.85;
+  private trackVolume(track:Track) {
+    const cached=this.volumes.get(track),now=Date.now();
+    return this.osc.state.connected && this.osc.state.available && cached && now>=cached.at && now-cached.at<=RECORDING_FRESH_MS
+      ? cached : null;
+  }
+  private async volumeResult<T>(operation:Operation,request:()=>Promise<T>):Promise<T> {
+    this.check(operation);
+    return new Promise<T>((resolve,reject)=>{
+      const finish=(error:unknown,value?:T)=>{clearTimeout(timer);operation.abort.signal.removeEventListener('abort',abort);if(error)reject(error);else resolve(value as T);};
+      const abort=()=>finish(operation.abort.signal.reason);
+      const timer=setTimeout(()=>finish(Error('REC:VOLUME_UNKNOWN')),RECORDING_CONFIRM_MS);
+      operation.abort.signal.addEventListener('abort',abort,{once:true});
+      try {request().then(value=>finish(null,value),error=>finish(error));}catch(error){finish(error);}
+    });
+  }
+  private async readVolume(operation:Operation,song:Song,track:Track):Promise<void> {
+    this.volumes.delete(track);
+    const parameter=track.mixer?.volume;
+    if(!parameter || typeof parameter.getValue!=='function' || typeof parameter.setValue!=='function')return;
+    const {min,max,defaultValue}=parameter;
+    if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min)return;
+    const value=await this.volumeResult(operation,()=>parameter.getValue());
+    this.check(operation);
+    if(this.getSong()!==song || !song.tracks.includes(track))fail('IDENTITY');
+    if(!Number.isFinite(value)||value<min||value>max)return;
+    this.volumes.set(track,{value:(value-min)/(max-min),defaultValue:Number.isFinite(defaultValue)&&defaultValue>=min&&defaultValue<=max?(defaultValue-min)/(max-min):null,at:Date.now()});
+  }
+  private async readVolumes(operation:Operation):Promise<void> {
+    const song=this.currentSong();
+    await Promise.all(song.tracks.map(async track=>{
+      try {await this.readVolume(operation,song,track);}catch {this.volumes.delete(track);}
+    }));
+    this.check(operation);
   }
   public snapshot() {
     const song = this.currentSong();
@@ -140,7 +167,7 @@ export class RecordingCoordinator extends EventEmitter {
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
         arm: this.value('arm:' + index), solo: this.value('solo:' + index), mute: this.value('mute:' + index),
         canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index),
-        volume: this.trackVolume(track) })),
+        volume: this.trackVolume(track)?.value ?? null, volumeDefault:this.trackVolume(track)?.defaultValue ?? null })),
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
       lastAttempt: this.lastAttempt,
@@ -248,14 +275,14 @@ export class RecordingCoordinator extends EventEmitter {
     this.currentSong();
     if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
     if (this.operation || this.trackMutation) return this.snapshot();
-    const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);await this.readVolumes(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
   }
   public async refreshSession(offset:unknown) {
     this.currentSong();this.session.window(offset);
     if(this.operation || this.trackMutation)return this.snapshot();
-    return this.run('read',undefined,async operation=>{await this.readDisplay(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
+    return this.run('read',undefined,async operation=>{await this.readDisplay(operation);await this.readVolumes(operation);await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
   }
   public async recordSession(request:unknown,context?:CommandExecutionContext) {
     this.idle(context);if(this.punch || this.armedByRecorder.length)fail('STOP_REQUIRED');
@@ -631,20 +658,30 @@ export class RecordingCoordinator extends EventEmitter {
     this.requireContext(context);
     const ref = this.trackRef(expected);
     if (typeof volume !== 'number' || !Number.isFinite(volume) || volume < 0 || volume > 1) fail('ARGUMENTS');
-    if (this.operation?.name === 'stop') fail('BUSY');
+    if (this.trackMutation || ['stop','rename'].includes(this.operation?.name ?? '')) fail('BUSY');
+    this.interruptRead();
     const song = this.currentSong();
     const track = song.tracks[ref.index];
     if (!track || String(track.handle.id) !== ref.id || track.name !== ref.name) fail('IDENTITY');
-    const mixer = (track as any).mixer;
-    if (mixer && mixer.volume) {
-      if (typeof mixer.volume.setValue === 'function') {
-        await mixer.volume.setValue(volume);
-      } else {
-        mixer.volume.value = volume;
-      }
-    } else {
-      (track as any).volume = volume;
-    }
+    const parameter=track.mixer?.volume;
+    if(!parameter || typeof parameter.getValue!=='function' || typeof parameter.setValue!=='function')fail('VOLUME_UNKNOWN');
+    const {min,max}=parameter;
+    if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min)fail('VOLUME_UNKNOWN');
+    const operation:Operation={name:'track-volume',abort:new AbortController(),...(context?{context}:{})};
+    this.trackMutation=operation;
+    try {
+      this.check(operation);
+      if(this.getSong()!==song || song.tracks[ref.index]!==track || track.name!==ref.name)fail('IDENTITY');
+      if(song.tracks.filter(item=>String(item.handle.id)===ref.id).length!==1)fail('IDENTITY');
+      this.volumes.delete(track);
+      await this.volumeResult(operation,()=>parameter.setValue(min+volume*(max-min)));
+      this.check(operation);
+      if(this.getSong()!==song || song.tracks[ref.index]!==track || track.name!==ref.name)fail('IDENTITY');
+      await this.readVolume(operation,song,track);
+      const actual=this.trackVolume(track)?.value;
+      if(actual===undefined || Math.abs(actual-volume)>0.002)fail('VOLUME_UNCONFIRMED');
+    } catch(error) {this.volumes.delete(track);throw error;}
+    finally {if(this.trackMutation===operation)this.trackMutation=null;}
     return this.snapshot();
   }
   private punchContext(owner: PunchOwner, operation: Operation): void {

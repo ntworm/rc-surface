@@ -6,15 +6,8 @@
   const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingTrackVolume','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
   function formatVolumeDb(v) {
-    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0.0001) return '-inf dB';
-    if (v >= 0.85) {
-      const db = ((v - 0.85) / 0.15) * 6.0;
-      if (Math.abs(db) < 0.05) return '0.0 dB';
-      return (db > 0 ? '+' : '') + db.toFixed(1) + ' dB';
-    }
-    const db = 40 * Math.log10(v / 0.85);
-    if (db <= -70) return '-inf dB';
-    return db.toFixed(1) + ' dB';
+    // SDK exposes internal values, not Live's formatted dB scale.
+    return typeof v==='number' && Number.isFinite(v) && v>=0 && v<=1 ? Math.round(v*100)+'%' : '?';
   }
   function positionToBeats(bar, beat, meter) {
     const numerator = meter?.numerator, denominator = meter?.denominator;
@@ -29,18 +22,18 @@
   /** Callbacks only confirm the state the host observed. No queued/replayed
    * writes; STOP retires prior callbacks and remains available while busy. */
   function createClient({send, render = () => {}, timeoutMs = 12000}) {
-    let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null;
+    let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null, connectionEpoch=0, pendingCommand=null;
     const view = () => {
       let observed = state;
       if (state?.transport && Date.now() - receivedAt > 2000) {
         observed = {...state, transport:{...state.transport}};
         for (const key of ['isPlaying','recordMode','songTimeBeats','metronome']) observed.transport[key] = {...state.transport[key],fresh:false};
       }
-      return {connected, role, state:observed, busy, fresh:Date.now()-receivedAt<=2000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
+      return {connected, role, state:observed, busy, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=2000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
     };
     const notify = () => render(view());
     function session(open, nextRole = 'viewer') {
-      generation++; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null; notify();
+      generation++;connectionEpoch++;pendingCommand=null; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null; notify();
     }
     function command(name, args = {}) {
       if (!connected || (WRITES.has(name) && !view().writable)) return Promise.reject(Error('REC:SESSION'));
@@ -50,13 +43,13 @@
       if (busy && !stop) return Promise.reject(Error('REC:BUSY'));
       if (!read) {generation++; reading = null;}
       const epoch = generation;
-      if (!read) {busy = true; error = null; notify();}
+      if (!read) {busy = true; pendingCommand=name; error = null; notify();}
       const request = new Promise((resolve, reject) => {
         let settled = false;
         function finish(response) {
           if (settled) return; settled = true; clearTimeout(timer);
           if (epoch !== generation) { reject(Error('REC:SESSION')); return; }
-          if (!read) busy = false;
+          if (!read) {busy = false;pendingCommand=null;}
           if (response?.ok && response.result) {
             state = response.result; receivedAt = Date.now();
             if(read && error?.includes('REC:SESSION_STOP_PENDING') && state.session?.active===false)error=null;
@@ -68,6 +61,7 @@
             // exclusive-arm side effects. Wait for observed arms before any
             // subsequent toggle; never retry the write or claim success.
             if(!read && name==='recordingTrackControl' && args.property==='arm' && state?.tracks)state={...state,tracks:state.tracks.map(track=>({...track,arm:null}))};
+            if(!read && name==='recordingTrackVolume' && state?.tracks)state={...state,tracks:state.tracks.map(track=>track.index===args.track.index&&track.id===args.track.id?{...track,volume:null}:track)};
             if(read) readError = message; else error = message;
             notify(); reject(Error(message));
           }
@@ -204,8 +198,34 @@
           const volValue=doc.createElement('span');volValue.className='rec-track-vol-val';
           volBox.appendChild(volValue);
           row.appendChild(volBox);
-          let volDragging=false, volStartY=0, volStartV=0;
+          let volDragging=false, volStartY=0, volStartV=0, volBinding=null,volSending=false,volPending=null;
+          const currentVolumeTrack=view=>view.state?.tracks.find(item=>item.index===track.index&&item.id===track.id);
+          function canVolume(view) {
+            const ref=currentVolumeTrack(view);
+            return view.writable && view.fresh && view.state?.transport?.connected && typeof ref?.volume==='number' && Number.isFinite(ref.volume)
+              && (!view.busy || volSending && view.pendingCommand==='recordingTrackVolume') && !['stop','rename'].includes(view.state?.pending);
+          }
+          function cancelVolume() {volDragging=false;volBinding=null;volPending=null;entry.volumeDragging=false;delete volBox.dataset.active;}
+          function sameVolumeBinding(view,binding) {
+            const ref=currentVolumeTrack(view);
+            return binding && binding.epoch===view.connectionEpoch && binding.song===view.state?.session?.songId && ref?.name===binding.name && canVolume(view);
+          }
+          function bindVolume() {
+            const view=client.view();if(!canVolume(view))return false;
+            volBinding={epoch:view.connectionEpoch,song:view.state?.session?.songId,name:currentVolumeTrack(view).name};return true;
+          }
+          function sendVolume() {
+            if(volSending || volPending===null)return;
+            const view=client.view(),binding=volBinding;
+            if(!sameVolumeBinding(view,binding)){cancelVolume();return;}
+            const nextV=volPending;volPending=null;volSending=true;
+            const ref=currentVolumeTrack(view);
+            client.command('recordingTrackVolume',{track:{index:ref.index,id:ref.id,name:ref.name},volume:nextV})
+              .catch(()=>{if(volBinding===binding)cancelVolume();})
+              .finally(()=>{volSending=false;if(volBinding===binding){if(sameVolumeBinding(client.view(),binding))sendVolume();else cancelVolume();}renderTracks(client.view());});
+          }
           function setTrackVol(nextV) {
+            if(!canVolume(client.view()) || !volBinding && !bindVolume())return;
             nextV = Math.max(0, Math.min(1, Math.round(nextV * 1000) / 1000));
             entry.currentV = nextV;
             const angle = -135 + nextV * 270;
@@ -215,42 +235,42 @@
             volBox.setAttribute('aria-valuenow', String(nextV));
             volBox.setAttribute('aria-valuetext', dbText);
             volBox.title = track.name + ' · ' + dbText;
-            const current = client.view();
-            const ref = current.state?.tracks.find(item => item.index === track.index && item.id === track.id);
-            if (ref && current.writable) {
-              invoke('recordingTrackVolume', { track: { index: ref.index, id: ref.id, name: ref.name }, volume: nextV });
-            }
+            volPending=nextV;sendVolume();
           }
           volBox.addEventListener('pointerdown', event => {
-            if (event.button !== 0 || !client.view().writable) return;
+            if (event.button !== 0 || !bindVolume()) return;
             event.stopPropagation(); event.preventDefault();
             volDragging = true; entry.volumeDragging = true;
             volStartY = event.clientY;
-            volStartV = typeof entry.currentV === 'number' ? entry.currentV : 0.85;
+            volStartV = entry.currentV;
+            volBinding.pointerId=event.pointerId;
             volBox.setPointerCapture?.(event.pointerId);
             volBox.dataset.active = 'true';
           });
           volBox.addEventListener('pointermove', event => {
-            if (!volDragging) return;
+            if (!volDragging || event.pointerId!==volBinding?.pointerId) return;
             event.stopPropagation(); event.preventDefault();
             const dy = volStartY - event.clientY;
             setTrackVol(volStartV + dy / 150);
           });
           const finishVolDrag = event => {
-            if (!volDragging) return;
+            if (!volDragging || event.pointerId!==volBinding?.pointerId) return;
+            if(event.type==='pointercancel'){cancelVolume();return;}
             volDragging = false; entry.volumeDragging = false;
             delete volBox.dataset.active;
             event.stopPropagation(); event.preventDefault();
           };
           volBox.addEventListener('pointerup', finishVolDrag);
-          volBox.addEventListener('pointercancel', finishVolDrag);
+          volBox.addEventListener('pointercancel', cancelVolume);
+          volBox.addEventListener('lostpointercapture', () => {if(volDragging)cancelVolume();});
           volBox.addEventListener('dblclick', event => {
             event.stopPropagation(); event.preventDefault();
-            if (!client.view().writable) return;
-            setTrackVol(0.85);
+            const ref=currentVolumeTrack(client.view());
+            if (!canVolume(client.view()) || typeof ref?.volumeDefault!=='number' || !bindVolume()) return;
+            setTrackVol(ref.volumeDefault);
           });
           volBox.addEventListener('keydown', event => {
-            if (!client.view().writable) return;
+            if (!canVolume(client.view()) || !bindVolume()) return;
             let step = 0;
             if (event.key === 'ArrowUp' || event.key === 'ArrowRight') step = 0.02;
             else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') step = -0.02;
@@ -260,7 +280,7 @@
             else if (event.key === 'End') { event.preventDefault(); setTrackVol(1); return; }
             else return;
             event.preventDefault();
-            setTrackVol((typeof entry.currentV === 'number' ? entry.currentV : 0.85) + step);
+            setTrackVol(entry.currentV + step);
           });
           const buttons={};
           for(const property of ['arm','solo','mute']) {
@@ -272,7 +292,8 @@
             });
             row.appendChild(button);buttons[property]=button;
           }
-          cards.set(key,{card,name,buttons,volBox,volPointer,volValue,currentV:track.volume ?? 0.85,volumeDragging:false});
+          cards.set(key,{card,name,buttons,volBox,volPointer,volValue,currentV:null,volumeDragging:false,cancelVolume,
+            volumeActive:()=>volDragging||volPending!==null,canVolume,checkVolume:()=>{if(volBinding&&!sameVolumeBinding(client.view(),volBinding))cancelVolume();}});
           const entry=cards.get(key);
           name.tabIndex=0;name.setAttribute('role','button');
           name.addEventListener('dblclick',()=>editName(entry,track.index,track.id));
@@ -283,19 +304,20 @@
         if(entry.editor)entry.editor.input.readOnly=entry.editor.pending || !canRename(view);
         entry.name.title=track.name+' · '+t('renameTrack');entry.name.setAttribute('aria-label',t('renameTrack')+' · '+track.name);
         entry.name.setAttribute('aria-disabled',String(!canRename(view)));
-        const v = typeof track.volume === 'number' ? track.volume : 0.85;
-        if (!entry.volumeDragging) {
+        entry.checkVolume();
+        const v = typeof track.volume === 'number' && Number.isFinite(track.volume) ? track.volume : null;
+        if (!entry.volumeActive()) {
           entry.currentV = v;
-          const angle = -135 + v * 270;
+          const angle = -135 + (v ?? 0) * 270;
           entry.volPointer.style.transform = 'rotate(' + angle + 'deg)';
           const dbText = formatVolumeDb(v);
           if (entry.volValue.textContent !== dbText) entry.volValue.textContent = dbText;
-          entry.volBox.setAttribute('aria-valuenow', String(Math.round(v * 1000) / 1000));
+          entry.volBox.setAttribute('aria-valuenow', v===null?'':String(Math.round(v * 1000) / 1000));
           entry.volBox.setAttribute('aria-valuetext', dbText);
           entry.volBox.title = track.name + ' · ' + dbText;
         }
         entry.volBox.setAttribute('aria-label', t('trackVolume') + ' · ' + track.name);
-        entry.volBox.setAttribute('aria-disabled', String(!view.writable));
+        entry.volBox.setAttribute('aria-disabled', String(!entry.canVolume(view)));
         for(const property of ['arm','solo','mute']) {
           const button=entry.buttons[property],label=t(property==='arm'?'armShort':property);
           if(button.textContent!==label)button.textContent=label;
@@ -307,7 +329,7 @@
       if(trackSignature!==signature) {
         trackSignature=signature;
         const keys=new Set(tracks.map(track=>track.index+':'+track.id));
-        for(const key of cards.keys())if(!keys.has(key))cards.delete(key);
+        for(const key of cards.keys())if(!keys.has(key)){cards.get(key).cancelVolume();cards.delete(key);}
         el('track-grid').replaceChildren(...tracks.map(track=>cards.get(track.index+':'+track.id).card));
       }
     }

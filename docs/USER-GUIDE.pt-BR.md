@@ -1162,6 +1162,12 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até 
 
 ## 16. REC: Arrangement / CLIP
 
+O knob de volume de cada faixa ajusta o mixer nativo, não o ganho de entrada.
+Arraste verticalmente ou use as setas; duplo-clique restaura o padrão do parâmetro
+no Live. A indicação é porcentagem normalizada, não dB. Valor desconhecido ou
+vencido bloqueia o controle. Mudanças externas aparecem na próxima leitura;
+troca de conexão ou Set cancela o gesto. STOP mantém prioridade sobre volume.
+
 Escolha **ARRANGEMENT / CLIP** dentro de REC. Abrir a página, trocar o destino,
 selecionar cena ou abrir CFG nunca arma faixa nem inicia playback/gravação.
 A troca de destino fica bloqueada enquanto existe tentativa REC própria. STOP
