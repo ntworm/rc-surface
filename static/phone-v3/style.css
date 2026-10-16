@@ -58,10 +58,10 @@ body { display: flex; flex-direction: column; touch-action: none; }
 #btn-calibrate-sensors-header[data-calibration="running"] { color: var(--accent); border-color: var(--accent); }
 
 /* ---- Top bar (tabs + status) ---- */
-.topbar { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr) 90px; align-items: center; padding: 3px 6px;
+.topbar { display: flex; align-items: center; padding: 3px 6px;
            background: var(--bg2); border-bottom: 1px solid var(--border);
-           flex-shrink: 0; gap: 6px; height: 32px; justify-content: space-between; }
-.tabs { display: flex; gap: 3px; }
+           flex-shrink: 0; gap: 6px; height: 32px; justify-content: flex-start; }
+.tabs { display: flex; flex: 0 0 auto; gap: 3px; }
 .tab { min-width: 54px; height: 22px; padding: 0 8px; border: 1px solid var(--border); border-radius: 0;
        background: var(--surface-soft); color: var(--text2); font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
        cursor: pointer;  }
@@ -69,7 +69,7 @@ body { display: flex; flex-direction: column; touch-action: none; }
 
 /* ---- Ableton Live Info Panel ---- */
 .ableton-panel {
-  width: max-content;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -97,7 +97,7 @@ body { display: flex; flex-direction: column; touch-action: none; }
 
 /* ---- Sync Mode Toggle ---- */
 .sync-mode-block {
-  justify-self: end;
+  margin-left: auto;
   display: flex;
   align-items: center;
 }
@@ -145,18 +145,19 @@ body { display: flex; flex-direction: column; touch-action: none; }
   .topbar .ableton-panel { gap: 3px; padding: 1px 3px; }
   .topbar .sync-mode-block { gap: 3px !important; }
   .topbar .status { max-width: 42px; }
+  body.stage-mode .topbar .tab { min-width: 40px; }
 }
-@media (max-width: 1000px) {
+@media (max-width: 800px) {
   .topbar, body.stage-mode .topbar {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 26px 24px; grid-template-areas: "transport status" "tabs sync";
-    height: auto; min-height: 60px; gap: 3px 6px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tabs status" "transport sync";
+    height: auto; min-height: 58px; gap: 3px 6px;
   }
   .topbar .tabs { grid-area: tabs; }
   .topbar .ableton-panel { grid-area: transport; justify-self: start; }
   .topbar .sync-mode-block { grid-area: sync; justify-self: end; }
   .topbar .status-block { grid-area: status; justify-self: end; }
-  body.stage-mode .topbar { grid-template-areas: "transport status" "tabs sync"; }
-  body.stage-mode .topbar .tab { min-width: 40px; }
+  /* Preserve the existing narrow-screen fallback and keep status reachable. */
+  body.stage-mode .topbar { grid-template-areas: "tabs status" "transport sync"; }
   .calibration-strip { top: 64px; }
 }
 
@@ -1553,11 +1554,14 @@ body.stage-mode .fader {
   box-sizing: border-box;
   transition: background 0.08s, transform 0.08s, border-color 0.08s;
 }
-/* Reserve contextual cells so every common control keeps its geometry.
-   Hidden controls cannot receive focus or clicks; tabs retain their rules. */
-body[data-header-page]:not([data-header-page="performance"]) #btn-aut-mode,
+/* Keep the original lateral header. Left-anchored transport controls do not
+   recenter when trailing contextual options disappear. Only MIX reserves AUT:
+   CFG is shared with PERF and must keep the same cell in those two pages. */
+body[data-header-page]:not([data-header-page="performance"]):not([data-header-page="mixer"]) #btn-aut-mode,
 body[data-header-page]:not([data-header-page="performance"]):not([data-header-page="mixer"]) #btn-cfg-mode,
-body[data-header-page="recording"] #btn-map-mode {
+body[data-header-page="recording"] #btn-map-mode { display: none; }
+body[data-header-page="mixer"] #btn-aut-mode {
+  display: inline-flex;
   visibility: hidden;
   pointer-events: none;
 }

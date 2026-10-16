@@ -43,6 +43,16 @@ for(const locale of ['en','pt-BR'])for(const viewport of [{width:568,height:320}
       for(const name of [...ORDER,...ORDER.slice().reverse()]){
         await page.locator(`.tab[data-page="${name}"]`).click();await page.locator('#status').evaluate((el,locale)=>{el.textContent=locale==='pt-BR'?'CONECTADO · TESTE':'CONNECTED · TEST';},locale);
         await expectHeader(page,name,viewport,stage);
+        const header=await page.locator('.topbar').boundingBox(),navigation=await page.locator('.tabs').boundingBox(),transport=await page.locator('.ableton-panel').boundingBox();
+        if(viewport.width>800){
+          expect(header.height,'preserve original single-row height').toBe(stage?30:32);
+          expect(Math.abs(navigation.y+navigation.height/2-transport.y-transport.height/2),'tabs and transport stay side by side').toBeLessThanOrEqual(1);
+          expect(navigation.x+navigation.width).toBeLessThanOrEqual(transport.x);
+        }else{
+          expect(header.height,'only the original narrow-screen fallback').toBeLessThanOrEqual(58);
+          expect(navigation.y+navigation.height).toBeLessThanOrEqual(transport.y);
+        }
+
         const panel=await page.locator('.ableton-panel').boundingBox(),status=await page.locator('#status').boundingBox();
         expect(panel.x+panel.width).toBeLessThanOrEqual(status.x);
         const tabs=await page.locator('.tab').all();const lastTab=await tabs.at(-1).boundingBox(),sync=await page.locator('.sync-mode-block').boundingBox();

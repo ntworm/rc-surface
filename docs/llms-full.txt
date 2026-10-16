@@ -874,7 +874,7 @@ the largest possible surface for the controls.
 The header shows only what acts on the current tab: **AUT** on PERF (XY 1/XY 2
 loops), **CFG** on PERF and MIX, and **MAP** on every tab except REC. Leaving a
 tab turns off a mode it does not support; an open MAP closes when you enter REC,
-without changing mappings. Hidden buttons reserve their cells: common controls
+without changing mappings. The original tabs/transport composition stays in place; common controls
 keep the same position between tabs. **STAGE/EXIT** and status remain visible,
 including in Stage Mode and narrow landscape screens.
 

@@ -275,8 +275,8 @@ para os controles.
 O cabeçalho mostra só o que age na aba atual: **AUT** no PERF (loops do XY 1/XY
 2), **CFG** no PERF e no MIX, e **MAP** em todas as abas menos REC. Sair de uma
 aba desliga o modo que ela não aceita; um MAP aberto fecha ao entrar no REC, sem
-mudar mappings. Botões ocultos reservam suas células: controles comuns mantêm
-a posição entre abas. **STAGE/SAIR** e status continuam visíveis, inclusive no
+mudar mappings. A composição original das abas e do transporte permanece; controles comuns
+mantêm a posição entre abas. **STAGE/SAIR** e status continuam visíveis, inclusive no
 Stage Mode e em telas estreitas na horizontal.
 
 **TRN** abre o Transporte Lite. **CLICK** e **QUANTIZAÇÃO GLOBAL** ficam sempre
