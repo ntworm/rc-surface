@@ -1826,3 +1826,23 @@ test('REC automatic Punch In relinquishes ownership after an external change and
   f.osc.state.connected=false;f.osc.emit('link-lost');f.osc.state.connected=true;await f.coordinator.refresh();
   assert.equal(f.values.punchIn,false);assert.equal(f.sent.filter(([address])=>address===REC_PREROLL.setPunchIn).length,setters);
 });
+
+test('REC CLICK is never locked: it changes during pre-roll and capture, and the user choice survives the pre-roll restore',async t=>{
+  const f=preRollFixture(t);f.values.tempo=60;
+  const state=await f.coordinator.record(recordingTrack,f.range,f.context,4);
+  assert.equal(state.preRoll.phase,'running');assert.equal(f.coordinator.snapshot().pending,'record');
+  assert.equal(f.values.click,true,'pre-roll turned the click on');
+  // Gabriel turns it off mid pre-roll while the REC operation is still held.
+  const changed=await f.coordinator.click(false,f.context);
+  assert.equal(changed.transport.metronome.value,false);assert.equal(f.values.click,false);
+  await f.coordinator.click(true,f.context);
+  for(let beat=17;beat<=32;beat++){f.values.position=beat;t.mock.timers.tick(1000);await flushRecording();}
+  assert.equal(f.coordinator.snapshot().preRoll.phase,'complete');assert.equal(f.values.record,true);
+  assert.equal(f.values.click,true,'the pre-roll does not overwrite the click the user chose');
+  await f.coordinator.click(false,f.context);
+  assert.equal(f.values.click,false,'CLICK also changes during capture');assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.click,false,'STOP keeps the user choice');
+  await assert.rejects(f.coordinator.click('on',f.context),/ARGUMENTS/);
+  f.retire();await assert.rejects(f.coordinator.click(true,f.context),/SESSION/);
+});

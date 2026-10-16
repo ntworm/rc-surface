@@ -22,21 +22,22 @@
   /** Callbacks only confirm the state the host observed. No queued/replayed
    * writes; STOP retires prior callbacks and remains available while busy. */
   function createClient({send, render = () => {}, timeoutMs = 12000}) {
-    let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null, connectionEpoch=0, pendingCommand=null;
+    let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null, connectionEpoch=0, pendingCommand=null, clicking=false;
     const view = () => {
       let observed = state;
       if (state?.transport && Date.now() - receivedAt > 5000) {
         observed = {...state, transport:{...state.transport}};
         for (const key of ['isPlaying','recordMode','songTimeBeats','metronome']) observed.transport[key] = {...state.transport[key],fresh:false};
       }
-      return {connected, role, state:observed, busy, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=5000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
+      return {connected, role, state:observed, busy, clicking, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=5000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
     };
     const notify = () => render(view());
     function session(open, nextRole = 'viewer') {
-      generation++;connectionEpoch++;pendingCommand=null; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null; notify();
+      generation++;connectionEpoch++;pendingCommand=null;clicking=false; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null; notify();
     }
     function command(name, args = {}) {
       if (!connected || (WRITES.has(name) && !view().writable)) return Promise.reject(Error('REC:SESSION'));
+      if (name === 'recordingClick') return click(args);
       const read = ['getRecordingState','getSessionRecordingState'].includes(name),stop=['recordingStop','recordingSessionStop'].includes(name);
       if (read && busy && pendingCommand!=='recordingRecord') return Promise.resolve(view().state);
       if (read && reading) return reading;
@@ -74,12 +75,51 @@
       if (read) {reading = request; request.finally(() => {if(reading === request) reading = null;}).catch(() => {});}
       return request;
     }
+    /** The metronome is never locked by REC: CLICK neither waits for nor
+     * retires a pending REC action, and only one click change is in flight. */
+    function click(args) {
+      if (clicking) return Promise.reject(Error('REC:BUSY'));
+      const epoch = connectionEpoch;
+      clicking = true; notify();
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        function finish(response) {
+          if (settled) return; settled = true; clearTimeout(timer);
+          if (epoch !== connectionEpoch) { reject(Error('REC:SESSION')); return; }
+          clicking = false;
+          if (response?.ok && response.result) { state = response.result; receivedAt = Date.now(); notify(); resolve(state); }
+          else { const message = response?.error || 'REC:UNKNOWN'; error = message; notify(); reject(Error(message)); }
+        }
+        const timer = setTimeout(() => finish({ok:false, error:'REC:UNKNOWN'}), timeoutMs);
+        try { send('recordingClick', args, finish); } catch { finish({ok:false, error:'REC:UNKNOWN'}); }
+      });
+    }
     return {view, session, command};
   }
   // Arrangement marker geometry; no audio data or take-lane representation.
   function timelineBounds(locators, zoom = 1) {
     const end = Math.max(16, ...locators.map(cue => cue.time + 4));
     return {start:0, end, width:Math.max(1,Math.min(300,zoom)) * 100};
+  }
+  /** Bar/beat ruler drawn behind the Arrangement markers, from the observed
+   * signature. Lines thin out with the zoom so they never smear together:
+   * beats appear once they are 8 px apart, bar lines keep 6 px and bar
+   * numbers 28 px, doubling the bar step until they fit. */
+  function timelineGrid(bounds, meter, pixels) {
+    const numerator = meter?.numerator, denominator = meter?.denominator, span = bounds?.end - bounds?.start;
+    if (!Number.isInteger(numerator) || numerator < 1 || ![1,2,4,8,16,32].includes(denominator) || !(pixels > 0) || !(span > 0)) return [];
+    const unit = 4 / denominator, bar = numerator * unit, perBeat = pixels / span;
+    let barStep = 1, labelStep = 1;
+    while (barStep * bar * perBeat < 6) barStep *= 2;
+    while (labelStep < barStep || labelStep * bar * perBeat < 28) labelStep *= 2;
+    const beats = unit * perBeat >= 8, ticks = [];
+    for (let index = Math.ceil(bounds.start / bar / barStep) * barStep; index * bar <= bounds.end; index += barStep) {
+      ticks.push({time:index * bar, kind:'bar', label:index % labelStep === 0 ? String(index + 1) : ''});
+      for (let beat = 1; beats && beat < numerator && index * bar + beat * unit <= bounds.end; beat++) {
+        ticks.push({time:index * bar + beat * unit, kind:'beat', label:''});
+      }
+    }
+    return ticks;
   }
   const PRE_ROLL_KEY = 'rc-surface-v2.rec.preRollBars';
   function preRollPreference(storage) {
@@ -92,10 +132,10 @@
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
     const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-start-marker','rec-end-marker',
-      'rec-passages','rec-passages-field','rec-free-mode','rec-end-field','rec-timeline','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
+      'rec-passages','rec-passages-field','rec-free-mode','rec-end-field','rec-timeline','rec-timeline-track','rec-grid','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
       'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-pre-roll-inline','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
-    let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null, cursorClock=null;
+    let trackSignature='', markerSignature='', gridSignature='', rangeSignature='', refreshTimer=null, frame=null, cursorClock=null;
     let startIndex='cursor', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[],fixedPoint=null,passes=1;
     let preRollBars=0, userAdjustedZoom=false, autoZoomTimer=null;
     let armMode='multi';
@@ -344,6 +384,17 @@
       const pos=beatsToPosition(time,meter);return pos.bar+'.'+pos.beat;
     };
     const percent = time => Math.max(0,Math.min(100,(time-bounds.start)/(bounds.end-bounds.start)*100));
+    function drawGrid() {
+      const grid=el('grid'),track=el('timeline-track');if(!grid||!track)return;
+      const observed=client.view().state?.meter,meter=observed?.numerator&&observed?.denominator?observed:displayMeter;
+      const pixels=track.offsetWidth||0,key=[bounds.start,bounds.end,meter?.numerator,meter?.denominator,pixels].join();
+      if(key===gridSignature)return;gridSignature=key;
+      grid.replaceChildren(...timelineGrid(bounds,meter,pixels).map(tick=>{
+        const line=doc.createElement('span');line.className='rec-grid-'+tick.kind;line.style.left=percent(tick.time)+'%';
+        if(tick.label)line.textContent=tick.label;
+        return line;
+      }));
+    }
     function reason(error) {
       const code=String(error).match(/REC:([A-Z_]+)/)?.[1];
       const translated=code?t('reason.'+code):'';
@@ -388,7 +439,7 @@
       if(el('zoom')) el('zoom').value = String(targetZoom);
       bounds = timelineBounds(state.locators, zoom);
       if(el('timeline-track')) el('timeline-track').style.width = 'calc(' + bounds.width + '% - 96px)';
-      drawCursor();
+      drawGrid();drawCursor();
       centerTimeline(start.time, end.time);
     }
     function centerTimeline(startTime, endTime) {
@@ -459,7 +510,7 @@
       for(const id of ['start-marker','end-marker']) el(id).disabled=!editable;
       el('passages').disabled=!editable;
       el('passages-field').hidden=destination==='clip'||endIndex==='';el('free-mode').hidden=destination==='clip'||endIndex!=='';
-      el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
+      el('click').disabled=!view.writable || view.clicking || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
       el('return-arrangement').disabled=!view.writable||!view.fresh||working||!known||transport.recordMode.value!==false||Boolean(state?.attemptActive)||state?.safety?.backToArranger!==true||!state?.session?.rows.every(row=>row.ready===true);
       el('return-arrangement').hidden=state?.safety?.backToArranger!==true;
@@ -494,7 +545,7 @@
         option(el('start-marker'),'cursor',t('here')+' · '+positionLabel(fixedPoint,state.meter));option(el('start-marker'),'use-current',t('useCursor'));
         option(el('start-marker'),'',t('chooseMarker'));option(el('end-marker'),'',t('untilStop'));
         option(el('end-marker'),'missing',t('reason.MARKER_CHANGED')).disabled=true;
-        bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';
+        bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';gridSignature='';
         state.locators.forEach((cue,index)=>{
           const label=cue.name+' · '+positionLabel(cue.time,state.meter);
           option(el('start-marker'),String(index),label);option(el('end-marker'),String(index),label);
@@ -542,7 +593,7 @@
       if(!view.error&&state.capture?.phase==='unconfirmed')el('status').textContent=reason(state.capture.error);
       else if(!view.error&&known&&transport.recordMode.value&&state.capture)el('status').textContent=t('recordObserved')+' · '+state.capture.pass+'/'+(state.capture.total??'∞');
       for(const marker of el('markers').children) marker.disabled=!editable;
-      drawCursor();
+      drawGrid();drawCursor();
     }
     for(const mode of ['arrangement','clip'])el(mode+'-mode').addEventListener('click',()=>{
       if(el(mode+'-mode').disabled)return;destination=mode;render(client.view());poll();
@@ -589,7 +640,7 @@
     el('zoom').addEventListener('input',()=>{
       clearTimeout(autoZoomTimer);autoZoomTimer=null;userAdjustedZoom=true;
       zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);
-      el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();
+      el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawGrid();drawCursor();
       const start=startAt(),end=looping?cueAt(endIndex):null;
       if(start){
         const center=end&&end.time>start.time?(start.time+end.time)/2:start.time;
@@ -617,6 +668,7 @@
       render(client.view());
       animate();refreshTimer=setTimeout(poll,750);
     }
+    root.addEventListener('resize',drawGrid);
     root.addEventListener('ableton-rc:phone-client-id',event=>{client.session(true,event.detail?.role || 'viewer');poll();});
     root.addEventListener('ableton-rc:phone-ws-close',()=>{client.session(false);clearTimeout(refreshTimer);if(frame!=null) root.cancelAnimationFrame?.(frame);frame=null;});
     root.addEventListener('ableton-rc:page-change',poll);
@@ -628,7 +680,7 @@
     if(open){client.session(true,open.role||'viewer');poll();}
     render(client.view());return client;
   }
-  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, formatVolumeDb, setup});
+  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, timelineGrid, preRollPreference, formatVolumeDb, setup});
   if (root.document) {
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded',setup,{once:true});
     else setup();

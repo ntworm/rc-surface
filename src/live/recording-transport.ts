@@ -48,6 +48,8 @@ export class RecordingTransport extends EventEmitter {
   private active = false;
   private revision = 0;
   private operation: Operation | null = null;
+  /** The metronome is its own lane: a click change never waits behind, nor blocks, a REC operation. */
+  private metronomeOperation: Operation | null = null;
   private preRollProgress: PreRollProgress | null = null;
   private readonly observations = {
     recordMode: empty<boolean>(), isPlaying: empty<boolean>(),
@@ -109,6 +111,7 @@ export class RecordingTransport extends EventEmitter {
 
   public invalidate(): void {
     this.operation?.abort.abort(new Error('AbletonOSC lost before recording state was observed'));
+    this.metronomeOperation?.abort.abort(new Error('AbletonOSC lost before recording state was observed'));
     this.preRollProgress = null;
     this.observations.recordMode = empty(); this.observations.isPlaying = empty();
     this.observations.songTimeBeats = empty(); this.observations.metronome = empty();
@@ -121,6 +124,7 @@ export class RecordingTransport extends EventEmitter {
     if ([...Object.values(REC), ...Object.values(REC_PREROLL), ...Object.values(getters), CMD.startPlaying, CMD.stopPlaying, CMD.cuePointJump].includes(address)) {
       this.operation?.abort.abort(error);
     }
+    if (address === REC.setMetronome || address === getters.metronome) this.metronomeOperation?.abort.abort(error);
   }
 
   public async readState(): Promise<RecordingTransportState> {
@@ -168,12 +172,18 @@ export class RecordingTransport extends EventEmitter {
 
   public async setMetronome(enabled: boolean): Promise<RecordingTransportState> {
     if (typeof enabled !== 'boolean') throw new Error('Metronome must be boolean');
-    return this.run('metronome', async operation => {
+    if (this.metronomeOperation) throw new Error('A metronome change is pending');
+    const operation = { name: 'metronome', abort: new AbortController() };
+    this.metronomeOperation = operation;
+    try {
       this.requireConnection();
       await this.wait(operation, ['metronome'], state => state.metronome.value === enabled,
         () => this.sendBatch([[REC.setMetronome, [{ type: 'integer', value: enabled ? 1 : 0 }]], [GET.metronome]]));
-      return this.snapshot();
-    });
+      if (operation.abort.signal.aborted) throw operation.abort.signal.reason;
+    } finally {
+      if (this.metronomeOperation === operation) { this.metronomeOperation = null; this.emit('update', this.snapshot()); }
+    }
+    return this.snapshot();
   }
 
   public async startRecording(guard: () => void = () => {}): Promise<RecordingTransportState> {
@@ -299,6 +309,10 @@ export class RecordingTransport extends EventEmitter {
     return this.snapshot();
   }
 
+  private current(operation: Operation): boolean {
+    return this.operation === operation || this.metronomeOperation === operation;
+  }
+
   private sendBatch(packets: Packet[]): void {
     let failure: unknown;
     for (const [address, args] of packets) {
@@ -309,7 +323,7 @@ export class RecordingTransport extends EventEmitter {
   }
 
   private wait(operation: Operation, fields: Field[], matches: (state: RecordingTransportState) => boolean, send: () => void, invalidate = true): Promise<void> {
-    if (this.operation !== operation || operation.abort.signal.aborted) return Promise.reject(operation.abort.signal.reason);
+    if (!this.current(operation) || operation.abort.signal.aborted) return Promise.reject(operation.abort.signal.reason);
     const revision = this.revision;
     // The last pre-request value cannot describe the result of a new write or
     // resync. Keep it unknown until another valid packet supplies evidence.
@@ -329,7 +343,7 @@ export class RecordingTransport extends EventEmitter {
       };
       const cancelled = () => finish(operation.abort.signal.reason);
       const observed = () => {
-        if (this.operation !== operation || operation.abort.signal.aborted) return;
+        if (!this.current(operation) || operation.abort.signal.aborted) return;
         const state = this.snapshot();
         if (fields.every(field => this.observations[field].revision > revision && state[field].fresh) && matches(state)) finish();
       };

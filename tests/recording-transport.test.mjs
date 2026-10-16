@@ -314,3 +314,22 @@ test('REC polling refreshes stale individual fields even when unrelated pushes k
   }
   assert.equal(writes(sent).length, 0);
 });
+
+test('REC metronome is its own lane: it confirms while a REC write is pending and leaves that write intact', async t => {
+  const { rec, sent, push, seed } = fixture(t);
+  seed();
+  const starting = rec.startRecording();
+  await flush();
+  assert.equal(rec.snapshot().pending, 'start');
+  const clicking = rec.setMetronome(true);
+  await assert.rejects(rec.setMetronome(false), /metronome change is pending/);
+  assert.ok(writes(sent).some(([address, args]) => address === REC.setMetronome && args[0].value === 1));
+  push(RESPONSE.metronome, 1);
+  assert.equal((await clicking).metronome.value, true);
+  assert.equal(rec.snapshot().pending, 'start', 'the REC write keeps its lane');
+  push(REC.getRecordMode, 1); await flush(); push(RESPONSE.isPlaying, 1); await flush();
+  push(REC.getRecordMode, 1); push(RESPONSE.isPlaying, 1);
+  const started = await starting;
+  assert.equal(started.recordMode.value, true);
+  assert.equal(started.metronome.value, true);
+});

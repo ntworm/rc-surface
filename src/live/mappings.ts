@@ -2608,7 +2608,12 @@ export const commands: Record<string, CommandSpec> = {
 
   getClipLaunchStatus: {
     description: "Current Launch Clip state of every mapped target, as Live reports it, plus recent rule diagnostics.",
-    handler: async () => clipLaunchEngine.snapshot(),
+    handler: async () => {
+      // TRN reads the Set quantization here even when no Launch Clip mapping
+      // ever asked Live for it.
+      oscTransport.requestUnknownGlobalClipQuantization();
+      return clipLaunchEngine.snapshot();
+    },
   },
 
   setGlobalClipQuantization: {

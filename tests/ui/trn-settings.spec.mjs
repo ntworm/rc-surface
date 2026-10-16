@@ -33,15 +33,16 @@ for(const locale of ['en','pt-BR'])test(`TRN shows and changes Live global quant
   await page.locator('#btn-trn-mode').click();
   for(const id of ['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next','btn-trn-refresh','locator-search'])await expect(page.locator('#'+id)).toBeVisible();
   await expect(page.locator('#btn-trn-settings')).toHaveCount(0);
-  await expect(page.locator('#trn-settings')).toBeVisible();
+  // Nothing to report: no status line and no explanatory note under the controls.
+  await expect(page.locator('#trn-settings')).toBeHidden();
   const select=page.locator('#trn-quantization'),click=page.locator('#trn-metronome');
   await expect(select).toHaveValue('4');await expect(select).toBeEnabled();
-  await expect(page.locator('#trn-quantization-status')).toContainText(await t('lc.quantOneBar'));
+  await expect(select.locator('option:checked')).toHaveText(await t('lc.quantOneBar'));
   await expect(click).toHaveAttribute('aria-pressed','false');
   await expect(page.locator('#locator-list')).toContainText('B');
   await select.selectOption('7');
   await expect.poll(()=>mock.writes.filter(m=>m.cmd==='setGlobalClipQuantization').map(m=>m.args)).toEqual([{quantization:7}]);
-  await expect(select).toHaveValue('7');await expect(page.locator('#trn-quantization-status')).toContainText('1/4');
+  await expect(select).toHaveValue('7');await expect(select.locator('option:checked')).toHaveText('1/4');
   await click.click();
   await expect.poll(()=>mock.writes.filter(m=>m.cmd==='recordingClick').map(m=>m.args)).toEqual([{enabled:true}]);
   await expect(click).toHaveAttribute('aria-pressed','true');await expect(click).toContainText(await t('rec.on'));
@@ -81,18 +82,27 @@ test('TRN settings: viewer reads without writing; disconnect clears state and ne
 });
 
 for(const locale of ['en','pt-BR'])for(const viewport of [{width:568,height:320},{width:851,height:393},{width:1280,height:800}])
-  test(`TRN CLICK and quantization stay in the main row before REFRESH (${locale} ${viewport.width})`,async({page})=>{
+  test(`TRN keeps PLAY STOP PREV NEXT on the first row and CLICK, quantization, REFRESH on the second (${locale} ${viewport.width})`,async({page})=>{
     const mock=liveMock(page);await mock.ready;await page.setViewportSize(viewport);await page.goto('/?lang='+locale);
     await page.locator('#btn-trn-mode').click();await expect(page.locator('#trn-quantization')).toHaveValue('4');
     await expect(page.locator('#btn-trn-settings')).toHaveCount(0);
-    const ids=['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next','trn-metronome','trn-quantization','btn-trn-refresh'];
-    let previous=null;
-    for(const id of ids){
+    const boxes={};
+    for(const id of ['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next','trn-metronome','trn-quantization','btn-trn-refresh']){
       const control=page.locator('#'+id);await expect(control).toBeVisible();
       const box=await control.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);
-      expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
-      if(previous){expect(box.x).toBeGreaterThanOrEqual(previous.x+previous.width-1);expect(Math.abs(box.y+box.height/2-previous.y-previous.height/2)).toBeLessThanOrEqual(1);}
-      previous=box;
+      expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);boxes[id]=box;
     }
+    const middle=box=>box.y+box.height/2;
+    const row=(ids)=>{for(let i=1;i<ids.length;i++){
+      expect(boxes[ids[i]].x).toBeGreaterThanOrEqual(boxes[ids[i-1]].x+boxes[ids[i-1]].width-1);
+      expect(Math.abs(middle(boxes[ids[i]])-middle(boxes[ids[i-1]]))).toBeLessThanOrEqual(1);
+    }};
+    row(['btn-trn-play','btn-trn-stop','btn-trn-prev','btn-trn-next']);
+    row(['trn-metronome','trn-quantization','btn-trn-refresh']);
+    const first=boxes['btn-trn-play'],second=boxes['trn-metronome'];
+    expect(second.y).toBeGreaterThanOrEqual(first.y+first.height-1);
+    expect(Math.abs(second.x-first.x)).toBeLessThanOrEqual(1);
+    const next=boxes['btn-trn-next'],refresh=boxes['btn-trn-refresh'];
+    expect(Math.abs(refresh.x+refresh.width-next.x-next.width)).toBeLessThanOrEqual(1);
     await expect(page.locator('#locator-search')).toBeVisible();await expect(page.locator('#locator-list')).toContainText('B');
   });

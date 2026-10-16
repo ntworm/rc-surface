@@ -279,14 +279,18 @@ mudar mappings. A composição original das abas e do transporte permanece; cont
 mantêm a posição entre abas. **STAGE/SAIR** e status continuam visíveis, inclusive no
 Stage Mode e em telas estreitas na horizontal.
 
-**TRN** abre o Transporte Lite. **CLICK** e **QUANTIZAÇÃO GLOBAL** ficam sempre
-visíveis na linha principal, antes de **REFRESH**, sem botão de ajustes:
+**TRN** abre o Transporte Lite. A primeira linha tem **PLAY**, **STOP**,
+**PREV** e **NEXT**; a segunda tem **CLICK**, **QUANTIZAÇÃO GLOBAL** e
+**REFRESH**, sempre visíveis, sem botão de ajustes. Uma linha abaixo só aparece
+quando algo pede atenção (sem AbletonOSC, mudança não confirmada, visualizador):
 **QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera a
 `clip_trigger_quantization` do Set (um clip com quantização própria mantém a
 dele), e **METRÔNOMO** liga ou desliga o click do Live. É o mesmo metrônomo do
 **CLICK** do REC; uma mudança feita no TRN, no REC ou no Live aparece nos dois
-em cerca de um segundo. Visualizador só lê, nada é repetido depois de reconectar,
-e sem AbletonOSC o valor aparece como desconhecido. Som, ritmo e contagem do
+em cerca de um segundo. Abrir o TRN lê o valor atual do Live mesmo sem nenhum
+mapping de Launch Clip. **CLICK** nunca fica bloqueado: muda na preparação, no
+pré-roll, durante o REC e no playback. Visualizador só lê, nada é repetido depois
+de reconectar, e sem AbletonOSC o valor aparece como desconhecido. Som, ritmo e contagem do
 metrônomo não são expostos às extensões: ajuste no Live ou use o **PRE-ROLL** do
 REC para contar antes de gravar.
 
@@ -1215,7 +1219,9 @@ playback parado:
    posição ou escolha um marcador inicial. Gravação livre não exige marcadores.
    Cada marcador mostra **compasso.beat** acima
    do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
-   observada do playback.
+   observada do playback. Uma grade fina de compassos e beats fica atrás dos
+   marcadores, com o número do compasso embaixo; os beats aparecem ao aproximar
+   e os números rareiam ao afastar.
    A lista segue o tempo da timeline, inclusive marcadores novos no início, com
    ordem estável nos empates e nomes completos. Compasso temporariamente atrasado
    mantém o último display confirmado com indicador pontilhado, sem autorizar REC.
@@ -1271,7 +1277,8 @@ playback da posição anterior antes de ligar record mode. Se o playback já
 chegou ao marcador antes dessa confirmação, aborta em vez de iniciar captura
 atrasada. O host acompanha o pré-roll depois de devolver o comando, portanto
 quatro compassos não ficam limitados pelo timeout de comando do celular.
-Na primeira passagem observada pelo marcador, restaura o click original.
+Na primeira passagem observada pelo marcador, restaura o click original, a menos
+que você tenha mudado o **CLICK** durante o pré-roll: sua escolha é mantida.
 STOP restaura somente click, Punch In e início temporário do Loop ainda
 pertencentes à tentativa, mantendo as entradas armadas; o início temporário só
 volta enquanto Loop permanece desligado. Use STOP desta página para terminar

@@ -1217,8 +1217,13 @@ export class RecordingCoordinator extends EventEmitter {
     });
   }
   public async click(enabled: boolean, context?: CommandExecutionContext) {
-    this.requireContext(context);
-    return this.run('click', context, async operation => { this.check(operation); await this.osc.recording.setMetronome(enabled); });
+    // The metronome is never locked: it changes during setup, pre-roll, REC
+    // and play alike. Once the user picks it, a pre-roll no longer restores
+    // the value it found.
+    this.requireContext(context); if (typeof enabled !== 'boolean') fail('ARGUMENTS');
+    if (this.preRoll) this.preRoll.clickOwned = false;
+    await this.osc.recording.setMetronome(enabled);
+    return this.snapshot();
   }
   public mark(mark: 'good' | 'review', context?: CommandExecutionContext) {
     this.idle(context); if (!this.lastAttempt?.stopped || !['good', 'review'].includes(mark)) fail('NO_ATTEMPT');

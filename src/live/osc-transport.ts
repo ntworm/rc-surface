@@ -166,6 +166,8 @@ export class OSCTransport extends EventEmitter {
   public clipLaunchActive = false;
   /** Song.clip_trigger_quantization as Live last reported it. */
   public globalQuantization: number | null = null;
+  /** Set once a reader (TRN, MAP) asked for the value, so re-registration keeps its listener. */
+  private globalQuantizationWatched = false;
   private pendingGlobalQuantization: ((error: Error) => void) | null = null;
   public get globalQuantizationPending(): boolean { return this.pendingGlobalQuantization !== null; }
   private readonly trackSlotListeners = new Set<number>();
@@ -367,6 +369,7 @@ export class OSCTransport extends EventEmitter {
     // A later start() belongs to a new session: nothing of this one is
     // re-registered on its behalf.
     this.clipLaunchActive = false;
+    this.globalQuantizationWatched = false;
     this.globalQuantization = null;
     this.trackSlotListeners.clear();
     this.clipPositionListeners.clear();
@@ -605,8 +608,8 @@ export class OSCTransport extends EventEmitter {
     this.send(LISTEN.beat);
     this.send(LISTEN.selectedTrack);
     this.recording.registerListeners();
+    if (this.clipLaunchActive || this.globalQuantizationWatched) this.send(CLIP.listenGlobalQuantization);
     if (this.clipLaunchActive) {
-      this.send(CLIP.listenGlobalQuantization);
       for (const trackIndex of this.trackSlotListeners) this.sendTrackSlotListen(trackIndex);
       for (const [trackIndex, slotIndex] of this.clipPositionListeners.values()) {
         this.send(CLIP.listenPlayingPosition, [oscInt(trackIndex), oscInt(slotIndex)]);
@@ -691,8 +694,15 @@ export class OSCTransport extends EventEmitter {
 
   public requestGlobalClipQuantization(): void {
     if (!this.state.available || !this.state.connected) return;
+    this.globalQuantizationWatched = true;
     this.send(CLIP.listenGlobalQuantization);
     this.send(CLIP.getGlobalQuantization);
+  }
+
+  /** Ask Live only while the value is unknown; once observed, its listener keeps it current. */
+  public requestUnknownGlobalClipQuantization(): void {
+    if (this.globalQuantization !== null || this.globalQuantizationPending) return;
+    this.requestGlobalClipQuantization();
   }
 
   /** Explicit, transient Set write. A UDP send is never an acknowledgement. */

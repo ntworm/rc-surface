@@ -919,3 +919,30 @@ test("the OSC traffic stays within fire, stop, listeners and getters", async () 
   ]);
   for (const [address] of sent) assert.ok(allowed.has(address), address);
 });
+
+test("TRN status asks Live for the global quantization once when no Launch Clip mapping exists", async () => {
+  setup();
+  // Gabriel's Set had no Launch Clip mapping: nothing had ever asked Live, so
+  // the TRN selector stayed on "Waiting for Live" until he picked a value.
+  oscTransport["clipLaunchActive"] = false;
+  oscTransport.globalQuantization = null;
+  const reads = () => sent.filter(([address]) => address === "/live/song/get/clip_trigger_quantization").length;
+  const listens = () => sent.filter(([address]) => address === "/live/song/start_listen/clip_trigger_quantization").length;
+  let { globalQuantization } = await commands.getClipLaunchStatus.handler({});
+  assert.equal(globalQuantization.value, null);
+  assert.equal(reads(), 1, "an unknown value is requested from Live");
+  assert.equal(listens(), 1, "and later changes in Live are pushed");
+  push("/live/song/get/clip_trigger_quantization", 7);
+  ({ globalQuantization } = await commands.getClipLaunchStatus.handler({}));
+  assert.equal(globalQuantization.value, 7);
+  await commands.getClipLaunchStatus.handler({});
+  assert.equal(reads(), 1, "a confirmed value is not polled again");
+  oscTransport.registerListeners();
+  assert.equal(listens(), 2, "the listener survives a listener re-registration");
+  assert.ok(sent.every(([address]) => !address.includes("/set/")), "reading never writes the Set");
+  oscTransport.state.connected = false;
+  oscTransport.globalQuantization = null;
+  await commands.getClipLaunchStatus.handler({});
+  assert.equal(reads(), 1, "nothing is sent without the AbletonOSC link");
+  oscTransport.send = realSend;
+});

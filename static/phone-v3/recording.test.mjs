@@ -680,3 +680,44 @@ test('REC inline pre-roll changes only the shared local preference and reflects 
   inline.value='4';inline.listeners.get('change')();assert.equal(h.saved.at(-1)[1],'2');
 });
 
+test('REC phone CLICK neither waits for nor retires a pending REC action',async t => {
+  const context = vm.createContext({setTimeout,clearTimeout,Date});
+  vm.runInContext(source,context);
+  const calls=[],client=context.RcRecording.createClient({send:(cmd,args,cb)=>calls.push({cmd,args,cb})});
+  t.after(()=>client.session(false));
+  client.session(true,'controller');
+  const recording=client.command('recordingRecord',{});
+  assert.equal(client.view().busy,true);
+  await assert.rejects(client.command('recordingArm',{}),/BUSY/,'other writes still wait for REC');
+  const clicking=client.command('recordingClick',{enabled:false});
+  assert.equal(calls.at(-1).cmd,'recordingClick');assert.equal(client.view().clicking,true);
+  await assert.rejects(client.command('recordingClick',{enabled:true}),/BUSY/,'one click change at a time');
+  calls.at(-1).cb({ok:true,result:{transport:{metronome:{value:false,fresh:true}}}});
+  assert.equal((await clicking).transport.metronome.value,false);
+  assert.equal(client.view().clicking,false);assert.equal(client.view().busy,true,'REC is still pending');
+  calls.find(call=>call.cmd==='recordingRecord').cb({ok:true,result:{transport:{metronome:{value:false,fresh:true}},pending:null}});
+  assert.equal((await recording).pending,null,'the REC callback was not retired by CLICK');
+  const late=client.command('recordingClick',{enabled:true});client.session(false);
+  calls.at(-1).cb({ok:true,result:{}});await assert.rejects(late,/SESSION/);
+});
+test('REC timeline grid marks bars and beats from the observed meter and thins out when zoomed out',t => {
+  const {api:rec}=api(t),a={timelineGrid:(...args)=>JSON.parse(JSON.stringify(rec.timelineGrid(...args)))};
+  const four={numerator:4,denominator:4},bounds={start:0,end:16,width:100};
+  // 16 beats over 640 px: every beat 40 px apart, every bar numbered.
+  let ticks=a.timelineGrid(bounds,four,640);
+  assert.deepEqual(ticks.filter(tick=>tick.kind==='bar').map(tick=>[tick.time,tick.label]),[[0,'1'],[4,'2'],[8,'3'],[12,'4'],[16,'5']]);
+  assert.deepEqual(ticks.filter(tick=>tick.kind==='beat').map(tick=>tick.time),[1,2,3,5,6,7,9,10,11,13,14,15]);
+  // 6/8: bars of three quarter notes, beats every eighth.
+  ticks=a.timelineGrid({start:0,end:6},{numerator:6,denominator:8},600);
+  assert.deepEqual(ticks.filter(tick=>tick.kind==='bar').map(tick=>tick.time),[0,3,6]);
+  assert.equal(ticks.filter(tick=>tick.kind==='beat').length,10);
+  // 400 bars on 600 px: no beats, bar lines at least 6 px apart, labels at least 28 px apart.
+  ticks=a.timelineGrid({start:0,end:1600},four,600);
+  const bars=ticks.filter(tick=>tick.kind==='bar'),labels=bars.filter(tick=>tick.label);
+  assert.equal(ticks.some(tick=>tick.kind==='beat'),false);
+  assert.ok(bars.length<=101 && (bars[1].time-bars[0].time)*600/1600>=6);
+  assert.ok((labels[1].time-labels[0].time)*600/1600>=28);
+  assert.equal(labels[1].label,String(labels[1].time/4+1),'labels are real bar numbers');
+  for(const meter of [null,{numerator:4,denominator:3},{numerator:0,denominator:4}]) assert.deepEqual(a.timelineGrid(bounds,meter,640),[],'unknown meter draws nothing');
+  assert.deepEqual(a.timelineGrid(bounds,four,0),[],'hidden timeline draws nothing');
+});

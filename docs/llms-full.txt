@@ -878,14 +878,19 @@ without changing mappings. The original tabs/transport composition stays in plac
 keep the same position between tabs. **STAGE/EXIT** and status remain visible,
 including in Stage Mode and narrow landscape screens.
 
-**TRN** opens Transport Lite. **CLICK** and **GLOBAL QUANTIZATION** stay visible
-in its main control row, before **REFRESH**, without a settings button:
+**TRN** opens Transport Lite. The first row holds **PLAY**, **STOP**, **PREV**
+and **NEXT**; the second holds **CLICK**, **GLOBAL QUANTIZATION** and
+**REFRESH**, always visible, without a settings button. A line below them
+appears only when something needs attention (no AbletonOSC, an unconfirmed
+change, viewer):
 **GLOBAL QUANTIZATION** shows the value Live confirmed and changes the Set's
 `clip_trigger_quantization` (a clip with its own quantization keeps it), and
 **METRONOME** turns Live's click on or off. It is the same metronome as REC
 **CLICK**; a change made in TRN, REC or Live appears in both within about a
-second. Viewers can read but not write, nothing is replayed after a reconnect,
-and a missing AbletonOSC link shows the value as unknown. The metronome's sound,
+second. Opening TRN reads the current value from Live even when no Launch
+Clip mapping exists. **CLICK** is never locked: it changes during setup,
+pre-roll, REC and playback. Viewers can read but not write, nothing is replayed
+after a reconnect, and a missing AbletonOSC link shows the value as unknown. The metronome's sound,
 rhythm and count-in are not exposed to extensions: set them in Live, or use REC
 **PRE-ROLL** for a count-off.
 
@@ -1792,6 +1797,8 @@ stopped:
    new start, or choose a start marker. No marker is required for free recording.
    Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
+   A fine bar/beat grid sits behind the markers, with bar numbers along the
+   bottom; beats appear as you zoom in and labels thin out when zoomed out.
    The list follows timeline time, including newly created early markers, with
    stable equal-time order and full names. A temporarily stale meter keeps its
    last confirmed display with a dotted indicator; it cannot authorize REC.
@@ -1846,7 +1853,8 @@ position before enabling record mode. If playback has already reached the
 marker before that confirmation, it aborts instead of starting a late capture.
 The host monitors the lead-in after the command returns, so four bars are not
 limited by the phone's command timeout. At the first observed marker crossing,
-it restores the original click setting. STOP restores only click, Punch In and
+it restores the original click setting, unless you changed **CLICK** during the
+lead-in: your choice is kept. STOP restores only click, Punch In and
 the temporary Loop start still owned by this attempt, keeping armed inputs intact;
 the temporary start is restored only while Loop remains off. Use this page's
 STOP to finish cleanup even if you stopped transport in Live. Changes to required

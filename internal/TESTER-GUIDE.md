@@ -70,9 +70,13 @@ then record longer than ten seconds and change each track volume, SOLO and
 MUTE. Stop REC, keep playback running and test volume again. Confirm real
 Live mixer values and external mixer changes; ARM/disarm must stay blocked
 until transport stops. Repeat with one pass and infinity, then STOP/restart.
-Open TRN: CLICK and Global Quantization must be visible in the main row
-before REFRESH, with no tool button. Change each here and in Live; confirm
-REC CLICK agrees. A viewer cannot write; reconnect must replay no writes.
+Open TRN: PLAY/STOP/PREV/NEXT on the first row, CLICK, Global Quantization
+and REFRESH on the second, with no tool button. Global Quantization must show
+Live's value on opening, without choosing one first. Change each here and in
+Live; confirm REC CLICK agrees. Toggle CLICK during pre-roll, during REC and
+during playback: it must always respond, and a choice made in pre-roll must
+survive the capture start. REC timeline: bar numbers and faint beat lines sit
+behind the markers and follow ZOOM. A viewer cannot write; reconnect must replay no writes.
 
 ## Historical kit: 1.0.2
 

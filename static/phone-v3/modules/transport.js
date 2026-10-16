@@ -70,11 +70,12 @@
       const label = confirmed ? quantizationLabel(quant.value) : tp('lc.quantUnknown', 'Waiting for Live');
       if (quantStatus) {
         quantStatus.dataset.state = !linked || quantError ? 'error' : pending ? 'pending' : confirmed ? 'confirmed' : 'waiting';
-        quantStatus.textContent = !connected ? tp('lc.quantUnknown', 'Waiting for Live')
+        // The selector itself shows the confirmed value or "Waiting for Live";
+        // this line only speaks when something needs attention.
+        quantStatus.textContent = !connected ? ''
           : !linked ? tp('lc.quantOffline', 'Connect AbletonOSC to change the Set global quantization.')
           : quantError ? tp('lc.quantError', 'Could not change global quantization: {error}', { error: quantError })
-          : pending ? tp('lc.quantPending', 'Waiting for Live… Current: {label}', { label })
-          : confirmed ? tp('lc.quantConfirmed', 'Confirmed in Live: {label}', { label }) : label;
+          : pending ? tp('lc.quantPending', 'Waiting for Live… Current: {label}', { label }) : '';
       }
       const known = typeof metronome === 'boolean';
       click.disabled = !writable() || !known || clickBusy;
@@ -82,7 +83,7 @@
       click.textContent = tp('rec.click', 'CLICK') + ' · ' + (known ? tp(metronome ? 'rec.on' : 'rec.off', metronome ? 'ON' : 'OFF') : '?');
       if (clickStatus) {
         clickStatus.textContent = clickError ? tp('trn.metronomeError', 'Live did not confirm the metronome: {error}', { error: clickError })
-          : !connected ? tp('trn.metronomeUnknown', 'Waiting for Live')
+          : !connected ? ''
           : !writable() ? tp('trn.viewer', 'Viewer: read only') : '';
       }
     }
