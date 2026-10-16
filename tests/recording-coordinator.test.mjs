@@ -8,7 +8,7 @@ import { DeviceParameter } from '@ableton-extensions/sdk';
 import * as oscCodec from 'osc-min';
 import { OSCTransport } from '../src/live/osc-transport.ts';
 import { RecordingCoordinator } from '../src/live/recording-coordinator.ts';
-import { CMD, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL, CLIP } from '../src/osc-tokens.ts';
+import { CMD, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL, REC_CAPTURE, CLIP } from '../src/osc-tokens.ts';
 
 test('REC conservative getter addresses match public AbletonOSC handlers literally', () => {
   assert.deepEqual(REC_PREFLIGHT, {
@@ -48,6 +48,7 @@ function fixture(t,nativePositioning=false) {
     if (address === REC_LOOP.setStart) values.loopStart = args[0].value;
     if (address === REC_LOOP.setLength) values.loopLength = args[0].value;
     if (address === REC_PREROLL.setPunchIn) values.punchIn = args[0].value === 1;
+    if (address === REC_CAPTURE.setPunchOut) values.punchOut = args[0].value === 1;
     if (address === '/live/song/continue_playing') {values.position=values.stoppedResume;values.playing=true;}
     if (address === CMD.startPlaying) {if(nativePositioning && !values.playing) values.position=values.insertion;values.playing=true;}
     if (address === CMD.stopPlaying) {if(values.playing) values.stoppedResume=values.position;values.playing = false;}
@@ -911,6 +912,162 @@ function preRollFixture(t) {
   return f;
 }
 const preRollWrites=f=>f.sent.filter(([address])=>address.includes('/set/') || address===CMD.startPlaying || address===CMD.stopPlaying);
+
+const drainCapture=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));};
+async function captureAdvance(t,f,position){f.values.position=position;t.mock.timers.tick(250);f.push(GET.currentSongTime,[position]);await drainCapture();}
+function captureFixture(t){const f=preRollFixture(t);f.song.tracks[0].arm=true;f.range.end={name:'End',time:64};return f;}
+
+test('REC free capture at a fixed cursor needs no markers and moves the native insertion point once',async t=>{
+  const f=captureFixture(t);f.song.cuePoints=[];
+  const range={start:{source:'cursor',time:20},end:null,loop:false};
+  await f.coordinator.record([recordingTrack],range,f.context,0,null);
+  assert.equal(f.values.position,20);assert.equal(f.values.insertion,20);
+  assert.equal(f.values.record,true);assert.equal(f.values.loop,false);assert.equal(f.values.punchOut,false);
+  assert.deepEqual(f.cueWrites.map(item=>item[0]),['create','delete']);assert.deepEqual(f.song.cuePoints,[]);
+  await f.coordinator.stop(f.context);assert.equal(f.song.tracks[0].arm,true);
+  await f.coordinator.record([recordingTrack],range,f.context,0,null);assert.equal(f.values.insertion,20);
+});
+
+test('REC one bounded pass configures native Punch Out and confirms stop while preserving ARM',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,0,1);
+  assert.equal(f.values.loop,false);assert.equal(f.values.punchOut,true);assert.equal(f.coordinator.snapshot().capture.pass,1);
+  for(let position=32.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.values.playing,false);assert.equal(f.values.record,false);assert.equal(f.values.punchOut,false);
+  assert.equal(f.song.tracks[0].arm,true);assert.equal(f.coordinator.snapshot().capture.phase,'complete');
+});
+
+test('REC finite passes count native wraps and disable Loop for the last pass even after phone disconnect',async t=>{
+  const f=captureFixture(t);f.range.loop=true;
+  await f.coordinator.record([recordingTrack],f.range,f.context,0,2);f.retire();
+  for(let position=32.5;position<64;position+=.5)await captureAdvance(t,f,position);
+  await captureAdvance(t,f,32);
+  assert.equal(f.coordinator.snapshot().capture.pass,2);assert.equal(f.values.loop,false,'last pass must not wrap');
+  assert.equal(f.values.punchOut,true,'capture boundary remains native until STOP');
+  for(let position=32.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.values.playing,false);assert.equal(f.values.record,false);assert.equal(f.coordinator.snapshot().capture.phase,'complete');
+  assert.equal(f.song.tracks[0].arm,true);
+});
+
+test('REC unlimited passes retain Loop until explicit STOP; retired plans never stop a new Set',async t=>{
+  const f=captureFixture(t);f.range.loop=true;await f.coordinator.record([recordingTrack],f.range,f.context,0,null);
+  for(let position=32.5;position<64;position+=.5)await captureAdvance(t,f,position);await captureAdvance(t,f,32);
+  assert.equal(f.values.loop,true);assert.equal(f.coordinator.snapshot().capture.pass,2);assert.equal(f.values.record,true);
+  f.replaceSong({tracks:[],cuePoints:[]});const before=f.sent.length;
+  await captureAdvance(t,f,64);assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
+
+test('REC capture rejects count without an end, invalid count and a loop/count mismatch before writes',async t=>{
+  const f=captureFixture(t),before=f.sent.length;
+  for(const passes of [0,17,1.5,'2'])await assert.rejects(f.coordinator.record([recordingTrack],f.range,f.context,0,passes),/PASSAGES/);
+  await assert.rejects(f.coordinator.record([recordingTrack],{...f.range,end:null},f.context,0,1),/PASSAGES/);
+  await assert.rejects(f.coordinator.record([recordingTrack],f.range,f.context,0,2),/PASSAGES/);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);
+});
+
+test('REC capture link loss retires future stop and loop writes without replay on recovery',async t=>{
+  const f=captureFixture(t);f.range.loop=true;await f.coordinator.record([recordingTrack],f.range,f.context,0,2);
+  f.osc.emit('link-lost');const before=f.sent.length;await captureAdvance(t,f,64);
+  assert.equal(f.values.record,true);assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
+
+test('REC finite pre-roll hands the observed first entry to the capture plan once',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,1,1);
+  f.retire();
+  assert.equal(f.coordinator.snapshot().capture,null);assert.equal(f.coordinator.snapshot().preRoll.phase,'running');
+  for(let position=28.5;position<=32;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().preRoll.phase,'complete');assert.equal(f.coordinator.snapshot().capture.pass,1);
+  for(let position=32.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().capture.phase,'complete');assert.equal(f.values.playing,false);
+});
+
+test('REC capture sees an external record OFF edge even if ON follows before queued position handling',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,0,1);
+  f.values.record=false;f.push(REC.getRecordMode,[false]);f.values.record=true;f.push(REC.getRecordMode,[true]);
+  const before=f.sent.length;
+  for(let position=32.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().capture.phase,'cancelled');assert.equal(f.values.record,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
+
+test('REC capture relinquishes an externally edited Punch Out and never restores it later',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,0,1);
+  f.values.punchOut=false;f.push(REC_PREFLIGHT.punchOut,[false]);
+  f.values.punchOut=true;f.push(REC_PREFLIGHT.punchOut,[true]);
+  const before=f.sent.length;await f.coordinator.stop(f.context);
+  assert.equal(f.sent.slice(before).some(([address])=>address===REC_CAPTURE.setPunchOut),false);
+  assert.equal(f.values.punchOut,true);
+});
+
+test('REC capture retires a modified native loop without stopping a replacement transport intent',async t=>{
+  const f=captureFixture(t);f.range.loop=true;await f.coordinator.record([recordingTrack],f.range,f.context,0,2);
+  f.values.loop=false;f.push(REC_PREFLIGHT.loop,[false]);const before=f.sent.length;
+  await captureAdvance(t,f,32.5);
+  assert.equal(f.coordinator.snapshot().capture.phase,'unconfirmed');assert.equal(f.values.record,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
+
+for(const bars of [0,1])test('REC missing native Punch Out confirmation with pre-roll '+bars+' never starts recording and retains recoverable ownership',async t=>{
+  const f=captureFixture(t),send=f.osc.send;
+  f.osc.send=(address,args=[])=>{if(address===REC_CAPTURE.setPunchOut)f.block(REC_PREFLIGHT.punchOut);send(address,args);};
+  const pending=f.coordinator.record([recordingTrack],f.range,f.context,bars,1),rejected=assert.rejects(pending,/PUNCH_UNCONFIRMED/);
+  await drainCapture();for(let i=0;i<4;i++){t.mock.timers.tick(2001);await drainCapture();}await rejected;
+  assert.equal(f.sent.some(([address])=>address===CMD.startPlaying),false);assert.equal(f.values.record,false);
+  f.osc.send=send;f.block(undefined);await f.coordinator.stop(f.context);assert.equal(f.values.punchOut,false);
+});
+
+test('REC accepted pre-roll OFF then ON cannot later stop the external replacement take',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,1,1);
+  f.values.record=false;f.push(REC.getRecordMode,[false]);f.values.record=true;f.push(REC.getRecordMode,[true]);
+  const before=f.sent.length;
+  for(let position=28.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().capture,null);assert.equal(f.values.record,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+  await f.coordinator.stop(f.context);assert.equal(f.values.record,false);assert.equal(f.values.punchOut,false);
+});
+
+test('REC capture STOP retires active capture state so refresh and ARM work after cache expiry',async t=>{
+  const f=captureFixture(t);f.range.loop=true;
+  await f.coordinator.record([recordingTrack],f.range,f.context,1,2);
+  for(let position=28.5;position<=32;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().capture.phase,'recording');
+  await f.coordinator.stop(f.context);
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+  t.mock.timers.tick(3000);
+  const state=await f.coordinator.refresh();
+  assert.equal(state.pending,null);
+  assert.equal(state.capture.phase,'cancelled');
+  assert.equal(state.transport.isPlaying.fresh,true);
+  assert.equal(state.transport.recordMode.fresh,true);
+  const armRes=await f.coordinator.trackControl(recordingTrack,'arm',false,'multi',f.context);
+  assert.equal(armRes.tracks[0].arm,false);
+});
+
+test('REC capture STOP cleanup failure still permits fresh display and an explicit cleanup retry',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,0,1);
+  const send=f.osc.send;
+  f.osc.send=(address,args=[])=>{
+    send(address,args);
+    if(address===REC_CAPTURE.setPunchOut)throw Error('test cleanup failure');
+  };
+  await assert.rejects(f.coordinator.stop(f.context),/test cleanup failure/);
+  assert.equal(f.values.record,false);assert.equal(f.values.playing,false);
+  f.osc.send=send;t.mock.timers.tick(3000);
+  const state=await f.coordinator.refresh();
+  assert.equal(state.transport.isPlaying.fresh,true);
+  assert.equal(state.tracks[0].canArm,true);
+  await f.coordinator.stop(f.context);assert.equal(f.values.punchOut,false);
+  await f.coordinator.trackControl(recordingTrack,'arm',false,'multi',f.context);
+  assert.equal(f.song.tracks[0].arm,false);
+});
+
+test('REC changed ARM cohort retires automatic stop without touching the replacement cohort',async t=>{
+  const f=captureFixture(t);await f.coordinator.record([recordingTrack],f.range,f.context,0,1);
+  f.song.tracks[0].arm=false;f.song.tracks[1].arm=true;
+  f.push(REC_PREFLIGHT.trackArm,[0,false]);f.push(REC_PREFLIGHT.trackArm,[1,true]);const before=f.sent.length;
+  for(let position=32.5;position<=64;position+=.5)await captureAdvance(t,f,position);
+  assert.equal(f.coordinator.snapshot().capture.phase,'unconfirmed');assert.equal(f.values.record,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+});
 
 test('REC pre-roll accepts only OFF/1/2/4 and refuses negative lead-in before writing or arming',async t=>{
   const f=preRollFixture(t);

@@ -47,7 +47,8 @@ test('REC phone reconnect/timeout do not replay writes or fabricate successful s
 });
 test('REC touch page exposes honest workflow and a separate STOP, loaded after session API',() => {
   const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-  for (const id of ['track-grid','arm-mode','start-marker','end-marker','timeline-track','markers','cursor','loop','start','stop','click']) assert.match(html,new RegExp('id="rec-'+id+'"'));
+  for (const id of ['track-grid','arm-mode','start-marker','end-marker','timeline-track','markers','cursor','passages','free-mode','start','stop','click']) assert.match(html,new RegExp('id="rec-'+id+'"'));
+  assert.doesNotMatch(html,/id="rec-loop"/);
   for(const removed of ['prepare','audition','retry','good','review','bar','beat','point']) assert.doesNotMatch(html,new RegExp('id="rec-'+removed+'"'));
   assert.ok(html.indexOf('modules/recording.js')>html.indexOf('modules/session.js'));
   assert.match(html,/data-page="recording" role="tab"/);
@@ -87,7 +88,8 @@ test('REC actual touch wiring respects role, sends explicit actions, keeps STOP 
   sent.at(-1).cb({ok:true,result:state});read.cb({ok:true,result:{...state,selected:null}});
   await new Promise(resolve=>setImmediate(resolve));assert.equal(client.view().state.selected.id,'11');
   automaticRead=true;
-  node('rec-loop').listeners.get('click')();assert.equal(node('rec-end-field').hidden,false);
+  node('rec-end-marker').value='1';node('rec-end-marker').listeners.get('change')();
+  node('rec-passages').value='infinite';node('rec-passages').listeners.get('change')();assert.equal(node('rec-end-field').hidden,false);
   node('rec-start').listeners.get('click')(); assert.equal(sent.at(-1).cmd,'recordingRecord'); assert.equal(sent.at(-1).args.range.start.time,8); assert.equal(sent.at(-1).args.tracks[0].id,'11');
   assert.equal(sent.at(-1).args.range.end.time,24);assert.equal(sent.at(-1).args.range.loop,true);
   assert.equal(node('rec-stop').disabled,false,'STOP never waits for start confirmation');
@@ -177,11 +179,11 @@ test('REC read jitter preserves valid state while real expiry still blocks stale
   const read=client.command('getRecordingState');assert.equal(client.view().busy,false);
   t.mock.timers.setTime(10950);assert.equal(client.view().state.transport.isPlaying.fresh,true);
   calls.at(-1).cb({ok:true,result:observed});await read;
-  t.mock.timers.setTime(12951);assert.equal(client.view().state.transport.isPlaying.fresh,false);
+  t.mock.timers.setTime(15951);assert.equal(client.view().state.transport.isPlaying.fresh,false);
   assert.equal(client.view().state.transport.isPlaying.value,false,'retain last known value without calling it fresh');
 });
 
-test('REC Loop can be switched off at the last marker so a non-loop recording remains reachable',async t=>{
+test('REC optional end supports free capture and never silently clears an invalid bounded range',async t=>{
   const nodes=new Map(),calls=[];let generated=0;
   const node=id=>{
     if(!nodes.has(id)) nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,dataset:{},style:{},children:[],listeners:new Map(),
@@ -200,15 +202,14 @@ test('REC Loop can be switched off at the last marker so a non-loop recording re
     sendPhoneCommand:(name,args,cb)=>{calls.push({name,args});cb({ok:true,result:state});}});
   vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
   client.session(true,'controller');await client.command('getRecordingState');
-  assert.equal(node('rec-loop').disabled,false);node('rec-loop').listeners.get('click')();
-  assert.equal(node('rec-loop')['aria-pressed'],'true');assert.equal(node('rec-end-marker').value,'1');
+  assert.equal(node('rec-free-mode').hidden,false);
+  node('rec-end-marker').value='1';node('rec-end-marker').listeners.get('change')();
+  assert.equal(node('rec-passages-field').hidden,false);assert.equal(node('rec-passages').value,'1');
   node('rec-start-marker').value='1';node('rec-start-marker').listeners.get('change')();
   assert.equal(calls.at(-1).name,'recordingSeekMarker');assert.equal(calls.at(-1).args.time,24);
-  assert.equal(node('rec-end-marker').value,'');assert.equal(node('rec-start').disabled,true);
-  assert.equal(node('rec-loop').disabled,false,'Loop OFF stays available when no later marker exists');
-  node('rec-loop').listeners.get('click')();
-  assert.equal(node('rec-loop')['aria-pressed'],'false');assert.equal(node('rec-end-field').hidden,true);
-  assert.equal(node('rec-loop').disabled,true,'enabling Loop still requires an end marker');
+  assert.equal(node('rec-end-marker').value,'1');assert.equal(node('rec-start').disabled,true);
+  node('rec-end-marker').value='';node('rec-end-marker').listeners.get('change')();
+  assert.equal(node('rec-free-mode').hidden,false);assert.equal(node('rec-passages-field').hidden,true);
   assert.equal(node('rec-start').disabled,false);
   node('rec-start').listeners.get('click')();
   assert.equal(calls.at(-1).name,'recordingRecord');
@@ -272,7 +273,7 @@ function gridHarness(t) {
   const seed=async result=>{const reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result});await reading;};
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
   const buttons=index=>node('rec-track-grid').children[index].children[1].children.filter(c=>c.dataset?.property);
-  return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=2001;}};
+  return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=5001;}};
 }
 test('REC polling retains 202 marker menus, full names, selection and scroll when the observed meter becomes stale',async t=>{
   const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
@@ -493,7 +494,6 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
 
   node('rec-start-marker').value='1';
   node('rec-start-marker').listeners.get('change')();
-  node('rec-loop').listeners.get('click')();
   node('rec-end-marker').value='2';
   node('rec-end-marker').listeners.get('change')();
 
@@ -511,6 +511,20 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
   timers.length=0;
   await client.command('getRecordingState');
   assert.equal(node('rec-zoom').value,'2','manual zoom retained and not overwritten');
+});
+
+test('REC manual zoom centers a selected marker and the midpoint of a wider-than-viewport selection',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');await h.seed(h.state());
+  const timeline=h.node('rec-timeline'),track=h.node('rec-timeline-track');
+  Object.assign(timeline,{clientWidth:400,scrollLeft:0});Object.assign(track,{offsetLeft:48,offsetWidth:2000});
+  const select=(id,value)=>{h.node(id).value=value;h.node(id).listeners.get('change')();};
+  const zoom=()=>{h.node('rec-zoom').value='8';h.node('rec-zoom').listeners.get('input')();};
+  select('rec-start-marker','1');h.calls.length=0;zoom();
+  assert.ok(Math.abs(timeline.scrollLeft-(48+48/52*2000-200))<.001,'selected marker stays centered');
+  assert.equal(h.calls.length,0,'marker zoom never writes to Live');
+  select('rec-start-marker','0');select('rec-end-marker','1');h.calls.length=0;timeline.scrollLeft=0;zoom();
+  assert.ok(Math.abs(timeline.scrollLeft-(48+40/52*2000-200))<.001,'wide selection centers its midpoint, rather than pinning its start');
+  assert.equal(h.calls.length,0,'selection zoom never writes to Live');
 });
 
 test('REC volume label reports native normalized units without inventing a dB curve',t=>{
@@ -579,5 +593,16 @@ test('REC unknown volume, stale snapshot and viewer disable keyboard and reset w
   box().listeners.get('keydown')(event);assert.equal(h.calls.length,count);
   h.client.session(true,'viewer');await h.seed(state);count=h.calls.length;
   box().listeners.get('dblclick')(event);assert.equal(h.calls.length,count);
+});
+
+test('REC inline pre-roll changes only the shared local preference and reflects locked state',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();await h.seed(state);
+  const inline=h.node('rec-pre-roll-inline'),before=h.calls.length;
+  inline.value='2';inline.listeners.get('change')();
+  assert.equal(h.calls.length,before);assert.equal(inline.value,'2');
+  assert.deepEqual(h.saved.at(-1),['rc-surface-v2.rec.preRollBars','2']);
+  assert.equal(h.node('rec-pre-roll-2')['aria-pressed'],'true');
+  await h.seed({...state,pending:'record'});assert.equal(inline.disabled,true);
+  inline.value='4';inline.listeners.get('change')();assert.equal(h.saved.at(-1)[1],'2');
 });
 

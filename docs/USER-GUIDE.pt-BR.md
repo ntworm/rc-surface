@@ -1164,7 +1164,8 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até 
 
 O knob de volume de cada faixa ajusta o mixer nativo, não o ganho de entrada.
 Arraste verticalmente ou use as setas; duplo-clique restaura o padrão do parâmetro
-no Live. A indicação é porcentagem normalizada, não dB. Valor desconhecido ou
+no Live. O arco ao redor mostra o nível normalizado sem rótulo numérico; teclado
+e leitor de tela mantêm a indicação em porcentagem, não dB. Valor desconhecido ou
 vencido bloqueia o controle. Mudanças externas aparecem na próxima leitura;
 troca de conexão ou Set cancela o gesto. STOP mantém prioridade sobre volume.
 
@@ -1187,7 +1188,9 @@ playback parado:
    ARM confirma o conjunto de entradas armáveis sem esperar Loop, compasso ou click.
    Se a confirmação falhar, os estados ARM ficam desconhecidos até nova leitura;
    a escrita pode já ter sido aplicada. A superfície não a repete automaticamente.
-2. Escolha o marcador de início. Cada marcador mostra **compasso.beat** acima
+2. Comece na posição fixa **Aqui**, use **Usar cursor atual** para fixar outra
+   posição ou escolha um marcador inicial. Gravação livre não exige marcadores.
+   Cada marcador mostra **compasso.beat** acima
    do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
    observada do playback.
    A lista segue o tempo da timeline, inclusive marcadores novos no início, com
@@ -1195,8 +1198,11 @@ playback parado:
    mantém o último display confirmado com indicador pontilhado, sem autorizar REC.
    Salto de marcador confirma transporte parado/record off e identidade/monitor
    selecionado sem esperar estados do mixer sem relação. REC confirma o conjunto.
-3. Para gravar passagens repetidas, ligue **Loop** e escolha um marcador final
-   depois do início. Deixe Loop desligado para gravar sem um final definido.
+3. Deixe **FIM = Até STOP** para gravar livremente. Escolher um marcador final
+   depois do início libera **PASSAGENS**: 1–16 passagens no total ou ∞ até STOP.
+   Um trecho novo começa com uma passagem. Fim inválido/removido bloqueia REC
+   sem mudar silenciosamente para gravação livre. Coloque o fim depois da
+   ressonância desejada dos pratos/instrumentos.
 4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
    padrão e começa diretamente no marcador. As outras opções tocam os compassos
    anteriores com click até o Punch In nativo abrir a captura no marcador.
@@ -1222,13 +1228,16 @@ iniciar playback nem gravação. A faixa serve de referência de marcadores e
 posição, sem waveform de áudio nem seleção de take lanes. Um marcador movido
 ou removido precisa ser escolhido novamente.
 
-Loop repete entre os dois marcadores até STOP; o marcador final não para a
-gravação. REC aguarda o Live confirmar a região de loop antes de começar.
-Todas as mudanças de loop compartilham um limite de dois segundos para a
-confirmação; sem ela, a gravação não começa. Com Loop desligado, REC desliga
-o Arrangement Loop do Live. STOP mantém a região escolhida para reprodução.
-Configure monitoração da entrada e take lanes no Live. Para ouvir o Arrangement,
-escolha Monitor Auto/Off em vez de In.
+Gravação livre desliga o Arrangement Loop. Gravação limitada confirma o trecho
+e o Punch Out nativo antes de começar. Uma passagem deixa Loop desligado;
+repetição finita desliga Loop na última passagem observada e confirma STOP após
+o limite nativo de captura. Pré-roll só antes da primeira passagem. O plano
+aceito roda no computador; reconectar o celular nunca repete REC. Posição
+ausente/ambígua não confirma conclusão. Perda de OSC ou troca de Set aposenta
+o plano; a gravação pode continuar, então confira o Live e use STOP.
+STOP preserva início fixo, trecho, quantidade e ARM para outro REC. O Live
+guarda as take lanes; escolha/comping ficam no computador. Configure monitoração
+lá; para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
 
 Pré-roll é uma preferência salva neste navegador, separada do count-in nativo
 do Live. Usa a fórmula de compasso observada para calcular a antecipação;

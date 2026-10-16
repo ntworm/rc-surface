@@ -580,15 +580,17 @@
     <section class="rec-workspace" aria-label="Arrangement REC">
       <header class="rec-heading">
         <h1 data-i18n="rec.title">REC</h1>
-        <span id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">Waiting for Live</span>
       </header>
       <div class="rec-row rec-destination" role="group" aria-label="Recording destination" data-i18n-aria-label="rec.destination">
-        <button id="rec-arrangement-mode" type="button" aria-pressed="true">ARRANGEMENT</button><button id="rec-clip-mode" type="button" aria-pressed="false">CLIP</button>
+        <span class="rec-mode-switch"><button id="rec-arrangement-mode" type="button" aria-pressed="true">ARRANGEMENT</button><button id="rec-clip-mode" type="button" aria-pressed="false">CLIP</button></span>
+        <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
       </div>
       <div class="rec-row rec-main">
         <button id="rec-start" type="button" class="rec-start">REC</button>
         <button id="rec-stop" type="button" class="rec-stop">STOP</button>
-        <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
+        <label class="rec-inline-preroll"><span data-i18n="rec.preRoll">PRE-ROLL</span><select id="rec-pre-roll-inline" data-i18n-aria-label="rec.preRollBars" aria-label="Pre-roll bars"><option value="0" data-i18n="rec.preRollOff">OFF</option><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
+        <div id="rec-free-mode" class="rec-free-mode"><span data-i18n="rec.freeRecording">FREE</span><span data-i18n="rec.untilStop">Until STOP</span></div>
+        <label id="rec-passages-field" class="rec-inline-preroll" hidden><span data-i18n="rec.passages">PASSES</span><select id="rec-passages" data-i18n-aria-label="rec.passages" aria-label="Passes"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="infinite">∞</option></select></label>
         <button id="rec-return-arrangement" type="button" data-i18n="rec.returnArrangement" data-i18n-aria-label="rec.returnArrangementLabel">BACK TO ARR</button>
       </div>
       <div id="rec-arrangement-panel" class="rec-arrangement-panel">
@@ -608,8 +610,7 @@
       </section>
       <div class="rec-row rec-range">
         <label><span data-i18n="rec.startMarker">START</span><select id="rec-start-marker"></select></label>
-        <button id="rec-loop" type="button" aria-pressed="false">LOOP</button>
-        <label id="rec-end-field" hidden><span data-i18n="rec.endMarker">END</span><select id="rec-end-marker"></select></label>
+        <label id="rec-end-field"><span data-i18n="rec.endMarker">END</span><select id="rec-end-marker"></select></label>
       </div>
       <div class="rec-row rec-pre-roll" role="group" aria-label="Pre-roll bars" data-i18n-aria-label="rec.preRollBars">
         <span data-i18n="rec.preRoll">PRE-ROLL</span>
@@ -627,7 +628,7 @@
         </div>
         <div class="rec-session-scroll"><div id="rec-session-grid" class="rec-session-grid"></div></div>
       </section>
-      <div class="rec-row rec-track-heading"><span data-i18n="rec.tracks">TRACKS</span><button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button></div>
+      <div class="rec-row rec-track-heading"><span id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">Waiting for Live</span><button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button></div>
       <section id="rec-track-grid" class="rec-track-grid" aria-label="Tracks" data-i18n-aria-label="rec.tracks"></section>
       <details class="rec-help">
         <summary data-i18n="rec.info">INFO</summary>

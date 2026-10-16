@@ -80,14 +80,15 @@ for (const locale of ['en', 'pt-BR']) {
       await expect(page.locator('#rec-start')).toBeInViewport();
       await expect(page.locator('#rec-stop')).toBeInViewport();
       await expect(page.locator('#rec-click')).toBeInViewport();
-      await expect(page.locator('#rec-pre-roll-0')).toBeInViewport();
-      await expect(page.locator('#rec-pre-roll-1')).toBeInViewport();
-      await expect(page.locator('#rec-pre-roll-2')).toBeInViewport();
-      await expect(page.locator('#rec-pre-roll-4')).toBeInViewport();
+      await expect(page.locator('#rec-pre-roll-inline')).toBeInViewport();
+      await expect(page.locator('#rec-pre-roll-inline option')).toHaveText(['OFF','1','2','4']);
 
       // Verify START and LOOP are in viewport
       await expect(page.locator('#rec-start-marker')).toBeInViewport();
-      await expect(page.locator('#rec-loop')).toBeInViewport();
+      await expect(page.locator('#rec-end-marker')).toBeInViewport();
+
+      // Verify guidance status is visible in track heading at top
+      await expect(page.locator('.rec-track-heading #rec-status')).toBeInViewport();
 
       // Verify header Play button remains accessible at top
       await expect(page.locator('#btn-header-play')).toBeInViewport();
@@ -113,7 +114,6 @@ for (const locale of ['en', 'pt-BR']) {
     await expect(zoomSlider).toHaveValue('1');
 
     await page.locator('#rec-start-marker').selectOption('2');
-    await page.locator('#rec-loop').click();
     await expect(page.locator('#rec-end-marker')).toBeVisible();
     await page.locator('#rec-end-marker').selectOption('3');
 
@@ -156,7 +156,7 @@ for (const locale of ['en', 'pt-BR']) {
     await expect(page.locator('#rec-start')).toBeVisible();
     await expect(page.locator('#rec-stop')).toBeVisible();
     await expect(page.locator('#rec-click')).toBeVisible();
-    await expect(page.locator('#rec-pre-roll-0')).toBeVisible();
+    await expect(page.locator('#rec-pre-roll-inline')).toBeVisible();
     await expect(page.locator('.rec-track-card')).toHaveCount(5);
   });
 }

@@ -415,6 +415,24 @@ states do not establish physical audio/MIDI capture or take preservation.
 
 ### Arrangement, AUT and shared track contracts
 
+`recordingRecord` additionally accepts `passes: null | integer(1..16)`.
+START is either exact `{name,time}` or fixed `{source:'cursor',time}`. A cursor
+start uses an SDK-owned temporary locator to establish the native insertion
+point, with the existing bounded cleanup/identity guards. END=null requires
+passes=null and Loop=false. A bounded END must follow START; Loop is true only
+for more than one pass or unlimited repetition. The phone has no separate Loop
+toggle and never silently converts an invalid bound into free recording.
+
+Bounded plans configure/confirm native Punch Out and region before starting.
+The host counts fresh observed wraps, disables Loop for the last finite pass
+and confirms priority STOP after the native capture boundary. This accepted
+plan survives phone socket loss; pending browser writes retain their existing
+socket guards. STOP, link loss, Set/cohort replacement or external region edits
+retire plan authority. Ambiguous observations cannot infer skipped passes or
+claim completion. Owned Punch Out restores only after confirmed STOP and only
+without an observed external edit. Pre-roll runs once, before the first pass.
+Physical capture, tails and timing still require Live acceptance.
+
 Marker presentation sorts a copied inventory by cue.time, stably at equal times,
 preserving full names and SDK order. Native jumps still resolve the original
 SDK index from exact name/time. Marker-only positioning requires fresh stopped/
@@ -446,8 +464,9 @@ The SDK `mixer.volume.getValue()` / `setValue()` methods read and write the nati
 parameter, normalized using its declared min/max. Readback confirms each write;
 missing, stale or unconfirmed values stay unknown. Updates serialize with other
 REC track writes, yield to priority STOP, and preserve ARM/SOLO/MUTE. Double-click
-uses the native `defaultValue`. The UI shows normalized percent: the SDK exposes
-no formatted dB curve. Gestures cancel on Set/session/identity change or loss;
+uses the native `defaultValue`. A 270-degree arc shows normalized magnitude;
+accessible value feedback remains percent, without a formatted dB curve or visible
+numeric caption. Gestures cancel on Set/session/identity change or loss;
 only the latest target from the same current gesture may follow an in-flight write.
 
 Mappings, presets and projects live in `storageDirectory/surface-v2/` with project/preset/performance schema 2. 1.x data and first-candidate 2.0 overrides/snapshots are not imported; old files remain. AUT persists XY points/settings, never playback/countdown/capture state. Reconnection requires explicit Play; SYNC requires fresh playing Live position/tempo/meter and FREE uses elapsed time. XY pad configuration opens via mobile long-press or desktop right-click without shrinking pad dimensions or altering automation loops.

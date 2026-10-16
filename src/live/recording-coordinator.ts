@@ -3,11 +3,12 @@
 // Source: https://github.com/ntworm/rc-surface
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { CLIP, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL,REC_RETURN } from '../osc-tokens.js';
+import { CLIP, GET, REC, REC_LOOP, REC_PREFLIGHT, REC_PREROLL,REC_RETURN,REC_CAPTURE } from '../osc-tokens.js';
 import type { CommandExecutionContext } from './catalog/types.js';
 import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 import {SessionRecording,type SessionSong} from './session-recording.js';
+import {ArrangementCapture} from './arrangement-capture.js';
 
 interface VolumeParameter { min:number; max:number; defaultValue:number; getValue():Promise<number>; setValue(value:number):Promise<void> }
 interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: {volume?:VolumeParameter} }
@@ -19,10 +20,16 @@ interface Song {
 }
 interface TrackRef { index: number; id: string; name: string }
 interface MarkerRef { name: string; time: number }
-interface MarkerRange { start: MarkerRef; end: MarkerRef | null; loop: boolean }
+type StartRef=MarkerRef|{source:'cursor';time:number};
+interface MarkerRange { start: StartRef; end: MarkerRef | null; loop: boolean }
+interface CaptureOwner {
+  song:Song;generation:number;tracks:TrackRef[];range:MarkerRange;total:number|null;
+  originalPunchOut:boolean;expectedPunchOut:boolean;ownedPunchOut:boolean;loopExpected:boolean;
+  abort:AbortController;active:boolean;loopPending:boolean;controller?:ArrangementCapture;
+}
 interface Observed { value: unknown; at: number; revision: number }
 interface Operation { name: string; abort: AbortController; context?: CommandExecutionContext }
-interface LoopExpectation { key: 'loop' | 'loopStart' | 'loopLength' | 'punchIn'; value: number | boolean; getter: string; deadline: number; code?: string }
+interface LoopExpectation { key: 'loop' | 'loopStart' | 'loopLength' | 'punchIn' | 'punchOut'; value: number | boolean; getter: string; deadline: number; code?: string }
 interface PunchOwner {
   song: Song; generation: number; original: boolean; desired: boolean; expected: boolean;
   owned: boolean; phase: 'baseline' | 'configuring' | 'active' | 'restoring';
@@ -70,6 +77,7 @@ export class RecordingCoordinator extends EventEmitter {
   private cueGeneration = 0;
   private readonly session:SessionRecording;
   private readonly volumes=new Map<Track,{value:number;defaultValue:number|null;at:number}>();
+  private capture:CaptureOwner|null=null;
 
   constructor(private readonly osc: OSCTransport, private readonly getSong: () => Song) {
     super();
@@ -79,6 +87,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
 
   private readonly lost = () => {
+    this.retireCapture();
     this.session.reset();
     this.cueGeneration++;
     this.operation?.abort.abort(Error('REC:CONNECTION'));
@@ -94,6 +103,7 @@ export class RecordingCoordinator extends EventEmitter {
   private currentSong(): Song {
     const song = this.getSong();
     if (this.song !== song) {
+      this.retireCapture();this.capture=null;
       this.session.reset();
       this.cueGeneration++;
       this.song = song; this.selected = null; this.point = null; this.preparedToken = null;
@@ -171,6 +181,7 @@ export class RecordingCoordinator extends EventEmitter {
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
       lastAttempt: this.lastAttempt,
+      capture:this.capture?.controller?.snapshot()??null,
       preRoll: this.preRoll ? {bars:this.preRoll.bars, phase:this.preRoll.phase, start:this.preRoll.start, point:this.preRoll.range.start.time} : null,
       ...(this.preRollError ? {error:this.preRollError} : {}),
     };
@@ -249,11 +260,28 @@ export class RecordingCoordinator extends EventEmitter {
   }
   private markerRange(value: MarkerRange): MarkerRange {
     if (!value || Object.keys(value).length !== 3 || typeof value.loop !== 'boolean') fail('ARGUMENTS');
-    const start = this.marker(value.start), end = value.end === null ? null : this.marker(value.end);
-    if (value.loop && (!end || end.time <= start.time)) fail('LOOP_RANGE');
+    const start=this.startRef(value.start),end=value.end===null?null:this.marker(value.end);
+    if ((end && end.time<=start.time)||(value.loop&&!end)) fail('LOOP_RANGE');
     return {start, end, loop: value.loop};
   }
-  private async jumpMarker(operation: Operation, marker: MarkerRef): Promise<void> {
+  private startRef(value:StartRef):StartRef {
+    if(value&&'source' in value){
+      if(Object.keys(value).length!==2||value.source!=='cursor'||!Number.isFinite(value.time)||value.time<0||value.time>10_000_000)fail('POSITION');
+      return {source:'cursor',time:value.time};
+    }
+    return this.marker(value as MarkerRef);
+  }
+  private async jumpMarker(operation: Operation, marker: StartRef): Promise<void> {
+    if('source' in marker){
+      const owner:PreRoll={operation,song:this.currentSong(),tracks:this.activeTracks().map(ref=>({...ref})),range:this.range!,bars:0,start:marker.time,
+        numerator:Number(this.value('numerator')),denominator:Number(this.value('denominator')),phase:'preparing',
+        originalClick:this.osc.recording.snapshot().metronome.value===true,originalLoopStart:Number(this.value('loopStart')),
+        clickOwned:false,loopStartOwned:false,cue:null,cueCreating:null,cueDeleting:null,cueOriginals:[],cueCleanup:false,generation:this.cueGeneration};
+      this.preRoll=owner;
+      await this.positionPreRoll(owner,()=>{this.ownPreRoll(owner);this.startRef(marker);});
+      if(this.preRoll===owner)this.preRoll=null;
+      return;
+    }
     const song = this.currentSong(), point = this.marker(marker);
     const index = song.cuePoints.findIndex(cue => cue.name === point.name && cue.time === point.time);
     await this.osc.recording.jumpToMarker(index, point.time, () => {
@@ -274,7 +302,7 @@ export class RecordingCoordinator extends EventEmitter {
   public async refresh() {
     this.currentSong();
     if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
-    if (this.operation || this.trackMutation) return this.snapshot();
+    if (this.operation || this.trackMutation || this.capture?.active || this.osc.recording.snapshot().recordMode.value === true) return this.snapshot();
     const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);await this.readVolumes(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
@@ -355,7 +383,7 @@ export class RecordingCoordinator extends EventEmitter {
       if (name !== 'read') this.preparedToken = null;
       if (name === 'record') {
         if (this.preRoll?.operation === operation) await this.failPreRoll(this.preRoll, error);
-        else if (this.punch && (this.punch.owned || this.armedByRecorder.length>0) && this.operation === operation && operation.context?.isCurrent() && this.getSong() === this.punch.song && this.osc.state.available && this.osc.state.connected) {
+        else if (this.punch && (this.punch.owned || this.armedByRecorder.length>0 || this.capture?.ownedPunchOut) && this.operation === operation && operation.context?.isCurrent() && this.getSong() === this.punch.song && this.osc.state.available && this.osc.state.connected) {
           try {await this.stop(operation.context);} catch { /* STOP reports its own cleanup failure; retain the original action error. */ }
         } else if(this.punch?.phase==='baseline') this.punch=null;
       }
@@ -396,21 +424,48 @@ export class RecordingCoordinator extends EventEmitter {
     }
     if (key !== undefined) {
       if (key === 'punchIn' && this.punch?.phase === 'active' && value !== this.punch.expected) this.punch.owned = false;
+      if(key==='punchOut'&&this.capture?.active&&value!==this.capture.expectedPunchOut)this.capture.ownedPunchOut=false;
       this.observed.set(key, { value, at, revision: ++this.revision }); this.emit('observation');
+      const capture=this.capture;
+      // Once native pre-roll is accepted, every OFF edge retires its plan.
+      // A following ON cannot lend this old plan authority over a new take.
+      if(capture&&!capture.controller&&this.preRoll?.phase==='running'
+        &&(key==='isPlaying'||key==='recordMode')&&value===false)this.retireCapture();
+      if(capture?.active&&capture.controller&&(
+        key==='loop'&&!capture.loopPending&&value!==capture.loopExpected
+        ||key==='punchOut'&&value!==capture.expectedPunchOut
+        ||key==='loopStart'&&Math.abs(Number(value)-capture.range.start.time)>=.001
+        ||key==='loopLength'&&capture.range.end&&Math.abs(Number(value)-(capture.range.end.time-capture.range.start.time))>=.001))capture.controller.invalidate();
     }
   };
   /** Card ARM confirmation excludes recording-only state, but observes every
    * armable input so MULTI cannot hide a host-side exclusive-arm side effect. */
-  private readArms(operation: Operation, song = this.currentSong()): Promise<void> {
+  private readArms(operation: Operation, song = this.currentSong(), expectedArms?: Map<number, boolean>): Promise<void> {
     this.check(operation);if(song.tracks.length>256)fail('TRACK_LIMIT');
     const refs=song.tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
     const revision=this.revision;
     const packets:[key:string,address:string,index?:number][]=[['names',CLIP.getTrackNames],['isPlaying',GET.isPlaying],['recordMode',REC.getRecordMode],
       ...refs.map(ref=>['canArm:'+ref.index,REC_PREFLIGHT.trackCanArm,ref.index] as [string,string,number])];
+    const armRetries = new Map<number, number>();
     return new Promise<void>((resolve,reject)=>{
       let done=false,armsRequested=false,retry:ReturnType<typeof setTimeout>|undefined;
       const guard=()=>{this.check(operation);if(this.getSong()!==song)fail('IDENTITY');};
-      const fresh=(key:string)=>(this.observed.get(key)?.revision??0)>revision&&this.value(key)!==null;
+      const fresh=(key:string)=>{
+        if((this.observed.get(key)?.revision??0)<=revision || this.value(key)===null) return false;
+        if(expectedArms && key.startsWith('arm:')){
+          const trkIdx=Number(key.slice(4));
+          if(expectedArms.has(trkIdx) && this.value(key)!==expectedArms.get(trkIdx)){
+            const count=(armRetries.get(trkIdx)??0);
+            if(count < 2){
+              armRetries.set(trkIdx, count + 1);
+              guard();
+              this.osc.send(REC_PREFLIGHT.trackArm, [{type:'integer', value:trkIdx}]);
+              return false;
+            }
+          }
+        }
+        return true;
+      };
       const finish=(error?:unknown)=>{if(done)return;done=true;clearTimeout(timer);clearTimeout(retry);this.off('observation',changed);operation.abort.signal.removeEventListener('abort',abort);if(error)reject(error);else resolve();};
       const abort=()=>finish(operation.abort.signal.reason);
       const sendMissing=()=>{for(const [key,address,index] of packets){if(done)break;if(fresh(key))continue;guard();this.osc.send(address,index===undefined?[]:[{type:'integer',value:index}]);}};
@@ -459,7 +514,7 @@ export class RecordingCoordinator extends EventEmitter {
       }
     }
     for (const ref of markerRead?(this.selected?[this.selected]:[]):monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
-    if (!markerRead && (this.range?.loop || this.preRollRequested || this.preRoll)) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
+    if (!markerRead && (this.range?.loop || this.range?.end || this.capture || this.preRollRequested || this.preRoll)) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
     if (!markerRead && (this.preRollRequested || this.preRoll)) { packets.push([GET.tempo]); keys.push('tempo'); }
     const revision = this.revision;
     const evidence = new Promise<void>((resolve, reject) => {
@@ -521,10 +576,10 @@ export class RecordingCoordinator extends EventEmitter {
     for (const key of flags) {
       const value = this.value(key); if (value === null) fail('UNKNOWN');
       if ((key === 'loop' && !checkLoop) || key === confirming) continue;
-      const expected = key === 'punchIn' ? this.punch?.expected ?? false : key === 'loop' && this.range?.loop === true;
+      const expected=key==='punchIn'?this.punch?.expected??false:key==='punchOut'?this.capture?.expectedPunchOut??false:key==='loop'?(this.capture?.loopExpected??this.range?.loop===true):false;
       if (value !== expected) fail(key.toUpperCase());
     }
-    if (checkLoop && this.range?.loop && (Math.abs(Number(this.value('loopStart')) - this.range.start.time) >= .001
+    if (checkLoop && (this.range?.loop || this.capture&&this.range?.end) && (Math.abs(Number(this.value('loopStart')) - this.range!.start.time) >= .001
       || Math.abs(Number(this.value('loopLength')) - (this.range.end!.time - this.range.start.time)) >= .001
       || this.value('loopStart') === null || this.value('loopLength') === null)) fail('LOOP_RANGE');
     const refs = this.activeTracks();
@@ -567,14 +622,16 @@ export class RecordingCoordinator extends EventEmitter {
         const identities = song.tracks.map((track,index)=>({index,id:String(track.handle.id),name:track.name}));
         if (before.some(value => typeof value !== 'boolean')) fail('UNKNOWN');
         const desired = before.map((value,index) => index === ref.index ? enabled : armMode === 'exclusive' && enabled ? false : value);
+        const changedArms = new Map<number, boolean>();
         for (let index=0;index<song.tracks.length;index++) if (before[index] !== desired[index]) {
           this.check(operation); this.identities(identities); if (this.getSong() !== song) fail('IDENTITY'); this.stopped();
           // A native arm setter can affect peers before applying/throwing.
           // Auxiliary snapshots must not resurrect any pre-write ARM value.
           for(const affected of identities)this.observed.delete('arm:'+affected.index);
           song.tracks[index]!.arm = desired[index] as boolean;
+          changedArms.set(index, desired[index] as boolean);
         }
-        await this.readArms(operation,song); this.identities(identities); this.stopped();
+        await this.readArms(operation,song,changedArms); this.identities(identities); this.stopped();
         const actual=arms();
         if (actual[ref.index] !== enabled) fail('ARM_UNCONFIRMED');
         if (desired.some((value,index) => actual[index] !== value)) fail('ARM_COLLATERAL_DISARM');
@@ -718,10 +775,11 @@ export class RecordingCoordinator extends EventEmitter {
     });
   }
   /** One explicit REC action owns arm, region confirmation, seek and start. */
-  public async record(track: TrackRef | TrackRef[], requested: MarkerRange, context?: CommandExecutionContext, preRollBars = 0) {
+  public async record(track: TrackRef | TrackRef[], requested: MarkerRange, context?: CommandExecutionContext, preRollBars = 0, passes?:number|null) {
     this.idle(context); this.currentSong();
-    if(this.punch || this.armedByRecorder.length) fail('STOP_REQUIRED');
+    if(this.punch || this.armedByRecorder.length || this.capture?.ownedPunchOut) fail('STOP_REQUIRED');
     const range = this.markerRange(requested);
+    if(passes!==undefined && (passes!==null&&(!Number.isInteger(passes)||passes<1||passes>16) || !range.end&&passes!==null || range.end&&range.loop!==(passes!==1)))fail('PASSAGES');
     if (![0,1,2,4].includes(preRollBars)) fail('PRE_ROLL_RANGE');
     const refs=this.refs(track),song=this.currentSong(),strict=Array.isArray(track);
     for(const ref of refs){const candidate=song.tracks[ref.index];if(!candidate||String(candidate.handle.id)!==ref.id||candidate.name!==ref.name)fail('IDENTITY');}
@@ -731,6 +789,12 @@ export class RecordingCoordinator extends EventEmitter {
       this.cohort=refs.map(ref=>({...ref}));this.strictCohort=strict;this.selected={...refs[0]!};
       await this.read(operation); this.stopped();
       if(this.getSong()!==song)fail('IDENTITY');this.identities(refs);
+      this.retireCapture();this.capture=null;
+      if(passes!==undefined){
+        const punchOut=this.value('punchOut');if(typeof punchOut!=='boolean')fail('UNKNOWN');
+        this.capture={song,generation:this.cueGeneration,tracks:refs.map(ref=>({...ref})),range,total:passes,
+          originalPunchOut:punchOut,expectedPunchOut:punchOut,ownedPunchOut:false,loopExpected:range.loop,abort:new AbortController(),active:false,loopPending:false};
+      }
       const original=this.value('punchIn');if(typeof original!=='boolean')fail('UNKNOWN');
       this.punch={song,generation:this.cueGeneration,original,desired:preRollBars>0,expected:original,owned:false,phase:'baseline'};
       await this.read(operation); this.preflight(false, false); this.markerRange(range);
@@ -757,10 +821,17 @@ export class RecordingCoordinator extends EventEmitter {
         await this.read(operation, {key, value: expected, getter: loopGetters[key], deadline: loopDeadline}); this.preflight(false, false);
       };
       if (this.value('loop') !== false) await confirm(REC_LOOP.setEnabled, 0, 'loop', false);
-      if (range.loop) {
+      if (range.loop || this.capture&&range.end) {
         await confirm(REC_LOOP.setLength, range.end!.time - range.start.time, 'loopLength', range.end!.time - range.start.time);
         await confirm(REC_LOOP.setStart, range.start.time, 'loopStart', range.start.time);
-        await confirm(REC_LOOP.setEnabled, 1, 'loop', true);
+        if(range.loop)await confirm(REC_LOOP.setEnabled, 1, 'loop', true);
+      }
+      if(this.capture){
+        const owner=this.capture,desired=Boolean(range.end);owner.expectedPunchOut=desired;
+        if(this.value('punchOut')!==desired){
+          owner.ownedPunchOut=true;this.osc.send(REC_CAPTURE.setPunchOut,[{type:'integer',value:desired?1:0}]);
+          await this.read(operation,{key:'punchOut',value:desired,getter:REC_PREFLIGHT.punchOut,deadline:Date.now()+RECORDING_CONFIRM_MS,code:'PUNCH_UNCONFIRMED'});
+        }
       }
       this.check(operation); this.preflight(false); this.markerRange(range);
       if (this.preRoll) { await this.startPreRoll(this.preRoll); return; }
@@ -773,7 +844,77 @@ export class RecordingCoordinator extends EventEmitter {
       if (Math.abs((this.osc.recording.snapshot().songTimeBeats.value ?? -1) - range.start.time) >= .001) fail('POSITION_CHANGED');
       await this.osc.recording.startRecording(() => {this.check(operation); this.identities(refs); this.conditions(true); this.markerRange(range);});
       this.lastAttempt = {id:randomUUID(),track:{...refs[0]!},tracks:refs.map(ref=>({...ref})),point:range.start.time,stopped:false,mark:null};
+      this.activateCapture();
     }).finally(() => {this.preRollRequested = false;});
+  }
+  private retireCapture(){
+    if(!this.capture)return;
+    // Retain cleanup ownership and progress, but let display polling resume
+    // once STOP has retired the plan, including when native cleanup fails.
+    this.capture.active=false;
+    this.capture.controller?.cancel();
+    this.capture.abort.abort(Error('REC:STOPPED'));
+  }
+  private captureGuard(owner:CaptureOwner){
+    if(this.capture!==owner||this.getSong()!==owner.song||this.cueGeneration!==owner.generation)fail('IDENTITY');
+    if(!this.osc.state.available||!this.osc.state.connected)fail('CONNECTION');
+    this.identities(owner.tracks);this.markerRange(owner.range);
+    for(let index=0;index<owner.song.tracks.length;index++){
+      const expected=owner.tracks.some(ref=>ref.index===index),capability=this.value('canArm:'+index);
+      if(capability===false&&!expected)continue;
+      if(capability!==true||this.armed(index)!==expected||owner.song.tracks[index]!.arm!==expected)fail('CAPTURE_CHANGED');
+    }
+    if(this.value('loop')===null||!owner.loopPending&&this.value('loop')!==owner.loopExpected)fail('CAPTURE_CHANGED');
+    if(owner.range.end&&(Math.abs(Number(this.value('loopStart'))-owner.range.start.time)>=.001
+      ||Math.abs(Number(this.value('loopLength'))-(owner.range.end.time-owner.range.start.time))>=.001
+      ||this.value('loopStart')===null||this.value('loopLength')===null||this.value('punchOut')!==true))fail('CAPTURE_CHANGED');
+  }
+  private async finishCaptureLoop(owner:CaptureOwner){
+    this.captureGuard(owner);if(owner.abort.signal.aborted)throw owner.abort.signal.reason;
+    const revision=this.revision;
+    owner.loopPending=true;
+    this.osc.send(REC_LOOP.setEnabled,[{type:'integer',value:0}]);
+    await new Promise<void>((resolve,reject)=>{
+      let done=false,retry:ReturnType<typeof setTimeout>|undefined;
+      const finish=(error?:unknown)=>{if(done)return;done=true;clearTimeout(timer);clearTimeout(retry);this.off('observation',changed);owner.abort.signal.removeEventListener('abort',abort);if(error)reject(error);else resolve();};
+      const abort=()=>finish(owner.abort.signal.reason);
+      const changed=()=>{try{this.captureGuard(owner);if((this.observed.get('loop')?.revision??0)>revision&&this.value('loop')===false)finish();}catch(error){finish(error);}};
+      const poll=()=>{if(done)return;try{this.captureGuard(owner);this.osc.send(REC_PREFLIGHT.loop);if(!done)retry=setTimeout(poll,100);}catch(error){finish(error);}};
+      this.on('observation',changed);owner.abort.signal.addEventListener('abort',abort,{once:true});
+      const timer=setTimeout(()=>finish(Error('REC:LOOP_UNCONFIRMED')),RECORDING_CONFIRM_MS);poll();changed();
+    });
+    this.captureGuard(owner);owner.loopExpected=false;owner.loopPending=false;
+  }
+  private activateCapture(){
+    const owner=this.capture;if(!owner||owner.abort.signal.aborted)return;owner.active=true;
+    if(!owner.range.end||owner.controller)return;
+    this.captureGuard(owner);
+    // Authority for this already committed native plan belongs to the host.
+    // Its token, Set, region and cohort guards remain valid without a phone
+    // socket. STOP, replacement or link loss permanently retire the token.
+    const context=this.captureContext(owner);
+    owner.controller=new ArrangementCapture(this.osc,owner.range.start.time,owner.range.end.time,owner.total,{
+      guard:()=>this.captureGuard(owner),pollTracks:()=>{
+        for(let index=0;index<owner.song.tracks.length;index++){
+          this.osc.send(REC_PREFLIGHT.trackCanArm,[{type:'integer',value:index}]);
+          if(this.value('canArm:'+index)!==false)this.osc.send(REC_PREFLIGHT.trackArm,[{type:'integer',value:index}]);
+        }
+      },disableLoop:()=>this.finishCaptureLoop(owner),stop:()=>this.stop(context),
+    });
+  }
+  private captureContext(owner:CaptureOwner):CommandExecutionContext {
+    return {clientId:'capture-plan',isCurrent:()=>this.capture===owner&&this.getSong()===owner.song&&this.cueGeneration===owner.generation};
+  }
+  private async restoreCapture(operation:Operation){
+    const owner=this.capture;if(!owner?.ownedPunchOut)return;
+    this.check(operation);if(this.getSong()!==owner.song||owner.generation!==this.cueGeneration)fail('IDENTITY');
+    await this.read(operation);this.check(operation);this.stopped();this.identities(owner.tracks);
+    if(this.value('punchOut')===owner.expectedPunchOut){
+      owner.expectedPunchOut=owner.originalPunchOut;
+      this.osc.send(REC_CAPTURE.setPunchOut,[{type:'integer',value:owner.originalPunchOut?1:0}]);
+      await this.read(operation,{key:'punchOut',value:owner.originalPunchOut,getter:REC_PREFLIGHT.punchOut,deadline:Date.now()+RECORDING_CONFIRM_MS,code:'PUNCH_UNCONFIRMED'});
+    }
+    owner.ownedPunchOut=false;
   }
   private ownPreRoll(owner: PreRoll, operation = owner.operation): void {
     this.check(operation);
@@ -884,6 +1025,10 @@ export class RecordingCoordinator extends EventEmitter {
     guard();
     await this.osc.recording.punchRecording(owner.range.start.time, guard);
     owner.phase = 'running';
+    if(this.capture){
+      const capture=this.capture,context=this.captureContext(capture);
+      owner.operation.context={...context,isCurrent:()=>!capture.abort.signal.aborted&&context.isCurrent()};
+    }
     this.lastAttempt = {id:randomUUID(),track:{...owner.tracks[0]!},tracks:owner.tracks.map(ref=>({...ref})),point:owner.range.start.time,stopped:false,mark:null};
     // Return the command now. Its lifecycle remains owned on the host so STOP
     // can preempt immediately and a four-bar lead-in has no client timeout.
@@ -922,7 +1067,7 @@ export class RecordingCoordinator extends EventEmitter {
             this.ownPreRoll(owner); await this.osc.recording.setMetronome(owner.originalClick);
             owner.clickOwned = false;
           }
-          owner.phase = 'complete'; return;
+          owner.phase = 'complete';this.activateCapture(); return;
         }
         previous = position; previousAt = now;
       }
@@ -932,7 +1077,8 @@ export class RecordingCoordinator extends EventEmitter {
   }
   private async restorePreRoll(owner: PreRoll, operation: Operation): Promise<void> {
     await this.clearPreRollCue(owner,operation.context);
-    this.ownPreRoll(owner, operation); await this.read(operation); this.ownPreRoll(owner, operation); this.stopped();
+    this.check(operation);if(this.preRoll!==owner||this.getSong()!==owner.song)fail('IDENTITY');
+    await this.read(operation); this.ownPreRoll(owner, operation); this.stopped();
     let failure: unknown;
     const attempt = async (restore: () => Promise<void>) => {try {await restore();} catch (error) {failure ??= error;}};
     if (owner.clickOwned && this.osc.recording.snapshot().metronome.value === true) await attempt(async () => {
@@ -950,7 +1096,13 @@ export class RecordingCoordinator extends EventEmitter {
     // STOP now owns cleanup. An interrupted start/monitor must not discard
     // its ownership while the priority stop is awaiting fresh evidence.
     if (this.operation?.name === 'stop') return;
-    if (!owner.clickOwned && !this.punch?.owned && !owner.loopStartOwned && !this.armedByRecorder.length && !owner.cue && !owner.cueCreating) {
+    if(this.capture?.abort.signal.aborted&&this.getSong()===owner.song){
+      // Retain native resource baselines for an explicit STOP, without
+      // stopping or restoring properties over an external replacement take.
+      if(this.operation===owner.operation)this.operation=null;
+      this.preRollError=message;return;
+    }
+    if (!owner.clickOwned && !this.punch?.owned && !this.capture?.ownedPunchOut && !owner.loopStartOwned && !this.armedByRecorder.length && !owner.cue && !owner.cueCreating) {
       this.preRoll = null; this.punch=null;this.preRollError = message; return;
     }
     if (this.operation === owner.operation && owner.operation.context?.isCurrent()
@@ -987,6 +1139,7 @@ export class RecordingCoordinator extends EventEmitter {
   }
   public async stop(context?: CommandExecutionContext) {
     this.requireContext(context);
+    this.retireCapture();
     if(this.session.active || this.operation?.name==='sessionRecord')return this.stopSession(context);
     if (this.operation?.name === 'stop' && this.stopping) return this.stopping;
     const preRoll = this.preRoll;
@@ -1005,6 +1158,7 @@ export class RecordingCoordinator extends EventEmitter {
       if(this.punch) {
         try {await this.restorePunch(operation);} catch(error) {cleanupError??=error;} finally {this.punch=null;}
       }
+      try{await this.restoreCapture(operation);}catch(error){cleanupError??=error;}
       if (this.lastAttempt) this.lastAttempt.stopped = true;
       this.armedByRecorder = [];
       if (cleanupError) throw cleanupError;

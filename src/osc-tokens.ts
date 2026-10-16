@@ -78,6 +78,7 @@ export const REC_LOOP = {
 export const REC_PREROLL = {
   setPunchIn: '/live/song/set/punch_in',
 } as const;
+export const REC_CAPTURE = {setPunchOut:'/live/song/set/punch_out'} as const;
 export const REC_RETURN={setBackToArranger:'/live/song/set/back_to_arranger'} as const;
 
 // Read-only Arrangement preflight. Unsupported/missing reports stay unknown.

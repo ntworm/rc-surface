@@ -30,16 +30,35 @@ for(const locale of ['en','pt-BR'])test(`Reviewed mobile candidate preserves nat
     const boxes=await page.locator('.rec-track-card').first().evaluate(card=>({card:card.getBoundingClientRect().toJSON(),
       controls:[...card.querySelectorAll('.rec-track-vol,button')].map(node=>node.getBoundingClientRect().toJSON())}));
     for(const control of boxes.controls){expect(control.left).toBeGreaterThanOrEqual(boxes.card.left);expect(control.right).toBeLessThanOrEqual(boxes.card.right);}
+    await expect(page.locator('.rec-track-vol-val').first()).toBeHidden();
+    expect((await page.locator('.rec-track-vol-dial').first().boundingBox()).width).toBe(26);
+    if(viewport.width<=950) {
+      const geometry=await page.evaluate(()=>{
+        const mode=document.querySelector('.rec-destination').getBoundingClientRect(),buttons=[...document.querySelectorAll('.rec-destination button')].map(node=>node.getBoundingClientRect());
+        return {modeCenter:mode.x+mode.width/2,buttonsCenter:(buttons[0].left+buttons[1].right)/2,
+          record:document.querySelector('#rec-start').getBoundingClientRect().toJSON(),markerFont:parseFloat(getComputedStyle(document.querySelector('.rec-marker')).fontSize)};
+      });
+      expect(Math.abs(geometry.modeCenter-geometry.buttonsCenter)).toBeLessThan(2);
+      expect(geometry.record.width).toBeLessThanOrEqual(100);expect(geometry.record.height).toBe(44);expect(geometry.markerFont).toBeGreaterThanOrEqual(11);
+      const row=await page.locator('#rec-pre-roll-inline').boundingBox();expect(Math.abs(row.y-geometry.record.y)).toBeLessThan(1);
+    }
     await expect(page.locator('#rec-stop')).toBeInViewport();
   }
   await page.setViewportSize({width:851,height:393});
   const volume=page.locator('.rec-track-vol').first();await expect(volume).toHaveAttribute('aria-valuetext','17%');
+  for(const value of [0,0.5,1]) {
+    tracks[0].volume=value;await expect(volume).toHaveAttribute('aria-valuenow',String(value));
+    const arc=await volume.locator('.rec-track-vol-dial').evaluate(node=>({sweep:parseFloat(node.style.getPropertyValue('--rec-volume-sweep')),paint:getComputedStyle(node,'::before').backgroundImage}));
+    expect(arc.sweep).toBeCloseTo(value*270);expect(arc.paint).toContain('conic-gradient');
+    await expect(volume.locator('.rec-track-vol-val')).toBeHidden();
+  }
+  tracks[0].volume=0.17;await expect(volume).toHaveAttribute('aria-valuenow','0.17');
   const box=await volume.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
   await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y-30,{steps:12});await page.mouse.up();
   await expect.poll(()=>tracks[0].volume).toBeGreaterThan(0.4);
   expect(writes.every(message=>message.cmd==='recordingTrackVolume'&&message.args.track.id==='track-a')).toBe(true);
   tracks[0].volume=0.24;await expect(volume).toHaveAttribute('aria-valuetext','24%');
-  await page.locator('#rec-start-marker').selectOption('1');await page.locator('#rec-loop').click();await page.locator('#rec-end-marker').selectOption('2');
+  await page.locator('#rec-start-marker').selectOption('1');await page.locator('#rec-end-marker').selectOption('2');
   await expect(page.locator('#rec-zoom')).toHaveValue('212');
   const fit=await page.evaluate(()=>{
     const viewport=document.querySelector('#rec-timeline').getBoundingClientRect(),markers=[...document.querySelectorAll('.rec-marker')].slice(1,3).map(node=>node.getBoundingClientRect());

@@ -452,11 +452,29 @@ Os métodos SDK `mixer.volume.getValue()` / `setValue()` leem e escrevem o parâ
 nativo, normalizado pelo min/max declarado. A releitura confirma cada escrita;
 valor ausente, vencido ou não confirmado permanece desconhecido. Volume serializa
 com outras escritas de track REC, cede ao STOP prioritário e preserva ARM/SOLO/MUTE.
-Duplo-clique usa o `defaultValue` nativo. A tela mostra porcentagem normalizada:
-o SDK não fornece curva de dB formatada. Troca de Set/sessão/identidade ou perda
+Duplo-clique usa o `defaultValue` nativo. Um arco de 270 graus mostra a magnitude
+normalizada; o valor acessível permanece em porcentagem, sem legenda numérica
+visível nem curva dB formatada. Troca de Set/sessão/identidade ou perda
 cancela o gesto; apenas o último alvo do mesmo gesto atual pode seguir uma escrita em andamento.
 
 Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido. Configuração dos pads XY abre por toque longo no celular ou clique direito no desktop sem reduzir as dimensões dos pads ou alterar loops de automação.
+
+`recordingRecord` também aceita `passes: null | inteiro(1..16)`. INÍCIO pode ser
+`{name,time}` exato ou ponto fixo `{source:'cursor',time}`. O cursor usa locator
+temporário próprio do SDK para fixar a entrada nativa, com limpeza limitada e
+identidades verificadas. FIM=null exige passes=null e Loop=false. Fim limitado
+deve vir depois do início; Loop só liga para várias passagens ou repetição sem
+limite. A página não tem outro botão Loop e não converte fim inválido em livre.
+
+O plano confirma trecho/Punch Out nativo antes de começar. No computador,
+conta voltas observadas, desliga Loop na última passagem finita e confirma STOP
+após o limite nativo da captura. Plano aceito continua sem o socket do celular;
+escritas pendentes mantêm a proteção da sessão original. STOP, perda de OSC,
+troca de Set/conjunto de faixas ou edição externa do trecho aposentam sua posse.
+Posição ambígua não permite inferir voltas nem confirmar conclusão. Punch Out
+próprio só restaura após STOP confirmado e sem edição externa observada.
+Pré-roll só antes da primeira passagem. Captura, ressonância e tempo exato
+ainda dependem de aceite físico no Live.
 
 REC envia `tracks` como conjunto ordenado não vazio de referências `{index,id,name}` (até 256); o backend confirma todas as identidades, armabilidade, ARM e ausência de ARM externo. Comandos legados de uma faixa são normalizados. ARM MULTI preserva outras entradas; EXCLUSIVE age somente no ARM explícito e confirma o conjunto inteiro. SOLO/MUTE usam confirmação GET serializada sem interromper o pré-roll. STOP nativo tem prioridade, para reprodução e gravação, e restaura pré-roll / Punch In temporário mantendo o estado de ARM das faixas intacto sem desarme automático.
 

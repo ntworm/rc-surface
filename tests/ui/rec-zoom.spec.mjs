@@ -19,7 +19,7 @@ for (const locale of ['en', 'pt-BR']) {
       if (!message.cmd) return;
       commands.push(message.cmd);
       const observed = value => ({ value, fresh: true, observedAt: Date.now() });
-      const result = message.cmd === 'getRecordingState' ? {
+      const result = ['getRecordingState','recordingSeekMarker'].includes(message.cmd) ? {
         transport: { connected: true, isPlaying: observed(false), recordMode: observed(false),
           songTimeBeats: observed(8), metronome: observed(false) },
         tracks: [{ index: 0, id: 'zoom-track', name: 'Drums', arm: false, canArm: true, solo: false, mute: false }],
@@ -48,7 +48,7 @@ for (const locale of ['en', 'pt-BR']) {
       const geometry = await zoom.evaluate(el => ({ width: el.getBoundingClientRect().width,
         height: el.getBoundingClientRect().height, appearance: getComputedStyle(el).appearance,
         radius: getComputedStyle(el).borderRadius, background: getComputedStyle(el).backgroundColor }));
-      expect(geometry.width, 'preserve the 100px range width').toBe(100);
+      expect(geometry.width, 'compact phone range, full desktop range').toBe(viewport.width<=950?72:100);
       expect(geometry.height, 'range has a full touch interaction area').toBeGreaterThanOrEqual(44);
       expect(geometry.appearance, 'replace the browser-default rounded slider').toBe('none');
       expect(geometry.radius).toBe('0px');
@@ -84,5 +84,19 @@ for (const locale of ['en', 'pt-BR']) {
       await expect(page.locator('.rec-marker')).toHaveCount(3);
     }
     expect(commands.filter(command => command.startsWith('recording')), 'zoom never sends host writes').toEqual([]);
+    // Chorus is also the midpoint of Verse..End: both must stay at the
+    // viewport center even when the selected interval no longer fits.
+    for (const selection of [{start:'1',end:''},{start:'0',end:'2'}]) {
+      await page.locator('#rec-start-marker').selectOption(selection.start);
+      await page.locator('#rec-end-marker').selectOption(selection.end);
+      const before=commands.length;
+      await zoom.evaluate(el=>{el.value='8';el.dispatchEvent(new Event('input',{bubbles:true}));});
+      await expect.poll(()=>page.evaluate(()=>{
+        const timeline=document.getElementById('rec-timeline').getBoundingClientRect();
+        const marker=document.querySelectorAll('.rec-marker')[1].getBoundingClientRect();
+        return Math.abs(marker.x+marker.width/2-(timeline.x+timeline.width/2));
+      })).toBeLessThan(3);
+      expect(commands.slice(before).filter(command=>command.startsWith('recording'))).toEqual([]);
+    }
   });
 }

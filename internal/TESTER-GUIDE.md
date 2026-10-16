@@ -5,6 +5,24 @@ history, including the rename migrator; they are not a 2.0 upgrade procedure.
 
 ## Local candidate 2.0.0 — current reported acceptance
 
+New REC capture candidate (2026-10-16): physical acceptance is still pending.
+STOP/zoom follow-up: choose a late marker, then a wide START/END interval and
+change zoom; the marker or interval midpoint must stay centered. Record with
+pre-roll 1 and two passes, STOP mid-pass, wait at least six seconds and toggle
+ARM/MUTE/SOLO. Cards must stay visible with no Waiting for Live flicker; start
+another take, then let both passes finish automatically and repeat ARM. Check
+volume drag and double-click reset still release the control after each use.
+Test free recording from Here with END=Until STOP and no locators. STOP must
+keep ARM and REC must return to the same fixed start. Then select an end marker
+after the desired decay and test one pass, four total passes, and unlimited.
+Finite plans should stop capture at native Punch Out and confirm stopped
+transport; a pass must not restart after the final one. Test pre-roll 1/2/4,
+STOP during pre-roll and STOP during a repeated pass. Disconnect only the phone
+after a bounded recording has started: the computer owns the accepted plan.
+OSC link loss retires it and Live may continue; no reconnect write is replayed.
+Check all drum microphones and the end/tail in Live; automated transport
+observations do not prove recorded audio, take preservation or exact timing.
+
 Gabriel installed source `e930ebe`, package SHA-256 prefix `523b7d93`, and on
 2026-10-15 reported everything working with no observed error or bug. This is
 the scope of the report; do not infer an exhaustive device/OS, latency, take

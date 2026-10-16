@@ -74,7 +74,7 @@ for(const locale of ['en','pt-BR'])test('REC Session selects a complete empty sc
   await page.locator('#rec-clip-mode').click();
   await page.locator('#rec-session-next').click();await expect(page.locator('#rec-session-grid [data-scene="8"]')).toBeVisible();await expect(page.locator('#rec-session-grid .rec-session-cell')).toHaveCount(20);
   const count=writes.length;await page.locator('#rec-arrangement-mode').click();await expect(page.locator('#rec-arrangement-panel')).toBeVisible();await expect(page.locator('#rec-session-panel')).toBeHidden();expect(writes).toHaveLength(count);
-  const markerMenu=page.locator('#rec-start-marker');await expect(markerMenu.locator('option')).toHaveCount(203);await markerMenu.selectOption('123');await expect(markerMenu).toBeEnabled();await markerMenu.focus();
+  const markerMenu=page.locator('#rec-start-marker');await expect(markerMenu.locator('option')).toHaveCount(205);await markerMenu.selectOption('123');await expect(markerMenu).toBeEnabled();await markerMenu.focus();
   meterStale=true;await expect(page.locator('#rec-position')).toHaveAttribute('data-meter-stale','true');await expect(markerMenu).toBeFocused();await expect(markerMenu).toHaveValue('123');
   await expect(markerMenu.locator('option:checked')).toHaveText('Água > [bpm 121] · 123 · 493.1');
   const noPassiveWrites=writes.length;await page.locator('#page-recording').screenshot({path:testInfo.outputPath('rec-markers-'+locale+'-stale.png')});expect(writes).toHaveLength(noPassiveWrites);

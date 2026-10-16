@@ -26,7 +26,7 @@ export const recordingCommands: Record<string, CommandSpec> = {
   getRecordingState: { description: 'Read observed Arrangement REC state', handler: async args => {
     exact(args, []);
     try { return await recordingCoordinator.refresh(); }
-    catch { return { ...recordingCoordinator.snapshot(), error: 'REC:UNKNOWN' }; }
+    catch { return { ...recordingCoordinator.snapshot() }; }
   } },
   recordingSelectTrack: { description: 'Select exact REC track identity', handler: async (args, context) => {
     exact(args, ['index', 'id', 'name']); return recordingCoordinator.selectTrack(args as { index: number; id: string; name: string }, context);
@@ -58,7 +58,9 @@ export const recordingCommands: Record<string, CommandSpec> = {
   } },
   recordingRecord: { description: 'Record an exact observed armed track cohort from verified Arrangement markers', handler: async (args, context) => {
     const key=Object.hasOwn(args,'tracks')?'tracks':'track';
-    exact(args, Object.hasOwn(args,'preRollBars') ? [key,'range','preRollBars'] : [key,'range']); return recordingCoordinator.record(args[key], args['range'], context, Object.hasOwn(args,'preRollBars') ? args['preRollBars'] : 0);
+    exact(args,[key,'range',...(Object.hasOwn(args,'preRollBars')?['preRollBars']:[]),...(Object.hasOwn(args,'passes')?['passes']:[])]);
+    const bars=Object.hasOwn(args,'preRollBars')?args['preRollBars']:0;
+    return Object.hasOwn(args,'passes')?recordingCoordinator.record(args[key],args['range'],context,bars,args['passes']):recordingCoordinator.record(args[key],args['range'],context,bars);
   } },
   recordingSeekMarker: { description: 'Position normal header playback at a verified marker without starting it', handler: async (args, context) => {
     exact(args, ['name','time']); return recordingCoordinator.seekMarker(args as {name:string;time:number}, context);

@@ -1150,7 +1150,8 @@ VID starts with three learned poses. **+ ADD POSE** adds numbered identities up 
 
 Each track's volume knob controls its native mixer level, not input gain. Drag
 vertically or use arrow keys; double-click restores Live's parameter default.
-The label is normalized percent, not dB. Unknown or stale values disable the
+The surrounding arc shows normalized level without a numeric label; keyboard
+and screen-reader feedback remain in percent, not dB. Unknown or stale values disable the
 control. External mixer changes appear on the next read; connection or Set
 changes cancel a gesture. STOP keeps priority over volume adjustment.
 
@@ -1173,15 +1174,19 @@ stopped:
    ARM confirms the armable input set without waiting for Loop, meter or click.
    If confirmation fails, ARM states become unknown until a fresh read; a write
    may already have applied. The surface does not repeat it automatically.
-2. Choose the start marker. Each marker shows its **bar.beat** above its name.
+2. Start at the fixed **Here** position, use **Use current cursor** to capture a
+   new start, or choose a start marker. No marker is required for free recording.
+   Each marker shows its **bar.beat** above its name.
    Use **Zoom** and scroll to inspect the markers and observed playback position.
    The list follows timeline time, including newly created early markers, with
    stable equal-time order and full names. A temporarily stale meter keeps its
    last confirmed display with a dotted indicator; it cannot authorize REC.
    Marker jumps check stopped/record-off transport and selected identity/monitor
    without waiting for unrelated mixer states. REC still checks the full set.
-3. For repeated passes, enable **Loop** and choose an end marker after the start.
-   Leave Loop off for an open-ended recording.
+3. Leave **END = Until STOP** for free recording. Choosing an end marker after
+   the start reveals **PASSES**: 1–16 total passes or ∞ until STOP. A new bounded
+   selection starts at one pass. An invalid/missing end blocks REC without
+   silently switching to free recording. Put the end after the wanted decay.
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
    default and starts directly at the marker. Other choices play the preceding
    bars with click before native Punch In opens capture at the selected marker.
@@ -1207,13 +1212,16 @@ starting playback or recording. The strip is a marker and position reference,
 without audio waveforms or take-lane selection. A moved or removed marker must
 be selected again.
 
-Loop repeats between the two markers until STOP; the end marker does not stop
-recording. REC waits for Live to confirm the loop region before starting. All
-loop changes share a two-second confirmation limit; missing confirmation
-blocks recording. With Loop off, REC turns off Live's Arrangement Loop. STOP
-retains the chosen loop region for playback. Configure input monitoring and
-take lanes in Live. For listening to the Arrangement, choose Monitor Auto/Off
-instead of In.
+Free recording turns Arrangement Loop off. Bounded recording confirms the
+region and native Punch Out before starting. One pass leaves Loop off; finite
+repetition disables Loop on the last observed pass and confirms STOP after the
+native capture boundary. Pre-roll runs before the first pass only. These plans
+run on the computer after acceptance; a phone reconnect never replays REC.
+Missing/ambiguous position evidence cannot confirm completion. OSC link or Set
+loss retires the plan; recording may continue, so check Live and use STOP.
+STOP retains the fixed start, selected range, count and ARM for another REC.
+Live owns take lanes; selection and comping stay on the computer. Configure
+input monitoring there; choose Monitor Auto/Off for Arrangement listening.
 
 Pre-roll is a preference saved in this browser, separate from Live's native
 count-in. It uses the currently observed time signature to calculate the lead-in;

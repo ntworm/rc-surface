@@ -25,11 +25,11 @@
     let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null, connectionEpoch=0, pendingCommand=null;
     const view = () => {
       let observed = state;
-      if (state?.transport && Date.now() - receivedAt > 2000) {
+      if (state?.transport && Date.now() - receivedAt > 5000) {
         observed = {...state, transport:{...state.transport}};
         for (const key of ['isPlaying','recordMode','songTimeBeats','metronome']) observed.transport[key] = {...state.transport[key],fresh:false};
       }
-      return {connected, role, state:observed, busy, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=2000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
+      return {connected, role, state:observed, busy, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=5000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
     };
     const notify = () => render(view());
     function session(open, nextRole = 'viewer') {
@@ -90,11 +90,11 @@
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
     const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-start-marker','rec-end-marker',
-      'rec-loop','rec-end-field','rec-timeline','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
-      'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
+      'rec-passages','rec-passages-field','rec-free-mode','rec-end-field','rec-timeline','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
+      'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-pre-roll-inline','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
     let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null;
-    let startIndex='', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[];
+    let startIndex='cursor', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[],fixedPoint=null,passes=1;
     let preRollBars=0, userAdjustedZoom=false, autoZoomTimer=null;
     let armMode='multi';
     let destination='arrangement',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
@@ -106,7 +106,8 @@
     const client = createClient({send:(name,args,cb)=>root.sendPhoneCommand(name,args,cb),render});
     const invoke = (name,args) => client.command(name,args).catch(()=>{});
     const cueAt = index => index === '' ? null : client.view().state?.locators[Number(index)] || null;
-    const markerRef = cue => ({name:cue.name,time:cue.time});
+    const startAt=()=>startIndex==='cursor'&&Number.isFinite(fixedPoint)?{source:'cursor',time:fixedPoint}:cueAt(startIndex);
+    const markerRef = cue => cue.source==='cursor'?{source:'cursor',time:cue.time}:{name:cue.name,time:cue.time};
     function canControl(view,property) {
       const state=view.state,transport=state?.transport;
       if(!view.writable||!view.fresh||view.busy||state?.trackPending||!transport?.connected)return false;
@@ -230,6 +231,7 @@
             entry.currentV = nextV;
             const angle = -135 + nextV * 270;
             volPointer.style.transform = 'rotate(' + angle + 'deg)';
+            volDial.style.setProperty?.('--rec-volume-sweep',nextV*270+'deg');
             const dbText = formatVolumeDb(nextV);
             volValue.textContent = dbText;
             volBox.setAttribute('aria-valuenow', String(nextV));
@@ -292,7 +294,7 @@
             });
             row.appendChild(button);buttons[property]=button;
           }
-          cards.set(key,{card,name,buttons,volBox,volPointer,volValue,currentV:null,volumeDragging:false,cancelVolume,
+          cards.set(key,{card,name,buttons,volBox,volDial,volPointer,volValue,currentV:null,volumeDragging:false,cancelVolume,
             volumeActive:()=>volDragging||volPending!==null,canVolume,checkVolume:()=>{if(volBinding&&!sameVolumeBinding(client.view(),volBinding))cancelVolume();}});
           const entry=cards.get(key);
           name.tabIndex=0;name.setAttribute('role','button');
@@ -310,6 +312,7 @@
           entry.currentV = v;
           const angle = -135 + (v ?? 0) * 270;
           entry.volPointer.style.transform = 'rotate(' + angle + 'deg)';
+          entry.volDial.style.setProperty?.('--rec-volume-sweep',(v ?? 0)*270+'deg');
           const dbText = formatVolumeDb(v);
           if (entry.volValue.textContent !== dbText) entry.volValue.textContent = dbText;
           entry.volBox.setAttribute('aria-valuenow', v===null?'':String(Math.round(v * 1000) / 1000));
@@ -348,13 +351,15 @@
       const item=doc.createElement('option');item.value=value;item.textContent=label;select.appendChild(item);return item;
     }
     function updateRange() {
-      const state=client.view().state, start=cueAt(startIndex);
+      const state=client.view().state, start=startAt();
       if(!state) return;
-      if(looping && cueAt(endIndex)?.time <= (start?.time ?? -1)) endIndex='';
-      el('start-marker').value=startIndex;el('end-marker').value=endIndex;
-      for(const item of el('end-marker').children) item.disabled=item.value!=='' && state.locators[Number(item.value)]?.time <= (start?.time ?? -1);
-      el('end-field').hidden=!looping;el('loop').setAttribute('aria-pressed',String(looping));
-      el('loop').textContent=t('loop')+' · '+t(looping?'on':'off');
+      looping=endIndex!=='';
+      if(doc.activeElement!==el('start-marker')) el('start-marker').value=startIndex;
+      if(doc.activeElement!==el('end-marker')) el('end-marker').value=endIndex;
+      for(const item of el('end-marker').children) item.disabled=item.value==='missing'||item.value!=='' && state.locators[Number(item.value)]?.time <= (start?.time ?? -1);
+      el('end-field').hidden=false;
+      el('passages-field').hidden=!looping||destination==='clip';el('free-mode').hidden=looping||destination==='clip';
+      el('passages').value=passes===null?'infinite':String(passes);
       const end=looping?cueAt(endIndex):null;
       el('region').hidden=!start || !end;
       if(start && end) {el('region').style.left=percent(start.time)+'%';el('region').style.width=(percent(end.time)-percent(start.time))+'%';}
@@ -370,7 +375,7 @@
       if(userAdjustedZoom) return;
       const state = client.view().state;
       if(!state || !looping) return;
-      const start = cueAt(startIndex), end = cueAt(endIndex);
+      const start = startAt(), end = cueAt(endIndex);
       if(!start || !end || end.time <= start.time) return;
       const totalSpan = bounds.end - bounds.start;
       const loopSpan = end.time - start.time;
@@ -387,14 +392,31 @@
     function centerTimeline(startTime, endTime) {
       const timeline = el('timeline') || el('timeline-track')?.parentElement;
       if(!timeline) return;
-      const midTime = (startTime + endTime) / 2;
-      const pct = bounds.end <= bounds.start ? 0 : Math.max(0, Math.min(1, (midTime - bounds.start) / (bounds.end - bounds.start)));
       const track = el('timeline-track');
-      const offsetLeft = track?.offsetLeft ?? 48;
+      const offsetLeft = track?.getBoundingClientRect && timeline.getBoundingClientRect
+        ? track.getBoundingClientRect().left-timeline.getBoundingClientRect().left+timeline.scrollLeft-(timeline.clientLeft||0)
+        : track?.offsetLeft ?? 48;
       const trackWidth = track?.offsetWidth || Math.max(0, (timeline.scrollWidth || 0) - (offsetLeft * 2));
-      const centerPx = offsetLeft + pct * trackWidth;
+      const span = bounds.end - bounds.start;
+      if (span <= 0) return;
+      const startPct = Math.max(0, Math.min(1, (startTime - bounds.start) / span));
+      const startPx = offsetLeft + startPct * trackWidth;
+      const endPct = Math.max(0, Math.min(1, (endTime - bounds.start) / span));
+      const endPx = offsetLeft + endPct * trackWidth;
       const viewWidth = timeline.clientWidth || 0;
-      timeline.scrollLeft = Math.max(0, centerPx - viewWidth / 2);
+      const cardHalfWidth = 44, leadMargin = 20;
+      const minLeftVisible = startPx - cardHalfWidth - leadMargin;
+      const midTime = (startTime + endTime) / 2;
+      const pct = Math.max(0, Math.min(1, (midTime - bounds.start) / span));
+      const centerPx = offsetLeft + pct * trackWidth;
+      let targetScroll = centerPx - viewWidth / 2;
+      if (endPx - startPx + (cardHalfWidth * 2) + (leadMargin * 2) <= viewWidth) {
+        const boxCenter = ((startPx - cardHalfWidth) + (endPx + cardHalfWidth)) / 2;
+        targetScroll = boxCenter - viewWidth / 2;
+      } else if (targetScroll > minLeftVisible) {
+        targetScroll = minLeftVisible;
+      }
+      timeline.scrollLeft = Math.max(0, targetScroll);
     }
     function drawCursor() {
       const state=client.view().state, clock=root.triggerNoteClockSnapshot, now=root.performance?.now?.() ?? 0;
@@ -409,20 +431,23 @@
     }
     function render(view) {
       const state=view.state, transport=state?.transport;
-      if(state?.session?.songId && displaySongId!==state.session.songId){displaySongId=state.session.songId;displayMeter=null;}
+      if(state?.session?.songId && displaySongId!==state.session.songId){displaySongId=state.session.songId;displayMeter=null;fixedPoint=null;startIndex='cursor';endIndex='';passes=1;markerSignature='';rangeSignature='';}
       const meterKnown=Number.isInteger(state?.meter?.numerator)&&state.meter.numerator>0&&[1,2,4,8,16,32].includes(state?.meter?.denominator);
       if(meterKnown)displayMeter={...state.meter};
       el('position').setAttribute('data-meter-stale',String(!meterKnown));el('position').title=!meterKnown&&displayMeter?t('staleMeter'):'';
       const known=transport?.connected && transport.isPlaying?.fresh && transport.recordMode?.fresh;
       const stopped=known && transport.isPlaying.value===false && transport.recordMode.value===false;
+      if(stopped&&fixedPoint===null&&transport.songTimeBeats?.fresh&&Number.isFinite(transport.songTimeBeats.value))fixedPoint=transport.songTimeBeats.value;
       const working=view.busy || Boolean(state?.pending);
       const editable=view.writable && !working && stopped;
       renderSession(view);
-      el('status').textContent=view.error?reason(view.error):state?.preRoll?.phase==='running'?t('preRolling'):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
+      const activeTake = known && transport.recordMode.value === true;
+      el('status').textContent=view.error && !activeTake?reason(view.error):state?.preRoll?.phase==='running'?t('preRolling'):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
       el('status').dataset.recording=String(known && transport.recordMode.value===true);
       el('stop').disabled=!view.writable;
       for(const id of ['start-marker','end-marker']) el(id).disabled=!editable;
-      el('loop').disabled=!editable || (!looping && !state?.locators?.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
+      el('passages').disabled=!editable;
+      el('passages-field').hidden=destination==='clip'||endIndex==='';el('free-mode').hidden=destination==='clip'||endIndex!=='';
       el('click').disabled=!view.writable || working || !transport?.metronome?.fresh;
       el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
       el('return-arrangement').disabled=!view.writable||!view.fresh||working||!known||transport.recordMode.value!==false||Boolean(state?.attemptActive)||state?.safety?.backToArranger!==true||!state?.session?.rows.every(row=>row.ready===true);
@@ -433,6 +458,12 @@
       for(const bars of [0,1,2,4]) {
         el('pre-roll-'+bars).disabled=!editable;
         el('pre-roll-'+bars).setAttribute('aria-pressed',String(preRollBars===bars));
+      }
+      if(el('pre-roll-inline')) {
+        el('pre-roll-inline').disabled=!editable;
+        el('pre-roll-inline').value=String(preRollBars);
+        const inlineGroup=el('pre-roll-inline').parentElement;
+        if(inlineGroup)inlineGroup.hidden=destination==='clip';
       }
       renderTracks(view);
       for(const marker of el('markers').children) marker.disabled=!editable;
@@ -445,11 +476,13 @@
         return;
       }
       const markerKey=JSON.stringify([state.locators,displayMeter]);
-      if(markerSignature!==markerKey) {
+      if(markerSignature!==markerKey && doc.activeElement!==el('start-marker') && doc.activeElement!==el('end-marker')) {
         const previous=startIndex!==''?previousLocators[Number(startIndex)]:null;
         const previousEnd=endIndex!==''?previousLocators[Number(endIndex)]:null;markerSignature=markerKey;
         el('start-marker').replaceChildren();el('end-marker').replaceChildren();el('markers').replaceChildren();
-        option(el('start-marker'),'',t('chooseMarker'));option(el('end-marker'),'',t('chooseEnd'));
+        option(el('start-marker'),'cursor',t('here')+' · '+positionLabel(fixedPoint,state.meter));option(el('start-marker'),'use-current',t('useCursor'));
+        option(el('start-marker'),'',t('chooseMarker'));option(el('end-marker'),'',t('untilStop'));
+        option(el('end-marker'),'missing',t('reason.MARKER_CHANGED')).disabled=true;
         bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';
         state.locators.forEach((cue,index)=>{
           const label=cue.name+' · '+positionLabel(cue.time,state.meter);
@@ -467,27 +500,36 @@
           el('markers').appendChild(marker);
         });
         const preserved=previous?state.locators.findIndex(cue=>cue.name===previous.name && cue.time===previous.time):-1;
-        startIndex=preserved>=0?String(preserved):previous?'':state.locators.length?'0':'';
+        startIndex=preserved>=0?String(preserved):previous?'':startIndex==='cursor'?'cursor':'';
         const retainedEnd=previousEnd?state.locators.findIndex(cue=>cue.name===previousEnd.name && cue.time===previousEnd.time):-1;
-        endIndex=retainedEnd>=0?String(retainedEnd):'';
+        endIndex=retainedEnd>=0?String(retainedEnd):previousEnd?'missing':endIndex;
         previousLocators=state.locators.map(cue=>({...cue}));
       }
-      const rangeKey=JSON.stringify(state.range || null);
+      const rangeKey=JSON.stringify([state.range||null,state.capture?.total]);
       if(rangeSignature!==rangeKey) {
         rangeSignature=rangeKey;
         if(state.range) {
+          if(state.capture&&(state.capture.total===null||Number.isInteger(state.capture.total)&&state.capture.total>=1&&state.capture.total<=16))passes=state.capture.total;
           const index=state.locators.findIndex(cue=>cue.name===state.range.start.name && cue.time===state.range.start.time);
-          startIndex=index>=0?String(index):'';looping=state.range.loop;
+          if(state.range.start.source==='cursor'){fixedPoint=state.range.start.time;startIndex='cursor';}else startIndex=index>=0?String(index):'';
+          looping=Boolean(state.range.end);
           const end=state.range.end && state.locators.findIndex(cue=>cue.name===state.range.end.name && cue.time===state.range.end.time);
-          endIndex=typeof end==='number' && end>=0?String(end):'';
+          endIndex=typeof end==='number' && end>=0?String(end):state.range.end?'missing':'';
           if(looping && startIndex!=='' && endIndex!=='' && !userAdjustedZoom) scheduleAutoZoom();
         }
       }
+      const hereOption=[...el('start-marker').children].find(item=>item.value==='cursor');
+      if(hereOption && doc.activeElement!==el('start-marker')) {
+        const nextText=t('here')+' · '+positionLabel(fixedPoint,state.meter);
+        if(hereOption.textContent!==nextText) hereOption.textContent=nextText;
+      }
       updateRange();
-      el('loop').disabled=!editable || (!looping && !state.locators.some(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity)));
       const armed=armedTracks(view);
-      el('start').disabled=!editable || !armed.length || Boolean(state.trackPending) || !cueAt(startIndex) || (looping && !cueAt(endIndex));
-      if(!view.error && !working && stopped) el('status').textContent=t(!armed.length?'armTracks':!state.locators.length?'createMarkers':!cueAt(startIndex)?'chooseMarker':looping && !cueAt(endIndex)?'chooseEnd':'ready');
+      const validEnd=!looping||cueAt(endIndex)&&cueAt(endIndex).time>(startAt()?.time??Infinity);
+      el('start').disabled=!editable || !armed.length || Boolean(state.trackPending) || !startAt() || !validEnd;
+      if(!view.error && !working && stopped) el('status').textContent=t(!armed.length?'armTracks':!startAt()?'chooseMarker':!validEnd?'chooseEnd':state.capture?.phase==='complete'?'completed':looping?'ready':'freeReady');
+      if(!view.error&&state.capture?.phase==='unconfirmed')el('status').textContent=reason(state.capture.error);
+      else if(!view.error&&known&&transport.recordMode.value&&state.capture)el('status').textContent=t('recordObserved')+' · '+state.capture.pass+'/'+(state.capture.total??'∞');
       for(const marker of el('markers').children) marker.disabled=!editable;
       drawCursor();
     }
@@ -505,39 +547,50 @@
       render(client.view());
     });
     el('start-marker').addEventListener('change',()=>{
-      startIndex=el('start-marker').value;updateRange();const cue=cueAt(startIndex);
+      startIndex=el('start-marker').value;
+      if(startIndex==='use-current'){
+        const position=client.view().state?.transport.songTimeBeats;
+        if(position?.fresh&&Number.isFinite(position.value)){fixedPoint=position.value;startIndex='cursor';markerSignature='';}
+        else startIndex='';
+      }
+      updateRange();const cue=cueAt(startIndex);
       if(cue) invoke('recordingSeekMarker',markerRef(cue));
+      else render(client.view());
       if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
     });
     el('end-marker').addEventListener('change',()=>{
-      endIndex=el('end-marker').value;render(client.view());
+      const previous=endIndex;endIndex=el('end-marker').value;if(previous===''&&endIndex!=='')passes=1;render(client.view());
       if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
     });
-    el('loop').addEventListener('click',()=>{
-      looping=!looping;
-      if(looping && !cueAt(endIndex)) {
-        const index=client.view().state.locators.findIndex(cue=>cue.time>(cueAt(startIndex)?.time ?? Infinity));endIndex=index>=0?String(index):'';
-      }
-      render(client.view());
-      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
-    });
-    for(const bars of [0,1,2,4]) el('pre-roll-'+bars).addEventListener('click',()=>{
-      if(el('pre-roll-'+bars).disabled) return;
+    el('passages').addEventListener('change',()=>{if(el('passages').disabled)return;passes=el('passages').value==='infinite'?null:Number(el('passages').value);render(client.view());});
+    function setPreRoll(bars) {
+      if(![0,1,2,4].includes(bars))return;
       preRollBars=bars;
       try { root.localStorage?.setItem(PRE_ROLL_KEY,String(bars)); } catch { /* The current page preference still works. */ }
       render(client.view());
+    }
+    el('pre-roll-inline')?.addEventListener('change',()=>{
+      if(!el('pre-roll-inline').disabled)setPreRoll(Number(el('pre-roll-inline').value));
+    });
+    for(const bars of [0,1,2,4]) el('pre-roll-'+bars).addEventListener('click',()=>{
+      if(!el('pre-roll-'+bars).disabled)setPreRoll(bars);
     });
     el('zoom').addEventListener('input',()=>{
       clearTimeout(autoZoomTimer);autoZoomTimer=null;userAdjustedZoom=true;
       zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);
       el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawCursor();
+      const start=startAt(),end=looping?cueAt(endIndex):null;
+      if(start){
+        const center=end&&end.time>start.time?(start.time+end.time)/2:start.time;
+        centerTimeline(center,center);
+      }
     });
     el('start').addEventListener('click',()=>{
       if(destination==='clip') {
         const view=client.view(),targets=sessionTargets(view);if(!el('start').disabled&&targets)invoke('recordingSessionRecord',{songId:view.state.session.songId,scene:sceneTarget,targets,bars:Number(el('session-bars').value),quantization:el('session-quantization').value});return;
       }
-      const view=client.view(),tracks=armedTracks(view),start=cueAt(startIndex),end=looping?cueAt(endIndex):null;
-      if(!el('start').disabled&&canControl(view,'arm')&&tracks.length&&start) invoke('recordingRecord',{tracks:tracks.map(track=>({index:track.index,id:track.id,name:track.name})),range:{start:markerRef(start),end:end?markerRef(end):null,loop:looping},preRollBars});
+      const view=client.view(),tracks=armedTracks(view),start=startAt(),end=looping?cueAt(endIndex):null;
+      if(!el('start').disabled&&canControl(view,'arm')&&tracks.length&&start) invoke('recordingRecord',{tracks:tracks.map(track=>({index:track.index,id:track.id,name:track.name})),range:{start:markerRef(start),end:end?markerRef(end):null,loop:Boolean(end)&&passes!==1},preRollBars,passes:end?passes:null});
     });
     el('stop').addEventListener('click',()=>invoke(destination==='clip'||client.view().state?.session?.active?'recordingSessionStop':'recordingStop'));
     el('click').addEventListener('click',()=>invoke('recordingClick',{enabled:!client.view().state?.transport.metronome.value}));
