@@ -348,8 +348,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: 'v2.0.0 is in local release preparation. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.',
-      'pt-BR': 'v2.0.0 está em preparação local. Sete páginas, loops XY e banco ampliado de poses; configure a partir do zero.',
+      en: 'v2.0.0 is the current release. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.',
+      'pt-BR': 'v2.0.0 é a versão atual. Sete páginas, loops XY e banco ampliado de poses; configure a partir do zero.',
     },
     'lp.docs.001': {
       en: 'Reference documents',

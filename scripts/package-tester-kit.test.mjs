@@ -148,7 +148,7 @@ test('tester-kit: current 2.0 docs stage intact with working links and no histor
     assert.ok(mod.stageDocs.includes('.github/release-notes/v2.0.0.md'));
     assert.equal(mod.stageDocs.some(file=>/Migrate|PESQUISA_CELULAR|CONTROL-LATENCY-AUDIT/.test(file)),false);
     const release=await readFile(join(stagedDir,'.github/release-notes/v2.0.0.md'),'utf8');
-    assert.match(release,/surface-v2/);assert.match(release,/## Em português/);assert.match(release,/unpublished/);
+    assert.match(release,/surface-v2/);assert.match(release,/## Em português/);assert.doesNotMatch(release,/unpublished/);
     const links=[...release.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map(match=>match[1]);
     assert.ok(links.length>=5);assert.ok(links.every(link=>link.startsWith('https://')),'release-body links must work outside the repository/kit path');
   } finally {await rm(stagedDir,{recursive:true,force:true});}

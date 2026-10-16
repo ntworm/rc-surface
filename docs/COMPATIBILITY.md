@@ -1,6 +1,6 @@
 # Compatibility — RC Surface
 
-Build `2.0.0` in local preparation. Product requirements and evidence; 1.0 records are not new 2.0 gates.
+Release `2.0.0`. Product requirements and evidence; 1.0 records are not new 2.0 gates.
 
 ## Live
 

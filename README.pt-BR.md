@@ -75,7 +75,7 @@ Para usar os recursos do AbletonOSC, deixe a extensão **AbletonOSC** rodando no
 
 ## Status da versão candidata
 
-A versão do código é 2.0.0, em preparação local. Instale o candidato recebido ou confira o arquivo publicado correspondente em Releases. A configuração começa do zero; veja a instalação para a atualização incompatível.
+A versão do código é 2.0.0, a versão atual. Instale o `RC-Surface-2.0.0.ablx` da página Releases do GitHub e confira com o `SHA256SUMS.txt`. A configuração começa do zero; veja a instalação para a atualização incompatível.
 
 ## Início rápido
 

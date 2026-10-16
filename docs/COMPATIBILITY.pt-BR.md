@@ -1,6 +1,6 @@
 # Compatibilidade — RC Surface
 
-Build `2.0.0` em preparação local. Requisitos e evidências do produto; registros 1.0 não são gates novos da versão 2.0.
+Versão `2.0.0`. Requisitos e evidências do produto; registros 1.0 não são gates novos da versão 2.0.
 
 ## Live
 

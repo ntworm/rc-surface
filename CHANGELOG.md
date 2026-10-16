@@ -4,7 +4,7 @@ Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.
 
-## 2.0.0 — local release preparation (unpublished)
+## 2.0.0
 
 - Transport Lite uses two rows: PLAY/STOP/PREV/NEXT, then CLICK, Global Quantization and REFRESH; the status line appears only when something needs attention. Opening TRN reads Live's global quantization even without a Launch Clip mapping, instead of waiting until a value was chosen. CLICK is never locked by REC: it changes during setup, pre-roll, capture and playback, and a choice made during pre-roll is not overwritten by its restore. The REC timeline draws a fine bar/beat grid with bar numbers behind the markers, thinning with zoom.
 

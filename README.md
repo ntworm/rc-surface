@@ -74,7 +74,7 @@ To use the AbletonOSC features, ensure the **AbletonOSC** extension is running i
 
 ## Candidate status
 
-The source version is 2.0.0, in local release preparation. Install the supplied candidate or verify the matching published asset on Releases. Configuration starts fresh; see the installation guide for the breaking upgrade.
+The source version is 2.0.0, the current release. Install `RC-Surface-2.0.0.ablx` from the GitHub Releases page and verify it with `SHA256SUMS.txt`. Configuration starts fresh; see the installation guide for the breaking upgrade.
 
 ## Quick Start
 
