@@ -459,7 +459,7 @@ cancela o gesto; apenas o último alvo do mesmo gesto atual pode seguir uma escr
 
 Mappings, presets e projetos vivem em `storageDirectory/surface-v2/`, com schemas de projeto/preset/performance 2. Dados 1.x e overrides/snapshots do primeiro candidato 2.0 não são importados; arquivos antigos permanecem. AUT persiste pontos/ajustes XY, nunca playback/contagem/captura. Reconectar exige Play explícito; SYNC requer posição/tempo/compasso atuais do Live tocando, FREE usa tempo decorrido. Configuração dos pads XY abre por toque longo no celular ou clique direito no desktop sem reduzir as dimensões dos pads ou alterar loops de automação.
 
-`recordingRecord` também aceita `passes: null | inteiro(1..16)`. INÍCIO pode ser
+`recordingRecord` também aceita `passes: null | inteiro(1..10)`. INÍCIO pode ser
 `{name,time}` exato ou ponto fixo `{source:'cursor',time}`. O cursor usa locator
 temporário próprio do SDK para fixar a entrada nativa, com limpeza limitada e
 identidades verificadas. FIM=null exige passes=null e Loop=false. Fim limitado

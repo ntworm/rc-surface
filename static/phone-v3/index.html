@@ -482,11 +482,11 @@
               <option value="flexible" data-i18n="vid.flexible">Flexible</option>
             </select>
           </label>
+          <button type="button" id="btn-add-learned-pose" data-i18n="vid.addPose">+ ADD POSE</button>
         </div>
         <section class="vision-gesture-studio">
           <header class="vision-studio-head">
             <div><strong data-i18n="vid.learnedPoses">LEARNED POSES</strong><span><span data-i18n="vid.examplesEach">3 to start · up to 6</span> <span data-i18n="vid.momentary">· momentary 0 → 1</span></span></div>
-            <button type="button" id="btn-add-learned-pose" data-i18n="vid.addPose">+ ADD POSE</button>
           </header>
           <div class="vision-gesture-slots vision-pose-grid">
             <article class="vision-gesture-slot" data-gesture-slot="1" data-name="sensor.vision.gesture.1">
@@ -590,7 +590,7 @@
         <button id="rec-stop" type="button" class="rec-stop">STOP</button>
         <label class="rec-inline-preroll"><span data-i18n="rec.preRoll">PRE-ROLL</span><select id="rec-pre-roll-inline" data-i18n-aria-label="rec.preRollBars" aria-label="Pre-roll bars"><option value="0" data-i18n="rec.preRollOff">OFF</option><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
         <div id="rec-free-mode" class="rec-free-mode"><span data-i18n="rec.freeRecording">FREE</span><span data-i18n="rec.untilStop">Until STOP</span></div>
-        <label id="rec-passages-field" class="rec-inline-preroll" hidden><span data-i18n="rec.passages">PASSES</span><select id="rec-passages" data-i18n-aria-label="rec.passages" aria-label="Passes"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="infinite">∞</option></select></label>
+        <label id="rec-passages-field" class="rec-inline-preroll" hidden><span data-i18n="rec.passages">PASSES</span><select id="rec-passages" data-i18n-aria-label="rec.passages" aria-label="Passes"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="infinite">∞</option></select></label>
         <button id="rec-return-arrangement" type="button" data-i18n="rec.returnArrangement" data-i18n-aria-label="rec.returnArrangementLabel">BACK TO ARR</button>
       </div>
       <div id="rec-arrangement-panel" class="rec-arrangement-panel">
@@ -719,6 +719,7 @@
       <header class="transport-head">
         <span class="transport-title" data-i18n="trn.title">TRANSPORT LITE</span>
         <span id="osc-status" class="osc-status free" data-i18n="trn.free">FREE</span>
+        <button id="btn-trn-settings" class="trn-settings-btn" type="button" aria-expanded="false" aria-controls="trn-settings" title="Transport settings" aria-label="Transport settings" data-i18n-title="trn.settings" data-i18n-aria-label="trn.settings">&#9881;</button>
         <button id="btn-trn-close" class="trn-close-btn" type="button">&times;</button>
       </header>
       
@@ -730,6 +731,20 @@
         <button id="btn-trn-refresh" class="trn-ctrl-btn refresh" type="button"><span class="transport-symbol transport-symbol-refresh" aria-hidden="true"></span><span data-i18n="trn.refresh">REFRESH</span></button>
       </div>
       
+      <section id="trn-settings" class="trn-settings" hidden>
+        <label class="trn-setting">
+          <span data-i18n="trn.quantization">GLOBAL QUANTIZATION</span>
+          <select id="trn-quantization" class="setting-select"></select>
+        </label>
+        <output id="trn-quantization-status" class="trn-setting-status" role="status" aria-live="polite"></output>
+        <div class="trn-setting">
+          <span data-i18n="trn.metronome">METRONOME</span>
+          <button id="trn-metronome" type="button" class="grid-btn" aria-pressed="mixed">CLICK · ?</button>
+        </div>
+        <output id="trn-metronome-status" class="trn-setting-status" role="status" aria-live="polite"></output>
+        <p class="setting-note" data-i18n="trn.metronomeGap">Same Live metronome as REC CLICK. Its sound, rhythm and count-in are not exposed to extensions: set them in Live. REC PRE-ROLL gives a count-off.</p>
+      </section>
+
       <div class="locator-section">
         <header class="locator-head">
           <span class="locator-title" data-i18n="trn.locators">LOCATORS</span>
@@ -831,7 +846,7 @@
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.phaseOffset">Phase Offset (Beats)</label>
             <div class="setting-row slider-row">
-              <input type="range" id="lfo-phase-offset" min="-4" max="4" step="0.25" value="0">
+              <input type="range" id="lfo-phase-offset" class="sync-slider" min="-4" max="4" step="0.25" value="0">
               <span id="lfo-phase-offset-val" class="readout-val">0.0</span>
             </div>
           </div>
@@ -859,7 +874,7 @@
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.swing">Swing</label>
             <div class="setting-row slider-row">
-              <input type="range" id="pulse-swing" min="0" max="0.66" step="0.05" value="0">
+              <input type="range" id="pulse-swing" class="sync-slider" min="0" max="0.66" step="0.05" value="0">
               <span id="pulse-swing-val" class="readout-val">0.00</span>
             </div>
           </div>
@@ -867,7 +882,7 @@
           <div class="setting-group">
             <label class="setting-label" data-i18n="sync.phaseOffset">Phase Offset (Beats)</label>
             <div class="setting-row slider-row">
-              <input type="range" id="pulse-phase-offset" min="-2" max="2" step="0.125" value="0">
+              <input type="range" id="pulse-phase-offset" class="sync-slider" min="-2" max="2" step="0.125" value="0">
               <span id="pulse-phase-offset-val" class="readout-val">0.0</span>
             </div>
           </div>
@@ -940,6 +955,7 @@
   <script src="xy-engine.js"></script>
   <script src="xy-automation.js"></script>
   <script src="xy-automation-controller.js"></script>
+  <script src="hold-to-edit.js"></script>
   <script src="controls.js"></script>
   <script src="modules/session.js"></script>
   <script src="modules/wake-lock.js"></script>

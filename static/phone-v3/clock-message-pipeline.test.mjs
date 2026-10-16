@@ -33,9 +33,19 @@ test('actual transport message and MAP renderer retain AUT clock age without ren
   assert.doesNotThrow(() => engine.arm(create(), root.triggerNoteClockSnapshot, now));
 });
 
-test('MAP AUT and CFG header controls stay visible in every page state', () => {
-  const css = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+test('MAP AUT and CFG header controls hide only by the real tab, never by MAP or STAGE state', () => {
+  // Contextual header (2026-10-16): AUT on PERF, CFG on PERF/MIX, MAP except REC.
+  // Any other hiding rule (overlay, stage, width) would strand an open mode.
+  const css = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   for (const id of ['btn-map-mode', 'btn-aut-mode', 'btn-cfg-mode']) {
-    assert.equal(new RegExp(`[^{}]*#${id}[^{}]*\\{[^}]*display:\\s*none`).test(css), false, id);
+    for (const [, selectors] of css.matchAll(/([^{}]*)\{[^}]*display:\s*none[^}]*\}/g)) {
+      for (const selector of selectors.split(',').map((item) => item.trim()).filter((item) => item.includes('#' + id))) {
+        assert.match(selector, /^body\[data-header-page(?:="recording")?\]/, id + ': ' + selector);
+      }
+    }
   }
+  const layout = fs.readFileSync(new URL('./modules/layout.js', import.meta.url), 'utf8');
+  const mapping = fs.readFileSync(new URL('./mapping-mode.js', import.meta.url), 'utf8');
+  assert.match(layout, /dataset\.headerPage = page/);
+  assert.doesNotMatch(mapping, /headerPage/, 'MAP overlay keeps the header context of the page underneath');
 });

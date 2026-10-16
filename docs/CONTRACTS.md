@@ -415,7 +415,7 @@ states do not establish physical audio/MIDI capture or take preservation.
 
 ### Arrangement, AUT and shared track contracts
 
-`recordingRecord` additionally accepts `passes: null | integer(1..16)`.
+`recordingRecord` additionally accepts `passes: null | integer(1..10)`.
 START is either exact `{name,time}` or fixed `{source:'cursor',time}`. A cursor
 start uses an SDK-owned temporary locator to establish the native insertion
 point, with the existing bounded cleanup/identity guards. END=null requires

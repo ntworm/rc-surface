@@ -179,7 +179,7 @@ export class RecordingCoordinator extends EventEmitter {
         canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index),
         volume: this.trackVolume(track)?.value ?? null, volumeDefault:this.trackVolume(track)?.defaultValue ?? null })),
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
-      meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },
+      meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },tempo:this.value('tempo'),
       lastAttempt: this.lastAttempt,
       capture:this.capture?.controller?.snapshot()??null,
       preRoll: this.preRoll ? {bars:this.preRoll.bars, phase:this.preRoll.phase, start:this.preRoll.start, point:this.preRoll.range.start.time} : null,
@@ -302,7 +302,9 @@ export class RecordingCoordinator extends EventEmitter {
   public async refresh() {
     this.currentSong();
     if (this.operation?.name === 'read' && this.refreshing) return this.refreshing;
-    if (this.operation || this.trackMutation || this.capture?.active || this.osc.recording.snapshot().recordMode.value === true) return this.snapshot();
+    // Capture owns transport writes; passive card/volume reads must continue
+    // during a take so freshness never expires just because REC is active.
+    if (this.operation || this.trackMutation) return this.snapshot();
     const promise = this.run('read', undefined, async operation => {await this.readDisplay(operation);await this.readVolumes(operation);if(this.session.active||this.value('backToArranger')===true)await this.session.refresh(()=>this.check(operation),operation.abort.signal);});
     this.refreshing = promise;
     try { return await promise; } finally { if (this.refreshing === promise) this.refreshing = null; }
@@ -515,7 +517,10 @@ export class RecordingCoordinator extends EventEmitter {
     }
     for (const ref of markerRead?(this.selected?[this.selected]:[]):monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
     if (!markerRead && (this.range?.loop || this.range?.end || this.capture || this.preRollRequested || this.preRoll)) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }
-    if (!markerRead && (this.preRollRequested || this.preRoll)) { packets.push([GET.tempo]); keys.push('tempo'); }
+    // Tempo feeds the phone's cursor interpolation on every read, but only a
+    // pre-roll depends on it: a silent tempo reply must not stall unrelated
+    // reads (Session, Arrangement return, ARM) until the evidence deadline.
+    if (!markerRead) { packets.push([GET.tempo]); if (this.preRollRequested || this.preRoll) keys.push('tempo'); }
     const revision = this.revision;
     const evidence = new Promise<void>((resolve, reject) => {
       let done = false, retry: ReturnType<typeof setTimeout> | undefined;
@@ -779,7 +784,7 @@ export class RecordingCoordinator extends EventEmitter {
     this.idle(context); this.currentSong();
     if(this.punch || this.armedByRecorder.length || this.capture?.ownedPunchOut) fail('STOP_REQUIRED');
     const range = this.markerRange(requested);
-    if(passes!==undefined && (passes!==null&&(!Number.isInteger(passes)||passes<1||passes>16) || !range.end&&passes!==null || range.end&&range.loop!==(passes!==1)))fail('PASSAGES');
+    if(passes!==undefined && (passes!==null&&(!Number.isInteger(passes)||passes<1||passes>10) || !range.end&&passes!==null || range.end&&range.loop!==(passes!==1)))fail('PASSAGES');
     if (![0,1,2,4].includes(preRollBars)) fail('PRE_ROLL_RANGE');
     const refs=this.refs(track),song=this.currentSong(),strict=Array.isArray(track);
     for(const ref of refs){const candidate=song.tracks[ref.index];if(!candidate||String(candidate.handle.id)!==ref.id||candidate.name!==ref.name)fail('IDENTITY');}

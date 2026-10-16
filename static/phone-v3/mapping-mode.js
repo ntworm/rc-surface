@@ -746,6 +746,8 @@
 
   function closeMappingMode() {
     if (!state.open) return;
+    curveHold?.detach();
+    curveHold = null;
     state.open = false;
     state.selectedControl = null;
     state.pickerMode = null;
@@ -1390,6 +1392,7 @@
   }
 
   let activeAnimationId = null;
+  let curveHold = null;
 
   function getActiveTarget() {
     if (!state.selectedControl) return null;
@@ -1589,6 +1592,16 @@
     // Draw 3 curve editing handles: left (outMin), right (outMax), middle (drive / transition)
     const handleRadius = 8;
     const [leftHandle, rightHandle, midHandle] = curveHandlePositions(canvas, target, plot);
+    // A held handle (touch hold-to-edit or mouse drag) gets a selection ring.
+    const selectedHandle = canvas.dataset?.holdEdit;
+    const held = [leftHandle, rightHandle, midHandle].find((handle) => handle.name === selectedHandle);
+    if (held) {
+      ctx.strokeStyle = '#ffa133';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(held.x, held.y, handleRadius + 7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     // Draw left handle (outMin)
     ctx.fillStyle = '#ffa133';
@@ -2914,7 +2927,8 @@
     canvasWrap.className = 'map-curve-canvas-wrap';
     const canvas = document.createElement('canvas');
     canvas.width = 360;
-    canvas.height = 180;
+    // Short plot: the phone panel keeps room for the sliders under it.
+    canvas.height = 120;
     canvas.className = 'map-curve-canvas';
     canvasWrap.appendChild(canvas);
     
@@ -2956,29 +2970,15 @@
       return nearest && nearest.distance <= 24 ? nearest.name : null;
     }
 
-    canvas.addEventListener('pointerdown', (e) => {
-      const pos = getCanvasCoords(e);
-      const handle = findHandleAt(pos);
-      if (handle) {
-        activeDragHandle = handle;
-        try { canvas.setPointerCapture?.(e.pointerId); } catch {}
-        e.preventDefault?.();
-      }
-    });
-
-    canvas.addEventListener('pointermove', (e) => {
-      if (!activeDragHandle) {
-        const pos = getCanvasCoords(e);
-        const handle = findHandleAt(pos);
-        canvas.style.cursor = handle ? 'pointer' : 'default';
-        return;
-      }
+    // Shared by the touch hold-to-edit path and the mouse path: the same
+    // inverse math turns a pointer position into outMin, outMax or drive.
+    function moveHandle(name, e) {
       const target = getActiveTarget();
       if (!target) return;
       const pos = getCanvasCoords(e);
       const normY = curvePlotGeometry(canvas).valueAtY(pos.y);
 
-      if (activeDragHandle === 'outMin') {
+      if (name === 'outMin') {
         const shaped = curvePreviewShape(curvePreviewInput(target.inMin ?? 0, target), target);
         const influence = 1 - shaped;
         if (Math.abs(influence) < 1e-8) return;
@@ -2987,7 +2987,7 @@
         target.outMin = rounded;
         updateMobileTargetField('outMin', rounded, { refresh: false });
         syncSliderDOM('outMin', rounded);
-      } else if (activeDragHandle === 'outMax') {
+      } else if (name === 'outMax') {
         const shaped = curvePreviewShape(curvePreviewInput(target.inMax ?? 1, target), target);
         if (Math.abs(shaped) < 1e-8) return;
         const value = (normY - (1 - shaped) * (target.outMin ?? 0)) / shaped;
@@ -2995,7 +2995,7 @@
         target.outMax = rounded;
         updateMobileTargetField('outMax', rounded, { refresh: false });
         syncSliderDOM('outMax', rounded);
-      } else if (activeDragHandle === 'drive') {
+      } else if (name === 'drive') {
         const outMin = target.outMin ?? 0;
         const outMax = target.outMax ?? 1;
         const range = outMax - outMin;
@@ -3009,23 +3009,71 @@
         updateMobileTargetField('drive', rounded, { refresh: false });
         syncSliderDOM('drive', rounded);
       }
-    });
-
-    const finishDrag = () => {
-      if (!activeDragHandle) return;
+    }
+    function commitHandle(name) {
       const target = getActiveTarget();
-      if (target) {
-        if (activeDragHandle === 'outMin') updateMobileTargetField('outMin', target.outMin);
-        else if (activeDragHandle === 'outMax') updateMobileTargetField('outMax', target.outMax);
-        else if (activeDragHandle === 'drive') updateMobileTargetField('drive', target.drive);
-      }
-      activeDragHandle = null;
-    };
-    canvas.addEventListener('pointerup', finishDrag);
-    canvas.addEventListener('pointercancel', finishDrag);
+      if (!target) return;
+      if (name === 'outMin') updateMobileTargetField('outMin', target.outMin);
+      else if (name === 'outMax') updateMobileTargetField('outMax', target.outMax);
+      else if (name === 'drive') updateMobileTargetField('drive', target.drive);
+    }
+    function restoreHandle(name, snapshot) {
+      const target = getActiveTarget();
+      if (!target || !snapshot || !(name in snapshot)) return;
+      target[name] = snapshot[name];
+      updateMobileTargetField(name, snapshot[name]);
+      syncSliderDOM(name, snapshot[name]);
+    }
+    const holdToEdit = window.RcHoldToEdit;
+    if (holdToEdit) {
+      curveHold?.detach();
+      curveHold = holdToEdit.attach(canvas, {
+        hitTest: (e) => findHandleAt(getCanvasCoords(e)),
+        begin: (name) => {
+          const target = getActiveTarget();
+          return target ? { [name]: target[name] ?? (name === 'outMax' ? 1 : 0) } : null;
+        },
+        move: moveHandle,
+        end: commitHandle,
+        cancel: restoreHandle,
+        panel: () => canvas.closest?.('#mapping-mode') || canvasWrap,
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (curveHold?.active() || e.pointerType === 'touch' || e.pointerType === 'pen') return;
+        canvas.style.cursor = findHandleAt(getCanvasCoords(e)) ? 'pointer' : 'default';
+      });
+    } else {
+      canvas.addEventListener('pointerdown', (e) => {
+        const handle = findHandleAt(getCanvasCoords(e));
+        if (handle) {
+          activeDragHandle = handle;
+          try { canvas.setPointerCapture?.(e.pointerId); } catch {}
+          e.preventDefault?.();
+        }
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!activeDragHandle) {
+          const handle = findHandleAt(getCanvasCoords(e));
+          canvas.style.cursor = handle ? 'pointer' : 'default';
+          return;
+        }
+        moveHandle(activeDragHandle, e);
+      });
+      const finishDrag = () => {
+        if (!activeDragHandle) return;
+        commitHandle(activeDragHandle);
+        activeDragHandle = null;
+      };
+      canvas.addEventListener('pointerup', finishDrag);
+      canvas.addEventListener('pointercancel', finishDrag);
+    }
+    let lastPointerType = 'mouse';
+    canvas.addEventListener('pointerdown', (e) => { lastPointerType = e.pointerType || 'mouse'; });
 
     canvas.addEventListener('dblclick', (e) => {
       e.preventDefault?.();
+      // A double tap on a phone is not a reset request; only the mouse resets.
+      if (lastPointerType === 'touch' || lastPointerType === 'pen') return;
       const target = getActiveTarget();
       if (!target) return;
       const pos = getCanvasCoords(e);
@@ -3435,6 +3483,13 @@
 
     window.addEventListener('ableton-rc:phone-ws-open', () => {
       if (state.open) loadMobileMappingData();
+    });
+    // REC hides the MAP button, so an open overlay there could not be closed
+    // from the header. Leave MAP on the REC page itself; mappings are untouched.
+    window.addEventListener('ableton-rc:page-change', (event) => {
+      if (!state.open || event?.detail?.page !== 'recording') return;
+      state.previousPage = 'recording';
+      closeMappingMode();
     });
     window.addEventListener('ableton-rc:phone-client-id', (event) => {
       state.selectedClient = event.detail && event.detail.clientId ? event.detail.clientId : state.selectedClient;

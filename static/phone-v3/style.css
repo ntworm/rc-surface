@@ -153,6 +153,9 @@ body { display: flex; flex-direction: column; touch-action: none; }
   .topbar .ableton-panel { grid-area: transport; justify-self: start; }
   .topbar .sync-mode-block { grid-area: sync; justify-self: end; }
   .topbar .status-block { grid-area: status; justify-self: end; }
+  /* STAGE hides the status badge and widens the tabs; let the tabs take the
+     whole first row so EXIT never shares a column with them and gets cut. */
+  body.stage-mode .topbar { grid-template-areas: "tabs tabs" "transport sync"; }
   .calibration-strip { top: 64px; }
 }
 
@@ -1229,6 +1232,7 @@ body.stage-mode .fader {
   min-width: 32px;
 }
 .morph-slider,
+.sync-slider,
 .cfg-slider-row input[type="range"],
 .map-vision-filter-row input[type="range"],
 .map-editor-slider-input,
@@ -1243,6 +1247,7 @@ body.stage-mode .fader {
   cursor: pointer;
 }
 .morph-slider::-webkit-slider-runnable-track,
+.sync-slider::-webkit-slider-runnable-track,
 .cfg-slider-row input[type="range"]::-webkit-slider-runnable-track,
 .map-vision-filter-row input[type="range"]::-webkit-slider-runnable-track,
 .map-editor-slider-input::-webkit-slider-runnable-track,
@@ -1251,6 +1256,7 @@ body.stage-mode .fader {
   background: linear-gradient(to right, var(--accent) var(--range-progress, 0%), var(--border) var(--range-progress, 0%));
 }
 .morph-slider::-webkit-slider-thumb,
+.sync-slider::-webkit-slider-thumb,
 .cfg-slider-row input[type="range"]::-webkit-slider-thumb,
 .map-vision-filter-row input[type="range"]::-webkit-slider-thumb,
 .map-editor-slider-input::-webkit-slider-thumb,
@@ -1265,6 +1271,7 @@ body.stage-mode .fader {
   background: var(--surface-soft);
 }
 .morph-slider::-moz-range-track,
+.sync-slider::-moz-range-track,
 .cfg-slider-row input[type="range"]::-moz-range-track,
 .map-vision-filter-row input[type="range"]::-moz-range-track,
 .map-editor-slider-input::-moz-range-track,
@@ -1273,6 +1280,7 @@ body.stage-mode .fader {
   background: linear-gradient(to right, var(--accent) var(--range-progress, 0%), var(--border) var(--range-progress, 0%));
 }
 .morph-slider::-moz-range-thumb,
+.sync-slider::-moz-range-thumb,
 .cfg-slider-row input[type="range"]::-moz-range-thumb,
 .map-vision-filter-row input[type="range"]::-moz-range-thumb,
 .map-editor-slider-input::-moz-range-thumb,
@@ -1284,6 +1292,7 @@ body.stage-mode .fader {
   background: var(--surface-soft);
 }
 .morph-slider:focus-visible,
+.sync-slider:focus-visible,
 .cfg-slider-row input[type="range"]:focus-visible,
 .map-vision-filter-row input[type="range"]:focus-visible,
 .map-editor-slider-input:focus-visible,
@@ -1542,6 +1551,14 @@ body.stage-mode .fader {
   cursor: pointer;
   box-sizing: border-box;
   transition: background 0.08s, transform 0.08s, border-color 0.08s;
+}
+/* Contextual header: AUT drives the PERF XY pads only, CFG edits PERF/MIX
+   controls only, and REC owns its own transport row without MAP. Keeping the
+   row short is also what keeps STAGE/EXIT and the status visible on VID. */
+body[data-header-page]:not([data-header-page="performance"]) #btn-aut-mode,
+body[data-header-page]:not([data-header-page="performance"]):not([data-header-page="mixer"]) #btn-cfg-mode,
+body[data-header-page="recording"] #btn-map-mode {
+  display: none;
 }
 .ablt-map-btn.on {
   background: rgba(255, 161, 51, 0.16);
@@ -2637,7 +2654,7 @@ body.mapping-mode [data-name].selected-control {
 .map-curve-canvas {
   display: block;
   width: 100%;
-  height: 180px;
+  height: 120px;
   border-radius: 0;
   background: var(--bg2);
 }
@@ -3015,7 +3032,9 @@ body.mapping-mode [data-name].selected-control {
 @media (max-width: 430px) {
   .map-duration-bars { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-.map-curve-canvas { touch-action: none; cursor: crosshair; }
+/* pan-y: a touch that is not a completed hold scrolls the MAP panel. */
+.map-curve-canvas { touch-action: pan-y; cursor: crosshair; -webkit-touch-callout: none; user-select: none; }
+.map-curve-canvas[data-hold-edit] { outline: 1px solid var(--accent); outline-offset: -1px; }
 .map-trigger-field-title {
   font-size: 10px;
   font-weight: 800;
@@ -4219,9 +4238,13 @@ body.mapping-mode [data-name].selected-control {
   display: block;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border, #333);
-  touch-action: none;
+  /* Scroll passes through; the peak is edited only after a held touch. */
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  user-select: none;
   cursor: ew-resize;
 }
+.burst-env[data-hold-edit] { outline: 1px solid var(--accent); outline-offset: -1px; }
 .burst-env-floor {
   stroke: #333;
   stroke-width: 1;
@@ -4973,3 +4996,149 @@ body.automation-mode .xy-pad { cursor:crosshair; }
 #btn-aut-mode.on { color:#ff453a; border-color:#ff453a; }
 #aut-message:empty { display:none; }
 #aut-message { position:fixed; bottom:8px; left:8px; right:8px; z-index:2100; padding:8px; background:var(--surface); color:var(--accent); border:1px solid var(--border); }
+
+/* ── VID compact phone layout (2026-10-16) ──────────────────────────────
+ * + ADD POSE shares the CAMERA/CONF/REC row, so the pose cards get the old
+ * button bar. Built-in detectors and the MAP/CLUTCH readouts drop to about
+ * half their height; every gesture, axis and value stays visible and tappable.
+ */
+.vision-command-bar > #btn-add-learned-pose {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  white-space: nowrap;
+}
+@media (max-width: 999px), (max-height: 649px) {
+  .vision-command-bar > #btn-add-learned-pose {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+  .vision-detector-section { padding: 0 4px; }
+  .vision-gesture-list button {
+    min-height: 14px;
+    height: 14px;
+    padding: 0 4px;
+    font-size: 9px;
+    line-height: 1;
+  }
+  .vision-sensor-deck .vision-readout-grid { gap: 2px; }
+  .vision-sensor-deck .vision-readout-card { padding: 1px 4px; gap: 3px; }
+  .vision-axis-chips span,
+  .vision-axis-chips span[data-name] {
+    min-height: 18px;
+    height: 18px;
+    padding: 0 3px;
+  }
+  /* OFF/ON only names the clutch state; the three axes keep the width. */
+  .vision-readout-card:nth-child(2) .vision-axis-chips {
+    grid-template-columns: max-content repeat(3, minmax(0, 1fr));
+  }
+  #vision-clutch-state { padding: 0 4px; }
+}
+@media (max-height: 460px) {
+  /* Its only content on short phones was + ADD POSE, now in the command row. */
+  .vision-studio-head { display: none; }
+}
+@media (max-width: 640px) and (orientation: landscape) {
+  /* Two short lines keep CONF/REC selects readable on 568px phones. */
+  .vision-command-bar > #btn-add-learned-pose {
+    width: auto;
+    min-width: 52px;
+    max-width: 72px;
+    padding: 0 3px;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .vision-command-bar > .vision-camera-toggle { min-width: 58px; }
+}
+@media (max-height: 380px) {
+  /* The status row is hidden here; the card drops its empty 20px row so the
+     whole first pose fits under the command row. */
+  .vision-gesture-slot { min-height: 0; grid-template-rows: 91px; }
+}
+
+/* ── MAP and Burst compact phone editors (2026-10-16) ─────────────────── */
+@media (max-width: 999px), (max-height: 649px) {
+  .map-detail-actions { gap: 3px; padding: 0 0 4px; margin: 0 0 6px; }
+  .map-detail-actions button { min-height: 26px; padding: 2px; font-size: 9px; line-height: 1.05; }
+  .map-curve-canvas-wrap { padding: 4px; gap: 3px; }
+  .map-curve-canvas { height: 88px; }
+  .burst-env { height: 64px; }
+}
+
+/* ── CFG popover and Deep Sync compact phone layout (2026-10-16) ────────
+ * Same options, smaller cells: the controls under the popover stay in view
+ * and each panel scrolls inside itself. */
+@media (max-width: 999px), (max-height: 649px) {
+  .cfg-menu { padding: 4px 6px; font-size: 11px; max-width: 280px; min-width: 176px; }
+  .cfg-menu-header { margin-bottom: 3px; padding-bottom: 2px; }
+  .cfg-menu-title { font-size: 12px; }
+  .cfg-menu-close { min-width: 32px; min-height: 28px; font-size: 16px; padding: 0 4px; }
+  .cfg-menu-body { gap: 4px; }
+  .cfg-item-label { font-size: 9px; margin-bottom: 2px; }
+  .cfg-segment-group, .cfg-grid-group { gap: 3px; }
+  .cfg-segment-btn, .cfg-grid-btn { min-width: 30px; min-height: 28px; padding: 2px 6px; font-size: 10px; }
+  .cfg-action { min-height: 30px; padding: 3px 8px; font-size: 11px; }
+  .cfg-details > summary { min-height: 30px; }
+  .cfg-advanced-body { gap: 6px; padding: 4px 0; }
+  .cfg-slider-row { gap: 6px; }
+  .cfg-slider-row input[type="range"] { height: 24px; }
+  #sync-settings-overlay { padding: 6px; }
+  #sync-settings-overlay .transport-modal { max-width: 460px; max-height: calc(100dvh - 12px); }
+  #sync-settings-overlay .transport-head { padding: 5px 10px; }
+  #sync-settings-overlay .transport-title { font-size: 12px; }
+  #sync-settings-overlay .trn-close-btn { font-size: 18px; padding: 0 6px; min-width: 32px; min-height: 28px; }
+  #sync-settings-overlay .sync-settings-body { padding: 6px 8px; gap: 6px; }
+  #sync-settings-overlay .setting-group-section { gap: 5px; padding: 6px 8px; }
+  #sync-settings-overlay .setting-group { gap: 2px; }
+  #sync-settings-overlay .setting-label { font-size: 9px; line-height: 1.3; }
+  #sync-settings-overlay .setting-note { font-size: 9px; line-height: 1.3; margin: 0; }
+  #sync-settings-overlay .setting-select { padding: 4px 6px; font-size: 11px; }
+  #sync-settings-overlay .grid-btn { padding: 2px; min-height: 24px; font-size: 9px; }
+  #sync-settings-overlay .slider-row { gap: 8px; }
+  #sync-settings-overlay .sync-slider { height: 24px; }
+}
+
+/* ── TRN settings: Live global quantization and metronome (2026-10-16) ── */
+.trn-settings-btn {
+  min-width: 32px;
+  min-height: 28px;
+  margin-left: auto;
+  margin-right: 4px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.trn-settings-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.trn-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px 8px;
+  padding: 6px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  background: #141416;
+}
+.trn-settings[hidden] { display: none; }
+.trn-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text2);
+  letter-spacing: 0.06em;
+}
+.trn-setting .setting-select { padding: 4px 6px; font-size: 11px; min-height: 30px; }
+#trn-metronome { min-height: 30px; font-size: 11px; }
+#trn-metronome[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.trn-setting-status { grid-row: 2; font-size: 9px; color: var(--text2); min-height: 11px; overflow-wrap: anywhere; }
+#trn-quantization-status { grid-column: 1; }
+#trn-metronome-status { grid-column: 2; }
+.trn-setting-status[data-state="error"] { color: #ff8a8a; }
+.trn-settings > .setting-note { grid-column: 1 / -1; margin: 0; font-size: 9px; line-height: 1.3; color: var(--text3); }

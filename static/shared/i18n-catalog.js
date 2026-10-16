@@ -552,6 +552,13 @@
     'trn.nextLocator': { en: 'Next Locator', 'pt-BR': 'Próximo locator' },
     'trn.playPause': { en: 'Play/Pause', 'pt-BR': 'Play/Pause' },
     'trn.free': { en: 'FREE', 'pt-BR': 'FREE' },
+    'trn.settings': { en: 'Transport settings', 'pt-BR': 'Ajustes do transporte' },
+    'trn.quantization': { en: 'GLOBAL QUANTIZATION', 'pt-BR': 'QUANTIZAÇÃO GLOBAL' },
+    'trn.metronome': { en: 'METRONOME', 'pt-BR': 'METRÔNOMO' },
+    'trn.metronomeUnknown': { en: 'Waiting for Live', 'pt-BR': 'Aguardando o Live' },
+    'trn.metronomeError': { en: 'Live did not confirm the metronome: {error}', 'pt-BR': 'O Live não confirmou o metrônomo: {error}' },
+    'trn.viewer': { en: 'Viewer: read only', 'pt-BR': 'Visualizador: somente leitura' },
+    'trn.metronomeGap': { en: 'Same Live metronome as REC CLICK. Its sound, rhythm and count-in are not exposed to extensions: set them in Live. REC PRE-ROLL gives a count-off.', 'pt-BR': 'Mesmo metrônomo do Live que o CLICK do REC. Som, ritmo e contagem não são expostos às extensões: ajuste no Live. O PRE-ROLL do REC faz a contagem.' },
 
     // ── Deep Sync ────────────────────────────────────────────────────────
     'sync.title': { en: 'DEEP SYNC SETTINGS', 'pt-BR': 'AJUSTES DE DEEP SYNC' },

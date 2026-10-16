@@ -958,7 +958,7 @@ test('REC unlimited passes retain Loop until explicit STOP; retired plans never 
 
 test('REC capture rejects count without an end, invalid count and a loop/count mismatch before writes',async t=>{
   const f=captureFixture(t),before=f.sent.length;
-  for(const passes of [0,17,1.5,'2'])await assert.rejects(f.coordinator.record([recordingTrack],f.range,f.context,0,passes),/PASSAGES/);
+  for(const passes of [0,11,16,17,1.5,'2'])await assert.rejects(f.coordinator.record([recordingTrack],f.range,f.context,0,passes),/PASSAGES/);
   await assert.rejects(f.coordinator.record([recordingTrack],{...f.range,end:null},f.context,0,1),/PASSAGES/);
   await assert.rejects(f.coordinator.record([recordingTrack],f.range,f.context,0,2),/PASSAGES/);
   assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);
@@ -1023,6 +1023,30 @@ test('REC accepted pre-roll OFF then ON cannot later stop the external replaceme
   assert.equal(f.coordinator.snapshot().capture,null);assert.equal(f.values.record,true);
   assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
   await f.coordinator.stop(f.context);assert.equal(f.values.record,false);assert.equal(f.values.punchOut,false);
+});
+
+test('REC accepts ten total passes as the last finite choice',async t=>{
+  const f=captureFixture(t);f.range.loop=true;
+  const state=await f.coordinator.record([recordingTrack],f.range,f.context,0,10);
+  assert.equal(state.capture.total,10);assert.equal(f.values.record,true);
+});
+
+test('REC active capture refreshes track cards and volume after cache expiry without stopping the take',async t=>{
+  const f=captureFixture(t),volume=nativeVolume(f);f.range.loop=true;
+  await f.coordinator.record([recordingTrack],f.range,f.context,0,null);
+  for(let position=32.5;position<=38;position+=.5)await captureAdvance(t,f,position);
+  volume.external(.31);f.song.tracks[0].mute=true;
+  const before=f.sent.length,state=await f.coordinator.refresh();
+  assert.equal(state.tracks[0].canArm,true);assert.equal(state.tracks[0].arm,true);
+  assert.equal(state.tracks[0].solo,false);assert.equal(state.tracks[0].mute,true);
+  assert.equal(state.tracks[0].volume,.31);assert.equal(state.transport.metronome.fresh,true);
+  assert.equal(state.meter.numerator,4);assert.equal(state.capture.phase,'recording');
+  assert.equal(f.values.record,true);assert.equal(f.values.playing,true);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.stopPlaying),false);
+  await f.coordinator.trackControl(recordingTrack,'mute',false,'multi',f.context);
+  await f.coordinator.setVolume(recordingTrack,.42,f.context);
+  assert.equal(f.song.tracks[0].mute,false);assert.deepEqual(volume.writes,[.42]);
+  assert.equal(f.values.record,true);
 });
 
 test('REC capture STOP retires active capture state so refresh and ARM work after cache expiry',async t=>{

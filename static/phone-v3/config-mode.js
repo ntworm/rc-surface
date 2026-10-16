@@ -509,7 +509,8 @@
 
     function onPageChange(ev) {
       const page = ev && ev.detail && ev.detail.page;
-      if (page && page !== "performance" && page !== "mixer") off();
+      const pages = Array.isArray(opts.pages) ? opts.pages : ["performance", "mixer"];
+      if (page && !pages.includes(page)) off();
     }
 
     function attach() {

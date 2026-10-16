@@ -13,6 +13,151 @@
 
   window.RCSurface = window.RCSurface || {};
 
+  // Song.clip_trigger_quantization values 0..13, same order as the host's
+  // SONG_QUANTIZATION_LABELS and the MAP Launch Clip editor.
+  const QUANT_LABELS = ['None', '8 Bars', '4 Bars', '2 Bars', '1 Bar', '1/2', '1/2T', '1/4', '1/4T', '1/8', '1/8T', '1/16', '1/16T', '1/32'];
+  const fill = (text, params) => String(text).replace(/\{(\w+)\}/g, (_, key) => (params[key] ?? ''));
+  const tp = (key, fallback, params = {}) => {
+    const value = window.RcSurfaceI18n?.t(key, params);
+    return fill(value && value !== key ? value : fallback, params);
+  };
+  function quantizationLabel(value) {
+    if (value === 0) return tp('lc.quantNone', 'None');
+    if (value === 4) return tp('lc.quantOneBar', '1 Bar');
+    if (value >= 1 && value <= 3) return tp('lc.quantBars', '{n} Bars', { n: [0, 8, 4, 2][value] });
+    return QUANT_LABELS[value] || tp('lc.quantUnknown', 'Waiting for Live');
+  }
+
+  /**
+   * TRN settings: Live's global quantization and the metronome. Both are
+   * native Set state; this panel keeps no local copy. Values shown are the
+   * last ones Live confirmed (getClipLaunchStatus / getRecordingState), a
+   * write is one explicit command whose result is read back, and nothing is
+   * replayed after a reconnect. REC CLICK drives the same metronome.
+   */
+  function setupTransportSettings(overlay) {
+    const toggle = document.getElementById('btn-trn-settings');
+    const panel = document.getElementById('trn-settings');
+    const select = document.getElementById('trn-quantization');
+    const quantStatus = document.getElementById('trn-quantization-status');
+    const click = document.getElementById('trn-metronome');
+    const clickStatus = document.getElementById('trn-metronome-status');
+    if (!toggle || !panel || !select || !click) return;
+    let connected = false, quant = null, quantBusy = false, quantError = '', metronome = null, clickBusy = false, clickError = '';
+    let timer = null, epoch = 0;
+    const writable = () => connected && ['controller', 'admin'].includes(window.state?.role);
+    const send = (cmd, args, cb) => (typeof window.sendPhoneCommand === 'function' ? window.sendPhoneCommand(cmd, args, cb) : false);
+
+    function renderOptions() {
+      const current = select.value;
+      select.replaceChildren();
+      const unknown = document.createElement('option');
+      unknown.value = ''; unknown.disabled = true;
+      unknown.textContent = tp('lc.quantUnknown', 'Waiting for Live');
+      select.appendChild(unknown);
+      QUANT_LABELS.forEach((_, value) => {
+        const option = document.createElement('option');
+        option.value = String(value); option.textContent = quantizationLabel(value);
+        select.appendChild(option);
+      });
+      select.value = current;
+    }
+    function render() {
+      const linked = Boolean(quant?.available && quant?.connected);
+      const confirmed = Number.isInteger(quant?.value) && quant.value >= 0 && quant.value <= 13;
+      const pending = quantBusy || Boolean(quant?.pending);
+      if (!pending) select.value = linked && confirmed ? String(quant.value) : '';
+      select.disabled = !writable() || !linked || pending;
+      const label = confirmed ? quantizationLabel(quant.value) : tp('lc.quantUnknown', 'Waiting for Live');
+      if (quantStatus) {
+        quantStatus.dataset.state = !linked || quantError ? 'error' : pending ? 'pending' : confirmed ? 'confirmed' : 'waiting';
+        quantStatus.textContent = !connected ? tp('lc.quantUnknown', 'Waiting for Live')
+          : !linked ? tp('lc.quantOffline', 'Connect AbletonOSC to change the Set global quantization.')
+          : quantError ? tp('lc.quantError', 'Could not change global quantization: {error}', { error: quantError })
+          : pending ? tp('lc.quantPending', 'Waiting for Live… Current: {label}', { label })
+          : confirmed ? tp('lc.quantConfirmed', 'Confirmed in Live: {label}', { label }) : label;
+      }
+      const known = typeof metronome === 'boolean';
+      click.disabled = !writable() || !known || clickBusy;
+      click.setAttribute('aria-pressed', known ? String(metronome) : 'mixed');
+      click.textContent = tp('rec.click', 'CLICK') + ' · ' + (known ? tp(metronome ? 'rec.on' : 'rec.off', metronome ? 'ON' : 'OFF') : '?');
+      if (clickStatus) {
+        clickStatus.textContent = clickError ? tp('trn.metronomeError', 'Live did not confirm the metronome: {error}', { error: clickError })
+          : !connected ? tp('trn.metronomeUnknown', 'Waiting for Live')
+          : !writable() ? tp('trn.viewer', 'Viewer: read only') : '';
+      }
+    }
+    function acceptRecording(result) {
+      const field = result?.transport?.metronome;
+      metronome = result?.transport?.connected && field?.fresh && typeof field.value === 'boolean' ? field.value : null;
+    }
+    function refresh() {
+      if (!connected) { render(); return; }
+      const current = epoch;
+      send('getClipLaunchStatus', {}, (response) => {
+        if (current !== epoch) return;
+        quant = response?.ok ? response.result?.globalQuantization || null : null;
+        render();
+      });
+      send('getRecordingState', {}, (response) => {
+        if (current !== epoch) return;
+        if (response?.ok) acceptRecording(response.result); else metronome = null;
+        render();
+      });
+    }
+    const open = () => !panel.hidden && overlay && !overlay.classList.contains('hidden') && !document.hidden;
+    function schedule() {
+      clearTimeout(timer); timer = null;
+      if (!open()) return;
+      refresh();
+      timer = setTimeout(schedule, 1000);
+    }
+    toggle.addEventListener('click', () => {
+      panel.hidden = !panel.hidden;
+      toggle.setAttribute('aria-expanded', String(!panel.hidden));
+      quantError = ''; clickError = '';
+      renderOptions(); render(); schedule();
+    });
+    document.getElementById('btn-trn-mode')?.addEventListener('click', () => setTimeout(schedule, 0));
+    select.addEventListener('change', () => {
+      const value = Number(select.value);
+      if (select.disabled || !Number.isInteger(value) || value < 0 || value > 13) return;
+      quantBusy = true; quantError = ''; render();
+      const current = epoch;
+      const sent = send('setGlobalClipQuantization', { quantization: value }, (response) => {
+        if (current !== epoch) return;
+        quantBusy = false;
+        if (!response?.ok) quantError = response?.error || 'No Live confirmation';
+        refresh();
+      });
+      if (!sent) { quantBusy = false; quantError = 'Not connected'; render(); }
+    });
+    click.addEventListener('click', () => {
+      if (click.disabled || typeof metronome !== 'boolean') return;
+      clickBusy = true; clickError = ''; render();
+      const current = epoch;
+      const sent = send('recordingClick', { enabled: !metronome }, (response) => {
+        if (current !== epoch) return;
+        clickBusy = false;
+        if (response?.ok) acceptRecording(response.result);
+        else { clickError = response?.error || 'No Live confirmation'; metronome = null; }
+        render();
+        refresh();
+      });
+      if (!sent) { clickBusy = false; clickError = 'Not connected'; render(); }
+    });
+    window.addEventListener('ableton-rc:phone-client-id', () => { epoch++; connected = true; quantBusy = false; clickBusy = false; schedule(); render(); });
+    window.addEventListener('ableton-rc:phone-ws-close', () => {
+      // A dropped socket retires pending callbacks and every observed value.
+      epoch++; connected = false; quant = null; metronome = null; quantBusy = false; clickBusy = false;
+      clearTimeout(timer); timer = null; render();
+    });
+    document.addEventListener('visibilitychange', schedule);
+    document.addEventListener('rcsurface:languagechange', () => { renderOptions(); render(); });
+    if (window.RCSurface.getPhoneSession?.()) connected = true;
+    renderOptions(); render();
+  }
+
   /**
    * setupTransport — Wire up the transport overlay (play, stop, prev/next
    * locator, locator search) and the header transport buttons.
@@ -95,6 +240,8 @@
         renderLocators();
       });
     }
+
+    setupTransportSettings(overlay);
 
     window.updateOscStatus = (available, connected) => {
       if (!statusEl) return;

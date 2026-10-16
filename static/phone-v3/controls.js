@@ -1406,6 +1406,20 @@
     activePage = (event.detail && event.detail.page) || document.body.dataset.page || 'performance';
   });
   
+  // Deep Sync ranges share the flat CFG slider: the track fill follows the
+  // value whatever wrote it (drag, keyboard, reset or restored settings).
+  function paintSyncSliders(panel) {
+    for (const input of panel.querySelectorAll?.('.sync-slider') || []) {
+      const min = Number(input.min), max = Number(input.max), value = Number(input.value);
+      const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
+      const next = `${Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0}%`;
+      if (input.dataset.rangeProgress !== next) {
+        input.dataset.rangeProgress = next;
+        input.style.setProperty('--range-progress', next);
+      }
+    }
+  }
+
   function globalPhysicsLoop() {
     requestAnimationFrame(globalPhysicsLoop);
     const now = performance.now();
@@ -1421,6 +1435,7 @@
     if (syncPanel && !syncPanel.classList.contains('hidden')) {
       renderPulseSettings();
       renderLfoSettings();
+      paintSyncSliders(syncPanel);
     }
 
     for (const [name, state] of xyStates) {
@@ -1975,6 +1990,15 @@
     const ENV_FLOOR = 84;
     let ultimoDesenho = '';
 
+    // The phone draws the envelope in a short strip. The viewBox follows the
+    // rendered aspect so the peak handle stays round instead of stretching.
+    function envelopeHeight() {
+      const box = burstEnv && typeof burstEnv.getBoundingClientRect === 'function'
+        ? burstEnv.getBoundingClientRect() : null;
+      return box && box.width > 0 && box.height > 0
+        ? Math.max(32, Math.min(96, Math.round(ENV_W * box.height / box.width))) : 96;
+    }
+
     function drawBurstEnvelope() {
       if (!burstEnvLine || !burstEnvPeak) return;
       const shape = resolveBurstShape();
@@ -1982,6 +2006,9 @@
         ? Math.min(0.9, Math.max(0.02, shape.attackMs / shape.durationMs))
         : 0.135;
       const x = ratio * ENV_W;
+      const envH = envelopeHeight();
+      const top = envH < 96 ? 8 : ENV_TOP;
+      const floor = envH < 96 ? envH - 8 : ENV_FLOOR;
       // Everything the readout prints, or a redraw that only watches the
       // length leaves a stale tempo or clock source on screen.
       const assinatura = [
@@ -1989,14 +2016,22 @@
         window.syncMode, window.syncSettings.clockSource,
         Math.round(Number(window.currentBpm) * 10),
         window.syncSettings.burstSubdivision,
+        envH,
       ].join('|');
       if (assinatura === ultimoDesenho) return;
       ultimoDesenho = assinatura;
+      if (envH !== 96 || burstEnv.getAttribute?.('viewBox') !== '0 0 240 96') {
+        burstEnv.setAttribute?.('viewBox', `0 0 ${ENV_W} ${envH}`);
+        const floorLine = burstEnv.querySelector?.('.burst-env-floor');
+        floorLine?.setAttribute('y1', String(floor));
+        floorLine?.setAttribute('y2', String(floor));
+      }
       burstEnvLine.setAttribute(
         'points',
-        `0,${ENV_FLOOR} ${x.toFixed(1)},${ENV_TOP} ${ENV_W},${ENV_FLOOR}`,
+        `0,${floor} ${x.toFixed(1)},${top} ${ENV_W},${floor}`,
       );
       burstEnvPeak.setAttribute('cx', x.toFixed(1));
+      burstEnvPeak.setAttribute('cy', String(top));
       if (burstEnvLen) {
         burstEnvLen.textContent = describeBurst(shape);
       }
@@ -2038,25 +2073,51 @@
         ultimoDesenho = '';
         drawBurstEnvelope();
       };
-      let arrastando = false;
-      burstEnv.addEventListener('pointerdown', (event) => {
-        arrastando = true;
-        burstEnv.classList.add('dragging');
-        burstEnv.setPointerCapture?.(event.pointerId);
-        setFromPointer(event);
-        event.preventDefault();
-      });
-      burstEnv.addEventListener('pointermove', (event) => {
-        if (arrastando) setFromPointer(event);
-      });
-      const soltar = (event) => {
-        if (!arrastando) return;
-        arrastando = false;
-        burstEnv.classList.remove('dragging');
-        burstEnv.releasePointerCapture?.(event.pointerId);
-      };
-      burstEnv.addEventListener('pointerup', soltar);
-      burstEnv.addEventListener('pointercancel', soltar);
+      const holdToEdit = window.RcHoldToEdit;
+      if (holdToEdit) {
+        // Mouse: press anywhere and drag, as before. Touch/pen: hold the peak
+        // (same long press as MAP curves) so scrolling the settings never edits.
+        const nearPeak = (event) => {
+          const box = burstEnv.getBoundingClientRect();
+          if (!box.width) return false;
+          const peak = box.left + parseFloat(burstEnvPeak?.getAttribute('cx') || '0') * box.width / ENV_W;
+          return Math.abs(event.clientX - peak) <= 28;
+        };
+        holdToEdit.attach(burstEnv, {
+          hitTest: (event) => (event.pointerType === 'touch' || event.pointerType === 'pen') && !nearPeak(event) ? null : 'attack',
+          moveOnDown: true,
+          begin: () => burstAttackInput.value,
+          move: (_, event) => setFromPointer(event),
+          end: () => {},
+          cancel: (_, previous) => {
+            if (previous === undefined) return;
+            burstAttackInput.value = previous;
+            burstAttackInput.dispatchEvent(new Event('input', { bubbles: true }));
+          },
+          panel: () => burstEnv.closest?.('.transport-modal') || burstEnv,
+          onSelect: (key) => burstEnv.classList.toggle('dragging', Boolean(key)),
+        });
+      } else {
+        let arrastando = false;
+        burstEnv.addEventListener('pointerdown', (event) => {
+          arrastando = true;
+          burstEnv.classList.add('dragging');
+          burstEnv.setPointerCapture?.(event.pointerId);
+          setFromPointer(event);
+          event.preventDefault();
+        });
+        burstEnv.addEventListener('pointermove', (event) => {
+          if (arrastando) setFromPointer(event);
+        });
+        const soltar = (event) => {
+          if (!arrastando) return;
+          arrastando = false;
+          burstEnv.classList.remove('dragging');
+          burstEnv.releasePointerCapture?.(event.pointerId);
+        };
+        burstEnv.addEventListener('pointerup', soltar);
+        burstEnv.addEventListener('pointercancel', soltar);
+      }
       burstAttackInput.addEventListener('input', () => {
         ultimoDesenho = '';
         drawBurstEnvelope();

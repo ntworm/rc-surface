@@ -705,7 +705,7 @@ instead, chosen in **Deep Sync Settings → Burst Config (Pad Mode D)**:
 | Control | What it does |
 | --- | --- |
 | Length (Subdivision) | One bar down to 1/16. At 120 BPM, `1 beat` is 500 ms. |
-| Attack | Drag the peak along the drawn envelope. The shape is what you are setting, so it is the shape you drag. |
+| Attack | Drag the peak along the drawn envelope. The shape is what you are setting, so it is the shape you drag. On a phone, press and hold the peak for about 0.6 s first; scrolling across the short envelope never edits it. |
 
 Under the drawing the panel prints what the current setting actually resolves
 to — the subdivision, the tempo it is being multiplied by, the clock source
@@ -869,6 +869,23 @@ the largest possible surface for the controls.
 > with it instead of leaving an **EXIT** button on a page that is no longer
 > fullscreen.
 
+### Contextual header and TRN settings
+
+The header shows only what acts on the current tab: **AUT** on PERF (XY 1/XY 2
+loops), **CFG** on PERF and MIX, and **MAP** on every tab except REC. Leaving a
+tab turns off a mode it does not support; an open MAP closes when you enter REC,
+without changing mappings. This keeps **STAGE/EXIT** and the status on screen.
+
+**TRN** opens Transport Lite. Its **⚙** button adds two native Live settings:
+**GLOBAL QUANTIZATION** shows the value Live confirmed and changes the Set's
+`clip_trigger_quantization` (a clip with its own quantization keeps it), and
+**METRONOME** turns Live's click on or off. It is the same metronome as REC
+**CLICK**; a change made in TRN, REC or Live appears in both within about a
+second. Viewers can read but not write, nothing is replayed after a reconnect,
+and a missing AbletonOSC link shows the value as unknown. The metronome's sound,
+rhythm and count-in are not exposed to extensions: set them in Live, or use REC
+**PRE-ROLL** for a count-off.
+
 ---
 
 ## 8. MAP mode - mobile mapping
@@ -958,7 +975,7 @@ When mapping a control to play notes on a MIDI track equipped with an `RcReceive
 - **Editor layout:** Destination appears once, followed by Note (pitch, octave, MIDI number and fixed velocity) and Trigger (when to fire and how long to play). Selecting Next Beat or Bar from Now opens Musical, 1/4 bar automatically, including after While Held. Choose ms explicitly for free duration; old millisecond presets are unchanged when opened.
 - **Musical duration:** Available with Short in Now, Next Beat and Bar. Tap a fraction directly; there is no duration dropdown or estimated-ms readout. Now starts immediately and uses the connected Live BPM/meter for its release timer, even while playback is stopped. Unknown or disconnected musical metadata blocks the note with feedback; ms remains available. While Held uses real gesture release instead of a fixed duration.
 - **Advanced:** Collapsed by default; contains trigger threshold and the actual signal-loss behavior. Bind and Trigger Note are selected at entry, without a second mapping-mode selector here. Presets stay collapsed; Bind, Trigger Note, Unbind Target, Clear Control and Clear All Mappings sit directly below the control title and stay accessible while scrolling. Multiple mappings form one labelled block, with Bind/Trigger Note type and destination on each selectable row. Only meaningful note feedback is displayed.
-- **Bind:** Direct Continuous/Toggle and Linear/Exp/Log/S buttons precede a full-width interactive graph. Output min/max, Drive, Compression and Smoothing are the primary faders. The three graph points follow the effective output after Drive and Compression; output min/max remain the limits used to scale that response. Dragging a point accounts for these settings, and a saturated or flat response keeps values bounded. Input range, target scale, takeover, safe loss, idle and neutral values are under Advanced. Small fader thumbs retain a larger interaction area and double-click reset.
+- **Bind:** Direct Continuous/Toggle and Linear/Exp/Log/S buttons precede a full-width interactive graph. Output min/max, Drive, Compression and Smoothing are the primary faders. The three graph points follow the effective output after Drive and Compression; output min/max remain the limits used to scale that response. Dragging a point accounts for these settings, and a saturated or flat response keeps values bounded. Input range, target scale, takeover, safe loss, idle and neutral values are under Advanced. Small fader thumbs retain a larger interaction area and double-click reset. On a phone, the three graph points edit only after you press and hold one for about 0.6 s: it gets a ring, then drag and lift. A quick tap, a scroll or a touch on the background never changes a value; cancelling (system gesture, leaving the panel, changing tab or losing the connection) restores the value the point had when it was selected. A mouse still drags at once and double-click still resets.
 - **Safe Lifecycle & Cancellation:** Pending Next Beat/Bar notes are cancelled on transport stop, meter change, seek, loop jump, stale transport clock (>1000 ms), unbinding, or disconnection. A sounding Next Beat/Bar note is released on transport stop, clock loss, unbinding, or disconnection; after a seek, loop jump, or meter change it ends on its own Note-Off. Now notes are not tied to the transport: Short ends on its own Note-Off and While Held when the control or gesture releases; unbinding or disconnection releases them early. Triggers executing >20 ms late are discarded as missed. Scheduling operates per track lane with latest-wins policy (capped at 64 active lanes).
   A retrigger on the same track retires the previous voice and OFF timer before the replacement ON, so the new note receives its full duration.
 
@@ -1735,7 +1752,7 @@ Right-click the same control again to close its CFG. Right-click another control
 
 In mode D, each toggle has its own **Burst length** and attack, independent of the waveform's subdivision (the period of each cycle). Length may follow the shared setting, use a pinned musical value in SYNC, or milliseconds in FREE. The collapsed Burst length section shows the selected duration. Global mode D exposes the same settings. Pins persist in projects, presets and snapshots; opening CFG never triggers a control.
 
-VID starts with three learned poses. **+ ADD POSE** adds numbered identities up to G15 and turns grey at fifteen cards. The bank has a dark scrollbar and compact cards: capture, recognition and CLR retain the normal action/summary footprint; visible take warnings or TEST diagnostics add only the space they need. **CLR** removes examples while retaining the card. The small **×** below G1/G2/etc. removes that card and its examples, cancels its capture/test, and explicitly releases its held output, including Hold indefinitely. Other IDs and destinations never shift. The removed ID's mapping remains available in MAP; Add reuses the first free numbered ID with an empty pose and that existing mapping. Clear its targets in MAP if you also want to discard the destination. Removing every card and restoring a sparse bank are supported. Each pose still needs three examples and accepts up to six. Slots `sensor.vision.gesture.1` through `.15` share the same qualification, MIDI and tracking-loss rules. The classifier, thumb checks and capture/recognition timing have not been retuned. Physical camera acceptance remains necessary.
+VID starts with three learned poses. **+ ADD POSE**, beside the REC recognition selector, adds numbered identities up to G15 and turns grey at fifteen cards. The bank has a dark scrollbar and compact cards: capture, recognition and CLR retain the normal action/summary footprint; visible take warnings or TEST diagnostics add only the space they need. **CLR** removes examples while retaining the card. The small **×** below G1/G2/etc. removes that card and its examples, cancels its capture/test, and explicitly releases its held output, including Hold indefinitely. Other IDs and destinations never shift. The removed ID's mapping remains available in MAP; Add reuses the first free numbered ID with an empty pose and that existing mapping. Clear its targets in MAP if you also want to discard the destination. Removing every card and restoring a sparse bank are supported. Each pose still needs three examples and accepts up to six. Slots `sensor.vision.gesture.1` through `.15` share the same qualification, MIDI and tracking-loss rules. The classifier, thumb checks and capture/recognition timing have not been retuned. Physical camera acceptance remains necessary.
 
 ## 16. REC: Arrangement / CLIP
 
@@ -1775,7 +1792,7 @@ stopped:
    Marker jumps check stopped/record-off transport and selected identity/monitor
    without waiting for unrelated mixer states. REC still checks the full set.
 3. Leave **END = Until STOP** for free recording. Choosing an end marker after
-   the start reveals **PASSES**: 1–16 total passes or ∞ until STOP. A new bounded
+   the start reveals **PASSES**: 1–10 total passes or ∞ until STOP. A new bounded
    selection starts at one pass. An invalid/missing end blocks REC without
    silently switching to free recording. Put the end after the wanted decay.
 4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
@@ -3358,7 +3375,7 @@ states do not establish physical audio/MIDI capture or take preservation.
 
 ### Arrangement, AUT and shared track contracts
 
-`recordingRecord` additionally accepts `passes: null | integer(1..16)`.
+`recordingRecord` additionally accepts `passes: null | integer(1..10)`.
 START is either exact `{name,time}` or fixed `{source:'cursor',time}`. A cursor
 start uses an SDK-owned temporary locator to establish the native insertion
 point, with the existing bounded cleanup/identity guards. END=null requires

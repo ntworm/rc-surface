@@ -6,6 +6,20 @@ history, including the rename migrator; they are not a 2.0 upgrade procedure.
 ## Local candidate 2.0.0 — current reported acceptance
 
 New REC capture candidate (2026-10-16): physical acceptance is still pending.
+Mobile follow-up (same day): reload the phone during a 4-pass and an ∞ take;
+REC must show the range and 4/∞, not 1, and must not send REC again. Walk every
+tab: AUT only on PERF, CFG only on PERF/MIX, no MAP on REC, STAGE/EXIT visible
+on VID. VID: + ADD POSE beside REC, smaller Open/Fist/Pinch/Victory and MAP/
+CLUTCH strips, G1 card whole. MAP and Burst: scroll across the curve without
+editing, then hold a point ~0.6 s, drag and lift; only that point changes. CFG
+on PERF/MIX and the Deep Sync gear are smaller; Swing/Phase Offset sliders are
+flat. TRN ⚙: change global quantization and the metronome, then confirm REC
+CLICK shows the same state and a change made in Live appears within a second.
+Active-recording follow-up: select START/END, pre-roll 1 and one pass, then
+repeat with infinity. During a take longer than six seconds the cursor must
+move smoothly and volume/MUTE/SOLO remain available; ARM retains its stopped
+transport requirement. Passes now offer 1–10 then infinity. Stop, repeat and
+check that connection loss still disables writes rather than simulating data.
 STOP/zoom follow-up: choose a late marker, then a wide START/END interval and
 change zoom; the marker or interval midpoint must stay centered. Record with
 pre-roll 1 and two passes, STOP mid-pass, wait at least six seconds and toggle

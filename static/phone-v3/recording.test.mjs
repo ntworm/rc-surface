@@ -104,6 +104,34 @@ test('REC actual touch wiring respects role, sends explicit actions, keeps STOP 
   doc.hidden=false; documentEvents.get('visibilitychange')(); assert.equal(sent.at(-1).cmd,'getRecordingState');
 });
 
+test('REC adopts a session whose hello arrived before setup, and stays closed without one',t=>{
+  // Reload race: the socket handshake can finish while later scripts still load,
+  // so ableton-rc:phone-client-id fires before REC registers its listener.
+  for(const open of [{clientId:'early',role:'controller'},null]) {
+    const nodes=new Map(),sent=[],events=new Map();
+    const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,dataset:{},style:{},children:[],
+      setAttribute(){},addEventListener(){},replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});return nodes.get(id);};
+    const field=value=>({value,fresh:true,observedAt:Date.now()});
+    const state={transport:{connected:true,isPlaying:field(true),recordMode:field(true),songTimeBeats:field(16),metronome:field(false)},
+      tracks:[{index:0,id:'d',name:'Drums',arm:true,canArm:true,solo:false,mute:false,volume:.5}],locators:[{name:'A',time:8},{name:'B',time:32}],
+      meter:{numerator:4,denominator:4},range:{start:{source:'cursor',time:16},end:{name:'B',time:32},loop:true},capture:{phase:'recording',pass:1,total:4},session:{songId:'s',scenes:[],rows:[],owned:[]}};
+    let generated=0;
+    const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('g'+(++generated)),addEventListener(){}};
+    const context=vm.createContext({document:doc,Date,setTimeout:()=>0,clearTimeout(){},addEventListener:(name,handler)=>events.set(name,handler),RcSurfaceI18n:{t:key=>key},
+      RCSurface:{getPhoneSession:()=>open},sendPhoneCommand:(cmd,args,cb)=>{sent.push(cmd);if(cmd==='getRecordingState')cb({ok:true,result:state});}});
+    vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
+    if(open){
+      assert.deepEqual(sent,['getRecordingState'],'setup reads once for the already-open session');
+      assert.equal(client.view().connected,true);assert.equal(client.view().writable,true);
+      assert.equal(node('rec-passages').value,'4','observed total passes restore instead of falling back to 1');
+      assert.equal(node('rec-stop').disabled,false);
+    } else {
+      assert.deepEqual(sent,[],'no open session means no read and no invented connection');
+      assert.equal(client.view().connected,false);assert.equal(node('rec-stop').disabled,true);
+    }
+  }
+});
+
 
 test('REC background reads never lock the UI and an older read cannot replace a newer explicit action',async t=>{
   const {client,calls}=api(t);client.session(true,'controller');
@@ -253,7 +281,7 @@ test('REC disconnect disables existing timeline markers and retires queued click
 });
 
 function gridHarness(t) {
-  const nodes=new Map(),events=new Map(),documentEvents=new Map(),calls=[],saved=[];let generated=0,now=10000;
+  const nodes=new Map(),events=new Map(),documentEvents=new Map(),calls=[],saved=[],frames=[];let generated=0,now=10000;
   class ClockDate extends Date {static now(){return now;}}
   const node=id=>{
     if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
@@ -267,13 +295,13 @@ function gridHarness(t) {
     locators:[{name:'REC',time:32},{name:'REC2',time:48}],meter:{numerator:4,denominator:4}});
   const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('generated-'+(++generated)),
     addEventListener:(name,handler)=>documentEvents.set(name,handler)};
-  const context=vm.createContext({document:doc,Date:ClockDate,setTimeout:()=>1,clearTimeout(){},addEventListener:(name,handler)=>events.set(name,handler),
+  const context=vm.createContext({document:doc,Date:ClockDate,performance:{now:()=>now},requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame(){},setTimeout:()=>1,clearTimeout(){},addEventListener:(name,handler)=>events.set(name,handler),
     localStorage:{getItem:()=>null,setItem:(...args)=>saved.push(args)},RcSurfaceI18n:{t:key=>key},sendPhoneCommand:(name,args,cb)=>calls.push({name,args,cb})});
   vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
   const seed=async result=>{const reading=client.command('getRecordingState');calls.at(-1).cb({ok:true,result});await reading;};
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
   const buttons=index=>node('rec-track-grid').children[index].children[1].children.filter(c=>c.dataset?.property);
-  return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,age:()=>{now+=5001;}};
+  return {node,client,state,seed,calls,events,documentEvents,saved,buttons,flush,frames,tick:ms=>{now+=ms;},age:()=>{now+=5001;}};
 }
 test('REC polling retains 202 marker menus, full names, selection and scroll when the observed meter becomes stale',async t=>{
   const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
@@ -511,6 +539,25 @@ test('REC loop auto-zoom calculates target zoom and centers timeline, respecting
   timers.length=0;
   await client.command('getRecordingState');
   assert.equal(node('rec-zoom').value,'2','manual zoom retained and not overwritten');
+});
+
+test('REC cursor moves between received positions and freezes on stop or stale connection',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');const state=h.state();
+  state.transport.isPlaying.value=true;state.transport.recordMode.value=true;state.tempo=120;
+  await h.seed(state);h.events.get('ableton-rc:page-change')();
+  const initial=parseFloat(h.node('rec-cursor').style.left);
+  h.tick(250);h.frames.at(-1)();
+  assert.ok(Math.abs(parseFloat(h.node('rec-cursor').style.left)-initial-.5/52*100)<.001,'cursor advances at observed tempo between network polls');
+  state.transport.isPlaying.value=false;await h.seed(state);
+  const stopped=h.node('rec-cursor').style.left;h.tick(250);h.frames.at(-1)();
+  assert.equal(h.node('rec-cursor').style.left,stopped);
+  h.age();h.frames.at(-1)();assert.equal(h.node('rec-cursor').hidden,true,'stale replies never simulate live movement');
+});
+
+test('REC passes menu offers one through ten then infinity',()=>{
+  const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+  const select=html.match(/<select id="rec-passages"[^>]*>(.*?)<\/select>/s)[1];
+  assert.deepEqual([...select.matchAll(/<option value="([^"]+)"/g)].map(match=>match[1]),[...Array.from({length:10},(_,index)=>String(index+1)),'infinite']);
 });
 
 test('REC manual zoom centers a selected marker and the midpoint of a wider-than-viewport selection',async t=>{

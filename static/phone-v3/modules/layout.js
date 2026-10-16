@@ -29,6 +29,9 @@
       const page = isRealPage || pages.length === 0 ? requested : DEFAULT_PAGE;
 
       document.body.dataset.page = page;
+      // The MAP overlay rewrites data-page to "mapping"; the header keeps the
+      // real tab here so AUT/CFG/MAP visibility follows the page underneath.
+      document.body.dataset.headerPage = page;
       pages.forEach((p) => {
         p.classList.toggle('hidden', p.dataset.page !== page);
       });

@@ -93,7 +93,7 @@
       'rec-passages','rec-passages-field','rec-free-mode','rec-end-field','rec-timeline','rec-timeline-track','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
       'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-pre-roll-inline','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
-    let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null;
+    let trackSignature='', markerSignature='', rangeSignature='', refreshTimer=null, frame=null, cursorClock=null;
     let startIndex='cursor', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[],fixedPoint=null,passes=1;
     let preRollBars=0, userAdjustedZoom=false, autoZoomTimer=null;
     let armMode='multi';
@@ -419,10 +419,19 @@
       timeline.scrollLeft = Math.max(0, targetScroll);
     }
     function drawCursor() {
-      const state=client.view().state, clock=root.triggerNoteClockSnapshot, now=root.performance?.now?.() ?? 0;
-      const fresh=clock?.valid && clock.playing && Number.isFinite(clock.receivedAt) && now>=clock.receivedAt && now-clock.receivedAt<=1000;
-      const time=fresh?clock.beat+(now-clock.receivedAt)*clock.bpm/60000
-        :state?.transport?.songTimeBeats?.fresh?state.transport.songTimeBeats.value:null;
+      const view=client.view(),state=view.state,transport=state?.transport,position=transport?.songTimeBeats;
+      const clock=root.triggerNoteClockSnapshot,now=root.performance?.now?.() ?? Date.now();
+      const known=view.connected&&view.fresh&&transport?.connected&&position?.fresh&&Number.isFinite(position.value);
+      if(!known)cursorClock=null;
+      else if(!cursorClock||cursorClock.observedAt!==position.observedAt||cursorClock.beat!==position.value)
+        cursorClock={observedAt:position.observedAt,beat:position.value,receivedAt:now};
+      const playing=known&&transport.isPlaying?.fresh&&transport.isPlaying.value===true;
+      const fresh=playing&&clock?.valid&&clock.playing&&Number.isFinite(clock.receivedAt)&&now>=clock.receivedAt&&now-clock.receivedAt<=1000;
+      // Display interpolation only. Native observations still own capture
+      // boundaries; never advance through stale state or a disconnected page.
+      const elapsed=cursorClock?Math.max(0,Math.min(1000,now-cursorClock.receivedAt)):0;
+      const time=!known?null:fresh?clock.beat+(now-clock.receivedAt)*clock.bpm/60000
+        :position.value+(playing&&Number.isFinite(state.tempo)?elapsed*state.tempo/60000:0);
       el('cursor').hidden=!Number.isFinite(time);
       if(Number.isFinite(time)) {
         el('cursor').style.left=percent(time)+'%';
@@ -509,7 +518,7 @@
       if(rangeSignature!==rangeKey) {
         rangeSignature=rangeKey;
         if(state.range) {
-          if(state.capture&&(state.capture.total===null||Number.isInteger(state.capture.total)&&state.capture.total>=1&&state.capture.total<=16))passes=state.capture.total;
+          if(state.capture&&(state.capture.total===null||Number.isInteger(state.capture.total)&&state.capture.total>=1&&state.capture.total<=10))passes=state.capture.total;
           const index=state.locators.findIndex(cue=>cue.name===state.range.start.name && cue.time===state.range.start.time);
           if(state.range.start.source==='cursor'){fixedPoint=state.range.start.time;startIndex='cursor';}else startIndex=index>=0?String(index):'';
           looping=Boolean(state.range.end);
@@ -611,6 +620,10 @@
     root.addEventListener('ableton-rc:page-change',poll);
     doc.addEventListener('visibilitychange',poll);
     doc.addEventListener('rcsurface:languagechange',()=>{markerSignature='';render(client.view());});
+    // The handshake can finish before this deferred setup runs (reload with a
+    // fast host); adopt that session or REC waits for Live until a reconnect.
+    const open=root.RCSurface?.getPhoneSession?.();
+    if(open){client.session(true,open.role||'viewer');poll();}
     render(client.view());return client;
   }
   root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, preRollPreference, formatVolumeDb, setup});

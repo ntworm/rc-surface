@@ -22,7 +22,7 @@
       }
     }
     const mode=root.RcConfigMode.create({buttonId:'btn-aut-mode',menuId:'automation-config-menu',
-      modeClass:'automation-mode',primary:false,accept:name=>/^xy-[12]$/.test(name),
+      modeClass:'automation-mode',primary:false,pages:['performance'],accept:name=>/^xy-[12]$/.test(name),
       contextEnabled:()=>mode.state.on,
       menuAvoidRect:()=>document.querySelector('.col-xy')?.getBoundingClientRect(),
       onActivate:()=>{root.RcConfigModeInstance?.off();selecting=true;},

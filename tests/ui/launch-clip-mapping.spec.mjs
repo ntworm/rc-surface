@@ -61,8 +61,11 @@ async function expectCompactMaintenance(detail) {
   const buttons = detail.locator('.map-detail-actions .map-action-danger');
   await expect(buttons).toHaveCount(3);
   const boxes = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
+  // 2026-10-16: the phone MAP header rows were halved on request (print02);
+  // they stay tappable and on one row instead of keeping 44px each.
   for (const box of boxes) {
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(24);
+    expect(box.height).toBeLessThanOrEqual(30);
     expect(Math.abs(box.y - boxes[0].y)).toBeLessThanOrEqual(1);
   }
   expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);

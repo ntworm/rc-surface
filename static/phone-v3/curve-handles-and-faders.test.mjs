@@ -393,18 +393,20 @@ test('curve canvas registers 3 draggable handles and updates target on drag', as
   assert.ok(pointerUp, 'pointerup listener registered');
 
   // C19: the 14px inset uses the same coordinates for drawing and pointer input.
-  pointerDown({ clientX: 7, clientY: 150.8, preventDefault() {} });
-  // Move up to y=90 (halfway, normY = 0.5)
-  pointerMove({ offsetX: 0, offsetY: 90, clientX: 0, clientY: 90 });
+  // The fake rect is 180px tall; plotY maps an output to that client space for
+  // whatever internal canvas height the editor uses.
+  const plotY = (output) => (14 + (1 - output) * (canvas.height - 28)) * 180 / canvas.height;
+  pointerDown({ clientX: 7, clientY: plotY(0.1), preventDefault() {} });
+  // Move to the plot midpoint (normY = 0.5)
+  pointerMove({ offsetX: 0, offsetY: 90, clientX: 0, clientY: plotY(0.5) });
   pointerUp();
 
   assert.equal(target.outMin, 0.5, 'outMin must update to 0.5');
   const setOutMin = calls.filter((c) => c.cmd === 'setMapping').at(-1);
   assert.equal(setOutMin.args.targets[0].outMin, 0.5);
 
-  pointerDown({ clientX: 173, clientY: 29.2, preventDefault() {} });
-  // Inset plot y=74.8 corresponds to normalized output 0.6.
-  pointerMove({ clientX: 173, clientY: 74.8 });
+  pointerDown({ clientX: 173, clientY: plotY(0.9), preventDefault() {} });
+  pointerMove({ clientX: 173, clientY: plotY(0.6) });
   pointerUp();
 
   assert.equal(context.window.mobileMappingState.currentMappings['fader-1'][0].outMax, 0.6, 'persisted outMax must update to 0.6');

@@ -132,7 +132,13 @@ test('compact card labels and controls survive the primary short-screen layout',
   const shortScreen = css.match(/@media \(max-height: 460px\)\s*\{([\s\S]*?)\n\}/);
 
   assert.ok(shortScreen, 'a short-screen rule must exist');
-  assert.doesNotMatch(shortScreen[1], /\.vision-studio-head\s*\{[^}]*display:\s*none/, 'Add pose remains available on short phones');
+  // + ADD POSE moved into the camera command row (2026-10-16); the studio head
+  // may fold away on short phones because it no longer carries an action.
+  const html = read('index.html');
+  const commands = html.match(/<div class="vision-command-bar">([\s\S]*?)<\/div>/);
+  assert.ok(commands, 'command bar markup');
+  assert.match(commands[1], /<\/label>\s*<button type="button" id="btn-add-learned-pose"/, 'Add pose follows the REC field');
+  assert.doesNotMatch(html.match(/<header class="vision-studio-head">[\s\S]*?<\/header>/)[0], /btn-add-learned-pose/);
   assert.doesNotMatch(
     shortScreen[1],
     /\.vision-readout-card em\s*\{\s*display:\s*none/,

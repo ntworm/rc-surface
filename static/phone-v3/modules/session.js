@@ -20,6 +20,7 @@
   // ── Private session state ──────────────────────────────────────────────────
   let ws = null;
   let clientId = null;
+  let clientRole = 'viewer';
   let reconnectDelay = 1000;
   let reconnectTimer = null;
   let lastPongAt = 0;
@@ -175,6 +176,7 @@
 
         if (msg.type === 'hello') {
           clientId = msg.client_id;
+          clientRole = msg.role || 'viewer';
           socket.controlStreamVersion = msg.controlStreamVersion === 1 ? 1 : 0;
           if (window.state) window.state.role = msg.role || 'viewer';
           dispatchPhoneEvent('ableton-rc:phone-client-id', { clientId, role: msg.role || 'viewer' });
@@ -279,6 +281,10 @@
   // Internal getters for app.js sendLoop (replaces IIFE-scoped variable access)
   window.RCSurface.getMappingModeActive = () => mappingModeActive;
   window.RCSurface.getTelemetryThrottleUntil = () => telemetryThrottleUntil;
+  // A module that loads after the handshake missed ableton-rc:phone-client-id;
+  // it adopts the open session here instead of waiting for a reconnect.
+  window.RCSurface.getPhoneSession = () => (clientId && ws && ws.readyState === WebSocket.OPEN
+    ? { clientId, role: clientRole } : null);
   // Backward-compat: expose setStatus and connect for attachNetwork / setupClientName
   window.RCSurface._setStatus = setStatus;
   window.RCSurface._connect = connect;

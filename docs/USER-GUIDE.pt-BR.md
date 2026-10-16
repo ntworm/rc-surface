@@ -106,7 +106,7 @@ header para `SYNC` e a duração passa a vir do andamento do Live, escolhida em
 | Controle | O que faz |
 | --- | --- |
 | Duração (subdivisão) | De um compasso até 1/16. A 120 BPM, `1 beat` dá 500 ms. |
-| Attack | Arraste o pico ao longo do envelope desenhado. A forma é o que você está ajustando, então é a forma que você arrasta. |
+| Attack | Arraste o pico ao longo do envelope desenhado. A forma é o que você está ajustando, então é a forma que você arrasta. No celular, pressione e segure o pico por cerca de 0,6 s antes; rolar sobre o envelope curto nunca o altera. |
 
 Abaixo do desenho o painel escreve no que o ajuste atual realmente dá — a
 subdivisão, o andamento pelo qual ela é multiplicada, a fonte de clock por trás
@@ -270,6 +270,23 @@ para os controles.
 > palco agora sai junto, em vez de deixar um botão **SAIR** numa página que já
 > não está em tela cheia.
 
+### Cabeçalho contextual e ajustes do TRN
+
+O cabeçalho mostra só o que age na aba atual: **AUT** no PERF (loops do XY 1/XY
+2), **CFG** no PERF e no MIX, e **MAP** em todas as abas menos REC. Sair de uma
+aba desliga o modo que ela não aceita; um MAP aberto fecha ao entrar no REC, sem
+mudar mappings. Assim **STAGE/SAIR** e o status continuam na tela.
+
+**TRN** abre o Transporte Lite. O botão **⚙** acrescenta dois ajustes nativos do
+Live: **QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera a
+`clip_trigger_quantization` do Set (um clip com quantização própria mantém a
+dele), e **METRÔNOMO** liga ou desliga o click do Live. É o mesmo metrônomo do
+**CLICK** do REC; uma mudança feita no TRN, no REC ou no Live aparece nos dois
+em cerca de um segundo. Visualizador só lê, nada é repetido depois de reconectar,
+e sem AbletonOSC o valor aparece como desconhecido. Som, ritmo e contagem do
+metrônomo não são expostos às extensões: ajuste no Live ou use o **PRE-ROLL** do
+REC para contar antes de gravar.
+
 ---
 
 ## 8. Modo MAP — mapeamento pelo celular
@@ -359,7 +376,7 @@ Ao mapear um controle para disparar notas em uma track MIDI com o dispositivo `R
 - **Organização do editor:** Destino aparece uma vez, seguido de Nota (nota, oitava, número MIDI e velocity fixo) e Disparo (quando tocar e por quanto tempo). Sair de Agora para Próx. Tempo ou Compasso abre Musical, 1/4 de compasso automaticamente, inclusive após Enquanto Pressionado. Escolha ms explicitamente para duração livre; presets antigos em milissegundos permanecem intactos ao abrir.
 - **Duração musical:** Disponível com Curta em Agora, Próx. Tempo e Compasso. Clique diretamente na fração, sem lista ou estimativa em ms. Agora começa imediatamente e usa o BPM/compasso conectado do Live para desligar a nota, inclusive com o transporte parado. Metadados musicais desconhecidos ou desconectados bloqueiam a nota com feedback; ms continua disponível. Enquanto Pressionado segue a soltura real do gesto, sem duração fixa.
 - **Avançado:** Recolhido por padrão; contém limiar de disparo e comportamento real de perda de sinal. Bind e Trigger Note são escolhidos na entrada, sem repetir o seletor de modo aqui. Presets ficam recolhidos; Bind, Trigger Note, Desfazer o bind, Limpar o controle e Limpar todos os mapeamentos ficam logo abaixo do título do controle e acessíveis durante a rolagem. Vários mapeamentos formam um bloco identificado, com tipo Bind/Trigger Note e destino em cada linha selecionável. Só feedback de nota com conteúdo aparece.
-- **Bind:** Botões diretos de Contínuo/Alternar e Linear/Exp/Log/S precedem o gráfico interativo ocupando a largura disponível. Saída mínima/máxima, Drive, Compressão e Suavização são os faders principais. Os três pontos do gráfico seguem a saída efetiva após Drive e Compressão; saída mínima/máxima continuam sendo os limites usados para escalar essa resposta. Arrastar um ponto considera essas configurações, e uma resposta saturada ou plana mantém os valores limitados. Entrada mínima/máxima, escala do alvo, retomada, perda de sinal, valor inativo e neutro ficam em Avançado. Alças menores conservam área de interação maior e reset por duplo clique.
+- **Bind:** Botões diretos de Contínuo/Alternar e Linear/Exp/Log/S precedem o gráfico interativo ocupando a largura disponível. Saída mínima/máxima, Drive, Compressão e Suavização são os faders principais. Os três pontos do gráfico seguem a saída efetiva após Drive e Compressão; saída mínima/máxima continuam sendo os limites usados para escalar essa resposta. Arrastar um ponto considera essas configurações, e uma resposta saturada ou plana mantém os valores limitados. Entrada mínima/máxima, escala do alvo, retomada, perda de sinal, valor inativo e neutro ficam em Avançado. Alças menores conservam área de interação maior e reset por duplo clique. No celular, os três pontos do gráfico só editam depois de pressionar e segurar um deles por cerca de 0,6 s: ele ganha um anel, então arraste e solte. Toque rápido, rolagem ou toque no fundo nunca alteram valor; cancelar (gesto do sistema, sair do painel, trocar de aba ou perder a conexão) restaura o valor que o ponto tinha ao ser selecionado. O mouse continua arrastando direto e o duplo clique continua resetando.
 - **Ciclo Seguro e Cancelamento:** Notas Próx. Tempo/Compasso ainda não enviadas são canceladas ao parar o transporte, mudar fórmula, saltar em seek/loop, detectar OSC desatualizado (>1000 ms), remover bind ou perder conexão. Uma nota Próx. Tempo/Compasso que já está soando é desligada ao parar o transporte, perder o relógio, remover bind ou perder conexão; depois de seek, salto de loop ou mudança de fórmula, ela termina no próprio Note-Off. Notas Agora não dependem do transporte: Curta termina no próprio Note-Off e Enquanto Pressionado quando o gesto ou controle é solto; remover bind ou perder conexão as desliga antes. Eventos mais de 20 ms atrasados são descartados. Na mesma track, uma nota nova aposenta o timer e envia o OFF anterior antes de seu ON, recebendo a duração integral. O limite é 64 tracks ativas.
 
 ### Launch Clip (`clip_launch`)
@@ -1158,7 +1175,7 @@ Clique direito novamente no mesmo controle fecha seu CFG. Clique direito em outr
 
 No modo D, cada toggle tem **Duração do burst** e ataque próprios, independentes da subdivisão da onda (período de cada ciclo). A duração pode seguir o ajuste compartilhado, usar valor musical fixo em SYNC ou milissegundos em FREE. A seção recolhida mostra a duração selecionada. O modo D herdado de Global apresenta os mesmos ajustes. Pins persistem em projetos, presets e snapshots; abrir CFG nunca dispara controles.
 
-VID inicia com três poses aprendidas. **+ ADICIONAR POSE** acrescenta IDs até G15 e fica cinza aos quinze cards. O banco tem rolagem escura e cards compactos: captura, reconhecimento e CLR mantêm a área normal de ações/status; avisos de exemplos ou diagnóstico do TEST acrescentam apenas o espaço necessário. **CLR** apaga exemplos preservando o card. O pequeno **×** abaixo de G1/G2/etc. remove aquele card e seus exemplos, cancela sua captura/teste e solta explicitamente sua saída ativa, inclusive Manter sem limite. Outros IDs e destinos nunca mudam de posição. O mapping do ID removido continua disponível no MAP; Adicionar reutiliza o primeiro ID livre, com pose vazia e esse mapping existente. Limpe seus alvos no MAP caso também queira descartar o destino. É possível remover todos os cards e restaurar um banco com IDs intercalados. Cada pose continua exigindo três exemplos e aceita até seis. Slots `sensor.vision.gesture.1` até `.15` seguem as mesmas regras de qualificação, MIDI e perda de tracking. Classificador, guardas de polegar e tempos de captura/reconhecimento não foram reajustados. Aceite físico da câmera continua necessário.
+VID inicia com três poses aprendidas. **+ ADICIONAR POSE**, ao lado do seletor REC de reconhecimento, acrescenta IDs até G15 e fica cinza aos quinze cards. O banco tem rolagem escura e cards compactos: captura, reconhecimento e CLR mantêm a área normal de ações/status; avisos de exemplos ou diagnóstico do TEST acrescentam apenas o espaço necessário. **CLR** apaga exemplos preservando o card. O pequeno **×** abaixo de G1/G2/etc. remove aquele card e seus exemplos, cancela sua captura/teste e solta explicitamente sua saída ativa, inclusive Manter sem limite. Outros IDs e destinos nunca mudam de posição. O mapping do ID removido continua disponível no MAP; Adicionar reutiliza o primeiro ID livre, com pose vazia e esse mapping existente. Limpe seus alvos no MAP caso também queira descartar o destino. É possível remover todos os cards e restaurar um banco com IDs intercalados. Cada pose continua exigindo três exemplos e aceita até seis. Slots `sensor.vision.gesture.1` até `.15` seguem as mesmas regras de qualificação, MIDI e perda de tracking. Classificador, guardas de polegar e tempos de captura/reconhecimento não foram reajustados. Aceite físico da câmera continua necessário.
 
 ## 16. REC: Arrangement / CLIP
 
@@ -1199,7 +1216,7 @@ playback parado:
    Salto de marcador confirma transporte parado/record off e identidade/monitor
    selecionado sem esperar estados do mixer sem relação. REC confirma o conjunto.
 3. Deixe **FIM = Até STOP** para gravar livremente. Escolher um marcador final
-   depois do início libera **PASSAGENS**: 1–16 passagens no total ou ∞ até STOP.
+   depois do início libera **PASSAGENS**: 1–10 passagens no total ou ∞ até STOP.
    Um trecho novo começa com uma passagem. Fim inválido/removido bloqueia REC
    sem mudar silenciosamente para gravação livre. Coloque o fim depois da
    ressonância desejada dos pratos/instrumentos.
