@@ -40,6 +40,9 @@ for(const locale of ['en','pt-BR'])test(`TRN shows and changes Live global quant
   await expect(select.locator('option:checked')).toHaveText(await t('lc.quantOneBar'));
   await expect(click).toHaveAttribute('aria-pressed','false');
   await expect(page.locator('#locator-list')).toContainText('B');
+  // Locators scroll with the flat themed bar, never the platform default.
+  const bar=await page.locator('#locator-list').evaluate(node=>{const style=getComputedStyle(node);return [style.scrollbarWidth,style.scrollbarColor];});
+  expect(bar[0]).toBe('thin');expect(bar[1]).not.toBe('auto');
   await select.selectOption('7');
   await expect.poll(()=>mock.writes.filter(m=>m.cmd==='setGlobalClipQuantization').map(m=>m.args)).toEqual([{quantization:7}]);
   await expect(select).toHaveValue('7');await expect(select.locator('option:checked')).toHaveText('1/4');

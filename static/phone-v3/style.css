@@ -3341,6 +3341,15 @@ body.mapping-mode [data-name].selected-control {
   gap: 4px;
 }
 
+/* Every scrolling area inside a modal (TRN locators, settings) uses the flat
+   themed scrollbar instead of the platform default. */
+.modal-overlay, .modal-overlay * { scrollbar-width: thin; scrollbar-color: var(--text3) var(--surface); }
+.modal-overlay ::-webkit-scrollbar { width: 6px; height: 6px; }
+.modal-overlay ::-webkit-scrollbar-track { background: var(--surface); }
+.modal-overlay ::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 0; }
+.modal-overlay ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+.modal-overlay ::-webkit-scrollbar-button { display: none; }
+
 .locator-item {
   background: #1c1c1e;
   border: 1px solid var(--border);
