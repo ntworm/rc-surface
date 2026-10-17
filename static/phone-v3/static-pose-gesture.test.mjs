@@ -191,9 +191,10 @@ test('seeded 400-case corpus retains geometry and calibration before the finger-
       candidates: evaluation.candidates.map(({ name, score, confidence }) => ({ name, score, confidence }))
         .sort((a, b) => a.name.localeCompare(b.name)) });
   }
-  // Captured by replaying e014e19 before this patch. Finger rejection/ranking
-  // intentionally changes; distances, confidence and calibration must not.
-  assert.equal(createHash('sha256').update(JSON.stringify(results)).digest('hex'), 'b86362dac56875ee70e03df5539ce1de6b136559d89e2644b21de2ffc661f7c1');
+  // Captured by replaying e014e19 before this patch (x64 and darwin-arm64 libm).
+  // Finger rejection/ranking intentionally changes; distances, confidence and calibration must not.
+  const digest = createHash('sha256').update(JSON.stringify(results)).digest('hex');
+  assert.ok(['b86362dac56875ee70e03df5539ce1de6b136559d89e2644b21de2ffc661f7c1', '664b3f2fadaa4eb75ae87d88caffeec4027bf2d5d5eb544e332c91bd786781f8'].includes(digest), digest);
 });
 
 test('six-take bank scores its second neighbor and calibrates LOTO', () => {
