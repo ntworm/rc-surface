@@ -50,7 +50,7 @@ test('operator landing fits mobile widths in both languages with local scrollabl
     // "&amp;#183;" strings, and a colliding catalog key must not rename the target.
     expect.soft((await page.locator('[data-i18n]').allTextContents()).join('\n')).not.toMatch(/&#(?:\d+|x[\da-f]+);/i);
     await expect.soft(page.locator('[data-i18n="lp.fig.160"]')).toHaveText(
-      locale === 'en' ? 'LIVE PARAMETER / MIDI' : 'PARÂMETRO DO LIVE / MIDI');
+      locale === 'en' ? 'LIVE PARAMETER / MIDI / SESSION CLIP' : 'PARÂMETRO DO LIVE / MIDI / CLIP DA SESSION');
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.evaluate(() => document.fonts.ready);
