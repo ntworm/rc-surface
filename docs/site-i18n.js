@@ -729,8 +729,8 @@
       'pt-BR': "Fig. 8",
     },
     'lp.map.138': {
-      en: "MAP — armed strip, then target picker",
-      'pt-BR': "MAP — barra armada e depois o seletor de destino",
+      en: "MAP — armed strip, action mode, then target picker",
+      'pt-BR': "MAP — barra armada, modo de ação e seletor de destino",
     },
     'lp.map.144': {
       en: 'Underlying page',
@@ -779,6 +779,14 @@
     'lp.map.155': {
       en: "Uses Live's selected track and device as a filter; it picks no parameter for you.",
       'pt-BR': "Usa a track e o device selecionados no Live como filtro; não escolhe parâmetro por você.",
+    },
+    'lp.map.156': {
+      en: 'Action modes',
+      'pt-BR': 'Modos de ação',
+    },
+    'lp.map.157': {
+      en: "<code>BIND</code> drives a Live parameter with curve and range; <code>TRIGGER NOTE</code> plays a MIDI note through <code>RC-Midi-Receiver.amxd</code>; <code>LAUNCH CLIP</code> fires Session clips through AbletonOSC.",
+      'pt-BR': "<code>BIND</code> move um parâmetro do Live com curva e faixa; <code>TRIGGER NOTE</code> toca uma nota MIDI pelo <code>RC-Midi-Receiver.amxd</code>; <code>LAUNCH CLIP</code> dispara clips da Session pelo AbletonOSC.",
     },
 
     'lp.controls.001': {
@@ -1210,8 +1218,8 @@
       'pt-BR': 'MAP, MIDI e superfícies de mapeamento',
     },
     'lp.controls.133': {
-      en: "Phone MAP and panel Mappings bind a control to a Live parameter or a trigger note, with curve, range, takeover and idle settings.",
-      'pt-BR': "O MAP do celular e a aba Mapeamentos do painel ligam um controle a um parâmetro do Live ou a uma nota de trigger, com curva, faixa, takeover e ajustes de repouso.",
+      en: "Phone MAP and panel Mappings give each control one of three actions: bind a Live parameter, trigger a MIDI note, or launch a Session clip, with curve, range, takeover and idle settings.",
+      'pt-BR': "O MAP do celular e a aba Mapeamentos do painel dão a cada controle uma de três ações: bind num parâmetro do Live, trigger de nota MIDI ou disparo de clip da Session, com curva, faixa, takeover e ajustes de repouso.",
     },
     'lp.controls.134': {
       en: 'INPUT → OUTPUT',
@@ -1646,8 +1654,8 @@
       'pt-BR': "AÇÃO",
     },
     'lp.fig.160': {
-      en: "LIVE PARAMETER / MIDI",
-      'pt-BR': "PARÂMETRO DO LIVE / MIDI",
+      en: "LIVE PARAMETER / MIDI / SESSION CLIP",
+      'pt-BR': "PARÂMETRO DO LIVE / MIDI / CLIP DA SESSION",
     },
 
     'lp.controls.147': {
@@ -1905,8 +1913,8 @@
       'pt-BR': "Overrides de modo dos pads",
     },
     'lp.map.cfgRow2Flow': {
-      en: "Overrides global A–D mode for a single pad: A travel (40–400 px, Linear/Fine/Fast); B hold/zero on touch; C latch; D timing (40–10000 ms or musical beat, attack, peak).",
-      'pt-BR': "Sobrescreve o modo global A–D em um pad individual: curso no A (40–400 px, Linear/Fine/Fast); manter/zerar no toque no B; trava no C; timing no D (40–10000 ms ou musical, ataque, pico).",
+      en: "Overrides global A–D mode for a single pad: A, B and C set drag travel (Very short to Long) and response (Linear/Fine/Fast); A touch level; B tap without drag keeps or zeroes; C on level; D timing (40–10000 ms or musical beat, attack, peak).",
+      'pt-BR': "Sobrescreve o modo global A–D em um pad individual: A, B e C ajustam curso do arrasto (Muito curto a Longo) e resposta (Linear/Fine/Fast); nível ao tocar no A; toque sem arrasto mantém ou zera no B; nível ligado no C; timing no D (40–10000 ms ou musical, ataque, pico).",
     },
     'lp.map.cfgRow3': {
       en: "Toggle & LFO parameters",
@@ -2041,12 +2049,12 @@
       'pt-BR': "Políticas de takeover / pickup previnem saltos na reconexão; Safe loss define comportamento de Hold vs Release na perda de sinal; timeout ocioso restaura referência.",
     },
     'lp.mapdesk.step6Title': {
-      en: "6 · BIND VS TRIGGER NOTE",
-      'pt-BR': "6 · BIND VS TRIGGER NOTE",
+      en: "6 · BIND · TRIGGER NOTE · LAUNCH CLIP",
+      'pt-BR': "6 · BIND · TRIGGER NOTE · LAUNCH CLIP",
     },
     'lp.mapdesk.step6Desc': {
-      en: "BIND writes Live parameters via the Extensions SDK. TRIGGER NOTE sends MIDI notes through RC-Midi-Receiver.amxd manually placed on the MIDI track (pitch/octave/velocity, timing Now/Next Beat/Bar, gate Short/While Held; keyboard MIDI passes through directly).",
-      'pt-BR': "BIND escreve parâmetros do Live via Extensions SDK. TRIGGER NOTE envia notas MIDI pelo RC-Midi-Receiver.amxd inserido manualmente na track MIDI (pitch/oitava/velocity, timing Now/Next Beat/Bar, gate Short/While Held; MIDI do teclado passa direto via thru).",
+      en: "BIND writes Live parameters via the Extensions SDK. TRIGGER NOTE sends MIDI notes through RC-Midi-Receiver.amxd manually placed on the MIDI track (pitch/octave/velocity, timing Now/Next Beat/Bar, gate Short/While Held; keyboard MIDI passes through directly). LAUNCH CLIP fires Session clips through AbletonOSC: launch one clip, advance a list or stop the track, at the quantization Live reports.",
+      'pt-BR': "BIND escreve parâmetros do Live via Extensions SDK. TRIGGER NOTE envia notas MIDI pelo RC-Midi-Receiver.amxd inserido manualmente na track MIDI (pitch/oitava/velocity, timing Now/Next Beat/Bar, gate Short/While Held; MIDI do teclado passa direto via thru). LAUNCH CLIP dispara clips da Session pelo AbletonOSC: lança um clip, avança uma lista ou para a track, na quantização informada pelo Live.",
     },
   };
 

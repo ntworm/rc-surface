@@ -52,7 +52,7 @@ wss.on("connection", (ws) => {
     try {
       const data = JSON.parse(msg.toString());
       if (data.cmd) {
-        ws.send(JSON.stringify({ type: "ack", cmd: data.cmd }));
+        ws.send(JSON.stringify({ id: data.id, ok: true, type: "ack", cmd: data.cmd }));
       }
     } catch {}
   });
