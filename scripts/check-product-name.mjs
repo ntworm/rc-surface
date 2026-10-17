@@ -7,13 +7,15 @@ import { join, sep } from "node:path";
 
 const root = process.cwd();
 const EXCLUDE_DIRS = new Set([
-  "node_modules", "dist", "release-kits", ".git", "test-results", ".worktrees"
+  "node_modules", "dist", "release-kits", ".git", "test-results", ".worktrees", ".local", ".agent-context"
 ]);
 const EXCLUDE_FILES = new Set([
   "CHANGELOG.md",
   "PESQUISA_CELULAR_GESTUAL.md",
   "RELEASE-READINESS-2026-09-07.pt-BR.md",
   "check-product-name.mjs",
+  "AGENTS.md",
+  "CLAUDE.md",
 ]);
 const EXCLUDE_PATH_SUBSTRINGS = [
   sep + "docs" + sep + "superpowers" + sep,

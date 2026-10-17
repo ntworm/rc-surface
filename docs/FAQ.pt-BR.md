@@ -1,7 +1,7 @@
 # Perguntas frequentes
 
 > Respostas para as dúvidas mais comuns sobre o **RC Surface**.
-> Última atualização: julho de 2026.
+> Última atualização: outubro de 2026.
 
 ## Índice
 
@@ -48,7 +48,7 @@ um build validado para publicação.
 
 ### Qual é a latência? Dá para usar ao vivo?
 
-Na versão candidata atual, gestos e áudio dividem um caminho em tempo real: o
+No RC Surface 2.0, gestos e áudio dividem um caminho em tempo real: o
 primeiro envio é imediato e os lotes seguintes saem com pelo menos 8 ms de
 intervalo. Os snapshots visuais do MAP não atrasam esses comandos. Smooth 0 não
 acrescenta rampa nenhuma ao mapeamento. Isso não é
@@ -114,6 +114,9 @@ selecione a ação correspondente à fonte:
   track normal, return track, mixer, device ou parâmetro.
 - **Trigger Note** mapeia o controle escolhido para uma nota MIDI numa track
   MIDI escolhida, através do `RC-Midi-Receiver.amxd`.
+- **Launch Clip** mapeia o controle escolhido para lançar um clip da Session,
+  avançar uma lista de clips ou parar uma track via AbletonOSC, com regras
+  opcionais *After it starts* e edição da quantização global do Set.
 
 O Follow Detected Note (seguir a nota detectada) foi removido. Modos de
 mapeamento não suportados são descartados ao carregar; os vínculos válidos, incluindo Trigger Note fixo, ficam.
@@ -193,7 +196,7 @@ aberto durante a atualização.
 
 ### REC é uma página? E AUT?
 
-REC é a sétima página: escolha marcadores, Loop opcional e pré-roll OFF/1/2/4, arme as entradas nos cartões e use REC/STOP. Punch In é ajustado temporariamente e restaurado somente enquanto a tentativa ainda possui o estado. AUT é um modo no cabeçalho do PERF para movimentos XY, com SYNC/FREE; não grava automação nativa do Arrangement.
+REC é a sétima página (**ARRANGEMENT / CLIP**): no Arrangement, escolha cursor ou marcador inicial na timeline de compassos/beats, END opcional (1–10 passagens ou ∞) ou FREE até STOP e pré-roll OFF/1/2/4; em CLIP, grave uma cena vazia da Session em todas as entradas armadas com 1/2/4/8/16 compassos, quantização e BACK TO ARR. Os cartões de track oferecem ARM MULTI/EXCLUSIVE, SOLO, MUTE, knobs de volume ao vivo e renomeação com clique duplo. Punch In é ajustado temporariamente e restaurado somente enquanto a tentativa ainda possui o estado. AUT é um modo no cabeçalho do PERF para loops de movimento XY (SYNC 1–5 compassos ou FREE 1–30 segundos); não grava automação nativa do Arrangement.
 
 ### Quantas poses e quais leituras da mão entram no MAP?
 

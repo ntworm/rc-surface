@@ -4,7 +4,7 @@
 
 | Versão | Suportada |
 |--------|-----------|
-| Candidato 2.0.0 | sim, candidato local |
+| 2.0.x | sim |
 | 1.x | histórico; sem compatibilidade de dados 2.0 |
 | 0.7.x e anteriores | não |
 

@@ -159,7 +159,7 @@ Important behavior:
 
 Editor fields currently exposed on mobile:
 
-- `mode`: `continuous`, `toggle`, `trigger_note`
+- `mode`: `continuous`, `toggle`, `trigger_note` (and `type: "clip_launch"` for Launch Clip)
 - `curve`: `linear`, `exponential`, `logarithmic`, `s-curve`
 - `targetScale`: `auto`, `linear`, `geometric`
 - `inMin`, `inMax`, `outMin`, `outMax`
@@ -183,7 +183,7 @@ movement until capture. A 500 ms host reconciliation loop re-arms takeover
 when Live changes the target while the phone is idle. `jump` remains available
 only as an explicit mapping or project preference.
 
-Momentary pads, trigger notes, and stutters bypass takeover and release on
+Momentary pads, trigger notes, and Square pulses bypass takeover and release on
 touch cancellation or disconnect. Toggle and LFO state is preserved. Sensor
 loss uses a short hold followed by a smooth release to the mapping's neutral
 value. Never delete a mapping as part of error recovery.
@@ -254,9 +254,7 @@ Runtime vision diagnostics:
 - `sensor.vision.color.r`
 - `sensor.vision.color.g`
 - `sensor.vision.color.b`
-- `sensor.vision.gesture.1`
-- `sensor.vision.gesture.2`
-- `sensor.vision.gesture.3`
+- `sensor.vision.gesture.1` through `sensor.vision.gesture.15`
 
 Public vision controls: `x/y/z`, `palm`, `face`, the four opt-in detectors, `rotateVal`, Pinch Clutch `pinch_x/y/z` and `sensor.vision.gesture.1` through `.15`. PALM is apparent size; FACE is palm/back orientation, normalized from −1–1 to 0–1 on the wire. `active`, fingers and RGB stay outside the picker. Missing/nonfinite values must emit `lost:true`, never a new neutral reading. Reuse Safe loss and the existing parameter/note/clip mapper. Capture-consistency warnings are advisory and do not alter recognition.
 

@@ -143,7 +143,7 @@ Comportamentos importantes:
 
 Campos do editor hoje expostos no celular:
 
-- `mode`: `continuous`, `toggle`, `trigger_note`
+- `mode`: `continuous`, `toggle`, `trigger_note` (e `type: "clip_launch"` para Launch Clip)
 - `curve`: `linear`, `exponential`, `logarithmic`, `s-curve`
 - `targetScale`: `auto`, `linear`, `geometric`
 - `inMin`, `inMax`, `outMin`, `outMax`
@@ -167,7 +167,7 @@ celular até a captura. Um loop de reconciliação com o host, a cada 500 ms,
 rearma o takeover quando o Live muda o destino com o celular parado. O `jump`
 continua disponível apenas como mapeamento explícito ou preferência de projeto.
 
-Pads momentâneos, trigger notes e stutters passam por fora do takeover e soltam
+Pads momentâneos, trigger notes e pulsos Square passam por fora do takeover e soltam
 no cancelamento do toque ou na desconexão. O estado de toggle e de LFO é
 preservado. A perda de sensor usa um hold curto seguido de release suave até o
 valor neutro do mapeamento. Nunca apague um mapeamento como parte da
@@ -241,9 +241,7 @@ Diagnósticos de visão em tempo de execução:
 - `sensor.vision.color.r`
 - `sensor.vision.color.g`
 - `sensor.vision.color.b`
-- `sensor.vision.gesture.1`
-- `sensor.vision.gesture.2`
-- `sensor.vision.gesture.3`
+- `sensor.vision.gesture.1` a `sensor.vision.gesture.15`
 
 Controles públicos de visão: `x/y/z`, `palm`, `face`, os quatro detectores opcionais, `rotateVal`, Pinch Clutch `pinch_x/y/z` e `sensor.vision.gesture.1` até `.15`. PALM é tamanho aparente; FACE é orientação palma/dorso, normalizada de −1–1 para 0–1 no wire. `active`, dedos e RGB não entram no picker. Valores ausentes/não finitos devem emitir `lost:true`, nunca uma nova amostra neutra. Reutilize Safe loss e o mapeador de parâmetros/notas/clips. O aviso de consistência é orientativo e não modifica o reconhecimento.
 

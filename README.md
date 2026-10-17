@@ -16,28 +16,26 @@ RC Surface is a source-available Ableton Live extension that turns a phone brows
 
 The host side is built on the Ableton Extensions SDK. The phone side is plain browser JavaScript: no native app, no bundler, no install on the phone.
 
-**2.0.0 breaks compatibility:** previous project profiles, presets, mappings and browser performance settings are not imported. Configure this version from a fresh state. Existing files are not deleted. This is a local candidate, not a published release.
+**2.0.0 breaks compatibility:** previous project profiles, presets, mappings and browser performance settings are not imported. Configure this version from a fresh state in `storageDirectory/surface-v2/` (schema 2). Existing 1.x files are not deleted.
 
 Eight uniform toggles start in Global. Square is the single 0-to-depth pulse waveform, with swing/ratchet in Advanced; there is no separate Stutter option. CFG hides touch-owned rate/depth and filters subdivisions by the actual ceiling. Both physics XY panels have trails and frame-independent friction. Live waveform changes retain activation, including Square, and visual fill uses transforms instead of resizing every frame.
 
 CFG waveform, mode and timing use direct buttons. Subdivision opens a compact note-value/rhythm editor for the effective waveform in SYNC; FREE hides it. Static XY hides physics settings while retaining them for a later switch. Toggle values fill the whole width in their mode colour.
 
-Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay; **AUT**, in the PERF header, records independent XY movements in SYNC (1–5 bars) or FREE (1–30 seconds in steps of one second). REC selects **ARRANGEMENT / CLIP**: markers, Loop and pre-roll for Arrangement, or one empty Session scene across every armed input, with native length/quantization in CFG. Both reuse ARM/SOLO/MUTE cards. VID supports up to fifteen pose cards, 3–6 captures per pose, RETAKE/KEEP review and real PALM/FACE mapping inputs.
+Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay; **AUT**, in the PERF header, records independent XY movements after a 3–2–1 countdown in SYNC (1–5 bars) or FREE (1–30 seconds in steps of one second). REC selects **ARRANGEMENT / CLIP**: a marker timeline with a bar/beat grid, Zoom, START/END (`1–10` passes or `∞`, or FREE until STOP) and pre-roll OFF/1/2/4 for Arrangement, or one empty Session scene across every armed input with native 1/2/4/8/16-bar length, launch quantization and `BACK TO ARR`. Both views share track cards with ARM MULTI/EXCLUSIVE, SOLO, MUTE, live volume knobs and double-click inline rename. VID supports up to fifteen pose cards, 3–6 captures per pose, RETAKE/KEEP review, contextual tracking-loss policy and real PALM/FACE mapping inputs.
 
 ## Highlights
 
 - 12 performance pads with modes A/B/C/D.
-- Two identical XY panels, each independently configurable as Static or Physics (friction, bounce and speed).
+- Two identical XY panels, each independently configurable as Static or Physics (friction, bounce and speed) with independent gesture loop automation (`AUT`).
 - Eight configurable LFO slots (`toggle-1`..`toggle-8`), each with Square among its waveforms, and performance utility controls (CAP, OFF, 4 snapshot slots).
+- Seventh **REC** page for Arrangement and Session **CLIP** recording directly from the phone.
 - Phone sensors: motion, orientation, audio, and optional camera hand tracking
   via bundled MediaPipe Hands (no CDN).
-- Single-hand vision tracking by design.
+- Single-hand vision tracking by design, with up to 15 learned poses (`G1`–`G15`) and continuous `X / Y / Z / PALM / FACE` mapping inputs.
 - Contextual CALIBRATE on SNS/AUD/VID: stable posture, audio-control response,
   and camera lighting/tracking checks, with independent states and reset.
-- Phone **MAP** mode for binding controls to Live parameters without leaving
-  the mobile interface.
-- Mobile trigger-note mappings for sending MIDI notes to a selected MIDI track
-  through the included Max for Live receiver.
+- Phone **MAP** mode for binding controls to Live parameters (**Bind**), sending MIDI notes to a selected MIDI track through the included Max for Live receiver (**Trigger Note**), or firing Session clips, advancing clip lists, and stopping tracks with optional *After it starts* continuation rules (**Launch Clip**).
 - Twelve audio descriptors: attacks, brightness, centroid, flux, flatness,
   spread, 95% rolloff and low/mid/high RMS. Each attack is measured inside its
   own band against that band's recent energy, so a kick and a hat drive
@@ -57,29 +55,35 @@ Seven pages: **PERF / MIX / SNP / SNS / AUD / VID / REC**. **MAP** is an overlay
 ## Performance 2.0
 
 - **Config Mode (CFG):** configure each LFO slot (T1–T8), including Square as a waveform, and choose Static or Physics independently for each XY. Physics has separate friction, bounce and speed. Pad modes, knob sensitivity and fader reset values remain configurable. Open `CFG` in the phone header; hold it to clear overrides. Performance settings use `ableton-rc:v3:control_config` and are included in new projects and presets.
+- **Individual pad CFG:** follows its effective A/B/C/D mode: A touch level, B optional tap-to-zero, C remembered or fixed On level, plus drag travel/response in A/B/C. D has its own sync/free length, attack and peak. Pad settings round-trip in projects, presets and snapshots; output level is not MIDI velocity. A second right-click on the same control closes CFG.
+- **Arrangement & Session REC (`REC`):** switch between **ARRANGEMENT / CLIP**. In Arrangement, use the scaled bar/beat timeline with `ZOOM`, `START` at the cursor or a locator, optional `END` (`1–10` passes or `∞`) or `FREE` (until `STOP`), and `PRE-ROLL` (`OFF / 1 / 2 / 4` bars). In `CLIP`, record an explicitly empty Session scene across all armed inputs with native `1 / 2 / 4 / 8 / 16`-bar length, `Global / None / 1 bar / 1 beat` launch quantization, and `BACK TO ARR` when the Session is idle. Track cards show observed `ARM` (`ARM MULTI` or `EXCLUSIVE`), `SOLO`, `MUTE`, live `270°` volume knobs operable during recording, and inline double-click track rename. `STOP` has priority and keeps your inputs armed for the next take.
+- **XY Gesture Loops (`AUT`):** tap `AUT` in the `PERF` header to record and loop movements independently on `XY 1` and `XY 2` after a `3–2–1` countdown, synced to Live (`1–5 bars`) or free (`1–30 seconds`). Hold an XY for `0.6 s` (or right-click on desktop) with `AUT` active to open its loop settings; changing loop length discards that XY's recording. `AUT` repeats control movements and does not write native Live arrangement automation.
+- **Safer touch editing (`0.6 s` hold):** on touch screens, MAP response-curve points and Mode D Burst peak handles unlock only after a `0.6 s` hold, preventing accidental edits while scrolling. Double-tap resets.
+- **Contextual header:** `AUT` appears only on `PERF`, `CFG` on `PERF` and `MIX`, `CALIBRATE` on `SNS / AUD / VID`, and `MAP` on all pages except `REC`. Shared buttons keep fixed positions across tabs and `STAGE / EXIT` stays visible.
+- **Expanded Vision (`VID`) & MIDI Thru:** `+ ADD POSE` grows the pose bank from 3 to 15 cards (`3–6` captures per pose, `RETAKE / KEEP` conflict review, local finger-bend evidence, and contextual tracking-loss policy: hold, timed hold default `10 s`, or release). `PALM` and `FACE` (palm/back orientation, not facial tracking) join `X / Y / Z` as normalized `0–1` `MAP` inputs. `RC-Midi-Receiver.amxd` passes upstream MIDI through byte-for-byte (`midiin → midiout`) alongside Trigger Note.
 - **LFO waveform preview:** the SYNC settings modal draws the active LFO shape (sine, triangle, ramp up, ramp down, square) so you can see the curve you are about to push to Live, including the locked 32-beat subdivision and the per-control ceiling (sine tops at 4 Hz, square at 15 Hz).
 - **Desktop keyboard control:** every continuous control (knob, fader, XY pad, toggle, square) accepts keyboard nudges while the phone client has focus, so the desktop mapping panel and the phone UI share the same gesture model.
 - **K-weighted loudness:** the AUD tab reports ITU-R BS.1770 K-weighted momentary, short-term and integrated loudness, alongside the existing twelve descriptors.
 
 ## AbletonOSC Integration (Transport Lite & Deep Sync)
 
-RC Surface includes built-in optional integration with **AbletonOSC** to enable advanced transport and beat synchronization directly from the mobile client:
+RC Surface includes built-in optional integration with **AbletonOSC** to enable recording, clip launch, advanced transport, and beat synchronization directly from the mobile client:
 
-- **Transport Lite**: Tap the `TRN` button in the header topbar to open a full-screen transport overlay. Control Play, Stop, Prev/Next locator, and trigger locator jumps. Includes a search input to filter locators list dynamically.
+- **Transport Lite (`TRN`)**: Tap `TRN` in the header topbar to open the transport overlay. Uses a two-row header: `PLAY / STOP / PREV / NEXT`, followed by `CLICK` (shared metronome, never locked by `REC`), Live's `Global Quantization` (read from the Set on opening), and `REFRESH`, above a searchable locator list.
 - **Visual Metronome**: The `TRN` button rhythmically flashes in sync with Ableton Live's playback beat (Beat 1 flashes green, other beats flash blue).
 - **Deep Sync Settings**: Tap the gear icon (`⚙`) next to `SYNC` (or long-press `SYNC`) to open the Deep Sync Settings panel. Select Clock Source (AbletonOSC, SDK BPM Simulator, or Free/Internal), and configure subdivisions, phase offsets, swing, and shapes for LFOs and Squares. Settings are persisted in local storage.
 - **Selected Target Picker Helper**: Tap `Selected in Live` in the mobile parameter mapping view to automatically query the selected track and device from the host and pre-populate the search filter.
 
-To use the AbletonOSC features, ensure the **AbletonOSC** extension is running in Ableton Live (outgoing port `11000`, incoming port `11001`). The extension automatically detects its presence and updates the status (`SYNCED` / `SDK` / `FREE`).
+To use the AbletonOSC features, ensure the **AbletonOSC** extension is running in Ableton Live (outgoing port `11000`, incoming port `11001`). The extension automatically detects its presence, updates the status (`SYNCED` / `SDK` / `FREE`), and automatically moves its listener back to port `11001` once freed if another extension briefly held it at startup.
 
-## Candidate status
+## Release status
 
-The source version is 2.0.0, the current release. Install `RC-Surface-2.0.0.ablx` from the GitHub Releases page and verify it with `SHA256SUMS.txt`. Configuration starts fresh; see the installation guide for the breaking upgrade.
+The current release is **2.0.0**. Install `RC-Surface-2.0.0.ablx` from the GitHub Releases page and verify it with `SHA256SUMS.txt`. Configuration starts fresh in `storageDirectory/surface-v2/` (schema 2); see `docs/INSTALL.md` for the breaking upgrade.
 
 ## Quick Start
 
 1. Install Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support.
-2. Obtain the local test candidate or an asset from [Releases](https://github.com/ntworm/rc-surface/releases), or build it with
+2. Download `RC-Surface-2.0.0.ablx` (and `RC-Midi-Receiver.amxd` if using Trigger Note) from [Releases](https://github.com/ntworm/rc-surface/releases), or build it locally with
    `npm run build:prod-ablx`.
 3. Install the `.ablx` in Live.
 4. Open RC Surface from the Extensions menu.
@@ -87,8 +91,8 @@ The source version is 2.0.0, the current release. Install `RC-Surface-2.0.0.ablx
 6. Accept the self-signed certificate warning once.
 7. Use the phone controller to perform. The built-in **MIX** tab inside
    the phone client handles eight knobs and eight faders.
-8. Tap **MAP** near the BPM display to bind phone controls to Live parameters,
-   including the twelve built-in audio descriptors, or trigger fixed MIDI notes.
+8. Tap **MAP** near the BPM display to bind phone controls to Live parameters (**Bind**),
+   trigger fixed MIDI notes (**Trigger Note**), or fire Session clips (**Launch Clip**).
 
 Detailed setup lives in `docs/INSTALL.md`.
 
@@ -183,12 +187,11 @@ Common groups:
 - `sensor.audio.gate`
 - `sensor.audio.attack`
 - `sensor.audio.{transient,kick,snare,brightness,centroid,rolloff,flux,flatness,spread,low,mid,high}`
-- `sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open}`
+- `sensor.vision.{x,y,z,palm,face,fist,pinch,victory,rotateVal,open}`
 - `sensor.vision.{pinch_x,pinch_y,pinch_z}`
-- `sensor.vision.{gesture.1,gesture.2,gesture.3}`
+- `sensor.vision.gesture.1` through `sensor.vision.gesture.15`
 
-Palm size, palm-facing sign, finger detail and whole-frame colour are diagnostics,
-not public mapping inputs.
+`sensor.vision.palm` (hand scale) and `sensor.vision.face` (palm/back orientation, normalized `0–1`) are public mapping inputs. Presence (`active`), finger curl detail and whole-frame RGB colour remain internal diagnostics, not public mapping inputs.
 
 Vision is single-hand. Do not add left/right hand control names without an explicit migration plan.
 
@@ -226,9 +229,8 @@ see `internal/TESTER-GUIDE.md`.
 - Follow Detected Note, tonal controls and its diagnostic lab were removed after unreliable musical results. Supported MIDI Trigger and independent Max devices remain available.
 - Kick and Snare are spectral onset heuristics, not instrument recognition.
   Total microphone-to-Live latency must be measured on the actual setup.
-
 - Final release validation still needs Ableton Live and real phone hardware.
-- AbletonOSC is optional but required for Deep Sync and locator transport.
+- AbletonOSC is optional for core parameter mappings, but required for `REC`, `Launch Clip`, `AUT` in `SYNC`, Deep Sync, and locator transport.
 - MIDI trigger notes require `RC-Midi-Receiver.amxd` in the Ableton User Library.
 
 ## License
@@ -240,5 +242,3 @@ not permitted. See [LICENSE](LICENSE) for the full text and Required Notice.
 
 Ableton and Live are trademarks of Ableton AG. RC Surface is an independent
 project, not affiliated with, endorsed by, or sponsored by Ableton AG.
-
-Individual pad CFG follows its effective A/B/C/D mode: A touch level, B optional tap-to-zero, C remembered or fixed On level, plus drag travel/response in A/B/C. D has its own sync/free length, attack and peak. Pad settings round-trip in projects, presets and snapshots; output level is not MIDI velocity. A second right-click on the same control closes CFG.

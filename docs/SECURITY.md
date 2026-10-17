@@ -4,7 +4,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| 2.0.0 candidate | yes, local candidate |
+| 2.0.x | yes |
 | 1.x | historical; no 2.0 data compatibility |
 | 0.7.x and earlier | no |
 

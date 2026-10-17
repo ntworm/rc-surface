@@ -1,7 +1,7 @@
 # Frequently Asked Questions
 
 > Answers to the most common questions about **RC Surface**.
-> Last updated: July 2026.
+> Last updated: October 2026.
 
 ## Contents
 
@@ -48,7 +48,7 @@ build as public-release validated.
 
 ### What is the latency? Is it usable for live performance?
 
-On the current candidate, gestures and audio share a realtime path: first frame
+In RC Surface 2.0, gestures and audio share a realtime path: first frame
 immediate, subsequent batches spaced by at least 8 ms. MAP's visual snapshots
 cannot delay those commands. Smooth 0 adds no mapping ramp. This is not a measured
 end-to-end latency; older hosts use the legacy snapshot path. The client is designed for
@@ -112,6 +112,9 @@ choose the action that matches the source:
   normal track, return track, mixer, device, or parameter targets.
 - **Trigger Note** maps the selected phone control to a MIDI note on a
   chosen MIDI track through `RC-Midi-Receiver.amxd`.
+- **Launch Clip** maps the selected phone control to launch a Session clip,
+  advance a clip list, or stop a track via AbletonOSC, with optional
+  *After it starts* continuation rules and editable Set global quantization.
 
 Follow Detected Note was removed. Unsupported mapping modes are discarded on
 load; supported bindings, including fixed Trigger Note, are retained.
@@ -189,7 +192,7 @@ during the update.
 
 ### Is REC a page? What about AUT?
 
-REC is the seventh page: choose markers, optional Loop and pre-roll OFF/1/2/4, arm inputs on the cards and use REC/STOP. Punch In is set temporarily and restored only while still owned by the attempt. AUT is a PERF header mode for XY movement with SYNC/FREE; it does not record native Arrangement automation.
+REC is the seventh page (**ARRANGEMENT / CLIP**): in Arrangement, choose a start cursor or marker on the bar/beat timeline, optional END (1–10 passes or ∞) or FREE until STOP, and pre-roll OFF/1/2/4; in CLIP, record an empty Session scene across all armed inputs with 1/2/4/8/16-bar length, quantization and BACK TO ARR. Track cards provide ARM MULTI/EXCLUSIVE, SOLO, MUTE, live volume knobs and double-click rename. Punch In is set temporarily and restored only while still owned by the attempt. AUT is a PERF header mode for XY movement loops (SYNC 1–5 bars or FREE 1–30 seconds); it does not record native Arrangement automation.
 
 ### How many poses and which hand readings can I map?
 
