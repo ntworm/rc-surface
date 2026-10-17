@@ -91,10 +91,10 @@ test('the IndexNow key file proves the key it is named after', () => {
   assert.equal(read('docs/' + keys[0]), keys[0].slice(0, -4));
 });
 
-test('release citation and bilingual notices match the unpublished 2.0 source version',()=>{
+test('release citation and bilingual notices match the published 2.0 release',()=>{
   const version=JSON.parse(read('package.json')).version,manifest=JSON.parse(read('manifest.json'));
   const citation=read('CITATION.cff');assert.match(citation,new RegExp('^version: '+version.replaceAll('.','\\.')+'$','m'));
-  assert.equal(manifest.version,version);assert.doesNotMatch(citation,/^date-released:/m,'local preparation has no invented release date');
+  assert.equal(manifest.version,version);assert.match(citation,/^date-released: "2026-10-16"$/m,'citation carries the real v2.0.0 publication date');
   for(const feature of ['T1-T8','AUT','REC','fifteen','PALM/FACE'])assert.ok(citation.includes(feature),feature);
   for(const file of ['docs/THIRD-PARTY-NOTICES.md','docs/THIRD-PARTY-NOTICES.pt-BR.md'])assert.ok(read(file).includes('Build `'+version+'`'));
 });
