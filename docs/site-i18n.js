@@ -381,12 +381,12 @@
     },
 
     'lp.map.165': {
-      en: "Every control on these plans is listed in <a href=\"#controls\">4.0</a>.",
-      'pt-BR': "Todo controle destas plantas está listado em <a href=\"#controls\">4.0</a>.",
+      en: "What each family does, from touch to Live, is in <a href=\"#controls\">4.0</a>.",
+      'pt-BR': "O que cada família faz, do toque ao Live, está em <a href=\"#controls\">4.0</a>.",
     },
     'lp.map.001': {
-      en: "Surface map <span class=\"tail\">— figs. 1 to 8</span>",
-      'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 8</span>",
+      en: "Surface map <span class=\"tail\">— figs. 1 to 11</span>",
+      'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 11</span>",
     },
     'lp.map.004': {
       en: 'Fig. 1',
@@ -445,12 +445,12 @@
       'pt-BR': "Dois painéis <code>XY 1</code> / <code>XY 2</code> independentes: Estático ou Física, com atrito, quique, velocidade e rastro. Cada eixo é mapeado separadamente.",
     },
     'lp.map.019': {
-      en: 'LFOs',
-      'pt-BR': 'LFOs',
+      en: 'Toggles T1–T8',
+      'pt-BR': 'Toggles T1–T8',
     },
     'lp.map.020': {
-      en: "T1 to T8. Each slot chooses its waveform, including Square, mode and clock in CFG. Hz in FREE, note values in SYNC.",
-      'pt-BR': "T1 a T8. Cada slot escolhe onda, incluindo Square, modo e clock no CFG. Hz em FREE, figuras em SYNC.",
+      en: "Waveform (Sine, Triangle, Ramp Up, Ramp Down, Square) set in CFG. Horizontal drag sets rate, vertical sets depth. Square includes swing and ratchet. Hz in FREE, beat divisions in SYNC.",
+      'pt-BR': "Onda (Sine, Triangle, Ramp Up, Ramp Down, Square) definida no CFG. Arrastar horizontal ajusta velocidade, vertical profundidade. Square inclui swing e ratchet. Hz em FREE, subdivisões em SYNC.",
     },
     'lp.map.021': {
       en: 'Squares',
@@ -460,25 +460,73 @@
       en: "Square is a waveform available in any of the eight LFO slots.",
       'pt-BR': "Square é uma onda disponível em qualquer um dos oito slots LFO.",
     },
+    'lp.map.perfUtilTitle': {
+      en: 'PERF UTIL',
+      'pt-BR': 'PERF UTIL',
+    },
+    'lp.map.perfUtilFlow': {
+      en: "CAP arms capture; CAP+1–4 saves; 1–4 recalls; OFF stops morph, pads, LFOs and Squares and centers XY, without touching MIX, sensors, audio, vision or transport.",
+      'pt-BR': "CAP arma captura; CAP+1–4 salva; 1–4 recupera; OFF para morph, pads, LFOs e Squares e centraliza os XY, sem mexer em MIX, sensores, áudio, visão ou transporte.",
+    },
     'lp.map.023': {
-      en: "CAP captures, slots 1 to 4 recall, OFF exits.",
-      'pt-BR': "CAP captura, os slots 1 a 4 recuperam, OFF sai.",
+      en: "CAP arms capture; CAP+1–4 saves; 1–4 recalls; OFF stops morph, pads, LFOs and Squares and centers XY, without touching MIX, sensors, audio, vision or transport.",
+      'pt-BR': "CAP arma captura; CAP+1–4 salva; 1–4 recupera; OFF para morph, pads, LFOs e Squares e centraliza os XY, sem mexer em MIX, sensores, áudio, visão ou transporte.",
     },
     'lp.map.024': {
       en: "Live panel",
       'pt-BR': "Painel do Live",
     },
     'lp.map.025': {
-      en: "BPM, transport, TRN, MAP, AUT, CFG. AUT is a header mode, not another page.",
-      'pt-BR': "BPM, transporte, TRN, MAP, AUT, CFG. AUT é um modo do cabeçalho, não outra página.",
+      en: "BPM, transport (PREV/PLAY/NEXT), TRN, MAP, AUT, CFG. AUT is a header mode on PERF.",
+      'pt-BR': "BPM, transporte (PREV/PLAY/NEXT), TRN, MAP, AUT, CFG. AUT é um modo do header no PERF.",
+    },
+    'lp.map.liveMix': {
+      en: "BPM, transport (PREV/PLAY/NEXT), TRN, MAP, CFG. No AUT on MIX.",
+      'pt-BR': "BPM, transporte (PREV/PLAY/NEXT), TRN, MAP, CFG. Sem AUT no MIX.",
+    },
+    'lp.map.liveSnp': {
+      en: "BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG on SNP.",
+      'pt-BR': "BPM, transporte (PREV/PLAY/NEXT), TRN, MAP. Sem AUT ou CFG no SNP.",
+    },
+    'lp.map.liveSensor': {
+      en: "BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG.",
+      'pt-BR': "BPM, transporte (PREV/PLAY/NEXT), TRN, MAP. Sem AUT ou CFG.",
+    },
+    'lp.map.liveRec': {
+      en: "BPM, transport (PREV/PLAY/NEXT), TRN only. Entering REC closes MAP; no AUT or CFG.",
+      'pt-BR': "BPM, transporte (PREV/PLAY/NEXT), só TRN. Entrar no REC fecha o MAP; sem AUT ou CFG.",
+    },
+    'lp.map.liveMap': {
+      en: "BPM, transport, TRN, active MAP overlay, CFG over current page.",
+      'pt-BR': "BPM, transporte, TRN, overlay MAP ativo, CFG sobre a página atual.",
+    },
+    'lp.map.liveTrn': {
+      en: "BPM, transport, active TRN overlay, MAP, AUT, CFG.",
+      'pt-BR': "BPM, transporte, overlay TRN ativo, MAP, AUT, CFG.",
+    },
+    'lp.map.liveAut': {
+      en: "BPM, transport, TRN, MAP, active AUT mode, CFG.",
+      'pt-BR': "BPM, transporte, TRN, MAP, modo AUT ativo, CFG.",
+    },
+    'lp.map.liveCfg': {
+      en: "BPM, transport, TRN, MAP, AUT, active CFG mode.",
+      'pt-BR': "BPM, transporte, TRN, MAP, AUT, modo CFG ativo.",
     },
     'lp.map.026': {
       en: "Sync block",
       'pt-BR': "Bloco de sync",
     },
     'lp.map.027': {
-      en: "SYNC, settings, STAGE; CALIBRATE on SNS/AUD/VID.",
-      'pt-BR': "SYNC, ajustes, STAGE; CALIBRAR em SNS/AUD/VID.",
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, STAGE locks surface to current page.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
+    },
+    'lp.map.syncStd': {
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, STAGE locks surface to current page.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
+    },
+    'lp.map.syncCal': {
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, CALIBRATE define referência neutra (postura no SNS, nível no AUD, iluminação no VID), STAGE trava a superfície.",
     },
     'lp.map.029': {
       en: 'Fig. 2',
@@ -734,8 +782,8 @@
     },
 
     'lp.controls.001': {
-      en: "Controls <span class=\"tail\">— inventory, header, families</span>",
-      'pt-BR': "Controles <span class=\"tail\">— inventário, header, famílias</span>",
+      en: "Controls <span class=\"tail\">— from touch to Live</span>",
+      'pt-BR': "Controles <span class=\"tail\">— do toque ao Live</span>",
     },
     'lp.controls.003': {
       en: 'Control inventory <span class="tail">— 18 rows</span>',
@@ -1666,13 +1714,21 @@
       en: "Create markers in Live. Tap a marker to position native playback, then use header Play to listen. Zoom and scroll preserve musical scale; both end cards have gutters.",
       'pt-BR': "Crie marcadores no Live. Toque para posicionar o playback nativo e use Play do topo para ouvir. Zoom e rolagem preservam a escala musical; as duas pontas têm margens.",
     },
+    'lp.rec.dest': {
+      en: "ARRANGEMENT / CLIP switch · CLICK",
+      'pt-BR': "Seletor ARRANGEMENT / CLIP · CLICK",
+    },
+    'lp.rec.destFlow': {
+      en: "Switches between timeline recording in Arrangement and scene recording in Session. CLICK top right is shared with TRN and is never locked.",
+      'pt-BR': "Alterna entre gravação na timeline do Arrangement e gravação de cenas na Session. CLICK no topo direito é compartilhado com TRN e nunca é travado.",
+    },
     'lp.rec.range': {
-      en: "Start / end / Loop",
-      'pt-BR': "Início / fim / Loop",
+      en: "START / END markers",
+      'pt-BR': "Marcadores START / END",
     },
     'lp.rec.rangeFlow': {
-      en: "Choose a start marker; optionally enable Loop and choose a later end marker. Live confirms the region before REC. Loop repeats until STOP.",
-      'pt-BR': "Escolha o início; opcionalmente ligue Loop e escolha um fim posterior. O Live confirma a região antes do REC. Loop repete até STOP.",
+      en: "Choose a START marker; optionally choose a later END marker. Live confirms the region before REC. Without END, recording runs FREE until STOP.",
+      'pt-BR': "Escolha um marcador START; opcionalmente escolha um END posterior. O Live confirma a região antes do REC. Sem END, a gravação roda LIVRE até STOP.",
     },
     'lp.rec.preRoll': {
       en: "PRE-ROLL OFF / 1 / 2 / 4",
@@ -1682,23 +1738,37 @@
       en: "OFF starts at the marker. 1/2/4 play earlier bars with click before native Punch In opens at the marker. This browser preference does not set Live’s read-only native count-in.",
       'pt-BR': "OFF começa no marcador. 1/2/4 tocam compassos anteriores com click até Punch In abrir no marcador. Esta preferência do navegador não altera o count-in nativo, somente leitura.",
     },
+    'lp.rec.passesTitle': {
+      en: "PRE-ROLL and PASSES / FREE",
+      'pt-BR': "PRÉ-ROLL e PASSES / LIVRE",
+    },
+    'lp.rec.passesFlow': {
+      en: "PRE-ROLL (OFF/1/2/4) plays earlier bars before Punch In opens. With an END marker, PASSES sets 1–10 or infinite loops. Without END, FREE records continuously until STOP.",
+      'pt-BR': "PRÉ-ROLL (OFF/1/2/4) toca compassos anteriores com click até o Punch In. Com marcador END, PASSES define 1–10 ou voltas infinitas. Sem END, o modo LIVRE grava continuamente até STOP.",
+    },
     'lp.rec.tracks': {
-      en: "Track cards / ARM / SOLO / MUTE",
-      'pt-BR': "Cartões / ARM / SOLO / MUTE",
+      en: "Track cards / volume knob / ARM MULTI",
+      'pt-BR': "Cartões de track / knob de volume / ARM MULTI",
     },
     'lp.rec.tracksFlow': {
       en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP keeps armed inputs intact. Groups can SOLO/MUTE but cannot ARM.",
       'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP mantém as entradas armadas. Grupos têm SOLO/MUTE, sem ARM.",
     },
     'lp.rec.transport': {
-      en: "REC / STOP / CLICK",
-      'pt-BR': "REC / STOP / CLICK",
+      en: "REC / STOP / BACK TO ARR",
+      'pt-BR': "REC / STOP / VOLTAR AO ARR",
     },
-    'lp.rec.clip':{en:'CLIP / Session scene','pt-BR':'CLIP / cena da Session'},
-    'lp.rec.clipFlow':{en:'CLIP replaces the timeline with a paged Session grid. Choose one empty scene across all armed tracks; CFG sets 1/2/4/8/16 bars and native Global/None/1bar/1beat quantization. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending until fresh stop confirmation releases it. BACK TO ARR explicitly returns after all Session clips are idle, without Pause/Play. No existing-clip overdub or take/comp browser.','pt-BR':'CLIP troca a timeline por grade paginada da Session. Escolha cena vazia em todas as faixas armadas; CFG define 1/2/4/8/16 compassos e quantização nativa Global/Nenhuma/1compasso/1beat. REC observa fila/gravação/playback; STOP age só nos alvos ainda próprios, mantém ARM/transporte global e pode ficar pendente até confirmação fresca liberar a tentativa. VOLTAR AO ARR retorna explicitamente após Session inteira ociosa, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.'},
     'lp.rec.transportFlow': {
-      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. Unknown state blocks recording; readouts do not prove audio capture or take preservation.",
-      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. Estado desconhecido bloqueia gravar; leituras não comprovam captura de áudio nem preservação de takes.",
+      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. BACK TO ARR appears when Session overrode Arrangement.",
+      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. VOLTAR AO ARR aparece quando a Session sobrepôs o Arrangement.",
+    },
+    'lp.rec.clip': {
+      en: 'CLIP / Session scene',
+      'pt-BR': 'CLIP / cena da Session',
+    },
+    'lp.rec.clipFlow': {
+      en: "CLIP replaces the timeline with a paged Session grid. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending until fresh stop confirmation releases it. BACK TO ARR explicitly returns after all Session clips are idle, without Pause/Play. No existing-clip overdub or take/comp browser.",
+      'pt-BR': "CLIP substitui a timeline por uma grade de Session paginada. Escolha a cena alvo; LENGTH (1/2/4/8/16 compassos) e QUANTIZE (Global/None/1 bar/1 beat) ajustados no próprio painel. REC observa fila/gravação/playback; STOP afeta apenas alvos que ainda possui, mantém ARM/transporte global e pode ficar pendente até confirmação fresca liberar a tentativa. BACK TO ARR retorna explicitamente após Session inteira ociosa, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.",
     },
     'lp.rec.start': {
       en: "START",
@@ -1711,6 +1781,272 @@
     'lp.rec.tracksLabel': {
       en: "TRACKS",
       'pt-BR': "TRACKS",
+    },
+    'lp.rec.arrangementView': {
+      en: "ARRANGEMENT",
+      'pt-BR': "ARRANGEMENT",
+    },
+    'lp.rec.clipView': {
+      en: "CLIP",
+      'pt-BR': "CLIP",
+    },
+
+    /* TRN Fig. 9 */
+    'lp.map.trnFig': {
+      en: "Fig. 9",
+      'pt-BR': "Fig. 9",
+    },
+    'lp.map.trnTitle': {
+      en: "TRN — Transport Lite overlay",
+      'pt-BR': "TRN — overlay Transport Lite",
+    },
+    'lp.map.trnRow1': {
+      en: "Main transport row",
+      'pt-BR': "Linha principal de transporte",
+    },
+    'lp.map.trnRow1Flow': {
+      en: "PLAY, STOP, PREV, NEXT with large targets. Mirrors Live's native playback state.",
+      'pt-BR': "PLAY, STOP, PREV, NEXT com alvos grandes de toque. Espelha o estado de playback nativo do Live.",
+    },
+    'lp.map.trnRow2': {
+      en: "CLICK, Quantization, REFRESH",
+      'pt-BR': "CLICK, Quantização, REFRESH",
+    },
+    'lp.map.trnRow2Flow': {
+      en: "CLICK shared with REC and never locked; Global Quantization read from Live Set on open and writes clip_trigger_quantization; REFRESH resyncs transport state.",
+      'pt-BR': "CLICK compartilhado com REC e nunca travado; Quantização global lida do Set do Live ao abrir e escreve clip_trigger_quantization; REFRESH ressincroniza o estado de transporte.",
+    },
+    'lp.map.trnRow3': {
+      en: "Searchable locators",
+      'pt-BR': "Localizadores com busca",
+    },
+    'lp.map.trnRow3Flow': {
+      en: "List of Arrangement cue points with search filter. Tapping any locator executes transportJumpToLocator with native playback.",
+      'pt-BR': "Lista de marcadores do Arrangement com filtro de busca. Tocar em qualquer localizador executa transportJumpToLocator com playback nativo.",
+    },
+    'lp.map.trnRow4': {
+      en: "Status and sync badge",
+      'pt-BR': "Badge de status e sincronização",
+    },
+    'lp.map.trnRow4Flow': {
+      en: "Badge shows SYNCED, SDK or FREE timing. Notice line appears only when AbletonOSC is missing, a change is unconfirmed, or in viewer mode.",
+      'pt-BR': "Badge exibe timing SINCRONIZADO, SDK ou FREE. Linha de aviso aparece apenas sem AbletonOSC, mudança não confirmada ou em modo visualizador.",
+    },
+
+    /* AUT Fig. 10 */
+    'lp.map.autFig': {
+      en: "Fig. 10",
+      'pt-BR': "Fig. 10",
+    },
+    'lp.map.autPageTitle': {
+      en: "AUT — XY gesture loop settings and capture",
+      'pt-BR': "AUT — ajustes e captura de loops de gesto XY",
+    },
+    'lp.map.autRow1': {
+      en: "Header mode activation",
+      'pt-BR': "Ativação no header",
+    },
+    'lp.map.autRow1Flow': {
+      en: "AUT is a contextual header mode available only on PERF. Tapping AUT arms gesture capture on either XY pad.",
+      'pt-BR': "AUT é um modo contextual do header disponível apenas no PERF. Tocar em AUT arma a captura de gesto em qualquer um dos pads XY.",
+    },
+    'lp.map.autRow2': {
+      en: "Gesture capture & loop",
+      'pt-BR': "Captura de gesto e loop",
+    },
+    'lp.map.autRow2Flow': {
+      en: "Tapping an XY initiates a 3–2–1 red pulse countdown; red border indicates active recording; captured movement loops immediately upon completion.",
+      'pt-BR': "Tocar no XY inicia uma contagem regressiva 3–2–1 com pulsos vermelhos; borda vermelha indica gravação ativa; o movimento capturado entra em loop imediatamente ao terminar.",
+    },
+    'lp.map.autRow3': {
+      en: "Hold for settings",
+      'pt-BR': "Segurar para ajustes",
+    },
+    'lp.map.autRow3Flow': {
+      en: "Holding an XY pad for 600 ms without moving (or right-clicking on desktop) opens its settings overlay without recording.",
+      'pt-BR': "Segurar o pad XY por 600 ms sem mover (ou clicar com o botão direito no desktop) abre os ajustes sem gravar.",
+    },
+    'lp.map.autRow4': {
+      en: "Duration and timing",
+      'pt-BR': "Duração e timing",
+    },
+    'lp.map.autRow4Flow': {
+      en: "SYNC offers 1–5 bars (default 2 bars); FREE offers 1–30 seconds in 1 s steps (default 10 s). Changing length or timing mode discards that XY's recording.",
+      'pt-BR': "SYNC oferece 1–5 compassos (padrão 2 compassos); FREE oferece 1–30 segundos em passos de 1 s (padrão 10 s). Mudar duração ou modo de timing descarta a gravação daquele XY.",
+    },
+    'lp.map.autRow5': {
+      en: "Playback, takeover & safety",
+      'pt-BR': "Reprodução, takeover e segurança",
+    },
+    'lp.map.autRow5Flow': {
+      en: "Record/replace, Play, Stop, and Clear (with confirmation). Manual touch overrides loop until release; white target square indicates takeover point. Does not write Live automation.",
+      'pt-BR': "Record/replace, Play, Stop e Clear (com confirmação). Toque manual sobrepõe o loop até soltar; quadradinho branco indica o alvo de takeover. Não escreve automação no Live.",
+    },
+
+    /* CFG Fig. 11 */
+    'lp.map.cfgFig': {
+      en: "Fig. 11",
+      'pt-BR': "Fig. 11",
+    },
+    'lp.map.cfgPageTitle': {
+      en: "CFG — per-control configuration overlay",
+      'pt-BR': "CFG — overlay de configuração por controle",
+    },
+    'lp.map.cfgRow1': {
+      en: "Configuration mode (CFG)",
+      'pt-BR': "Modo de configuração (CFG)",
+    },
+    'lp.map.cfgRow1Flow': {
+      en: "Tap CFG then tap any control (desktop: right-click) to open its settings. Holding CFG lists all active overrides with Clear all. PERF and MIX only.",
+      'pt-BR': "Toque em CFG e depois no controle (desktop: botão direito) para abrir ajustes. Segurar CFG lista todos os overrides ativos com Clear all. Apenas no PERF e MIX.",
+    },
+    'lp.map.cfgRow2': {
+      en: "Pad mode overrides",
+      'pt-BR': "Overrides de modo dos pads",
+    },
+    'lp.map.cfgRow2Flow': {
+      en: "Overrides global A–D mode for a single pad: A travel (40–400 px, Linear/Fine/Fast); B hold/zero on touch; C latch; D timing (40–10000 ms or musical beat, attack, peak).",
+      'pt-BR': "Sobrescreve o modo global A–D em um pad individual: curso no A (40–400 px, Linear/Fine/Fast); manter/zerar no toque no B; trava no C; timing no D (40–10000 ms ou musical, ataque, pico).",
+    },
+    'lp.map.cfgRow3': {
+      en: "Toggle & LFO parameters",
+      'pt-BR': "Parâmetros de toggles e LFO",
+    },
+    'lp.map.cfgRow3Flow': {
+      en: "Select waveform (Sine, Triangle, Ramp Up, Ramp Down, Square), timing mode and subdivision. Advanced settings expose phase and swing/ratchet for Square.",
+      'pt-BR': "Escolha a forma de onda (Sine, Triangle, Ramp Up, Ramp Down, Square), modo de timing e subdivisão. Ajustes avançados expõem fase e swing/ratchet para Square.",
+    },
+    'lp.map.cfgRow4': {
+      en: "XY Static & Physics",
+      'pt-BR': "XY Static e Physics",
+    },
+    'lp.map.cfgRow4Flow': {
+      en: "Toggle between Static and Physics per XY pad. Physics settings: friction (0.002–0.05), bounce (0–0.95), speed (0.1–4×). Reset removes override.",
+      'pt-BR': "Alterne entre Static e Physics para cada pad XY. Parâmetros de Physics: atrito (0.002–0.05), quique (0–0.95), velocidade (0.1–4×). Reset remove o override.",
+    },
+    'lp.map.cfgRow5': {
+      en: "Hold to edit points",
+      'pt-BR': "Segurar para editar pontos",
+    },
+    'lp.map.cfgRow5Flow': {
+      en: "MAP response curve points and Burst envelope points edit only after holding for ~0.6 s: indicator ring appears, drag to move, release to set. Quick taps and scrolls never shift points. Double tap resets.",
+      'pt-BR': "Pontos da curva de resposta do MAP e do envelope Burst só editam após segurar por ~0.6 s: anel indicador aparece, arraste para mover, solte para fixar. Toques rápidos e rolagem nunca movem pontos. Duplo toque reseta.",
+    },
+
+    /* Vision card "Teach a pose" */
+    'lp.vision.teachTitle': {
+      en: "TEACH A POSE — STEP SEQUENCE",
+      'pt-BR': "ENSINAR UMA POSE — SEQUÊNCIA DE PASSOS",
+    },
+    'lp.vision.step1Title': {
+      en: "1 · ADD POSE",
+      'pt-BR': "1 · ADD POSE",
+    },
+    'lp.vision.step1Desc': {
+      en: "+ ADD POSE creates custom gesture slots up to G15 (starts with G1–G3). Each pose is specific to the active hand.",
+      'pt-BR': "+ ADD POSE cria slots de gestos customizados até G15 (começa com G1–G3). Cada pose é específica para a mão ativa.",
+    },
+    'lp.vision.step2Title': {
+      en: "2 · CAP EXAMPLES",
+      'pt-BR': "2 · CAPTURAR EXEMPLOS",
+    },
+    'lp.vision.step2Desc': {
+      en: "Press CAP 3–6 times with hand still, slightly varying angle and finger curvature. TEST unlocks at 3 takes.",
+      'pt-BR': "Pressione CAP 3–6 vezes com a mão parada, variando levemente o ângulo e curvatura dos dedos. TEST desbloqueia a partir do 3º take.",
+    },
+    'lp.vision.step3Title': {
+      en: "3 · SILENT TEST",
+      'pt-BR': "3 · TESTE SILENCIOSO",
+    },
+    'lp.vision.step3Desc': {
+      en: "TEST performs silent live matching, showing \"nearest take N · X% of radius\" without firing live MIDI or parameter outputs.",
+      'pt-BR': "TEST faz checagem silenciosa ao vivo, exibindo \"nearest take N · X% of radius\" sem disparar saídas de MIDI ou parâmetros.",
+    },
+    'lp.vision.step4Title': {
+      en: "4 · EDIT & REVIEW",
+      'pt-BR': "4 · EDITAR E REVISAR",
+    },
+    'lp.vision.step4Desc': {
+      en: "DEL LAST deletes the last take; CLR resets all takes to retrain; X removes the card. RETAKE/KEEP warnings are advisory and do not alter recognition.",
+      'pt-BR': "DEL LAST remove o último take; CLR limpa todos os takes para retreinar; X remove o cartão. Avisos RETAKE/KEEP são consultivos e não mudam o reconhecimento.",
+    },
+    'lp.vision.detectorsTitle': {
+      en: "5 · BUILT-IN DETECTORS & PRESETS",
+      'pt-BR': "5 · DETECTORES NATIVOS E PRESETS",
+    },
+    'lp.vision.detectorsDesc': {
+      en: "Built-in detectors Open, Fist, Pinch, and Victory are opt-in and require no training; Victory includes wrist rotation. CONF sets Low/Medium/High threshold; presets include Precision, Balanced (default), Performance, and Flexible.",
+      'pt-BR': "Detectores integrados Open, Fist, Pinch e Victory são opcionais e não requerem treino; Victory inclui rotação do punho. CONF define limiar Low/Medium/High; presets incluem Precision, Balanced (padrão), Performance e Flexible.",
+    },
+    'lp.vision.lossTitle': {
+      en: "6 · SAFE LOSS & MAPPING",
+      'pt-BR': "6 · SAFE LOSS E MAPEAMENTO",
+    },
+    'lp.vision.lossDesc': {
+      en: "Tracking loss settings (VID → ⚙): Hold indefinitely, Hold with timeout (0.1–30 s, default 10 s), or Release on loss. Map poses in MAP as sensor.vision.gesture.N (momentary 0/1 gate, re-arms on hand release).",
+      'pt-BR': "Ajustes de perda de tracking (VID → ⚙): Hold indefinitely, Hold with timeout (0.1–30 s, padrão 10 s) ou Release on loss. Mapeie poses no MAP como sensor.vision.gesture.N (gate momentâneo 0/1, rearma ao soltar a mão).",
+    },
+    'lp.vision.builtinsNote': {
+      en: "Built-in detectors: Open / Fist / Pinch / Victory",
+      'pt-BR': "Detectores nativos: Open / Fist / Pinch / Victory",
+    },
+    'lp.vision.clutchNote': {
+      en: "Pinch Clutch engages relative control on sensor.vision.pinch_x · _y · _z",
+      'pt-BR': "Pinch Clutch ativa controle relativo em sensor.vision.pinch_x · _y · _z",
+    },
+
+    /* Mapping & MIDI 6-step sequence */
+    'lp.mapdesk.stepSeqTitle': {
+      en: "SIX-STEP MAPPING SEQUENCE — FROM TOUCH TO LIVE",
+      'pt-BR': "SEQUÊNCIA DE MAPEAMENTO EM SEIS PASSOS — DO TOQUE AO LIVE",
+    },
+    'lp.mapdesk.step1Title': {
+      en: "1 · PICK TARGET",
+      'pt-BR': "1 · ESCOLHER ALVO",
+    },
+    'lp.mapdesk.step1Desc': {
+      en: "Open MAP, tap any control, then choose target via Track → Device → Parameter picker (+ Song/Main/Master & Returns; search filter; \"Selected in Live\").",
+      'pt-BR': "Abra o MAP, toque no controle e selecione o alvo no seletor Track → Device → Parameter (+ Song/Main/Master e Returns; filtro de busca; \"Selected in Live\").",
+    },
+    'lp.mapdesk.step2Title': {
+      en: "2 · NORMALIZE SOURCE",
+      'pt-BR': "2 · NORMALIZAR FONTE",
+    },
+    'lp.mapdesk.step2Desc': {
+      en: "Set input range In min / In max to map to 0..1. CLAMP bounds values outside the range to prevent jumps.",
+      'pt-BR': "Ajuste a faixa de entrada In min / In max para mapear para 0..1. CLAMP limita valores fora da faixa para evitar saltos.",
+    },
+    'lp.mapdesk.step3Title': {
+      en: "3 · RESPONSE CURVE",
+      'pt-BR': "3 · CURVA DE RESPOSTA",
+    },
+    'lp.mapdesk.step3Desc': {
+      en: "Choose Linear, Exponential, Logarithmic, or S-Curve shape, with Drive, Comp, and Smooth. Hold points for ~0.6 s to edit; double tap resets.",
+      'pt-BR': "Escolha forma Linear, Exponencial, Logarítmica ou Curva S, com Drive, Comp e Smooth. Segure pontos por ~0.6 s para editar; duplo toque reseta.",
+    },
+    'lp.mapdesk.step4Title': {
+      en: "4 · TARGET RANGE",
+      'pt-BR': "4 · FAIXA DO ALVO",
+    },
+    'lp.mapdesk.step4Desc': {
+      en: "Set target Out min and Out max in native Live units. Scaling modes: Auto, Linear, or Geometric for frequency/pitch controls.",
+      'pt-BR': "Defina Out min e Out max do alvo em unidades nativas do Live. Modos de escala: Auto, Linear ou Geometric para frequência/pitch.",
+    },
+    'lp.mapdesk.step5Title': {
+      en: "5 · POLICIES",
+      'pt-BR': "5 · POLÍTICAS",
+    },
+    'lp.mapdesk.step5Desc': {
+      en: "Takeover / pickup policies prevent jumps on reconnection; Safe loss defines Hold vs Release behavior on signal drop; idle timeout restores baseline.",
+      'pt-BR': "Políticas de takeover / pickup previnem saltos na reconexão; Safe loss define comportamento de Hold vs Release na perda de sinal; timeout ocioso restaura referência.",
+    },
+    'lp.mapdesk.step6Title': {
+      en: "6 · BIND VS TRIGGER NOTE",
+      'pt-BR': "6 · BIND VS TRIGGER NOTE",
+    },
+    'lp.mapdesk.step6Desc': {
+      en: "BIND writes Live parameters via the Extensions SDK. TRIGGER NOTE sends MIDI notes through RC-Midi-Receiver.amxd manually placed on the MIDI track (pitch/octave/velocity, timing Now/Next Beat/Bar, gate Short/While Held; keyboard MIDI passes through directly).",
+      'pt-BR': "BIND escreve parâmetros do Live via Extensions SDK. TRIGGER NOTE envia notas MIDI pelo RC-Midi-Receiver.amxd inserido manualmente na track MIDI (pitch/oitava/velocity, timing Now/Next Beat/Bar, gate Short/While Held; MIDI do teclado passa direto via thru).",
     },
   };
 

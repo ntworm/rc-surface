@@ -24,7 +24,7 @@ test('REC plan keeps its active REC and SYNC labels readable in EN/PT', async ({
   for (const locale of ['en', 'pt-BR']) {
     await page.goto('/landing/index.html?lang=' + locale);
     await page.locator('label[for="surface-select-rec"]').click();
-    const header = page.locator('#surface-map-rec [data-plan-header="seven-pages"]');
+    const header = page.locator('#surface-map-rec [data-plan-header="seven-pages"]').first();
     for (const [label, fill] of [['REC', 'rgb(255, 161, 51)'], ['SYNC', 'rgb(200, 190, 80)']]) {
       const text = header.locator('text').filter({ hasText: new RegExp('^' + label + '$') });
       await expect(text).toBeVisible();
@@ -92,7 +92,7 @@ test('the Portuguese landing URL opens in Portuguese for a browser that last cho
   expect(errors).toEqual([]);
 });
 
-test('eight plans including REC and PERF AUT plus six control families remain reachable in EN/PT', async ({ page }, testInfo) => {
+test('eleven plans including REC and overlays plus six control families remain reachable in EN/PT', async ({ page }, testInfo) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   for (const locale of ['en', 'pt-BR']) {
@@ -100,21 +100,24 @@ test('eight plans including REC and PERF AUT plus six control families remain re
       await page.setViewportSize({ width, height: 960 });
       await page.goto('/landing/index.html?lang=' + locale);
       await page.evaluate(() => document.fonts.ready);
-      for (const tab of ['perf', 'mix', 'snp', 'sns', 'aud', 'vid', 'rec', 'map']) {
+      for (const tab of ['perf', 'mix', 'snp', 'sns', 'aud', 'vid', 'rec', 'map', 'trn', 'aut', 'cfg']) {
         await page.locator(`label[for="surface-select-${tab}"]`).click();
         const sheet = page.locator('#surface-map-' + tab);
         await expect(sheet).toBeVisible();
         await expect(page.locator('.surface-tab-input:checked')).toHaveValue(tab);
         await expect(sheet.locator('svg.surface-diagram').first()).toBeVisible();
-        await expect(sheet.locator('[data-plan-header="seven-pages"] [data-page-tab]')).toHaveCount(7);
-        await expect(sheet.locator('[data-header-mode="aut"]')).toHaveText('AUT');
+        await expect(sheet.locator('[data-plan-header="seven-pages"]').first().locator('[data-page-tab]')).toHaveCount(7);
+        if (['perf', 'aut'].includes(tab)) {
+          await expect(sheet.locator('[data-header-mode="aut"]')).toHaveText('AUT');
+        }
         if (tab === 'rec') {
           await expect(sheet.locator('[data-rec-timeline="musical-scale"]')).toBeVisible();
-          await expect(sheet.locator('[data-rec-track-action="arm"]')).toHaveCount(4);
+          await expect(sheet.locator('.rec-arrangement-fig [data-rec-track-action="arm"]')).toHaveCount(4);
+          await expect(sheet.locator('.rec-clip-fig [data-rec-track-action="arm"]')).toHaveCount(4);
           await expect(sheet.locator('td[data-i18n="lp.rec.preRollFlow"]')).toContainText(locale === 'en' ? 'read-only' : 'somente leitura');
         }
         const drawingHeight = await sheet.locator('svg.surface-diagram').first().evaluate((svg) => svg.getBoundingClientRect().height);
-        const frameHeight = await sheet.locator('.figwrap').evaluate((frame) => frame.getBoundingClientRect().height);
+        const frameHeight = await sheet.locator('.figwrap').first().evaluate((frame) => frame.getBoundingClientRect().height);
         expect(frameHeight - drawingHeight, 'inactive tabs must not stretch this card').toBeLessThan(40);
         if (['sns', 'vid', 'rec'].includes(tab)) {
           const overflow = await sheet.locator('svg text[data-i18n]').evaluateAll((texts) => texts
@@ -124,7 +127,7 @@ test('eight plans including REC and PERF AUT plus six control families remain re
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
         if (width === 1440) {
-          await sheet.locator('.figwrap').screenshot({ path: testInfo.outputPath('landing-' + locale + '-' + tab + '.png') });
+          await sheet.locator('.figwrap').first().screenshot({ path: testInfo.outputPath('landing-' + locale + '-' + tab + '.png') });
         }
       }
       for (const family of ['performance', 'continuous', 'snapshots', 'sensors', 'vision', 'mapping']) {

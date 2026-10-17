@@ -10,10 +10,10 @@ import { pathToFileURL } from 'node:url';
 
 const root=path.resolve(import.meta.dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const context={};vm.runInNewContext(read('docs/site-i18n.js'),context);const catalog=context.RcSurfaceSiteCatalog;
-const pages=['perf','mix','snp','sns','aud','vid','rec'],plans=[...pages,'map'];
+const pages=['perf','mix','snp','sns','aud','vid','rec'],plans=[...pages,'map','trn','aut','cfg'];
 const figure=(html,id)=>html.match(new RegExp('<figure class="surface-sheet" id="surface-map-'+id+'"[\\s\\S]*?</figure>'))?.[0];
 
-test('both landing editions expose seven real pages plus MAP, with matching radio/reveal/header contracts',()=>{
+test('both landing editions expose seven real pages plus overlays, with matching radio/reveal/header contracts',()=>{
   const phone=read('static/phone-v3/index.html');
   assert.deepEqual([...phone.matchAll(/<button class="tab[^"]*"[^>]*>([^<]+)<\/button>/g)].map(match=>match[1]),pages.map(value=>value.toUpperCase()));
   for(const locale of ['en','pt-BR']) {
@@ -24,26 +24,64 @@ test('both landing editions expose seven real pages plus MAP, with matching radi
       assert.match(html,new RegExp('id="surface-label-'+id+'" for="surface-select-'+id+'"'));
       assert.ok(html.includes('#surface-select-'+id+':checked ~ .surface-deck [data-surface-plan="'+id+'"]'));
       const sheet=figure(html,id);assert.ok(sheet,id);
-      assert.deepEqual([...sheet.matchAll(/data-page-tab="([^"]+)"/g)].map(match=>match[1]),pages);
-      assert.match(sheet,/data-header-mode="aut">AUT<\/text>/);
+      const tabs=[...sheet.matchAll(/data-page-tab="([^"]+)"/g)].map(match=>match[1]);
+      assert.deepEqual(tabs.slice(0, 7),pages);
+      if (id === 'rec') assert.equal(tabs.length, 14); else assert.equal(tabs.length, 7);
+      if (['perf', 'aut'].includes(id)) {
+        assert.match(sheet,/data-header-mode="aut">AUT<\/text>/);
+      }
     }
-    assert.doesNotMatch(html,/id="surface-select-aut"/,'AUT is a header mode, never a product page');
-    assert.match(figure(html,'rec'),/>Fig\. 7<\/span>/);assert.match(figure(html,'map'),/>Fig\. 8<\/span>/);
+    assert.match(html,/class="surface-tab-map"[^>]*id="surface-label-aut"/,'AUT is a header mode tab');
+    assert.match(figure(html,'rec'),/>Fig\. 7<\/span>/);
+    assert.match(figure(html,'map'),/>Fig\. 8<\/span>/);
+    assert.match(figure(html,'trn'),/>Fig\. 9<\/span>/);
+    assert.match(figure(html,'aut'),/>Fig\. 10<\/span>/);
+    assert.match(figure(html,'cfg'),/>Fig\. 11<\/span>/);
+  }
+});
+
+test('header controls matrix across all plan figures matches the canonical header matrix',()=>{
+  const expected={
+    perf: {aut: true, cfg: true, map: true, cal: false},
+    mix:  {aut: false, cfg: true, map: true, cal: false},
+    snp:  {aut: false, cfg: false, map: true, cal: false},
+    sns:  {aut: false, cfg: false, map: true, cal: true},
+    aud:  {aut: false, cfg: false, map: true, cal: true},
+    vid:  {aut: false, cfg: false, map: true, cal: true},
+    rec:  {aut: false, cfg: false, map: false, cal: false},
+  };
+  for(const file of ['docs/index.html','docs/pt-br.html']) {
+    const html=read(file);
+    for(const [id, exp] of Object.entries(expected)) {
+      const sheet=figure(html,id);
+      const header=sheet.match(/<g data-plan-header="seven-pages"[^>]*>([\s\S]*?)<\/g>\s*<line x1="40" y1="72"/)?.[1];
+      assert.ok(header, 'header group in ' + id);
+      assert.equal(header.includes('data-header-mode="aut"') || header.includes('>AUT<'), exp.aut, id + ' AUT visibility');
+      assert.equal(header.includes('>CFG<'), exp.cfg, id + ' CFG visibility');
+      assert.equal(header.includes('>MAP<'), exp.map, id + ' MAP visibility');
+      assert.equal(header.includes('CALIBRATE') || header.includes('CALIBRAR') || header.includes('lp.fig.001'), exp.cal, id + ' CALIBRATE visibility');
+    }
   }
 });
 
 test('REC plan draws a scaled timeline with end gutters, complete controls and track actions above its workflow table',()=>{
   for(const file of ['docs/index.html','docs/pt-br.html']) {
-    const rec=figure(read(file),'rec'),svg=rec.slice(rec.indexOf('<svg'),rec.indexOf('</svg>'));
-    for(const label of ['REC','STOP','CLICK','LOOP','PRE-ROLL','OFF','EXCLUSIVE'])assert.ok(svg.includes(label),label);
-    assert.match(svg,/ZOOM/);assert.match(svg,/data-end-gutters="both"/);
-    assert.deepEqual([...svg.matchAll(/<text x="\d+" y="279"[^>]*>([^<]+)<\/text>/g)].map(match=>match[1]),['OFF','1','2','4']);
-    const cards=[...svg.matchAll(/<rect x="(\d+)" y="148" width="64"/g)].map(match=>Number(match[1]));
+    const rec=figure(read(file),'rec');
+    assert.match(rec,/data-rec-destination="arrangement-clip"/);
+    assert.match(rec,/data-rec-timeline="musical-scale"/);
+    assert.match(rec,/data-end-gutters="both"/);
+    assert.match(rec,/ZOOM/);
+    for(const label of ['REC','STOP','CLICK','PRE-ROLL','OFF','EXCLUSIVE','BACK TO ARR','PASSES','FREE'])assert.ok(rec.includes(label),label);
+    for(const label of ['LENGTH','QUANTIZE'])assert.ok(rec.includes(label),label);
+    const preRoll=[...rec.matchAll(/<text x="(\d+)" y="174"[^>]*>([^<]+)<\/text>/g)].filter(m=>Number(m[1])>100).map(m=>m[2]);
+    assert.deepEqual(preRoll.slice(0, 4),['OFF','1','2','4']);
+    const cards=[...rec.matchAll(/<rect x="(\d+)" y="148" width="64"/g)].map(match=>Number(match[1]));
     assert.deepEqual(cards,[416,704,992]);assert.equal(cards[1]-cards[0],cards[2]-cards[1]);
     assert.ok(cards[0]>400&&cards.at(-1)+64<1070,'both marker cards stay within the timeline frame');
-    for(const [bar,x] of [['9.1',425],['13.1',713],['17.1',1001]])assert.match(svg,new RegExp('x="'+x+'" y="164"[^>]*>'+bar.replace('.','\\.')+'<'));
-    for(const action of ['arm','solo','mute'])assert.equal([...svg.matchAll(new RegExp('data-rec-track-action="'+action+'"','g'))].length,4);
-    for(const key of ['timeline','range','preRoll','tracks','transport'])assert.match(rec,new RegExp('data-i18n="lp.rec.'+key+'Flow"'));
+    for(const [bar,x] of [['9.1',425],['13.1',713],['17.1',1001]])assert.match(rec,new RegExp('x="'+x+'" y="164"[^>]*>'+bar.replace('.','\\.')+'<'));
+    for(const action of ['arm','solo','mute'])assert.equal([...rec.matchAll(new RegExp('data-rec-track-action="'+action+'"','g'))].length,8);
+    for(const n of [1,2,3,4])assert.match(rec,new RegExp('data-rec-volume-knob="'+n+'"'));
+    for(const key of ['timeline','range','preRoll','tracks','transport','clip'])assert.match(rec,new RegExp('data-i18n="lp.rec.'+key+'Flow"'));
   }
   assert.match(catalog['lp.rec.preRollFlow'].en,/read-only native count-in/);
   assert.match(catalog['lp.rec.transportFlow'].en,/only still-owned state/);

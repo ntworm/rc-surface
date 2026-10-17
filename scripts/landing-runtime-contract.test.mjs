@@ -211,9 +211,8 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   // assert both homes so a future edit cannot quietly lose them.
   assert.match(vision, /G1(?:&#8211;|–)G15 and the four built-in detectors/);
   assert.match(vision, /PALM size and FACE palm orientation map continuously/);
-  const inventory = figure('controls', 'scenarios');
-  assert.match(inventory, /Open \/ Fist \/ Pinch \/ Victory/);
-  assert.match(inventory, /Pinch Clutch[\s\S]{0,120}pinch_x/);
+  assert.match(vision, /Open \/ Fist \/ Pinch \/ Victory/);
+  assert.match(vision, /Pinch Clutch[\s\S]{0,120}pinch_x/);
 
   const mapping = controlFamily('mapping');
   assert.match(mapping, /data-control-illustration="mapping"/);
@@ -637,7 +636,7 @@ test('the four 1.0 features stay documented where the long answers live', () => 
   assert.doesNotMatch(landing, /class="card highlights"/, 'the 1.0 highlights card was cut on purpose');
   assert.doesNotMatch(landing, /data-i18n(-html)?="lp\.highlights\./, 'no highlights handle may linger');
   // CFG still has to be reachable from the sheet, as a control rather than as news.
-  assert.match(landing, /data-i18n(-html)?="lp\.controls\.148"/, 'CFG must stay in the header cards');
+  assert.match(landing, /data-i18n(-html)?="lp\.controls\.148"/, 'CFG must stay in Fig. 11 CFG');
   // The USER-GUIDE must have a CFG chapter in both languages
   const en = fs.readFileSync(path.join(import.meta.dirname, '..', 'docs', 'USER-GUIDE.md'), 'utf8');
   const pt = fs.readFileSync(path.join(import.meta.dirname, '..', 'docs', 'USER-GUIDE.pt-BR.md'), 'utf8');
