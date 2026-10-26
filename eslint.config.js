@@ -129,4 +129,26 @@ export default [
       "no-unused-vars": "off",
     },
   },
+  {
+    // Structure ratchet: complexity 10, 500 lines per file and 60 lines per
+    // function, counting every line. Today's debt lives in
+    // eslint-suppressions.json, which only shrinks: after an improvement run
+    // `npx eslint src static tests docs scripts build.ts --prune-suppressions`;
+    // never suppress again.
+    files: [
+      "src/**/*.ts",
+      "static/**/*.js",
+      "static/**/*.mjs",
+      "docs/**/*.js",
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "tests/**/*.mjs",
+      "build.ts",
+    ],
+    rules: {
+      complexity: ["error", { max: 10 }],
+      "max-lines": ["error", { max: 500, skipBlankLines: false, skipComments: false }],
+      "max-lines-per-function": ["error", { max: 60, skipBlankLines: false, skipComments: false }],
+    },
+  },
 ];

@@ -1,0 +1,992 @@
+{
+  "docs/i18n.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "docs/site-i18n.js": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "scripts/audio-descriptors-device.test.mjs": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "scripts/bench-live-write-rate.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/bench-ws-compression.mjs": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "scripts/build-site.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "scripts/check-release-gates.mjs": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "scripts/check-vendor-sdk.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/landing-runtime-contract.test.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "scripts/measure-native-audio-latency.mjs": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "scripts/midi-receiver-arming.test.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/migrate-data.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "scripts/native-audio-capability-probe.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/native-audio-reference.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/package-tester-kit.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "scripts/pose-benchmark.mjs": {
+    "complexity": {
+      "count": 5
+    }
+  },
+  "scripts/stress/admin-observer.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/stress/fake-phone-headless.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/stress/fake-phone-multi.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/sync-tester-kit.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/verify-release-package.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "scripts/verify-release.mjs": {
+    "complexity": {
+      "count": 4
+    }
+  },
+  "src/extension.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/live/arrangement-capture.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/live/clip-continuation.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/live/clip-launch.ts": {
+    "complexity": {
+      "count": 12
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "src/live/continuous-target-actuator.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/live/curves.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/live/host-modulators.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/live/mappings.ts": {
+    "complexity": {
+      "count": 20
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 11
+    }
+  },
+  "src/live/osc-transport.ts": {
+    "complexity": {
+      "count": 5
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/live/project-config.ts": {
+    "complexity": {
+      "count": 7
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/live/recording-coordinator.ts": {
+    "complexity": {
+      "count": 19
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "src/live/recording-transport.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/live/safe-input.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/live/session-recording.ts": {
+    "complexity": {
+      "count": 9
+    }
+  },
+  "src/live/state.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/live/target-scale.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/live/transport-clock.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/live/trigger-note-clock.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/live/trigger-note-scheduler.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/live/vision-loss.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/server/cert.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/server/http.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/server/session-auth.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/server/state.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/server/ws-bounds.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/server/ws.ts": {
+    "complexity": {
+      "count": 9
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    }
+  },
+  "src/ui/panel.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/admin/app.js": {
+    "complexity": {
+      "count": 5
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/admin/mappings-core.js": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "static/panel/app.js": {
+    "complexity": {
+      "count": 7
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 6
+    }
+  },
+  "static/panel/connect-ui.test.mjs": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/panel/mappings.js": {
+    "complexity": {
+      "count": 12
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 13
+    }
+  },
+  "static/panel/mappings.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/panel/qrcode.js": {
+    "complexity": {
+      "count": 6
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/app.js": {
+    "complexity": {
+      "count": 37
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 14
+    }
+  },
+  "static/phone-v3/audio-descriptor-worklet.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/audio-descriptors.js": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/audio-detector-timing.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/audio-processor.js": {
+    "complexity": {
+      "count": 6
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "static/phone-v3/audio-processor.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/audio-spectral-descriptors.js": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/audio-spectral-descriptors.test.mjs": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/audio-timeline.js": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/audio-workspace.js": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/automation-config-access.test.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/automation-mode.js": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/battery-diagnostics.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/calibration.js": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/cfg-slider-theme.test.mjs": {
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "static/phone-v3/config-mode.js": {
+    "complexity": {
+      "count": 6
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/config-mode.test.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/control-config.js": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/control-stream.js": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/controls.js": {
+    "complexity": {
+      "count": 15
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 10
+    }
+  },
+  "static/phone-v3/curve-handles-and-faders.test.mjs": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/eight-modulators.test.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/fader-range.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/gesture-hold.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/gestures-touch.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/hold-to-edit.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/lfo-shape-ceiling-ux.test.mjs": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/mapping-mode.js": {
+    "complexity": {
+      "count": 26
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 10
+    }
+  },
+  "static/phone-v3/mapping-mode.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/mobile-ui.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/mode-engine.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/modulator-emit-coalescing.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/modules/calibration.js": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "static/phone-v3/modules/recording.js": {
+    "complexity": {
+      "count": 17
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 4
+    }
+  },
+  "static/phone-v3/modules/session.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/modules/settings.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/modules/snapshots.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/modules/transport.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/performance-util.test.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/recording.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/remote-control-values.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/safe-input-layer.js": {
+    "complexity": {
+      "count": 9
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/sensor-capabilities.js": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/sensor-orientation.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/snapshot-vector-raf.test.mjs": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/snapshots.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/stage-mode-controller.js": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/static-pose-gesture.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/stutter-mode.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/trigger-note-editor.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "static/phone-v3/vision-control-state.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/vision-gesture-drift-probe.mjs": {
+    "complexity": {
+      "count": 5
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "static/phone-v3/vision-hands-worker.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/vision-hands-worker.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/vision-processor.js": {
+    "complexity": {
+      "count": 14
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    }
+  },
+  "static/phone-v3/vision-processor.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    }
+  },
+  "static/phone-v3/wake-lock.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/xy-automation-controller.js": {
+    "complexity": {
+      "count": 4
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/xy-automation.js": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/xy-automation.test.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/phone-v3/xy-engine.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/shared/i18n-catalog.js": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "static/shared/i18n.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "static/shared/native-audio-contract.js": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "tests/clip-launch.test.mjs": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "tests/lfo-high-rate-jitter.test.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "tests/live-host-modulators.test.mjs": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "tests/live-mappings-high-rate.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/live-mappings-idle-value.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/live-midi-trigger.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/recording-coordinator.test.mjs": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/server-ws-security.test.mjs": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "tests/session-recording.test.mjs": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "tests/stage-mode-fullscreen.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/trigger-note-scheduler.test.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/audio-spectral-workspace.spec.mjs": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "tests/ui/header-context.spec.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tests/ui/landing-release.spec.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tests/ui/launch-clip-mapping.spec.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tests/ui/mobile-review.spec.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/rec-mobile-landscape.spec.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/rec-rename.spec.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tests/ui/rec-session.spec.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/rec-zoom.spec.mjs": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/surface.spec.mjs": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tests/ui/test-server.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tests/ui/trigger-note-mapping.spec.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "tests/ui/trn-settings.spec.mjs": {
+    "complexity": {
+      "count": 1
+    }
+  }
+}
