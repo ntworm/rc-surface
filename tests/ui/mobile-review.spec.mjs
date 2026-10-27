@@ -54,8 +54,10 @@ for(const locale of ['en','pt-BR'])test(`Reviewed mobile candidate preserves nat
   }
   tracks[0].volume=0.17;await expect(volume).toHaveAttribute('aria-valuenow','0.17');
   const box=await volume.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
-  await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y-30,{steps:12});await page.mouse.up();
-  await expect.poll(()=>tracks[0].volume).toBeGreaterThan(0.4);
+  await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y-30,{steps:12});
+  // Wait for the last pointer sample to reach the host: an earlier write can pass 0.4 while it is still queued.
+  const dragged=Number(await volume.getAttribute('aria-valuenow'));await page.mouse.up();
+  expect(dragged).toBeGreaterThan(0.4);await expect.poll(()=>tracks[0].volume).toBe(dragged);
   expect(writes.every(message=>message.cmd==='recordingTrackVolume'&&message.args.track.id==='track-a')).toBe(true);
   tracks[0].volume=0.24;await expect(volume).toHaveAttribute('aria-valuetext','24%');
   await page.locator('#rec-start-marker').selectOption('1');await page.locator('#rec-end-marker').selectOption('2');
