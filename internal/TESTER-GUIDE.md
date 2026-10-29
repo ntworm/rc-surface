@@ -1,9 +1,13 @@
 # Tester Guide
 
-Current local preparation: RC Surface 2.0.0. The older kit sections are dated
+Current local preparation: RC Surface 2.0.1. The older kit sections are dated
 history, including the rename migrator; they are not a 2.0 upgrade procedure.
 
-## Local candidate 2.0.0 — current reported acceptance
+## Local 2.0.1 checks — physical Mac acceptance pending
+
+Confirm Start, automatic-start preference and Close with the server stopped. With a virtual bridge and Wi-Fi, check the default QR and the Network address selector. After changing networks restart the server to refresh certificate coverage. Record and replay a real take. Existing 2.0 profiles remain compatible. Mac WebView, hardware and timing acceptance remain pending.
+
+## Historical 2.0.0 candidate acceptance
 
 New REC capture candidate (2026-10-16): physical acceptance is still pending.
 Mobile follow-up (same day): reload the phone during a 4-pass and an ∞ take;

@@ -127,6 +127,10 @@
   <!-- Network summary (migrated from former Interfaces tab) -->
   <div class="section-title" style="margin-top:16px" data-i18n="panel.network">Network</div>
   <div class="iface-primary" style="margin-bottom:8px">
+    <label id="network-address-field" class="network-address-field hidden">
+      <span data-i18n="panel.networkAddress">Network address</span>
+      <select id="network-address" aria-label="Network address" data-i18n-aria-label="panel.networkAddress"></select>
+    </label>
     <div class="ip" id="iface-primary-ip">—</div>
     <div class="url" id="iface-primary-url" data-i18n="panel.notRunning">Server not running</div>
     <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
@@ -244,6 +248,7 @@
 <script src="../shared/audio-descriptor-catalog.js"></script>
 <script src="../admin/mappings-core.js"></script>
 <script src="mappings.js"></script>
+<script src="network-address.js"></script>
 <script src="qrcode.js"></script>
 <script src="app.js"></script>
 </body></html>

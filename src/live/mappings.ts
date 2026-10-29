@@ -11,7 +11,8 @@ import * as path from "node:path";
 import { getExtensionContext, requireCtx, requireTrack } from "../context.js";
 import { trackedClients, broadcastTriggerNoteState, broadcastClipLaunchState } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
-import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
+import { selectLanInterfaces, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
+import { certifiedLanSelection } from "../server/cert.js";
 import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
 import { oscTransport, validateGlobalClipQuantization } from "./osc-transport.js";
 import { globalWriteScheduler } from "../server/write-scheduler.js";
@@ -1875,7 +1876,7 @@ export const commands: Record<string, CommandSpec> = {
       const isRunning = serverState.serverInstance !== null;
       const port = serverState.actualPort;
       const httpsPort = serverState.actualHttpsPort;
-      const { primary, others } = pickLanIps(getLanAddresses());
+      const { primary, others } = certifiedLanSelection(selectLanInterfaces());
       const localeModule = await import("../server/locale.js");
       const { phoneUrl, adminUrl } = buildServerAccessUrls({
         isRunning,

@@ -5,7 +5,6 @@
 // This file is part of RC Surface, distributed under the
 // PolyForm Noncommercial License 1.0.0. You may obtain a copy of
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { initialize } from "@ableton-extensions/sdk";
 import { actualPort, serverInstance } from "../server/state.js";
@@ -13,6 +12,7 @@ import { startServer, stopServer } from "../server/state.js";
 import { isAutostartEnabled, setAutostartEnabled } from "../server/autostart.js";
 import { showInfoDialog } from "../util/helpers.js";
 import { getAdminToken } from "../server/session-auth.js";
+import { buildOfflinePanel } from "./offline-panel.js";
 
 /**
  * Panel wiring extracted from src/extension.ts so the activation entry
@@ -96,24 +96,7 @@ async function renderPanelDialog(context: ModalContext): Promise<string> {
   const panelDir = path.join(__dirname, "static/panel");
   let html = "";
   try {
-    html = await fs.readFile(path.join(panelDir, "index.html"), "utf8");
-    const css = await fs.readFile(path.join(panelDir, "style.css"), "utf8");
-    const js = await fs.readFile(path.join(panelDir, "app.js"), "utf8");
-    const qrJs = await fs.readFile(path.join(panelDir, "qrcode.js"), "utf8");
-
-    html = html.replace('<link rel="stylesheet" href="style.css">', `<style>${css}</style>`);
-    html = html.replace('<script src="qrcode.js"></script>', `<script>${qrJs}</script>`);
-    html = html.replace('<script src="app.js"></script>', `<script>${js}</script>`);
-
-    const injection = `
-      <script>
-        window.INITIAL_PORT = null;
-        window.INITIAL_IS_RUNNING = false;
-        window.INITIAL_CLIENTS = [];
-        window.INITIAL_AUTOSTART = ${isAutostartEnabled()};
-      </script>
-    `;
-    html = html.replace('<body>', `<body>${injection}`);
+    html = await buildOfflinePanel(panelDir, isAutostartEnabled());
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     html = `<!DOCTYPE html><html><body style="background:#1c1c1e;color:#fff;padding:20px;font-family:sans-serif"><h3>Failed to load panel files: ${detail}</h3></body></html>`;

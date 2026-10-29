@@ -15,7 +15,8 @@ import { authenticateRequest, checkSameOrigin, classifyRequestToken, getAdminTok
 import { getQueryParam, stripQueryParam } from "../util/url.js";
 import { getPublicCommandsMetadata } from "./command-dispatch.js";
 import { lastUpgradeRejection, getRateLimitDiagnostics } from "./ws.js";
-import { getLanAddresses, pickLanIps } from "../util/helpers.js";
+import { selectLanInterfaces } from "../util/helpers.js";
+import { certifiedLanSelection } from "./cert.js";
 import { buildServerAccessUrls } from "./access-urls.js";
 
 const MIME_TYPES: Record<string, string> = {
@@ -76,7 +77,7 @@ async function servePanelHtml(
   const isRunning = serverInstance !== null;
   const port = actualPort;
   const httpsPort = actualHttpsPort;
-  const { primary, others } = pickLanIps(getLanAddresses());
+  const { primary, others } = certifiedLanSelection(selectLanInterfaces());
   const ctrlToken = getControllerToken();
   const adminToken = getAdminToken();
   const { phoneUrl } = buildServerAccessUrls({

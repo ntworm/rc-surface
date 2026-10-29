@@ -9,6 +9,12 @@ your first pad-to-Live mapping working.
 
 If you only want the short version: see the [Quick start](../README.md#quick-start) in the README.
 
+## Updating from 2.0.0 to 2.0.1
+
+Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel now includes all its scripts and font, so Start and the automatic-start preference work offline. The QR prefers known physical interfaces; if needed, choose **Network address** in the panel to update the performance QR, link and copied URL. Only addresses covered by the current certificate are offered. After changing networks, restart the server and scan its new QR.
+
+Install AbletonOSC in Remote Scripts inside the configured User Library, rather than inside the Live application. This survives Live updates. REC and SYNC require AbletonOSC.
+
 ## Upgrading to 2.0.0
 
 2.0.0 breaks compatibility with previous projects, presets, mappings and performance settings. Install the supplied package, reload the browser and configure the surface from a fresh state. The host uses `storageDirectory/surface-v2/` for mappings, presets and projects with schema 2. Old files are neither deleted nor automatically imported; do not copy 1.x data into this folder or use the old rename migrator as a 2.0 upgrade.
@@ -38,7 +44,7 @@ The extension itself is built on the
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.
-   The source version is **2.0.0**; a local candidate is not a declaration
+   The source version is **2.0.1**; a local candidate is not a declaration
    that the matching public release exists. Use the version and verification instructions
    supplied with the actual package.
 2. Double-click the file. Live's extension installer opens.
@@ -53,14 +59,14 @@ If you cloned the repository and ran `npm ci` followed by
 the same `.ablx` file in the project root. Install it the same way
 (double-click).
 
-### Optional: Install AbletonOSC (for Deep Sync)
+### Install AbletonOSC (required for REC and SYNC)
 
 To enable beat-accurate sync for toggle, the flashing metronome header, and the full-screen transport control overlay (`TRN` button), you must install and configure **AbletonOSC**:
 
 1. Download **AbletonOSC** from the repository: [AbletonOSC GitHub](https://github.com/ideoforms/AbletonOSC). Click **Code** -> **Download ZIP**.
 2. Extract the ZIP and place the `AbletonOSC` folder in your Ableton Live **MIDI Remote Scripts** directory:
-   - **Windows**: `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\`
-   - **macOS**: Right-click the Ableton Live app in Applications, choose **Show Package Contents**, and navigate to `Contents/App-Resources/MIDI Remote Scripts/`.
+   - **Windows**: `C:\Users\<user>\Documents\Ableton\User Library\Remote Scripts\AbletonOSC\`
+   - **macOS**: `~/Music/Ableton/User Library/Remote Scripts/AbletonOSC/`.
 3. Open Ableton Live's **Link/Tempo/MIDI** Preferences.
 4. Add **AbletonOSC** as a Control Surface in the list. Under **Input** and **Output**, leave them as **None**.
 5. Once configured, the extension will automatically detect it and sync using ports `11000` (outgoing) and `11001` (incoming). Stock AbletonOSC replies only on `11001`: if another RC extension holds it while Live starts, the surface listens on a fallback port and moves back to `11001` as soon as it frees.

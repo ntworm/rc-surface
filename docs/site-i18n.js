@@ -348,8 +348,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: 'v2.0.0 is the current release. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.',
-      'pt-BR': 'v2.0.0 é a versão atual. Sete páginas, loops XY e banco ampliado de poses; configure a partir do zero.',
+      en: 'v2.0.1 fixes offline panel recovery and LAN address selection. Existing 2.0 profiles remain compatible.',
+      'pt-BR': 'v2.0.1 corrige o painel offline e a seleção do endereço de rede. Perfis 2.0 continuam compatíveis.',
     },
     'lp.docs.001': {
       en: 'Reference documents',

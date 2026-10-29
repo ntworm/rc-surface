@@ -6,6 +6,9 @@
 /* Form controls do not inherit font-family; without this every button in the
    panel falls back to Arial. Family only, so each control keeps its size. */
 button, input, select, textarea { font-family: inherit; }
+.network-address-field { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+.network-address-field select { background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:0;padding:5px; }
+.network-address-field select:focus-visible { outline:1px solid var(--accent); }
 
 
 /* ── Design Tokens ──────────────────────────────────────────── */

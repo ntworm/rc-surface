@@ -90,7 +90,7 @@ export function isRfc1918(ip: string): boolean {
   return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }
 
-export function pickLanIps(ips: string[]): { primary: string; others: string[] } {
+export function pickLanIps(ips: string[], preferredIp?: string): { primary: string; others: string[] } {
   const rfc = ips.filter(isRfc1918);
   if (rfc.length === 0) {
     return { primary: ips[0] ?? "127.0.0.1", others: [] };
@@ -101,9 +101,22 @@ export function pickLanIps(ips: string[]): { primary: string; others: string[] }
     return 2; // 172.16-31
   };
   const sorted = [...rfc].sort((a, b) => rank(a) - rank(b));
-  const primary = sorted[0];
+  const primary = preferredIp && sorted.includes(preferredIp) ? preferredIp : sorted[0];
   if (!primary) return { primary: "127.0.0.1", others: [] };
-  return { primary, others: sorted.slice(1) };
+  return { primary, others: sorted.filter(ip => ip !== primary) };
+}
+
+/** Interface names are a preference, not proof of reachability; the panel can override it. */
+export function selectLanInterfaces(interfaces = networkInterfaces()): { primary: string; others: string[] } {
+  const candidates = Object.entries(interfaces).flatMap(([name, entries]) => (entries || [])
+    .filter(addr => addr.family === "IPv4" && !addr.internal)
+    .map(addr => ({ name, ip: addr.address })));
+  const privateCandidates = candidates.filter(entry => isRfc1918(entry.ip));
+  const ordinary = privateCandidates.filter(entry => !/^(bridge|utun|tun|tap|vmnet|vbox|veth|vethernet|docker|br-)/i.test(entry.name));
+  const physical = ordinary.filter(entry => /^(en\d+|eth\d+|wlan\d+|wl[a-z0-9]+|wi-?fi(?: .*)?|ethernet(?: .*)?)$/i.test(entry.name));
+  const preferred = physical.length ? physical : ordinary;
+  const preferredIp = preferred.length ? pickLanIps(preferred.map(entry => entry.ip)).primary : undefined;
+  return pickLanIps(candidates.map(entry => entry.ip), preferredIp);
 }
 
 export async function showInfoDialog(

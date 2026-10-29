@@ -10,6 +10,12 @@ pad para o Live funcionando.
 Se você só quer a versão curta, veja o [início rápido](../README.md#quick-start)
 no README.
 
+## Atualizando de 2.0.0 para 2.0.1
+
+Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR prioriza interfaces físicas conhecidas; se necessário, escolha **Endereço de rede** no painel para atualizar o QR de performance, o link e a URL copiada. Só são oferecidos endereços cobertos pelo certificado atual. Depois de trocar de rede, reinicie o servidor e leia o novo QR.
+
+Instale o AbletonOSC em Remote Scripts dentro da User Library configurada, em vez de dentro do aplicativo Live. Isso preserva a instalação nas atualizações. REC e SYNC precisam do AbletonOSC.
+
 ## Atualizando para 2.0.0
 
 2.0.0 quebra compatibilidade com os projetos, presets, mappings e configurações de performance anteriores. Instale o pacote recebido, recarregue o navegador e configure a superfície do zero. O host usa `storageDirectory/surface-v2/` para mappings, presets e projetos, com schema 2. Arquivos antigos não são apagados nem importados automaticamente; não copie dados 1.x para essa pasta nem use o migrador antigo de renomeação como atualização para 2.0.
@@ -38,7 +44,7 @@ A extensão em si é construída sobre o
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
    do projeto, ou use o pacote de teste enviado pelo mantenedor. A versão do
-   código é **2.0.0**; ter uma versão candidata local não significa que já existe
+   código é **2.0.1**; ter uma versão candidata local não significa que já existe
    a release pública correspondente. Siga a versão e as instruções de verificação do pacote recebido.
 2. Dê dois cliques no arquivo. O instalador de extensões do Live abre.
 3. Clique em *Install*. O Live coloca o arquivo em
@@ -51,7 +57,7 @@ Se você clonou o repositório e rodou `npm ci` seguido de
 `npm run build:prod-ablx`, terá o mesmo arquivo `.ablx` na raiz do projeto.
 Instale do mesmo jeito, com dois cliques.
 
-### Opcional: instalar o AbletonOSC (para o Deep Sync)
+### Instalar o AbletonOSC (obrigatório para REC e SYNC)
 
 Para habilitar sincronia travada no beat para LFO e square, o metrônomo que
 pisca no header, e o overlay de transporte em tela cheia (botão `TRN`), você
@@ -59,8 +65,8 @@ precisa instalar e configurar o **AbletonOSC**:
 
 1. Baixe o **AbletonOSC** no repositório: [AbletonOSC no GitHub](https://github.com/ideoforms/AbletonOSC). Clique em **Code** → **Download ZIP**.
 2. Extraia o ZIP e coloque a pasta `AbletonOSC` no diretório **MIDI Remote Scripts** do seu Ableton Live:
-   - **Windows**: `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\`
-   - **macOS**: clique com o botão direito no Ableton Live, na pasta Aplicativos, escolha **Mostrar Conteúdo do Pacote** (*Show Package Contents*) e vá até `Contents/App-Resources/MIDI Remote Scripts/`.
+   - **Windows**: `C:\Users\<user>\Documents\Ableton\User Library\Remote Scripts\AbletonOSC\`
+   - **macOS**: `~/Music/Ableton/User Library/Remote Scripts/AbletonOSC/`.
 3. Abra as preferências **Link/Tempo/MIDI** do Ableton Live.
 4. Adicione o **AbletonOSC** como Control Surface na lista. Em **Input** e **Output**, deixe **None**.
 5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada). O AbletonOSC original só responde na `11001`: se outra extensão RC estiver com ela quando o Live abre, a superfície escuta numa porta reserva e volta para a `11001` assim que ela libera.

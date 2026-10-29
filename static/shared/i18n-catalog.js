@@ -641,6 +641,7 @@
     'panel.replaceExisting': { en: 'Replace existing', 'pt-BR': 'Substituir existente' },
     'panel.bindTo': { en: 'Bind to…', 'pt-BR': 'Bind em…' },
     'panel.triggerTo': { en: 'Trigger to…', 'pt-BR': 'Trigger em…' },
+    'panel.networkAddress': { en: 'Network address', 'pt-BR': 'Endereço de rede' },
     'panel.import': { en: 'Import .rcsurface', 'pt-BR': 'Importar .rcsurface' },
     'panel.export': { en: 'Export .rcsurface', 'pt-BR': 'Exportar .rcsurface' },
     'panel.rollback': { en: 'Rollback project profile', 'pt-BR': 'Reverter o perfil do projeto' },

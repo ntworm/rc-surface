@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 — 2026-10-29
+
+- Fix the stopped-server panel by embedding every local script and font; Start, Close and the automatic-start preference remain usable without an HTTP server.
+- Prefer known physical LAN interfaces over virtual bridges/VPNs for the QR. Add a local Network address selector that preserves the HTTPS port and complete session URL; only announced private addresses covered by the current certificate are offered.
+- Preserve 2.0 mappings, presets and projects. Install AbletonOSC in the User Library so it survives Live updates; REC and SYNC require it. Physical Mac/Live recording acceptance remains pending.
+
 Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.

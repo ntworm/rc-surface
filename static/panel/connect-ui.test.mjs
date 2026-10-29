@@ -365,6 +365,7 @@ function loadPanelApp(extraIds = []) {
 
   const source = fs.readFileSync(path.join(staticRoot, 'panel', 'app.js'), 'utf8');
   vm.runInContext(fs.readFileSync(path.join(staticRoot, 'shared', 'audio-descriptor-catalog.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(staticRoot, 'panel', 'network-address.js'), 'utf8'), context);
   vm.runInContext(source, context, { filename: 'panel/app.js' });
   return { context, document, qrCalls };
 }

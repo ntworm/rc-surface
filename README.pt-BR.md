@@ -1,7 +1,7 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v2.0.0](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.0.1](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/ntworm/rc-surface/releases)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface.svg?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
@@ -41,9 +41,9 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 
 ## Início rápido
 
-1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** opcional (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat.
-2. **Download:** baixe `RC-Surface-2.0.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) em [Releases](https://github.com/ntworm/rc-surface/releases) e confira com o `SHA256SUMS.txt`.
-3. **Instalação:** dê dois cliques no `RC-Surface-2.0.0.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
+1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat; o AbletonOSC é opcional para controle básico.
+2. **Download:** baixe `RC-Surface-2.0.1.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou na [release correspondente](https://github.com/ntworm/rc-surface/releases) e confira com o `SHA256SUMS.txt`.
+3. **Instalação:** dê dois cliques no `RC-Surface-2.0.1.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 4. **Conexão:** abra o painel do RC Surface no Live, escaneie o QR code com o celular e aceite o certificado HTTPS local autoassinado uma única vez.
 5. **Performance e Mapeamento:** use as 7 abas para tocar ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.
 

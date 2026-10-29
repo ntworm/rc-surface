@@ -14,6 +14,17 @@ import { getLanAddresses, stripWslDrivePrefix } from "../util/helpers.js";
 export let useHttps = false;
 export let httpsOptions: { key: Buffer; cert: Buffer } | null = null;
 
+/** A network change must not advertise a new IP before the TLS cert covers it. */
+export function certifiedLanSelection(
+  selection: { primary: string; others: string[] },
+  certificate: Buffer | string | undefined = httpsOptions?.cert,
+): { primary: string; others: string[] } {
+  if (!certificate) return selection;
+  const covered = [selection.primary, ...selection.others]
+    .filter(ip => certCoversRequiredAltNames(certificate, [ip]));
+  return { primary: covered[0] ?? "127.0.0.1", others: covered.slice(1) };
+}
+
 // selfsigned's SubjectAltNameEntry has type: 1|2|6|7, value?: string,
 // ip?: string. We re-export it so callers can typecheck without depending
 // on selfsigned's surface.

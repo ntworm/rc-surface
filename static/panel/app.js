@@ -1129,6 +1129,7 @@ function clearQRCode(frame) {
 
 function updateServerUI() {
   if (!serverInfo) return;
+  const networkInfo = window.RcSurfaceNetwork.render(serverInfo, updateServerUI);
 
   const active = serverInfo.isRunning;
   const dot = document.getElementById("footer-dot");
@@ -1143,9 +1144,9 @@ function updateServerUI() {
   // "Other Interfaces" sub-list was migrated away in A1 (now displayed
   // inline under Network); keep the function null-safe in case server
   // still sends otherIps for diagnostic purposes.
-  const primaryIp = serverInfo.primaryIp || "—";
+  const primaryIp = networkInfo.primaryIp || "—";
   document.getElementById("iface-primary-ip").textContent = primaryIp;
-  document.getElementById("iface-primary-url").textContent = serverInfo.phoneUrl || "Server not running";
+  document.getElementById("iface-primary-url").textContent = networkInfo.phoneUrl || "Server not running";
 
   const otherList = document.getElementById("iface-list");
   if (otherList) {
@@ -1187,20 +1188,20 @@ function updateServerUI() {
   const row = document.getElementById("qr-row");
   const placeholder = document.getElementById("qr-placeholder");
 
-  if (active && serverInfo.phoneUrl) {
+  if (active && networkInfo.phoneUrl) {
     if (row) row.classList.remove("hidden");
     if (placeholder) placeholder.classList.add("hidden");
 
-    ensureQRCode(qrPerf, serverInfo.phoneUrl);
+    ensureQRCode(qrPerf, networkInfo.phoneUrl);
 
-    if (urlPerf) urlPerf.textContent = serverInfo.phoneUrl;
+    if (urlPerf) urlPerf.textContent = networkInfo.phoneUrl;
 
     const openPerf = document.getElementById("open-perf");
-    if (openPerf) openPerf.href = serverInfo.phoneUrl;
+    if (openPerf) openPerf.href = networkInfo.phoneUrl;
 
     const copyPrimary = document.getElementById("copy-primary");
     if (copyPrimary) {
-      copyPrimary.dataset.url = serverInfo.phoneUrl;
+      copyPrimary.dataset.url = networkInfo.phoneUrl;
       bindCopyButton(copyPrimary);
     }
 

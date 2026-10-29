@@ -1,6 +1,6 @@
 # Compatibilidade — RC Surface
 
-Versão `2.0.0`. Requisitos e evidências do produto; registros 1.0 não são gates novos da versão 2.0.
+Versão `2.0.1`. Requisitos e evidências do produto; registros 1.0 não são gates novos da versão 2.0.
 
 ## Live
 
@@ -32,9 +32,9 @@ Versão `2.0.0`. Requisitos e evidências do produto; registros 1.0 não são ga
 
 ## Evidência atual e limites
 
-O candidato instalado foi relatado como funcionando sem erro ou bug observado. É um relato de uso, não uma certificação exaustiva de cenários ou plataformas. Latência real, captura de áudio e preservação de takes precisam ser conferidas na configuração do usuário.
+A instalação histórica da 2.0.0 foi relatada como funcionando sem erro ou bug observado. Esse relato não certifica a 2.0.1 no Mac de destino. Os checks da 2.0.1 são automatizados; latência real, captura de áudio, WebView e preservação de takes precisam ser conferidos na configuração do usuário.
 
-Regressões automatizadas usam mocks e navegadores isolados; não equivalem a hardware. A preparação final deve registrar commit/hash do pacote, seus gates atuais e revisão visual EN/PT. A versão continua 2.0.0; este documento não declara publicação. Os registros históricos 1.0 e “Receiver v2” descrevem outros ciclos, não o aceite da versão do produto 2.0.
+Regressões automatizadas usam mocks e navegadores isolados; não equivalem a hardware. A preparação final deve registrar commit/hash do pacote, seus gates atuais e revisão visual EN/PT. A versão continua 2.0.1; este documento não declara publicação. Os registros históricos 1.0 e “Receiver v2” descrevem outros ciclos, não o aceite da versão do produto 2.0.
 
 Dados 1.x não migram: mappings/presets/projetos 2.0 usam `surface-v2` e schema 2. Um Set existente não ganha garantia de preservação de takes a partir dessa separação.
 
