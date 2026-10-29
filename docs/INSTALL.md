@@ -11,6 +11,8 @@ If you only want the short version: see the [Quick start](../README.md#quick-sta
 
 ## Updating from 2.0.0 to 2.0.1
 
+Version 2.0.1 is distributed as a [pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1). Before using it for a performance, check Start/Close and the QR in the native Live panel, then record and replay a take in a copy of your Set on the target Mac. Automated CI does not replace that acceptance.
+
 Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel now includes all its scripts and font, so Start and the automatic-start preference work offline. The QR prefers known physical interfaces; if needed, choose **Network address** in the panel to update the performance QR, link and copied URL. Only addresses covered by the current certificate are offered. After changing networks, restart the server and scan its new QR.
 
 Install AbletonOSC in Remote Scripts inside the configured User Library, rather than inside the Live application. This survives Live updates. REC and SYNC require AbletonOSC.
@@ -28,7 +30,7 @@ You need:
 - **Ableton Live 12.4.5+ Suite (Beta)** with the Extensions SDK host enabled.
 - A computer and a phone on the **same WiFi network**.
 - A modern browser on the phone: Chrome 90+, Safari 15.4+, Edge 90+, or any Chromium-based Android browser.
-- **Optional (for Deep Sync)**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
+- **Required for REC, Launch Clip, TRN and beat sync; optional for basic control**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
 - **Optional (for MIDI Trigger Notes)**: `RC-Midi-Receiver.amxd` saved in your Ableton User Library.
 - Optional, for advanced features: a phone with a working gyroscope, accelerometer, microphone, and camera.
 - Camera hand tracking works on the local network; its MediaPipe runtime and

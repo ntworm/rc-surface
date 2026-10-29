@@ -1,11 +1,13 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v2.0.1](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.0.1](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface.svg?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
 **English:** [README.md](README.md) · [landing page](https://ntworm.github.io/rc-surface/)
+
+> **Prévia 2.0.1:** correções do painel offline e de rede/QR disponíveis no [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1). O aceite de gravação no Live/macOS nativo está pendente. A [versão estável](https://github.com/ntworm/rc-surface/releases/latest) e a landing permanecem na 2.0.0 até a promoção.
 
 [**:globe_with_meridians: Página em português**](https://ntworm.github.io/rc-surface/pt-br.html) — mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
 
@@ -42,7 +44,7 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 ## Início rápido
 
 1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat; o AbletonOSC é opcional para controle básico.
-2. **Download:** baixe `RC-Surface-2.0.1.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou na [release correspondente](https://github.com/ntworm/rc-surface/releases) e confira com o `SHA256SUMS.txt`.
+2. **Download:** baixe `RC-Surface-2.0.1.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou no [pré-lançamento 2.0.1](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1) e confira com o `SHA256SUMS.txt`.
 3. **Instalação:** dê dois cliques no `RC-Surface-2.0.1.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 4. **Conexão:** abra o painel do RC Surface no Live, escaneie o QR code com o celular e aceite o certificado HTTPS local autoassinado uma única vez.
 5. **Performance e Mapeamento:** use as 7 abas para tocar ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.

@@ -12,6 +12,8 @@ no README.
 
 ## Atualizando de 2.0.0 para 2.0.1
 
+Esta versão 2.0.1 é distribuída como [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1). Antes de usá-la numa apresentação, confira Start/Close e o QR no painel nativo do Live; depois grave e reproduza um take numa cópia do Set no Mac de destino. O CI automatizado não substitui esse aceite.
+
 Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR prioriza interfaces físicas conhecidas; se necessário, escolha **Endereço de rede** no painel para atualizar o QR de performance, o link e a URL copiada. Só são oferecidos endereços cobertos pelo certificado atual. Depois de trocar de rede, reinicie o servidor e leia o novo QR.
 
 Instale o AbletonOSC em Remote Scripts dentro da User Library configurada, em vez de dentro do aplicativo Live. Isso preserva a instalação nas atualizações. REC e SYNC precisam do AbletonOSC.
@@ -29,7 +31,7 @@ Você precisa de:
 - **Ableton Live 12.4.5+ Suite (Beta)** com o host do SDK de Extensions habilitado.
 - Um computador e um celular na **mesma rede Wi-Fi**.
 - Um navegador atual no celular: Chrome 90+, Safari 15.4+, Edge 90+, ou qualquer navegador Chromium no Android.
-- **Opcional (para o Deep Sync)**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
+- **Obrigatório para REC, Launch Clip, TRN e sincronização; opcional para controle básico**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
 - **Opcional (para trigger notes MIDI)**: `RC-Midi-Receiver.amxd` salvo na sua User Library do Ableton.
 - Opcional, para os recursos avançados: um celular com giroscópio, acelerômetro, microfone e câmera funcionando.
 - O rastreio de mãos por câmera funciona na rede local; o runtime e os arquivos de modelo do MediaPipe vêm junto com a extensão.

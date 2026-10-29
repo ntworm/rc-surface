@@ -4,12 +4,23 @@ This folder contains maintainer references, validation records and tester
 guidance. Public documentation lives in `docs/`; historical records here
 describe their dated state, not necessarily the current product.
 
-## Current preparation — 2.0.0 (2026-10-15)
+## Current preview — 2.0.1 (2026-10-29)
+
+The [2.0.1 pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.0.1)
+contains offline panel recovery and LAN/QR address fixes. Existing 2.0 data
+remains compatible and the companion Max devices are unchanged. Automated CI
+and package integrity are checked before publication; native Live/macOS panel,
+recording/playback and hardware acceptance remain pending. The stable Latest
+release and default landing remain on 2.0.0 until that acceptance and promotion.
+
+## Historical 2.0.0 candidate (2026-10-15)
 
 Source candidate `e930ebe` (package SHA-256 prefix `523b7d93`) was installed by
 Gabriel, who reported everything working without an observed error or bug.
 This is the reported-use acceptance, not a new exhaustive platform, latency,
-audio-capture or companion-device test matrix. The release remains unpublished.
+audio-capture or companion-device test matrix. The release was unpublished at
+that checkpoint; [v2.0.0](https://github.com/ntworm/rc-surface/releases/tag/v2.0.0)
+was subsequently published on 2026-10-16 (-03).
 Use the current 2.0 notes and the top of the candidate checklist; record the
 final package commit/hash and fresh verification with that delivery. The
 1.0 gate records below and elsewhere remain historical evidence.
