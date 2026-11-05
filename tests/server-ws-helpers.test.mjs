@@ -7,6 +7,17 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import test from "node:test";
 import assert from "node:assert/strict";
+import path from "node:path";
+import { WebSocket } from "ws";
+
+// The bundle defines __dirname; running the sources under tsx does not.
+if (typeof globalThis.__dirname === "undefined") {
+  globalThis.__dirname = path.join(process.cwd(), "dist");
+}
+
+// Every test file that starts a server competes for DEFAULT_PREFERRED_PORT.
+// This one claims its own port so the port assertions never flap.
+process.env.RC_SURFACE_PORT = "16230";
 
 // RED: src/server/ws.ts já existe. Estes testes verificam exports que serão adicionados
 // na Task 6 ou se já existem não-exportados.
@@ -88,5 +99,48 @@ test("per-client history treats prototype names as ordinary signal data", async 
     assert.equal(Object.hasOwn(client.history, name), true);
     assert.deepEqual(client.history[name], [[1, 0.5]]);
     assert.equal(client.historyWritten[name], 1);
+  }
+});
+
+test("a phone that reconnects says 'resume' without wiping the last snapshot", async () => {
+  // The phone greets the server again on every reconnect (see the phone's
+  // session module). The greeting carries no state, so it must never become
+  // the last data of the client: the admin panel shows that as the live view
+  // of the phone, and an empty card is what the performer sees on every
+  // reconnect until the next snapshot arrives.
+  const serverState = await import("../src/server/state.ts");
+  await serverState.startServer();
+  try {
+    const { trackedClients } = await import("../src/server/ws.ts");
+    const { getControllerToken } = await import("../src/server/session-auth.ts");
+    const port = serverState.actualPort;
+    assert.ok(port, "the server should be running");
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?client_id=resume-test&token=${getControllerToken()}`);
+    const messages = [];
+    ws.on("message", (data) => { try { messages.push(JSON.parse(data.toString())); } catch { /* ignore */ } });
+    await new Promise((resolve, reject) => { ws.on("open", resolve); ws.on("error", reject); });
+    const start = Date.now();
+    while (!messages.some((m) => m && m.type === "hello") && Date.now() - start < 2000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.ok(messages.some((m) => m && m.type === "hello"), "the server must greet the phone");
+    const client = trackedClients.get("resume-test");
+    assert.ok(client, "the phone should be tracked");
+
+    ws.send(JSON.stringify({ type: "snapshot", data: { controls: [], marker: "fallback-state" } }));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    assert.equal(client.lastData?.marker, "fallback-state", "the snapshot is the last data");
+
+    ws.send(JSON.stringify({
+      type: "resume", client_id: "resume-test", display_name: "Phone", ts: Date.now(),
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    assert.equal(client.lastData?.marker, "fallback-state",
+      "REGRESSION: the reconnect greeting replaced the snapshot the panel is showing");
+    assert.equal(client.displayName, "Phone", "the greeting carries the display name");
+    ws.close();
+  } finally {
+    await serverState.stopServer();
   }
 });

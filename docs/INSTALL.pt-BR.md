@@ -10,6 +10,16 @@ pad para o Live funcionando.
 Se você só quer a versão curta, veja o [início rápido](../README.md#quick-start)
 no README.
 
+## Atualizando da 2.0 para a 2.1.0
+
+Esta versão 2.1.0 é distribuída como [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Antes de usá-la numa apresentação, confira Start/Close e o QR no painel nativo do Live; depois grave e reproduza um take numa cópia do Set no Mac de destino. O CI automatizado não substitui esse aceite.
+
+Ela substitui a prévia 2.0.1. O REC ganha três vistas locais (Gravar, Arrangement, Clip) sobre uma barra de captura única, linhas nativas das tracks com grupos e intervalos entre markers; os destinos e o CLICK passam para o cabeçalho do REC. No Mac, o link do AbletonOSC agora liga junto com o servidor, uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
+
+Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR agora usa o endereço que alcança a sua rede: primeiro o que tem saída, depois o que tem gateway, e por último adaptadores virtuais e VPNs. A aba **Rede** do painel mostra o motivo, deixa fixar um endereço e tem **ACHAR CONFIGURAÇÃO** para quando o celular não abre; **Endereço de rede**, na aba Principal, oferece a mesma escolha, e o servidor guarda essa escolha. Depois de trocar de rede não é preciso reiniciar nada: o painel prepara um certificado para o endereço novo e o celular pede para aceitar o aviso uma vez. A escolha feita numa prévia anterior da 2.0.1 ficava no navegador e não é aproveitada.
+
+Instale o AbletonOSC em Remote Scripts dentro da User Library configurada, em vez de dentro do aplicativo Live. Isso preserva a instalação nas atualizações. REC e SYNC precisam do AbletonOSC.
+
 ## Atualizando para 2.0.0
 
 2.0.0 quebra compatibilidade com os projetos, presets, mappings e configurações de performance anteriores. Instale o pacote recebido, recarregue o navegador e configure a superfície do zero. O host usa `storageDirectory/surface-v2/` para mappings, presets e projetos, com schema 2. Arquivos antigos não são apagados nem importados automaticamente; não copie dados 1.x para essa pasta nem use o migrador antigo de renomeação como atualização para 2.0.
@@ -23,7 +33,7 @@ Você precisa de:
 - **Ableton Live 12.4.5+ Suite (Beta)** com o host do SDK de Extensions habilitado.
 - Um computador e um celular na **mesma rede Wi-Fi**.
 - Um navegador atual no celular: Chrome 90+, Safari 15.4+, Edge 90+, ou qualquer navegador Chromium no Android.
-- **Opcional (para o Deep Sync)**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
+- **Obrigatório para REC, Launch Clip, TRN e sincronização; opcional para controle básico**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
 - **Opcional (para trigger notes MIDI)**: `RC-Midi-Receiver.amxd` salvo na sua User Library do Ableton.
 - Opcional, para os recursos avançados: um celular com giroscópio, acelerômetro, microfone e câmera funcionando.
 - O rastreio de mãos por câmera funciona na rede local; o runtime e os arquivos de modelo do MediaPipe vêm junto com a extensão.
@@ -38,7 +48,7 @@ A extensão em si é construída sobre o
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
    do projeto, ou use o pacote de teste enviado pelo mantenedor. A versão do
-   código é **2.0.0**; ter uma versão candidata local não significa que já existe
+   código é **2.1.0**; ter uma versão candidata local não significa que já existe
    a release pública correspondente. Siga a versão e as instruções de verificação do pacote recebido.
 2. Dê dois cliques no arquivo. O instalador de extensões do Live abre.
 3. Clique em *Install*. O Live coloca o arquivo em
@@ -51,7 +61,7 @@ Se você clonou o repositório e rodou `npm ci` seguido de
 `npm run build:prod-ablx`, terá o mesmo arquivo `.ablx` na raiz do projeto.
 Instale do mesmo jeito, com dois cliques.
 
-### Opcional: instalar o AbletonOSC (para o Deep Sync)
+### Instalar o AbletonOSC (obrigatório para REC e SYNC)
 
 Para habilitar sincronia travada no beat para LFO e square, o metrônomo que
 pisca no header, e o overlay de transporte em tela cheia (botão `TRN`), você
@@ -59,8 +69,8 @@ precisa instalar e configurar o **AbletonOSC**:
 
 1. Baixe o **AbletonOSC** no repositório: [AbletonOSC no GitHub](https://github.com/ideoforms/AbletonOSC). Clique em **Code** → **Download ZIP**.
 2. Extraia o ZIP e coloque a pasta `AbletonOSC` no diretório **MIDI Remote Scripts** do seu Ableton Live:
-   - **Windows**: `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\`
-   - **macOS**: clique com o botão direito no Ableton Live, na pasta Aplicativos, escolha **Mostrar Conteúdo do Pacote** (*Show Package Contents*) e vá até `Contents/App-Resources/MIDI Remote Scripts/`.
+   - **Windows**: `C:\Users\<user>\Documents\Ableton\User Library\Remote Scripts\AbletonOSC\`
+   - **macOS**: `~/Music/Ableton/User Library/Remote Scripts/AbletonOSC/`.
 3. Abra as preferências **Link/Tempo/MIDI** do Ableton Live.
 4. Adicione o **AbletonOSC** como Control Surface na lista. Em **Input** e **Output**, deixe **None**.
 5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada). O AbletonOSC original só responde na `11001`: se outra extensão RC estiver com ela quando o Live abre, a superfície escuta numa porta reserva e volta para a `11001` assim que ela libera.
@@ -177,9 +187,10 @@ Um controlador feito só para a horizontal. O ideal é segurar o celular deitado
 com os dois polegares na tela; na vertical aparece um aviso pedindo para girar
 o aparelho.
 
-Na primeira vez que você abre o app, o navegador pede permissão para acessar os
-sensores de movimento e orientação. Toque em *Permitir* — eles são necessários
-para o painel de sensores e para a bolha de nível.
+Os sensores começam automaticamente quando o navegador permite. Se o acesso
+precisar de um toque, abra **SNS**, toque no **⚙** da barra de cima e depois
+em **Ativar sensores**. Você pode repetir depois de uma recusa ou de um erro.
+Câmera e microfone exigem permissões próprias.
 
 ## 5. Teste rápido: seu primeiro mapeamento pelo celular
 
@@ -254,6 +265,10 @@ redirecionamento de porta, túnel público ou proxy reverso público. Esses
 cenários estão fora do modelo de ameaças testado, mesmo quando o endpoint
 público fornece um certificado confiável.
 
+Um IP público nunca entra no QR sozinho, porque o QR leva o token de controle.
+Se o computador só tem endereço público, o painel avisa e só mostra o QR depois
+que você clica em **USAR** nesse endereço.
+
 ## 8. Ciclo de vida do certificado
 
 O bridge gera um certificado autoassinado novo na primeira execução, usando o
@@ -261,15 +276,34 @@ pacote npm `selfsigned`. O certificado:
 
 - É RSA de 2048 bits, assinado com SHA-256.
 - Vale um ano (`notAfterDate` assume, por padrão, um ano a partir da geração).
-- Inclui entradas `subjectAltName` para `localhost`, `127.0.0.1` e os IPs
-  atuais da rede local. Se o IP da rede local mudar e o certificado guardado
-  não cobrir mais a URL do celular, a extensão gera um certificado novo.
+- Inclui entradas `subjectAltName` para `localhost`, `127.0.0.1` e os
+  endereços dos adaptadores físicos, guardando os anteriores até 32 entradas.
+  Endereço novo em adaptador virtual não mexe no certificado. Quando o
+  computador vai para uma rede que o certificado não cobre, a extensão gera um
+  novo sem reiniciar, e o celular pede para aceitar o aviso uma vez.
 - É guardado com permissão `0600` no diretório de armazenamento do Live.
 
 Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
 `Preferences/Extensions/<id>/`, e reinicie.
 
 ## 9. Diagnóstico
+
+### A página abre no computador, mas não no celular
+
+O computador abre a página em qualquer endereço dele mesmo, então isso não prova
+nada sobre a rede. Abra a aba **Rede** do painel:
+
+- Veja qual endereço o QR usa e por quê. O celular não alcança endereço de
+  adaptador virtual.
+- Clique em **ACHAR CONFIGURAÇÃO**. O painel mostra um QR por endereço, 25
+  segundos cada. Aponte o celular. Quando ele conectar, esse endereço fica
+  guardado nessa rede por 30 dias.
+- Leia **Diagnóstico**. Ele lê o certificado e o firewall sem alterar nada. Se
+  faltar regra no firewall, ele dá o comando para copiar. Rode você mesmo no
+  PowerShell como administrador.
+- Se nenhum endereço alcançar o celular, confira se ele está fora dos dados
+  móveis e na mesma rede, depois procure isolamento de clientes ou rede de
+  convidados no roteador. O computador não detecta isso daqui.
 
 ### O celular mostra "ERR_CONNECTION_REFUSED"
 
@@ -285,6 +319,18 @@ Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
   na mesma rede.
 - Alguns celulares gerenciados por empresa têm políticas de administração que
   bloqueiam a exceção de certificado. Use um celular pessoal.
+
+### O celular mostra "ERR_LOCAL_NETWORK_PERMISSION_MISSING"
+
+- Esse erro indica que o navegador bloqueou o acesso desse site à rede local.
+- **Chrome no Android**: abra as informações do site (o ícone à esquerda da
+  barra de endereços) → *Permissões* → *Acesso à rede local* → *Permitir* para o
+  endereço atual do Surface, e recarregue a mesma URL do QR code.
+- Se a opção por site não aparecer, abra *Configurações do Chrome* →
+  *Configurações do site* → *Acesso à rede local*, permita o site e recarregue.
+- Se a página ainda não abrir, continue pelas verificações de conexão abaixo.
+  O aviso de certificado é separado.
+  Referência do Chrome: <https://support.google.com/chrome/answer/114662?co=GENIE.Platform%3DAndroid&hl=en>
 
 ### Câmera e microfone não funcionam
 

@@ -1,11 +1,13 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v2.0.0](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.1.0](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface.svg?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
 **English:** [README.md](README.md) · [landing page](https://ntworm.github.io/rc-surface/)
+
+> **Prévia 2.1.0:** vistas compactas do REC, aba Rede e correções de conexão no Mac disponíveis no [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). O aceite de gravação no Live/macOS nativo está pendente. A [versão estável](https://github.com/ntworm/rc-surface/releases/latest) e a landing permanecem na 2.0.0 até a promoção.
 
 [**:globe_with_meridians: Página em português**](https://ntworm.github.io/rc-surface/pt-br.html) — mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
 
@@ -25,12 +27,12 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 | **`SNS`** | Sensores de movimento (acelerômetro/giroscópio) e orientação 3D do celular com calibração de postura. |
 | **`AUD`** | Análise de microfone em tempo real com 12 descritores espectrais/ataques por banda e loudness ITU-R BS.1770 ponderado K. |
 | **`VID`** | Rastreamento local de mão pela câmera (MediaPipe Hands embutido) com entradas contínuas `X / Y / Z / PALM / FACE` e até 15 poses aprendidas (`G1`–`G15`). |
-| **`REC`** | Estação de gravação no Arrangement e na Session (**ARRANGEMENT / CLIP**) com timeline de marcadores, pré-roll, contagem de passagens e cartões de track ao vivo. |
+| **`REC`** | Estação de gravação com três visões locais — **GRAVAR / ARRANGEMENT / CLIP**, com **Gravar** como padrão — compartilhando uma barra de captura fixa (**REC / STOP**, **PRÉ-ROLL**, **PASSES**, **INÍCIO / FIM**, **CLICK**) e uma barra de modo fixa. Gravar mostra as linhas nativas de track e uma lista compacta de marcadores, e só a lista de tracks rola; essa visão não lê clips, takes nem waveforms. Arrangement acrescenta a timeline de marcadores com seleção local, os clips nativos do Arrangement na mesma timeline e a inspeção de takes; Clip captura uma cena vazia da Session. |
 | **`MAP` · `TRN` · `AUT` · `CFG`** | Sobreposições de cabeçalho para mapeamento no celular (**Bind**, **Trigger Note**, **Launch Clip**), transporte/locators (`TRN`), loops de gesto XY (`AUT`) e configuração por controle (`CFG`). |
 
 ## Performance 2.0
 
-- **REC no Arrangement e na Session (`REC`):** alterne entre **ARRANGEMENT / CLIP**. Grave no Arrangement usando a timeline em escala de compassos e beats com `ZOOM`, `START / END` (`1–10` passagens, `∞` ou `FREE` até `STOP`) e `PRE-ROLL` (`OFF / 1 / 2 / 4` compassos), ou capture uma cena vazia da Session em todas as tracks armadas (`1 / 2 / 4 / 8 / 16` compassos, quantização de lançamento e `BACK TO ARR`). Os cartões de track trazem `ARM MULTI / EXCLUSIVE`, `SOLO`, `MUTE`, knobs de volume ao vivo (`270°`) e renomeação inline com clique duplo.
+- **Gravação (`REC`):** uma página global com três visões locais — **GRAVAR / ARRANGEMENT / CLIP** — em que **Gravar** é o padrão, com uma barra de captura fixa e uma barra de modo fixa compartilhadas. **Gravar** mostra a barra de captura (**REC / STOP**, **PRÉ-ROLL** `OFF / 1 / 2 / 4` compassos, **PASSES** `1 / 2 / 3 / ∞`, **INÍCIO / FIM**, **CLICK**) com as linhas nativas de track e uma lista compacta de marcadores; no celular deitado só a lista de tracks rola, e essa visão não lê clips, takes nem waveforms. **Arrangement** é o editor com a timeline de marcadores em escala de compassos e beats, clips nativos do Arrangement nos intervalos reais, `ZOOM` e foco de takes; **Clip** captura uma cena vazia da Session em todas as tracks armadas (`1 / 2 / 4 / 8 / 16` compassos, quantização de lançamento e `BACK TO ARR`). A seleção de marcador é local: define o trecho que o **REC** captura e nunca procura posição no Live. Os marcadores são preparados no Live e aparecem no catálogo; o celular não cria nenhum. As tracks do Live aparecem como linhas nativas, com **ARM / SOLO / MUTE** por linha e um fader horizontal de volume, mais **ARM ALL** e a expansão local de grupo; armar uma linha de grupo arma os descendentes armáveis dele. Em **Arrangement**, a linha da track oferece **TAKES** e o clip do Arrangement escolhido abre um foco exclusivo naquele clip exato, onde **GOOD / REVIEW / SEM NOTA** renomeiam o clip do take escolhido; não existe painel global de takes. A prévia de waveform é uma ação explícita, com o transporte parado, sobre um clip de áudio visível do Arrangement. Escutar, fazer comp e promover continuam no Live; veja o [Guia de Uso](docs/USER-GUIDE.pt-BR.md#16-rec-arrangement--clip).
 - **Loops de gesto XY (`AUT`):** grave e repita movimentos de forma independente no `XY 1` e no `XY 2` após contagem `3–2–1`, sincronizados ao Live (`1–5 compassos`) ou livres (`1–30 segundos`).
 - **Mapeamento direto no celular (`MAP`):** vincule qualquer controle ou sensor a parâmetros do Live (**Bind**), dispare notas MIDI quantizadas via `RC-Midi-Receiver.amxd` (**Trigger Note**) ou acione clips da Session e regras de avanço (**Launch Clip**). Pontos de curva e do Burst exigem segurar por `0,6 s`, evitando edições acidentais ao rolar a tela.
 - **Modo Config (`CFG`):** configure cada pad individualmente (modos A/B/C/D e envelope do Burst no modo D), os moduladores `T1`–`T8` e o comportamento Estático/Física independente de cada XY (atrito, quique, velocidade e rastro).
@@ -41,9 +43,9 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 
 ## Início rápido
 
-1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** opcional (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat.
-2. **Download:** baixe `RC-Surface-2.0.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) em [Releases](https://github.com/ntworm/rc-surface/releases) e confira com o `SHA256SUMS.txt`.
-3. **Instalação:** dê dois cliques no `RC-Surface-2.0.0.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
+1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat; o AbletonOSC é opcional para controle básico.
+2. **Download:** baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou no [pré-lançamento 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) e confira com o `SHA256SUMS.txt`.
+3. **Instalação:** dê dois cliques no `RC-Surface-2.1.0.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 4. **Conexão:** abra o painel do RC Surface no Live, escaneie o QR code com o celular e aceite o certificado HTTPS local autoassinado uma única vez.
 5. **Performance e Mapeamento:** use as 7 abas para tocar ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.
 

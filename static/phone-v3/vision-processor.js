@@ -147,6 +147,19 @@
       }
     }
 
+    // A hidden page stops the browser from delivering frames. Drop the
+    // pending request so the session is not holding a callback that will
+    // never run. The stream, the running flag and the generation stay
+    // untouched: the page is only hidden, not stopped.
+    pauseFrames() {
+      if (this.frameRequest !== null) {
+        if (this.frameRequestType === 'video') this.video?.cancelVideoFrameCallback?.(this.frameRequest);
+        else global.cancelAnimationFrame?.(this.frameRequest);
+      }
+      this.frameRequest = null;
+      this.frameRequestType = null;
+    }
+
     async processFrame() {
       this.frameRequest = null;
       if (!this.running || this.framePending) return this.scheduleFrame();
@@ -759,6 +772,13 @@
       this.onVisionStatus = null; // Callback: (visionStatus) => {}
       this.active = false;
       this.wasHandPresent = false;
+      // A hidden page stops the browser from delivering camera frames. These
+      // two carry that pause across the visibility change.
+      this.visibilityHandler = null;
+      this.pausedByVisibility = false;
+      // The stage the HUD showed before the page was hidden, so coming back
+      // can restore it instead of claiming the pipeline is waiting for a hand.
+      this.stageBeforePause = null;
       this.pinchClutch = new PinchClutch();
       this.poseDropFrames = 0;
       this.lastPinchSignal = 0;
@@ -768,6 +788,7 @@
       // which one failed instead of silently showing a live preview forever.
       //   idle → starting → waiting-hand ⇄ hand-detected
       //                          ↘ error
+      //   waiting-hand ⇄ paused-hidden (page hidden, no frame delivered)
       this.visionStatus = {
         stage: 'idle',
         cameraActive: false,
@@ -844,6 +865,52 @@
         this.lastVisionStatusPublishAt = publishAt;
         try { this.onVisionStatus(this.visionStatus); } catch { /* UI must never break the pipeline */ }
       }
+    }
+
+    // A hidden page stops the browser from delivering camera frames, so the
+    // HUD must say "paused" instead of claiming a live camera with nothing
+    // analysed. Coming back re-arms the frame loop and starts from a clean
+    // clutch, the same way a fresh start does.
+    handleVisibilityChange() {
+      if (!this.active) return;
+      if (global.document?.hidden) {
+        this.pauseForHiddenPage();
+        return;
+      }
+      this.resumeAfterHiddenPage();
+    }
+
+    pauseForHiddenPage() {
+      // A failed or idle pipeline has nothing to pause: the HUD must keep
+      // saying what went wrong instead of claiming the camera is merely
+      // waiting for a hand.
+      const stage = this.visionStatus.stage;
+      if (stage === 'error' || stage === 'idle') return;
+      this.stageBeforePause = stage;
+      this.pausedByVisibility = true;
+      this.camera?.pauseFrames?.();
+      this.setVisionStatus({ stage: 'paused-hidden' });
+    }
+
+    resumeAfterHiddenPage() {
+      if (!this.pausedByVisibility) return;
+      this.pausedByVisibility = false;
+      // Drop the filter history and the clutch: resuming must not ease out
+      // of a position recorded before the pause.
+      for (const filter of Object.values(this.positionFilters)) filter.reset();
+      this.pinchClutch.reset();
+      this.poseDropFrames = 0;
+      this.lastPinchSignal = 0;
+      // Go back to the stage the HUD showed before the pause. A hand is not
+      // known any more, though: without a fresh frame there is nothing to
+      // track, so the pipeline waits for one.
+      const before = this.stageBeforePause;
+      const stage = !before || before === 'hand-detected' || before === 'waiting-hand'
+        ? 'waiting-hand'
+        : before;
+      this.setVisionStatus({ stage });
+      this.stageBeforePause = null;
+      this.camera?.scheduleFrame?.();
     }
 
     // Map the three UI presets to MediaPipe's minDetection / minTracking
@@ -1174,6 +1241,9 @@
     async start(videoElement, canvasElement) {
       if (this.active) return;
       this.active = true;
+      // One listener per start; stop() takes it away again.
+      this.visibilityHandler = () => this.handleVisibilityChange();
+      global.document?.addEventListener?.('visibilitychange', this.visibilityHandler);
       const session = {};
       this.startSession = session;
       this.lastColorSampleAt = -Infinity;
@@ -1283,6 +1353,10 @@
 
     stop() {
       this.active = false;
+      if (this.visibilityHandler) global.document?.removeEventListener?.('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+      this.pausedByVisibility = false;
+      this.stageBeforePause = null;
       this.cancelGestureLearn();
       this.setVisionStatus({ stage: 'idle', cameraActive: false, mediapipeLoaded: false });
       if (this.camera) {
@@ -1311,6 +1385,9 @@
 
     processResults(results, frameTimestamp = nowMs()) {
       if (!this.active) return;
+      // A result that was already in flight when the page was hidden must
+      // not claim the camera is live again, nor move a mapping.
+      if (this.pausedByVisibility) return;
       if (this.lastSendTime) {
         const latency = nowMs() - this.lastSendTime;
         this.lastSendTime = null;

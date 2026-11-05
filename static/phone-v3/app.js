@@ -576,57 +576,89 @@
     update();
   }
 
-  // ---- Permission UX (iOS 13+ requires a user gesture) ----
-  // Each API is requested independently inside the SAME synchronous gesture
-  // callback, before any promise is awaited. Motion and orientation trackers
-  // never share a verdict: one denied API does not poison the other.
-  function maybeRequestPermissions() {
-    const motionNeedsRequest = typeof DeviceMotionEvent !== 'undefined'
-      && typeof DeviceMotionEvent.requestPermission === 'function';
-    const orientationNeedsRequest = typeof DeviceOrientationEvent !== 'undefined'
-      && typeof DeviceOrientationEvent.requestPermission === 'function';
-    const needsRequest = motionNeedsRequest || orientationNeedsRequest;
-    if (needsRequest) {
-      const banner = document.getElementById('permission-banner');
-      const btn = document.getElementById('permission-activate');
-      banner.classList.remove('hidden');
-      btn.addEventListener('click', () => {
-        // Fire every request synchronously while the gesture is still active.
-        const motionRequest = motionNeedsRequest ? DeviceMotionEvent.requestPermission() : null;
-        const orientationRequest = orientationNeedsRequest ? DeviceOrientationEvent.requestPermission() : null;
+  // ---- Sensor permission startup (the page never prompts by itself) ----
+  // Some browsers only deliver motion/orientation readings after an explicit
+  // requestPermission() call, and that call needs a user gesture. The boot
+  // attaches the APIs that need no gesture and waits for the others: no
+  // banner, no global OK, no prompt on the way into a session. The Settings
+  // sensor action asks for the missing permissions inside the user's
+  // gesture, and both APIs are requested before anything is awaited.
+  //
+  // The Permissions API knows the sensor hardware, not the event names:
+  // relative motion and relative orientation both need the accelerometer
+  // and the gyroscope; the magnetometer only adds absolute orientation.
+  const SENSOR_PERMISSION_NAMES = ['accelerometer', 'gyroscope'];
 
-        const handleMotion = (result) => {
-          motionTracker.permission(result);
-          if (result === 'granted') attachMotion();
-        };
-        const handleOrientation = (result) => {
-          orientationTracker.permission(result);
-          if (result === 'granted') attachOrientation();
-        };
+  function sensorPermissionQuery(name) {
+    const permissions = navigator.permissions;
+    if (!permissions || typeof permissions.query !== 'function') return null;
+    if (name !== 'motion' && name !== 'orientation') return null;
+    const states = SENSOR_PERMISSION_NAMES.map((permissionName) => {
+      try {
+        const pending = permissions.query({ name: permissionName });
+        if (!pending || typeof pending.then !== 'function') return Promise.resolve('unknown');
+        return pending.then(
+          (status) => (status && typeof status.state === 'string' ? status.state : 'unknown'),
+          () => 'unknown',
+        );
+      } catch {
+        return Promise.resolve('unknown');
+      }
+    });
+    // Every name of the bundle has to be granted.
+    return Promise.all(states).then(
+      (results) => (results.every((state) => state === 'granted') ? 'granted' : 'unknown'),
+      () => 'unknown',
+    );
+  }
 
-        if (motionRequest) {
-          motionRequest.then(
-            (r) => handleMotion(r === 'granted' ? 'granted' : 'denied'),
-            () => handleMotion('error'),
-          );
-        } else if (motionTracker && motionTracker.getState().status !== 'unsupported') {
-          attachMotion();
-        }
-        if (orientationRequest) {
-          orientationRequest.then(
-            (r) => handleOrientation(r === 'granted' ? 'granted' : 'denied'),
-            () => handleOrientation('error'),
-          );
-        } else if (orientationTracker && orientationTracker.getState().status !== 'unsupported') {
-          attachOrientation();
-        }
-        syncSensorTrackers();
-        banner.classList.add('hidden');
-      }, { once: true });
+  function sensorPermissionApis() {
+    const motion = typeof DeviceMotionEvent !== 'undefined' ? DeviceMotionEvent : null;
+    const orientation = typeof DeviceOrientationEvent !== 'undefined' ? DeviceOrientationEvent : null;
+    return {
+      motion: {
+        present: !!motion,
+        request: motion && typeof motion.requestPermission === 'function'
+          ? () => motion.requestPermission() : null,
+      },
+      orientation: {
+        present: !!orientation,
+        // Relative orientation: the magnetometer (absolute) is never asked for.
+        // The IDL argument is a boolean: requestPermission(optional boolean
+        // absolute=false), so a plain false is asked for here.
+        request: orientation && typeof orientation.requestPermission === 'function'
+          ? () => orientation.requestPermission(false) : null,
+      },
+    };
+  }
+
+  function startSensorAccess() {
+    const factory = window.RcSensorPermissions?.create;
+    const controller = typeof factory === 'function'
+      ? factory({
+        apis: sensorPermissionApis(),
+        trackers: { motion: motionTracker, orientation: orientationTracker },
+        attach: { motion: attachMotion, orientation: attachOrientation },
+        queryPermission: sensorPermissionQuery,
+        onChange: () => syncSensorTrackers(),
+      })
+      : null;
+    window.RcSensorPermissionController = controller;
+    if (controller) {
+      controller.start();
+      // The hidden bridge button stays for anything that still clicks it.
+      // It never shows a banner and never becomes a one-shot action: a
+      // denied or failed request can be repeated from the next gesture.
+      const bridge = document.getElementById('permission-activate');
+      if (bridge) bridge.addEventListener('click', () => { controller.request(); });
     } else {
-      attachMotion();
-      attachOrientation();
+      // The controller did not load: attach only what needs no gesture.
+      if (typeof DeviceMotionEvent === 'undefined'
+        || typeof DeviceMotionEvent.requestPermission !== 'function') attachMotion();
+      if (typeof DeviceOrientationEvent === 'undefined'
+        || typeof DeviceOrientationEvent.requestPermission !== 'function') attachOrientation();
     }
+    syncSensorTrackers();
     attachNetwork();
   }
 
@@ -2882,6 +2914,8 @@
           setCameraStageState('active', 'CAMERA ACTIVE', 'Video ready — loading hand tracking…');
         } else if (status.stage === 'starting') {
           setCameraStageState('starting', 'STARTING CAMERA', 'Waiting for the browser video source…');
+        } else if (status.stage === 'paused-hidden') {
+          setCameraStageState('starting', T('vid.pausedHidden', 'VISION PAUSED'), T('vid.pausedHiddenDetail', 'Page hidden — vision resumes when this page is visible again'));
         }
       };
       processor.onVisionStatus = renderVisionStage;
@@ -3245,7 +3279,7 @@
     },
   });
   sendLoop();
-  maybeRequestPermissions();
+  startSensorAccess();
   setupSensorToggles();
   setupCalibration();
   setupAudioUI();

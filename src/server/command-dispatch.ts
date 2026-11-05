@@ -42,6 +42,10 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   getClipTargets: "read",
   getClipLaunchStatus: "read",
   getRecordingState: "read",
+  getRecordingTakes: "read",
+  getRecordingCueState: "read",
+  getRecordingArrangement: "read",
+  getRecordingWaveform: "read",
   getSessionRecordingState:"read",
 
   // Live-write side effects (controller, admin)
@@ -66,6 +70,7 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   recordingSetPoint: "live-write",
   recordingLocator: "live-write",
   recordingArm: "live-write",
+  recordingArmTracks: "live-write",
   recordingTrackControl: "live-write",
   recordingTrackVolume: "live-write",
   recordingRenameTrack: "live-write",
@@ -77,9 +82,11 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   recordingReturnToArrangement:"live-write",
   recordingSeekMarker: "live-write",
   recordingStop: "live-write",
+  recordingCreateMarker: "live-write",
   recordingAudition: "live-write",
   recordingClick: "live-write",
   recordingMark: "live-write",
+  recordingMarkTake: "live-write",
 
   // Mapping-write side effects (controller, admin) — everything the phone's
   // own MAP panel needs to bind a control and manage its presets.
@@ -104,6 +111,12 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
 
   // Server-admin side effects (admin only)
   getServerInfo: "server-admin",
+  getNetworkInfo: "server-admin",
+  setNetworkChoice: "server-admin",
+  runNetworkCheck: "server-admin",
+  startNetworkSearch: "server-admin",
+  stopNetworkSearch: "server-admin",
+  nextNetworkAddress: "server-admin",
   getActuatorStats: "server-admin",
   resetActuatorStats: "server-admin",
   benchDeviceParamWrites: "server-admin",

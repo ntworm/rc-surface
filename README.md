@@ -1,11 +1,13 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v2.0.0](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/ntworm/rc-surface/releases)
+[![v2.1.0](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 [![stars](https://img.shields.io/github/stars/ntworm/rc-surface.svg?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
 **Português:** [README.pt-BR.md](README.pt-BR.md) · [página em português](https://ntworm.github.io/rc-surface/pt-br.html)
+
+> **2.1.0 preview:** compact REC views, the Network tab and the Mac connection fixes are available in the [pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Native Live/macOS recording acceptance is pending. The [stable release](https://github.com/ntworm/rc-surface/releases/latest) and landing remain on 2.0.0 until promotion.
 
 [**:globe_with_meridians: Live landing page**](https://ntworm.github.io/rc-surface/) — interactive surface map, install walkthrough, and workflow reference.
 
@@ -25,12 +27,12 @@ The mobile interface is organized into **seven pages** plus **four contextual he
 | **`SNS`** | Phone motion (accelerometer/gyroscope) and 3D orientation sensors with posture calibration. |
 | **`AUD`** | Real-time microphone analysis with 12 spectral/band-onset descriptors and ITU-R BS.1770 K-weighted loudness. |
 | **`VID`** | Local single-hand camera tracking (bundled MediaPipe Hands) with continuous `X / Y / Z / PALM / FACE` inputs and up to 15 learned poses (`G1`–`G15`). |
-| **`REC`** | Arrangement & Session recording station (**ARRANGEMENT / CLIP**) with marker timeline, pre-roll, loop passes, and live track arm/solo/mute/volume cards. |
+| **`REC`** | Recording station with three local views — **RECORD / ARRANGEMENT / CLIP**, with **Record** as the default — sharing one fixed capture bar (**REC / STOP**, **PRE-ROLL**, **PASSES**, **START / END**, **CLICK**) and one fixed mode bar. Record shows the native track rows and a compact marker list, and only the track list scrolls; it reads no clips, takes or waveforms. Arrangement adds the marker timeline with local marker selection, the native Arrangement clips on the same timeline and take inspection; Clip captures an empty Session scene. |
 | **`MAP` · `TRN` · `AUT` · `CFG`** | Header overlays for on-phone mapping (**Bind**, **Trigger Note**, **Launch Clip**), transport/locators (`TRN`), XY gesture loops (`AUT`), and per-control configuration (`CFG`). |
 
 ## Performance 2.0
 
-- **Arrangement & Session REC (`REC`):** switch between **ARRANGEMENT / CLIP**. Record Arrangement takes along a scaled bar/beat marker timeline with `ZOOM`, `START / END` (`1–10` passes, `∞`, or `FREE` until `STOP`), and `PRE-ROLL` (`OFF / 1 / 2 / 4` bars), or capture an empty Session scene across all armed tracks (`1 / 2 / 4 / 8 / 16` bars, launch quantization, and `BACK TO ARR`). Track cards provide `ARM MULTI / EXCLUSIVE`, `SOLO`, `MUTE`, live `270°` volume knobs, and double-click inline track rename.
+- **Recording (`REC`):** one global page with three local views — **RECORD / ARRANGEMENT / CLIP** — where **Record** is the default, sharing one fixed capture bar and one fixed mode bar. **Record** shows the capture bar (**REC / STOP**, **PRE-ROLL** `OFF / 1 / 2 / 4` bars, **PASSES** `1 / 2 / 3 / ∞`, **START / END**, **CLICK**) with the native track rows and a compact marker list; on a landscape phone only the track list scrolls, and this view reads no clips, takes or waveforms. **Arrangement** is the editor with the scaled bar/beat marker timeline, native Arrangement clips at their real intervals, `ZOOM` and take focus; **Clip** captures an empty Session scene across all armed tracks (`1 / 2 / 4 / 8 / 16` bars, launch quantization, and `BACK TO ARR`). Marker selection is local: it defines the range that **REC** captures and never seeks Live. Markers are prepared in Live and appear in the catalog; the phone creates none. Live tracks appear as native rows with per-row **ARM / SOLO / MUTE** and a horizontal volume fader, plus **ARM ALL** and a local group expansion; arming a group row arms its armable descendants. In **Arrangement**, a track row offers **TAKES** and the Arrangement clip you choose opens an exclusive focus on that exact clip, where **GOOD / REVIEW / NO MARK** rename the take clip you chose; there is no global take panel. A waveform preview is an explicit stopped-state action on a visible Arrangement audio clip. Listening, comping and promoting stay in Live; see [User Guide](docs/USER-GUIDE.md#16-rec-arrangement--clip).
 - **XY Gesture Loops (`AUT`):** record and loop movements independently on `XY 1` and `XY 2` after a `3–2–1` countdown, synced to Live (`1–5 bars`) or free (`1–30 seconds`).
 - **On-Phone Mapping (`MAP`):** bind any touch or sensor source to Live parameters (**Bind**), trigger quantized MIDI notes via `RC-Midi-Receiver.amxd` (**Trigger Note**), or fire Session clips and clip-advance rules (**Launch Clip**). Touch response-curve and Burst handles require a `0.6 s` hold so scrolling never alters a value.
 - **Config Mode (CFG):** customize individual pads (modes A/B/C/D and Mode D burst timing), `T1`–`T8` modulators, and independent Static/Physics XY behavior (friction, bounce, speed, trails).
@@ -41,9 +43,9 @@ The mobile interface is organized into **seven pages** plus **four contextual he
 
 ## Quick Start
 
-1. **Requirements:** Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support, a modern mobile browser on the same trusted Wi-Fi/LAN, and optional **AbletonOSC** (ports `11000` / `11001`) for `REC`, `Launch Clip`, `TRN`, and beat sync.
-2. **Download:** grab `RC-Surface-2.0.0.ablx` and `RC-Midi-Receiver.amxd` (plus optional `RC-Audio-Sender.amxd`) from [Releases](https://github.com/ntworm/rc-surface/releases) and verify with `SHA256SUMS.txt`.
-3. **Install:** double-click `RC-Surface-2.0.0.ablx` to install in Live (restart Live if already open), then enable **RC Surface** under *Options → Preferences → Extensions*.
+1. **Requirements:** Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support, a modern mobile browser on the same trusted Wi-Fi/LAN, and **AbletonOSC** (ports `11000` / `11001`) for `REC`, `Launch Clip`, `TRN`, and beat sync; AbletonOSC is optional for basic control.
+2. **Download:** grab `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus optional `RC-Audio-Sender.amxd`) from the supplied kit or matching [2.1.0 pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) and verify with `SHA256SUMS.txt`.
+3. **Install:** double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if already open), then enable **RC Surface** under *Options → Preferences → Extensions*.
 4. **Connect:** open the RC Surface panel in Live, scan the QR code with your phone, and accept the local self-signed HTTPS certificate once.
 5. **Play & Map:** use the 7 surface tabs to perform, or tap **MAP** in the header to bind parameters, trigger MIDI notes, or launch clips.
 

@@ -48,7 +48,8 @@ test('phone connection has a heartbeat deadline and immediate online/offline han
   // Heartbeat and online/offline handling moved to modules/session.js
   const session = fs.readFileSync(path.join(import.meta.dirname, 'modules/session.js'), 'utf8');
   assert.match(session, /HEARTBEAT_TIMEOUT_MS/);
-  assert.match(session, /Date\.now\(\) - lastPongAt > HEARTBEAT_TIMEOUT_MS/);
+  assert.match(session, /now - lastPongAt > HEARTBEAT_TIMEOUT_MS/);
+  assert.match(session, /2 \* PING_MS/);
   assert.match(session, /addEventListener\(['"]offline['"]/);
   assert.match(session, /addEventListener\(['"]online['"]/);
   assert.match(session, /CONNECTION LOST/);

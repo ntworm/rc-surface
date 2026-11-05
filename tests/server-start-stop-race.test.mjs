@@ -26,7 +26,10 @@ function harness({ tls = false, manualListen = false, manualClose = false } = {}
     useHttps: tls, httpsOptions: tls ? {} : null,
     loadCerts() { const gate = deferred(); certs.push(gate); return gate.promise; },
     regenerateTokens() { rotations++; },
-    handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {}, getLanAddresses: () => [],
+    handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {},
+    onCertificateChange() {},
+    getPublishedLan: () => ({ primaryIp: '', otherIps: [] }),
+    startLanRuntime: async () => {}, stopLanRuntime: () => {},
   });
   return { api, certs, servers, closed, rotations: () => rotations };
 }

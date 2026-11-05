@@ -365,6 +365,8 @@ function loadPanelApp(extraIds = []) {
 
   const source = fs.readFileSync(path.join(staticRoot, 'panel', 'app.js'), 'utf8');
   vm.runInContext(fs.readFileSync(path.join(staticRoot, 'shared', 'audio-descriptor-catalog.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(staticRoot, 'panel', 'network-address.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(staticRoot, 'panel', 'network-tab.js'), 'utf8'), context);
   vm.runInContext(source, context, { filename: 'panel/app.js' });
   return { context, document, qrCalls };
 }
@@ -687,6 +689,15 @@ test('All panel IDs referenced by tests exist in index.html (A1 regression guard
     'open-perf',
     'copy-primary',
     'link-admin',
+    'network-address',
+    'network-reason',
+    'net-ip',
+    'net-why',
+    'net-actions',
+    'net-note',
+    'net-qr',
+    'net-rows',
+    'net-diag',
   ];
   const missing = ids.filter((id) => !html.includes(`id="${id}"`));
   assert.deepEqual(missing, [], 'IDs missing from index.html: ' + missing.join(', '));

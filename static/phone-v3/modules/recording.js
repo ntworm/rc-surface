@@ -3,7 +3,7 @@
 // Source: https://github.com/ntworm/rc-surface
 (function (root) {
   'use strict';
-  const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingTrackControl','recordingRenameTrack','recordingTrackVolume','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark']);
+  const WRITES = new Set(['recordingReturnToArrangement','recordingSessionRecord','recordingSessionStop','recordingSelectTrack','recordingSetPoint','recordingLocator','recordingArm','recordingArmTracks','recordingTrackControl','recordingRenameTrack','recordingTrackVolume','recordingPrepare','recordingStart','recordingRecord','recordingSeekMarker','recordingStop','recordingAudition','recordingClick','recordingMark','recordingCreateMarker','recordingMarkTake']);
   const t = (key, params) => root.RcSurfaceI18n?.t('rec.' + key, params) || key;
   function formatVolumeDb(v) {
     // SDK exposes internal values, not Live's formatted dB scale.
@@ -21,24 +21,81 @@
   }
   /** Callbacks only confirm the state the host observed. No queued/replayed
    * writes; STOP retires prior callbacks and remains available while busy. */
+  /** The arrangement channel follows the coordinator. It is opened, closed
+   * and cancelled with the same session, and its replies never become an
+   * observation of the state. */
+  function syncArrangement(arrangement, base) {
+    if (!arrangement) return;
+    arrangement.sync(base);
+  }
+  function sessionArrangement(arrangement, open, role) {
+    if (!arrangement) return;
+    arrangement.session(open, role);
+  }
+  function cancelArrangement(arrangement) {
+    if (!arrangement) return;
+    arrangement.cancel();
+  }
+  /** The arrangement rows UI is optional: the page works without it. */
+  function createArrangementRows(options) {
+    const factory = root.RcRecordingArrangement?.setupRows;
+    if (typeof factory !== 'function') return null;
+    return factory(options);
+  }
+  /** CLICK changes an observed metronome. A live connection, a recent
+   * observation and a known boolean metronome are all required: an unknown,
+   * stale or disconnected observation is never turned into a write. */
+  function clickReady(state, writable, fresh) {
+    const transport = state?.transport;
+    const metronome = transport?.metronome;
+    return writable === true && fresh === true
+      && transport?.connected === true
+      && metronome?.fresh === true && typeof metronome?.value === 'boolean';
+  }
   function createClient({send, render = () => {}, timeoutMs = 12000}) {
     let connected = false, role = 'viewer', state = null, busy = false, generation = 0, error = null, readError = null, receivedAt = 0, reading = null, connectionEpoch=0, pendingCommand=null, clicking=false;
+    const requests = root.RcRecordingRequests?.createRequests({send, timeoutMs, getView: () => view(), notify: () => notify()});
+    // The data path answers questions about Live's objects. Its replies never
+    // become an observation: they never touch the state, the generation, the
+    // busy flag or the pending command of the coordinator. Its own note
+    // paints the list at once, so a busy note disables the mark actions
+    // before the reply arrives.
+    const data = root.RcRecordingData?.createDataClient?.({send, timeoutMs, getView: () => view(), notify: () => notify()});
+    // The arrangement path reads the native clip catalog and the waveform
+    // previews. It shares the raw channel, the same view and the same note
+    // of the coordinator: its replies are answers about Live's objects and
+    // never become an observation of the state.
+    const arrangement = root.RcRecordingArrangement?.createReads?.({send, timeoutMs, getView: () => view(), notify: () => notify()});
     const view = () => {
       let observed = state;
       if (state?.transport && Date.now() - receivedAt > 5000) {
         observed = {...state, transport:{...state.transport}};
         for (const key of ['isPlaying','recordMode','songTimeBeats','metronome']) observed.transport[key] = {...state.transport[key],fresh:false};
       }
-      return {connected, role, state:observed, busy, clicking, connectionEpoch, pendingCommand, fresh:Date.now()-receivedAt<=5000, error:error || readError, writable: connected && ['controller','admin'].includes(role)};
+      const fresh = Date.now()-receivedAt<=5000;
+      const writable = connected && ['controller','admin'].includes(role);
+      const base = {connected, role, state:observed, busy, clicking, connectionEpoch, pendingCommand, fresh, error:error || readError, writable, clickable: clickReady(observed, writable, fresh)};
+      data?.sync(base);
+      syncArrangement(arrangement, base);
+      return {markerBusy:false, markerResult:null, markerError:null, ...base, ...requests?.view(base), ...data?.view(base)};
     };
     const notify = () => render(view());
     function session(open, nextRole = 'viewer') {
-      generation++;connectionEpoch++;pendingCommand=null;clicking=false; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null; notify();
+      generation++;connectionEpoch++;pendingCommand=null;clicking=false; connected = open; role = nextRole; state = null; busy = false; reading = null; error = null; readError = null;
+      requests?.session(open, nextRole);
+      data?.session(open, nextRole);
+      sessionArrangement(arrangement, open, nextRole);
+      notify();
     }
     function command(name, args = {}) {
       if (!connected || (WRITES.has(name) && !view().writable)) return Promise.reject(Error('REC:SESSION'));
+      // The data path is routed before the coordinator path: its replies are
+      // answers about Live's objects, never a new observation of the state.
+      if (data?.handles?.(name)) return data.command(name, args);
       if (name === 'recordingClick') return click(args);
+      if (name === 'recordingCreateMarker') return requests ? requests.createMarker(args) : Promise.reject(Error('REC:UNKNOWN'));
       const read = ['getRecordingState','getSessionRecordingState'].includes(name),stop=['recordingStop','recordingSessionStop'].includes(name);
+      if (stop) { requests?.cancel('stop'); data?.cancel(); cancelArrangement(arrangement); }
       if (read && busy && pendingCommand!=='recordingRecord') return Promise.resolve(view().state);
       if (read && reading) return reading;
       if (busy && !read && !stop) return Promise.reject(Error('REC:BUSY'));
@@ -63,7 +120,12 @@
             // An SDK write may have applied without confirmation, including
             // exclusive-arm side effects. Wait for observed arms before any
             // subsequent toggle; never retry the write or claim success.
-            if(!read && name==='recordingTrackControl' && args.property==='arm' && state?.tracks)state={...state,tracks:state.tracks.map(track=>({...track,arm:null}))};
+            // A failed ARM write leaves every arm observation unknown, exactly as a
+            // failed single ARM does: the host owns the arm state. The
+            // invalidation happens here, after the generation check, so a late
+            // error of a retired cohort can never clear the arms of a new Set
+            // or of a confirmed STOP.
+            if(!read && (name==='recordingArmTracks'||(name==='recordingTrackControl'&&args.property==='arm')) && state?.tracks)state={...state,tracks:state.tracks.map(track=>({...track,arm:null}))};
             if(!read && name==='recordingTrackVolume' && state?.tracks)state={...state,tracks:state.tracks.map(track=>track.index===args.track.index&&track.id===args.track.id?{...track,volume:null}:track)};
             if(read) readError = message; else error = message;
             notify(); reject(Error(message));
@@ -79,6 +141,9 @@
      * retires a pending REC action, and only one click change is in flight. */
     function click(args) {
       if (clicking) return Promise.reject(Error('REC:BUSY'));
+      // The metronome must be known: an unknown, stale or disconnected
+      // observation is never turned into a write.
+      if (!view().clickable) return Promise.reject(Error('REC:UNOBSERVED'));
       const epoch = connectionEpoch;
       clicking = true; notify();
       return new Promise((resolve, reject) => {
@@ -94,7 +159,44 @@
         try { send('recordingClick', args, finish); } catch { finish({ok:false, error:'REC:UNKNOWN'}); }
       });
     }
-    return {view, session, command};
+    // cancelData retires a pending note when the phone changes the target of
+    // its own list. It touches nothing of the coordinator: the write may
+    // still land in Live, but it can no longer report success here.
+    return {view, session, command, requests, cancelData: () => Boolean(data?.cancel?.()), arrangement};
+  }
+  /** A marker activation is a tap, not a pan: a gesture that moved never
+   * selects a marker. A keyboard activation is not a gesture at all: it
+   * never inherits the pointer origin of another marker. The pan gesture
+   * of a later step asks this guard before it selects anything. */
+  function markerTapGuard(slop = 12) {
+    let origin = null, keyboard = false;
+    const moved = (event, point) => {
+      const x = event && Number.isFinite(event.clientX) ? event.clientX : point.x;
+      const y = event && Number.isFinite(event.clientY) ? event.clientY : point.y;
+      return Math.abs(x - point.x) > slop || Math.abs(y - point.y) > slop;
+    };
+    return {
+      down(marker, event) {
+        keyboard = false;
+        origin = event ? { marker, x: event.clientX || 0, y: event.clientY || 0 } : null;
+      },
+      /** The pointer state ends with its gesture: a cancelled pointer
+       * never decides about a later activation. */
+      cancel() { origin = null; keyboard = false; },
+      /** A keyboard activation is remembered: it selects the marker even
+       * when a pointer gesture on another marker came first. */
+      key() { keyboard = true; },
+      tap(marker, event) {
+        // A keyboard activation is never a movement: it is always a tap.
+        if (keyboard || (event && event.detail === 0 && !event.clientX && !event.clientY)) {
+          origin = null; keyboard = false; return true;
+        }
+        if (!origin) return true;
+        const blocked = origin.marker !== marker || moved(event, origin);
+        origin = null;
+        return !blocked;
+      }
+    };
   }
   // Arrangement marker geometry; no audio data or take-lane representation.
   function timelineBounds(locators, zoom = 1) {
@@ -131,25 +233,118 @@
   function setup() {
     const doc = root.document, page = doc.getElementById('page-recording');
     if (!page) return;
-    const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-start-marker','rec-end-marker',
-      'rec-passages','rec-passages-field','rec-free-mode','rec-end-field','rec-timeline','rec-timeline-track','rec-grid','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
-      'rec-pre-roll-0','rec-pre-roll-1','rec-pre-roll-2','rec-pre-roll-4','rec-pre-roll-inline','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-cfg','rec-session-settings','rec-session-bars','rec-session-quantization','rec-session-grid'].map(id => [id.slice(4),doc.getElementById(id)]));
+    const elements = Object.fromEntries(['rec-status','rec-track-grid','rec-start','rec-stop','rec-click','rec-return-arrangement','rec-arm-mode','rec-arm-all','rec-start-marker','rec-end-marker',
+      'rec-passages','rec-passages-value','rec-end-field','rec-range-note','rec-timeline','rec-timeline-track','rec-grid','rec-markers','rec-cursor','rec-region','rec-zoom','rec-position',
+      'rec-focus','rec-takes',
+      'rec-pre-roll-inline','rec-pre-roll-value','rec-record-mode','rec-arrangement-mode','rec-clip-mode','rec-arrangement-panel','rec-range-row','rec-scene-row','rec-bars-slot','rec-quant-slot','rec-session-panel','rec-session-target','rec-session-prev','rec-session-next','rec-session-bars','rec-session-quantization','rec-session-grid',
+      'rec-combined-band','rec-combined-editor','rec-combined-session','rec-combined-footer'].map(id => [id.slice(4),doc.getElementById(id)]));
     const el = id => elements[id];
-    let trackSignature='', markerSignature='', gridSignature='', rangeSignature='', refreshTimer=null, frame=null, cursorClock=null;
-    let startIndex='cursor', endIndex='', looping=false, zoom=1, bounds=timelineBounds([]), previousLocators=[],fixedPoint=null,passes=1;
+    // The pure range selection owns the start and the end of the capture.
+    // Without it the page owns no range at all: it never guesses an index.
+    const rangeApi = root.RcRecordingRange;
+    if (!rangeApi) {
+      el('status').textContent = t('rangeUnavailable');
+      el('start').disabled = true;
+      // An inert surface: the page reads nothing and writes nothing.
+      return {view:()=>({connected:false,writable:false,busy:false,fresh:false,state:null}),session(){},command:()=>Promise.reject(Error('REC:UNKNOWN'))};
+    }
+    let trackSignature='', markerSignature='', gridSignature='', rangeSignature='', refreshTimer=null, frame=null, cursorClock=null, paintedEnd=0;
+    let zoom=1, bounds=timelineBounds([]), fixedPoint=null, passes=1;
+    // One shared selection with real references. The selectors only adapt a
+    // value to a reference; they never keep an index of their own.
+    let selection=rangeApi.emptySelection(), selectionTouched=false, selectionScope='';
+    // The catalog the open selectors display: an option means the marker
+    // it shows, never the marker that sits at that index now.
+    let optionCatalog=[];
     let preRollBars=0, userAdjustedZoom=false, autoZoomTimer=null;
+    // The opening with Até STOP: the flag is armed until the view frames
+    // the resolved start, and the reader's own view always wins over it.
+    let stopFrameArmed=true, userAdjustedView=false;
+    // The gesture of the reader on the ruler: a finger or a wheel that
+    // really moved the scrollport owns the view from then on.
+    let lastScrollLeft=0, pointerOnTimeline=false, lastPointerUp=0;
+    let passesReported=null;
     let armMode='multi';
-    let destination='arrangement',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
+    let destination='record',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
     let displayMeter=null,displaySongId=null;
     const sessionCells=new Map();
     try { preRollBars=preRollPreference(root.localStorage); } catch { /* Disabled browser storage uses OFF. */ }
     try {if(root.localStorage?.getItem('rc-surface-v2.rec.armMode')==='exclusive')armMode='exclusive';}catch{}
     const cards=new Map();
+    // Every marker owns the node it represents: a reorder never moves a
+    // marker to another node of the Set.
+    const markerCues=new Map();
+    // A collective ARM owns a bounded cohort: an unbounded or ambiguous set
+    // is never written.
+    const MAX_COLLECTIVE=256;
+    // The group collapse is a local view choice: it never writes to Live.
+    const collapsedGroups=new Set();
+    let treeScope='';
     const client = createClient({send:(name,args,cb)=>root.sendPhoneCommand(name,args,cb),render});
+    // A marker activation is a tap: the guard of a later pan gesture.
+    const activation=markerTapGuard();
+    // The take-lane list is its own module: it reads on demand only and it
+    // never writes on its own.
+    const takes = root.RcRecordingTakes?.setup?.({client, doc});
+    // The arrangement rows UI reads the native clip catalog of the visible
+    // ordinary tracks and paints the real clips of the lane. It owns no
+    // state of its own: the bounded model keeps the cache and the paging,
+    // and the take focus is a seam that a later step connects.
+    const arrangementRows = createArrangementRows({
+      client, doc,
+      getGeometry: () => arrangementGeometry(),
+      onChange: () => scheduleArrangementPaint()
+    });
+    let arrangementFrame=null;
+    function scheduleArrangementPaint() {
+      if (arrangementFrame!=null) return;
+      const paint=()=>{arrangementFrame=null;render(client.view());};
+      arrangementFrame=root.requestAnimationFrame?root.requestAnimationFrame(paint):setTimeout(paint,0);
+    }
+    // The take focus is a local view of one track: it reuses the take list
+    // and the arrangement rows and never owns a state of its own. The rows
+    // answer whether the source clip is still the one of their own cached
+    // catalog: the focus never reads again for that answer.
+    const focus = root.RcRecordingFocus?.setup?.({
+      client, takes, doc,
+      getGeometry: () => arrangementGeometry(),
+      onChange: () => scheduleArrangementPaint(),
+      cancelVolumes: () => cancelVolumes(),
+      hasSource: arrangementRows?.hasSource ? (track, clip) => arrangementRows.hasSource(track, clip) : null,
+    });
+    arrangementRows?.setFocusHandler?.(detail => { focus?.open(detail); });
     const invoke = (name,args) => client.command(name,args).catch(()=>{});
-    const cueAt = index => index === '' ? null : client.view().state?.locators[Number(index)] || null;
-    const startAt=()=>startIndex==='cursor'&&Number.isFinite(fixedPoint)?{source:'cursor',time:fixedPoint}:cueAt(startIndex);
-    const markerRef = cue => cue.source==='cursor'?{source:'cursor',time:cue.time}:{name:cue.name,time:cue.time};
+    /** The observed marker catalog: the only source of a marker identity. */
+    const markers=()=>client.view().state?.locators||[];
+    /** The resolved selection: the real references, or an honest reason. */
+    const resolved=()=>rangeApi.resolveSelection(selection,markers());
+    /** The end of the range is bounded: a marker of the catalog or the next
+     * one after the start. */
+    const bounded=()=>selection.endMode!=='stop';
+    /** The host owns the range while it captures, prepares, pre-rolls or
+     * runs a Session: the local selection never redraws it. */
+    function hostOwnsRange(state) {
+      if(!state) return false;
+      const phase=state.capture?.phase;
+      return Boolean(state.pending)||Boolean(state.preRoll)||Boolean(state.attemptActive)
+        ||Boolean(state.session?.active)||phase==='recording'||phase==='unconfirmed';
+    }
+    /** The range the surface shows: the frozen range of the host while it
+     * owns the capture, the local selection otherwise. */
+    function displayRange() {
+      const state=client.view().state;
+      if(hostOwnsRange(state)&&state?.range) return {start:state.range.start||null,end:state.range.end||null};
+      const current=resolved();
+      return {start:current.start,end:current.end};
+    }
+    /** The range is editable only while the page is idle: a pending
+     * action, a pre-roll, an attempt or a running Session owns the
+     * capture. */
+    function rangeLocked(view) {
+      const state=view.state;
+      return Boolean(view.busy)||Boolean(state?.pending)||Boolean(state?.preRoll)
+        ||Boolean(state?.attemptActive)||Boolean(state?.session?.active);
+    }
     function canControl(view,property) {
       const state=view.state,transport=state?.transport;
       if(!view.writable||!view.fresh||view.busy||state?.trackPending||!transport?.connected)return false;
@@ -169,11 +364,69 @@
       });
       return targets.every(Boolean)?targets:null;
     };
+    /** The modes are locked while the host owns the capture: a pending
+     * action, a pre-roll, an attempt, a running Session or an observed
+     * record mode. A switch is never forced during a capture. */
+    function modeLocked(view) {
+      const state=view.state||{};
+      const transport=state.transport||{};
+      const capture=state.capture||{};
+      const session=state.session||{};
+      const locks=[view.busy,state.pending,state.preRoll,state.attemptActive,session.active,
+        capture.phase==='recording',capture.phase==='unconfirmed',transport.recordMode?.value===true];
+      return locks.some(Boolean);
+    }
+    /** The local modes of the page. The Record mode is the default: it shows
+     * the capture without the editor and never writes to the host. */
+    function applyModeChrome(view) {
+      if(page.dataset.recMode!==destination)page.dataset.recMode=destination;
+      const locked=modeLocked(view);
+      for(const mode of ['record','arrangement','clip']){
+        const button=el(mode+'-mode');
+        if(!button)continue;
+        button.disabled=locked;
+        button.setAttribute('aria-pressed',String(mode===destination));
+      }
+      const record=el('record-mode');
+      const label=t('recordMode');
+      if(record&&record.textContent!==label)record.textContent=label;
+      const range=el('range-row');
+      if(range)range.hidden=destination==='clip';
+      // The context of the band follows the destination: the Record and the
+      // Arrangement own the range of the capture and its zoom, the Clip
+      // owns the native scene and its paging. The row that is not in use
+      // is hidden and never leaves a gap behind.
+      const scene=el('scene-row');
+      if(scene)scene.hidden=destination!=='clip';
+      if(el('bars-slot'))el('bars-slot').hidden=destination!=='clip';
+      if(el('quant-slot'))el('quant-slot').hidden=destination!=='clip';
+    }
+    /** The focus owns the take lanes: the overview of the Arrangement shows
+     * no empty list of its own. */
+    function focusOpen() {
+      return destination==='arrangement'&&Boolean(focus?.isOpen?.());
+    }
+    /** The take inspection belongs to the Arrangement alone: the Record and
+     * the Clip never show the editor of a take, its details or its focus.
+     * The focus owns its own open state: a closed focus is never unhidden
+     * and an open one is never closed by the chrome. The ruler belongs to
+     * the Record and the Arrangement; the Clip owns the Session context of
+     * the same column of the combined band. */
+    function applyEditorChrome() {
+      const panel=el('arrangement-panel');
+      if(panel)panel.hidden=destination==='clip';
+      const sessionContext=el('combined-session');
+      if(sessionContext)sessionContext.hidden=destination!=='clip';
+      const open=focusOpen();
+      const takesPanel=el('takes');
+      if(takesPanel)takesPanel.hidden=!open;
+      const focusPanel=el('focus');
+      if(focusPanel)focusPanel.hidden=!open;
+    }
     function renderSession(view) {
       const session=view.state?.session;
-      el('arrangement-panel').hidden=destination!=='arrangement';el('session-panel').hidden=destination!=='clip';
+      el('session-panel').hidden=destination!=='clip';
       const locked=view.busy||Boolean(view.state?.pending)||Boolean(view.state?.attemptActive);
-      for(const mode of ['arrangement','clip']){el(mode+'-mode').disabled=locked;el(mode+'-mode').setAttribute('aria-pressed',String(mode===destination));}
       for(const id of ['session-bars','session-quantization'])el(id).disabled=locked||!view.writable;
       el('session-prev').disabled=locked||sceneOffset===0;el('session-next').disabled=locked||sceneOffset+8>=(session?.totalScenes??0);
       if(sessionSongId!==session?.songId){sessionSongId=session?.songId;sceneTarget=null;}
@@ -224,24 +477,329 @@
       // its draft intact; only Enter sends the exact reference captured here.
       entry.name.replaceChildren(input);input.focus?.();input.select?.();
     }
-    function renderTracks(view) {
-      const tracks=view.state?.tracks||[],signature=JSON.stringify(tracks.map(track=>[track.index,track.id]));
+    /** Every queued local MIX gesture stops at once: a mode change must not
+     * leave a pending value that lands after the cards changed their mind. */
+    function cancelVolumes() {
+      for (const entry of cards.values()) entry.cancelVolume();
+    }
+    const trackKey = track => track.index+':'+track.id;
+    const trackRef = track => ({index:track.index,id:track.id,name:track.name});
+    /** The observed tree, read only from the snapshot: a group owns the
+     * tracks that name it. Nothing is guessed from a position or a name. */
+    function observedTree(tracks,valid) {
+      const groups=tracks.filter(track=>track.isGroup===true);
+      const byId=new Map(groups.map(group=>[String(group.id),group]));
+      const children=new Map(),parent=new Map();
       for(const track of tracks) {
+        const owner=valid?parentGroup(track,byId):null;
+        if(!owner||owner===track)continue;
+        parent.set(trackKey(track),owner);
+        if(!children.has(trackKey(owner)))children.set(trackKey(owner),[]);
+        children.get(trackKey(owner)).push(track);
+      }
+      return {groups,children,parent,roots:tracks.filter(track=>!parent.has(trackKey(track)))};
+    }
+    /** A group owns the tracks that name its exact handle. An unknown handle
+     * owns nothing: a position is never a parent. */
+    function parentGroup(track,byId) {
+      if(!track.groupId)return null;
+      return byId.get(String(track.groupId))||null;
+    }
+    /** The depth-first order of the observed tree. A collapsed group keeps
+     * its children in the document; they are hidden locally. */
+    function treeOrder(tracks,tree) {
+      const order=[],seen=new Set();
+      const visit=(track,depth)=>{
+        if(depth>64||seen.has(trackKey(track)))return;
+        seen.add(trackKey(track));order.push(track);
+        for(const child of tree.children.get(trackKey(track))||[])visit(child,depth+1);
+      };
+      for(const root of tree.roots)visit(root,0);
+      for(const track of tracks)visit(track,0);
+      return order;
+    }
+    /** A track is visible while every group above it stays expanded. */
+    function trackVisible(track,tree) {
+      let owner=tree.parent.get(trackKey(track)),depth=0;
+      while(owner&&depth++<64) {
+        if(collapsedGroups.has(trackKey(owner)))return false;
+        owner=tree.parent.get(trackKey(owner));
+      }
+      return true;
+    }
+    /** Every descendant of a group, transitively, with a visited cap. */
+    function descendantsOf(group,tree) {
+      const out=[],seen=new Set([trackKey(group)]),stack=[group];
+      while(stack.length&&seen.size<256) {
+        const current=stack.pop();
+        for(const child of tree.children.get(trackKey(current))||[]) {
+          if(seen.has(trackKey(child)))continue;
+          seen.add(trackKey(child));out.push(child);stack.push(child);
+        }
+      }
+      return out;
+    }
+    /** The collective ARM needs a fresh, stopped, known and idle tree. */
+    function canArmCollective(view,group) {
+      if(!canControl(view,'arm'))return false;
+      const state=view.state;
+      if(state?.trackTreeValid!==true)return false;
+      if(state?.attemptActive)return false;
+      if(typeof state?.scope!=='string'||!state.scope)return false;
+      const cohort=collectiveCohort(view,group);
+      return cohort.length>0&&cohort.every(track=>typeof track.arm==='boolean');
+    }
+    /** The exact cohort a collective ARM owns: unique, bounded and made of
+     * the observed descendants of one group. */
+    function collectiveCohort(view,group) {
+      const state=view.state,tracks=state?.tracks||[];
+      const tree=observedTree(tracks,state?.trackTreeValid===true);
+      const pool=group?descendantsOf(group,tree):tracks;
+      const seen=new Set(),cohort=[];
+      for(const track of pool) {
+        if(track.isGroup===true||track.canArm!==true)continue;
+        const key=trackKey(track);
+        if(seen.has(key))continue;
+        seen.add(key);cohort.push(track);
+        if(cohort.length>MAX_COLLECTIVE)return [];
+      }
+      return cohort;
+    }
+    /** The observed arm state of a collective target set. */
+    function collectiveState(view,group) {
+      const targets=collectiveCohort(view,group);
+      const armed=targets.filter(track=>track.arm===true);
+      const known=targets.every(track=>typeof track.arm==='boolean');
+      const pressed=!targets.length?'false':!known?'mixed':armed.length===targets.length?'true':armed.length?'mixed':'false';
+      return {targets,armed,known,pressed};
+    }
+    /** The current observed group, resolved on every click: a rename must
+     * never leave a stale name in a collective write. */
+    function currentGroup(view,index,id) {
+      return view.state?.tracks.find(track=>track.index===index&&track.id===id&&track.isGroup===true)||null;
+    }
+    /** One collective ARM write. The host owns the arm state: nothing is
+     * changed here before the host answers, and a failure is never retried. */
+    function armCollective(view,group) {
+      const current=group?currentGroup(view,group.index,group.id):null;
+      if(group&&!current)return;
+      if(!canArmCollective(view,current))return;
+      const state=view.state,{targets}=collectiveState(view,current);
+      if(!targets.length)return;
+      const cohort=targets.map(trackRef).sort((a,b)=>a.index-b.index);
+      const enabled=!(targets.every(track=>track.arm===true));
+      client.command('recordingArmTracks',{
+        scope:state.scope??null,
+        group:current?trackRef(current):null,
+        tracks:cohort,
+        enabled,
+        armMode,
+      }).catch(()=>{});
+    }
+    // The ruler may grow when the catalog knows clips beyond the last
+    // marker: the markers follow the measured axis.
+    function paintMarkerAxis() {
+      if (bounds.end===paintedEnd) return;
+      paintedEnd=bounds.end;gridSignature='';
+      for (const marker of el('markers').children) {
+        const cue=markerCues.get(marker);
+        if (cue) marker.style.left=percent(cue.time)+'%';
+      }
+    }
+    // The badges of the ruler never cover each other: a badge that would
+    // touch another one keeps its own place on the axis and loses its
+    // text. The measurement is defensive: without a measured axis nothing
+    // is marked and every badge keeps its own text.
+    const REC_BADGE_W=76, REC_BADGE_GAP=2;
+    /** The measured width of the axis: without it nothing is marked. */
+    function measuredAxisWidth(track) {
+      const rect=track.getBoundingClientRect?track.getBoundingClientRect():null;
+      return rect&&rect.width?rect.width:0;
+    }
+    /** The place of a marker on the measured axis. */
+    function markerAxisX(marker,width) {
+      const left=parseFloat(marker.style.left);
+      return Number.isFinite(left)?left/100*width:0;
+    }
+    /** The selected markers come first, the others after them. */
+    function partitionMarkers(list) {
+      const selected=[],others=[];
+      for(const marker of list) {
+        const pressed=marker.getAttribute?marker.getAttribute('aria-pressed'):'';
+        (pressed==='true'?selected:others).push(marker);
+      }
+      return [selected,others];
+    }
+    function layoutMarkerLabels() {
+      const track=el('timeline-track'),markers=el('markers');
+      if(!track||!markers)return;
+      const width=measuredAxisWidth(track);
+      if(!width)return;
+      const list=[...markers.children];
+      for(const marker of list)marker.dataset.compact='false';
+      const reserved=[];
+      for(const group of partitionMarkers(list)) {
+        const ordered=group.slice().sort((a,b)=>markerAxisX(a,width)-markerAxisX(b,width));
+        for(const marker of ordered) {
+          const x=markerAxisX(marker,width);
+          // Two badges of 76 px touch when their centres are closer than
+          // the width of a badge plus the gap of two pixels.
+          const touches=reserved.some(seen=>Math.abs(seen-x)<REC_BADGE_W+REC_BADGE_GAP);
+          if(touches)marker.dataset.compact='true';
+          else reserved.push(x);
+        }
+      }
+    }
+    // The arrangement rows are read only while the Arrangement of the REC
+    // page is the visible destination.
+    function updateArrangementRows(view) {
+      if (!arrangementRows) return;
+      const active=destination==='arrangement'&&doc.body.dataset.page==='recording'&&!doc.hidden;
+      // The focus owns the surface while it is open: the automatic row
+      // reads pause, so the hidden rows are never read and the cached
+      // source of the focus survives its own panel. The compact Record
+      // mode pauses them too: no hidden catalog and no hidden row scan.
+      const paused=Boolean(focus?.isOpen?.())||destination==='record';
+      arrangementRows.update(view,cards,{active,paused});
+    }
+    // One measured axis: the marker scrollport owns the time scale and the
+    // lane of the rows follows it. The gutter between the ruler and the lane
+    // is measured, never guessed.
+    function laneBox() {
+      for (const entry of cards.values()) {
+        const card=entry.card;
+        if (!card||card.hidden) continue;
+        if (card.dataset&&card.dataset.group==='true') continue;
+        const lane=entry.lane;
+        const rect=lane&&lane.getBoundingClientRect?lane.getBoundingClientRect():null;
+        if (rect&&rect.width) return {left:rect.left,width:rect.width};
+      }
+      return null;
+    }
+    // The focus lane owns the axis while the focus is open: the ruler and
+    // the take lanes then share one measured origin.
+    function focusLaneBox() {
+      const box=focus?.viewport?.();
+      if (!box) return null;
+      const rect=box.getBoundingClientRect?box.getBoundingClientRect():null;
+      if (!rect||!rect.width) return null;
+      return {left:rect.left,width:rect.width};
+    }
+    /** The ruler of the Record mode measures its own visible container:
+     * it never reads a hidden row of the editor. */
+    function rulerBox() {
+      const panel=el('arrangement-panel');
+      if (!panel||panel.hidden) return null;
+      const rect=panel.getBoundingClientRect?panel.getBoundingClientRect():null;
+      if (!rect||!rect.width) return null;
+      return {left:rect.left,width:rect.width};
+    }
+    function laneOrigin() {
+      // The Record mode owns no lane: its ruler measures its own visible
+      // container and never a hidden row.
+      if (destination==='record') return rulerBox();
+      // A hidden editor has no axis: the Clip never measures a lane it
+      // does not show.
+      if (destination!=='arrangement') return null;
+      const focusBox=focusLaneBox();
+      if (focusBox) return focusBox;
+      return laneBox();
+    }
+    function arrangementGeometry() {
+      const timeline=el('timeline'),track=el('timeline-track');
+      const geometry={start:bounds.start,end:bounds.end,trackWidth:0,trackLeft:0,scrollLeft:0};
+      if (!timeline||!track) return geometry;
+      geometry.scrollLeft=timeline.scrollLeft||0;
+      const lane=laneOrigin();
+      const rect=track.getBoundingClientRect?track.getBoundingClientRect():null;
+      // One measured axis: the ruler, the audio lanes and the take lanes
+      // read the same origin, the same width and the same scroll.
+      if (rect) geometry.trackWidth=rect.width||track.offsetWidth||0;
+      if (lane&&rect) geometry.trackLeft=rect.left-lane.left;
+      return geometry;
+    }
+    /** The origin of the scrollport inside its host: the border and the
+     * padding of the host are measured, never guessed. */
+    function axisOrigin(timeline) {
+      const host=timeline.parentElement;
+      if (!host||!host.getBoundingClientRect) return 0;
+      const style=root.getComputedStyle?root.getComputedStyle(host):null;
+      const border=parseFloat(style&&style.borderLeftWidth)||0;
+      const padding=parseFloat(style&&style.paddingLeft)||0;
+      return host.getBoundingClientRect().left+border+padding;
+    }
+    /** No visible editor leaves no inline placement behind: the ruler of
+     * another layout never stays on the page. */
+    function clearArrangementAxis(timeline) {
+      if(!timeline.style.marginLeft&&!timeline.style.width)return;
+      timeline.style.marginLeft='';timeline.style.width='';
+    }
+    // The ruler viewport follows the lane: the scrollport is placed over the
+    // lane column and the track keeps the shared gutter inside it. The
+    // placement is measured from the host of the scrollport, never guessed,
+    // and no inline margin of another layout is left behind.
+    function syncArrangementAxis() {
+      const timeline=el('timeline'),track=el('timeline-track');
+      if (!timeline||!track) return;
+      // The width of the track follows the zoom alone: it never depends on
+      // a lane and never waits for one.
+      track.style.width='calc('+(zoom*100)+'% - 2*var(--rec-gutter,48px))';
+      const lane=laneOrigin();
+      if (!lane) { clearArrangementAxis(timeline); layoutMarkerLabels(); return; }
+      timeline.style.marginLeft=Math.round(lane.left-axisOrigin(timeline))+'px';
+      timeline.style.width=Math.round(lane.width)+'px';
+      // The axis moved: the badges of the ruler follow it.
+      layoutMarkerLabels();
+    }
+    // The ruler ends where the real clips end: the catalog may know clips
+    // beyond the last marker, and no locator is invented for them.
+    function syncBounds(locators) {
+      bounds=timelineBounds(locators||[],zoom);
+      const extent=Number(arrangementRows?.extent?.())||0;
+      if (extent>bounds.end) bounds={...bounds,end:extent};
+      return bounds;
+    }
+    function renderTracks(view) {
+      const tracks=view.state?.tracks||[];
+      // A different scope is a different Set: the local collapse never
+      // follows it.
+      const scope=String(view.state?.scope??view.state?.session?.songId??'');
+      if(scope!==treeScope){treeScope=scope;collapsedGroups.clear();}
+      // An invalid tree owns no parentage: its rows stay flat and honest.
+      const treeValid=view.state?.trackTreeValid===true;
+      const tree=observedTree(tracks,treeValid);
+      const order=treeOrder(tracks,tree);
+      for(const track of order) {
         const key=track.index+':'+track.id;
         if(!cards.has(key)) {
-          const card=doc.createElement('article');card.className='rec-track-card';
+          const card=doc.createElement('article');card.className='rec-track-card rec-track-row';
+          card.dataset.index=String(track.index);card.dataset.id=String(track.id);
+          // A group owns a disclosure button of its own: expanding and
+          // collapsing is a local view choice and never writes to Live.
+          const toggle=doc.createElement('button');toggle.type='button';toggle.className='rec-track-group-toggle';toggle.hidden=true;
+          toggle.addEventListener('click',()=>{
+            if(collapsedGroups.has(key))collapsedGroups.delete(key);else collapsedGroups.add(key);
+            cancelVolumes();
+            renderTracks(client.view());
+          });
+          card.appendChild(toggle);
           const name=doc.createElement('span');name.className='rec-track-name';card.appendChild(name);
           const row=doc.createElement('div');row.className='rec-track-actions';card.appendChild(row);
+          // The right lane holds the real take clips of the Arrangement: the
+          // container is a real element, never a hidden canvas.
+          const lane=doc.createElement('div');lane.className='rec-track-lane';
+          const clips=doc.createElement('div');clips.className='rec-track-clips';
+          lane.appendChild(clips);card.appendChild(lane);
           const volBox=doc.createElement('div');volBox.className='rec-track-vol';
           volBox.setAttribute('role','slider');volBox.tabIndex=0;
           volBox.setAttribute('aria-valuemin','0');volBox.setAttribute('aria-valuemax','1');
-          const volDial=doc.createElement('div');volDial.className='rec-track-vol-dial';
-          const volPointer=doc.createElement('span');volPointer.className='rec-track-vol-pointer';
-          volDial.appendChild(volPointer);volBox.appendChild(volDial);
+          const volRail=doc.createElement('div');volRail.className='rec-track-vol-rail';
+          const volFill=doc.createElement('div');volFill.className='rec-track-vol-fill';
+          const volThumb=doc.createElement('div');volThumb.className='rec-track-vol-thumb';
+          volRail.appendChild(volFill);volRail.appendChild(volThumb);volBox.appendChild(volRail);
           const volValue=doc.createElement('span');volValue.className='rec-track-vol-val';
           volBox.appendChild(volValue);
-          row.appendChild(volBox);
-          let volDragging=false, volStartY=0, volStartV=0, volBinding=null,volSending=false,volPending=null;
+          let volDragging=false, volStartX=0, volStartV=0, volBinding=null,volSending=false,volPending=null;
           const currentVolumeTrack=view=>view.state?.tracks.find(item=>item.index===track.index&&item.id===track.id);
           function canVolume(view) {
             const ref=currentVolumeTrack(view);
@@ -271,9 +829,7 @@
             if(!canVolume(client.view()) || !volBinding && !bindVolume())return;
             nextV = Math.max(0, Math.min(1, Math.round(nextV * 1000) / 1000));
             entry.currentV = nextV;
-            const angle = -135 + nextV * 270;
-            volPointer.style.transform = 'rotate(' + angle + 'deg)';
-            volDial.style.setProperty?.('--rec-volume-sweep',nextV*270+'deg');
+            volBox.style.setProperty?.('--rec-volume-level',String(nextV));
             const dbText = formatVolumeDb(nextV);
             volValue.textContent = dbText;
             volBox.setAttribute('aria-valuenow', String(nextV));
@@ -285,7 +841,7 @@
             if (event.button !== 0 || !bindVolume()) return;
             event.stopPropagation(); event.preventDefault();
             volDragging = true; entry.volumeDragging = true;
-            volStartY = event.clientY;
+            volStartX = event.clientX;
             volStartV = entry.currentV;
             volBinding.pointerId=event.pointerId;
             volBox.setPointerCapture?.(event.pointerId);
@@ -294,8 +850,8 @@
           volBox.addEventListener('pointermove', event => {
             if (!volDragging || event.pointerId!==volBinding?.pointerId) return;
             event.stopPropagation(); event.preventDefault();
-            const dy = volStartY - event.clientY;
-            setTrackVol(volStartV + dy / 150);
+            const dx = event.clientX - volStartX;
+            setTrackVol(volStartV + dx / 120);
           });
           const finishVolDrag = event => {
             if (!volDragging || event.pointerId!==volBinding?.pointerId) return;
@@ -330,13 +886,19 @@
           for(const property of ['arm','solo','mute']) {
             const button=doc.createElement('button');button.type='button';button.dataset.property=property;
             button.addEventListener('click',()=>{
-              const current=client.view(),ref=current.state?.tracks.find(item=>item.index===track.index&&item.id===track.id);
+              const current=client.view();
+              // A group arms its descendants in one collective write; its own
+              // solo and mute stay native group controls.
+              if(property==='arm'&&track.isGroup===true){armCollective(current,track);return;}
+              const ref=current.state?.tracks.find(item=>item.index===track.index&&item.id===track.id);
               if(!ref||!canControl(current,property)||typeof ref[property]!=='boolean'||property==='arm'&&ref.canArm!==true)return;
               invoke('recordingTrackControl',{track:{index:ref.index,id:ref.id,name:ref.name},property,enabled:!ref[property],...(property==='arm'?{armMode}:{})});
             });
             row.appendChild(button);buttons[property]=button;
           }
-          cards.set(key,{card,name,buttons,volBox,volDial,volPointer,volValue,currentV:null,volumeDragging:false,cancelVolume,
+          // The horizontal fader follows ARM, SOLO and MUTE.
+          row.appendChild(volBox);
+          cards.set(key,{card,name,buttons,toggle,lane,volBox,volValue,currentV:null,volumeDragging:false,cancelVolume,track:trackRef(track),
             volumeActive:()=>volDragging||volPending!==null,canVolume,checkVolume:()=>{if(volBinding&&!sameVolumeBinding(client.view(),volBinding))cancelVolume();}});
           const entry=cards.get(key);
           name.tabIndex=0;name.setAttribute('role','button');
@@ -344,6 +906,9 @@
           name.addEventListener('keydown',event=>{if(event.target===name && event.key==='Enter'){event.preventDefault();editName(entry,track.index,track.id);}});
         }
         const entry=cards.get(key),label=(track.index+1)+' · '+track.name;
+        // The arrangement rows read the ordinary tracks by their exact
+        // reference: the name is part of the identity of a row.
+        entry.track=trackRef(track);
         if(!entry.editor && entry.name.textContent!==label)entry.name.textContent=label;
         if(entry.editor)entry.editor.input.readOnly=entry.editor.pending || !canRename(view);
         entry.name.title=track.name+' · '+t('renameTrack');entry.name.setAttribute('aria-label',t('renameTrack')+' · '+track.name);
@@ -352,9 +917,7 @@
         const v = typeof track.volume === 'number' && Number.isFinite(track.volume) ? track.volume : null;
         if (!entry.volumeActive()) {
           entry.currentV = v;
-          const angle = -135 + (v ?? 0) * 270;
-          entry.volPointer.style.transform = 'rotate(' + angle + 'deg)';
-          entry.volDial.style.setProperty?.('--rec-volume-sweep',(v ?? 0)*270+'deg');
+          entry.volBox.style.setProperty?.('--rec-volume-level',String(v ?? 0));
           const dbText = formatVolumeDb(v);
           if (entry.volValue.textContent !== dbText) entry.volValue.textContent = dbText;
           entry.volBox.setAttribute('aria-valuenow', v===null?'':String(Math.round(v * 1000) / 1000));
@@ -366,16 +929,41 @@
         for(const property of ['arm','solo','mute']) {
           const button=entry.buttons[property],label=t(property==='arm'?'armShort':property);
           if(button.textContent!==label)button.textContent=label;
+          if(property==='arm'&&track.isGroup===true) {
+            // A group arms its descendants: the observed state is all, mixed
+            // or none, and the host owns the change.
+            const collective=collectiveState(view,track);
+            button.disabled=!canArmCollective(view,track)||!collective.targets.length;
+            button.setAttribute('aria-pressed',collective.pressed);
+            button.setAttribute('aria-label',t('armGroup')+' · '+track.name);
+            button.title=collective.targets.length?collective.targets.length+' '+t('armableTracks'):t('noArmableTracks');
+            continue;
+          }
           button.disabled=!canControl(view,property)||typeof track[property]!=='boolean'||property==='arm'&&track.canArm!==true;
           button.setAttribute('aria-pressed',typeof track[property]==='boolean'?String(track[property]):'mixed');
           button.setAttribute('aria-label',label+' · '+track.name);
         }
+        if(track.isGroup===true) {
+          const collapsed=collapsedGroups.has(key);
+          entry.toggle.hidden=!treeValid;
+          entry.toggle.textContent=collapsed?'▸':'▾';
+          entry.toggle.setAttribute('aria-expanded',String(!collapsed));
+          entry.toggle.setAttribute('aria-label',(collapsed?t('expandGroup'):t('collapseGroup'))+' · '+track.name);
+          entry.card.dataset.group='true';
+        } else {
+          entry.toggle.hidden=true;
+          entry.card.dataset.group='false';
+        }
+        const visible=trackVisible(track,tree);
+        entry.card.hidden=!visible;
+        if(!visible)entry.cancelVolume();
       }
-      if(trackSignature!==signature) {
-        trackSignature=signature;
-        const keys=new Set(tracks.map(track=>track.index+':'+track.id));
+      const orderSignature=order.map(track=>trackKey(track)).join('|');
+      if(trackSignature!==orderSignature) {
+        trackSignature=orderSignature;
+        const keys=new Set(order.map(trackKey));
         for(const key of cards.keys())if(!keys.has(key)){cards.get(key).cancelVolume();cards.delete(key);}
-        el('track-grid').replaceChildren(...tracks.map(track=>cards.get(track.index+':'+track.id).card));
+        el('track-grid').replaceChildren(...order.map(track=>cards.get(trackKey(track)).card));
       }
     }
     const positionLabel = (time,meter) => {
@@ -403,48 +991,223 @@
     function option(select,value,label) {
       const item=doc.createElement('option');item.value=value;item.textContent=label;select.appendChild(item);return item;
     }
+    /** A new Set, a new scope or a new connection retires the local
+     * selection: the old references belong to another song. */
+    function retireSelection() {
+      selection=rangeApi.emptySelection();
+      selectionTouched=false;
+      fixedPoint=null;
+    }
+    /** The native range describes a capture the host already owns. It may
+     * fill an untouched selection; an explicit local choice is never
+     * replaced by a later observation. */
+    function adoptNativeRange(native) {
+      if(selectionTouched) return;
+      if(native.start) {
+        selection=rangeApi.updateSelection(selection,{type:'start',value:native.start},markers());
+        if(native.start.source==='cursor'&&Number.isFinite(native.start.time)) fixedPoint=native.start.time;
+      }
+      if(native.end) selection=rangeApi.updateSelection(selection,{type:'end',mode:'marker',value:native.end},markers());
+      else selection=rangeApi.updateSelection(selection,{type:'end',mode:'stop',value:null},markers());
+      const current=resolved();
+      if(current.end&&!userAdjustedZoom) scheduleAutoZoom();
+    }
+    /** A marker tap is a local decision: it moves the start or the end of
+     * the range and never seeks the host. */
+    function selectMarker(cue) {
+      const previous=selection.endMode;
+      selection=rangeApi.updateSelection(selection,{type:'tap',value:{name:cue.name,time:cue.time}},markers());
+      selectionTouched=true;
+      if(previous==='stop'&&selection.endMode!=='stop')passes=1;
+      // An explicit choice of the reader owns the view again: the flags of
+      // the automatic view fall and the opening is armed.
+      userAdjustedZoom=false;userAdjustedView=false;stopFrameArmed=true;
+      render(client.view());
+      if(bounded()) scheduleAutoZoom();
+    }
+    /** The start select adapts a value to a reference: the cursor, a
+     * marker of the displayed catalog or nothing at all. */
+    function startFromValue(value) {
+      if(value==='cursor') return Number.isFinite(fixedPoint)?{source:'cursor',time:fixedPoint}:null;
+      if(value==='use-current') {
+        const position=client.view().state?.transport?.songTimeBeats;
+        if(position?.fresh&&Number.isFinite(position.value)){fixedPoint=position.value;markerSignature='';return {source:'cursor',time:position.value};}
+        return null;
+      }
+      if(value==='') return null;
+      const cue=optionCatalog[Number(value)];
+      return cue?{name:cue.name,time:cue.time}:null;
+    }
+    /** The end select adapts a value to a mode and a reference. */
+    function endFromValue(value) {
+      if(value==='next') return {mode:'next',value:null};
+      if(value==='') return {mode:'stop',value:null};
+      const cue=optionCatalog[Number(value)];
+      // An explicit end that is not there never widens the range to stop.
+      return {mode:'marker',value:cue?{name:cue.name,time:cue.time}:null};
+    }
+    /** The status of an unusable selection. */
+    function statusKey(reason) {
+      return reason==='START_MISSING'||reason==='START_AMBIGUOUS'?'chooseMarker':'chooseEnd';
+    }
+    /** The note under the range: an unusable selection first, then the
+     * instruction of an armed start, then the pass count notice. */
+    function rangeNoteText(current) {
+      if(current.editingStart) return t('editStart');
+      if(!current.valid) return t('reason.'+current.reason);
+      return passesReported===null?'':t('passagesNormalized',{count:passesReported});
+    }
+    /** The adapter value of the start select: a cursor, a marker of the
+     * catalog or nothing. It is a value, never an identity. The catalog is
+     * the one the open selector displays: an option means the marker it
+     * shows, never the marker that sits at that index now. */
+    function startValue() {
+      if(!selection.start) return '';
+      if(selection.start.source==='cursor') return 'cursor';
+      const index=optionCatalog.findIndex(cue=>cue.name===selection.start.name&&cue.time===selection.start.time);
+      return index>=0?String(index):'missing';
+    }
+    /** The adapter value of the end select: Until STOP, the next marker or
+     * a marker of the displayed catalog. */
+    function endValue() {
+      if(selection.endMode==='next') return 'next';
+      if(selection.endMode!=='marker'||!selection.end) return '';
+      const index=optionCatalog.findIndex(cue=>cue.name===selection.end.name&&cue.time===selection.end.time);
+      return index>=0?String(index):'missing';
+    }
+    /** The start and the end of the range are marked on the real markers.
+     * A marker owns the node it represents: the highlight follows that
+     * node and never the marker that sits at that index now. A node that
+     * left the Set is shown honestly, never as the start or the end. */
+    function highlightRange(start,end) {
+      // The exact presence of a node in the catalog of the Set: two
+      // markers never share a key.
+      const present=new Set(markers().map(cue=>JSON.stringify([cue.name,cue.time])));
+      for(const marker of el('markers').children) {
+        const cue=markerCues.get(marker);
+        const here=Boolean(cue)&&present.has(JSON.stringify([cue.name,cue.time]));
+        // The membership of a node and the identity of its reference are the
+        // only gate: a redundant key set never owned the highlight.
+        const same=ref=>here&&Boolean(ref)&&ref.name===cue.name&&ref.time===cue.time;
+        marker.setAttribute('aria-pressed',String(here&&same(start)));
+        marker.setAttribute('data-end',String(here&&same(end)));
+      }
+      // The selection changed: the badges of the ruler follow it.
+      layoutMarkerLabels();
+    }
     function updateRange() {
-      const state=client.view().state, start=startAt();
-      if(!state) return;
-      looping=endIndex!=='';
-      if(doc.activeElement!==el('start-marker')) el('start-marker').value=startIndex;
-      if(doc.activeElement!==el('end-marker')) el('end-marker').value=endIndex;
-      for(const item of el('end-marker').children) item.disabled=item.value==='missing'||item.value!=='' && state.locators[Number(item.value)]?.time <= (start?.time ?? -1);
+      if(!client.view().state) return;
+      const shown=displayRange(), start=shown.start, end=shown.end;
+      if(doc.activeElement!==el('start-marker')) el('start-marker').value=startValue();
+      if(doc.activeElement!==el('end-marker')) el('end-marker').value=endValue();
+      const startTime=start?start.time:-1;
+      for(const item of el('end-marker').children) item.disabled=item.value==='missing'||item.value!==''&&item.value!=='next'&&(optionCatalog[Number(item.value)]?.time??-1)<=startTime;
       el('end-field').hidden=false;
-      el('passages-field').hidden=!looping||destination==='clip';el('free-mode').hidden=looping||destination==='clip';
-      el('passages').value=passes===null?'infinite':String(passes);
-      const end=looping?cueAt(endIndex):null;
+      el('passages').hidden=destination==='clip';
+      if(el('pre-roll-inline'))el('pre-roll-inline').hidden=destination==='clip';
+      const passageText=passes===null?'∞':String(passes);
+      if(el('passages-value')&&el('passages-value').textContent!==passageText)el('passages-value').textContent=passageText;
       el('region').hidden=!start || !end;
       if(start && end) {el('region').style.left=percent(start.time)+'%';el('region').style.width=(percent(end.time)-percent(start.time))+'%';}
-      for(const marker of el('markers').children) marker.setAttribute('aria-pressed',String(marker.dataset.index===startIndex));
+      highlightRange(start,end);
     }
     function scheduleAutoZoom() {
-      if(userAdjustedZoom) return;
+      if(userAdjustedZoom||userAdjustedView) return;
       clearTimeout(autoZoomTimer);
       autoZoomTimer = setTimeout(applyAutoZoom, 250);
     }
-    function applyAutoZoom() {
-      autoZoomTimer = null;
-      if(userAdjustedZoom) return;
-      const state = client.view().state;
-      if(!state || !looping) return;
-      const start = startAt(), end = cueAt(endIndex);
-      if(!start || !end || end.time <= start.time) return;
+    /** The bar of the capture in beats: the observed signature owns it and
+     * an unknown signature falls back to four beats. */
+    function barBeats(state) {
+      const meter=state?.meter;
+      if(!Number.isInteger(meter?.numerator)||meter.numerator<1||![1,2,4,8,16,32].includes(meter?.denominator))return 4;
+      return meter.numerator*4/meter.denominator;
+    }
+    /** The zoom of a window: the window owns 72% of the whole catalog. */
+    function windowZoom(windowBeats) {
+      const totalSpan=bounds.end-bounds.start;
+      if(totalSpan<=0||windowBeats<=0)return 0;
+      return Math.max(1,Math.min(300,Math.round(0.72*totalSpan/windowBeats)||1));
+    }
+    /** The window of Até STOP: sixteen bars from the resolved start. The
+     * capture never grows an end of its own: the window is a view. */
+    function stopWindow(state,start) {
+      const windowBeats=16*barBeats(state);
+      return {windowBeats,visualEnd:Math.max(start.time,Math.min(bounds.end,start.time+windowBeats))};
+    }
+    /** The zoom of an explicit end: the window of the capture. */
+    function explicitEndZoom(start,end) {
+      if (end.time <= start.time) return 0;
       const totalSpan = bounds.end - bounds.start;
       const loopSpan = end.time - start.time;
-      if(totalSpan <= 0 || loopSpan <= 0) return;
+      if(totalSpan <= 0 || loopSpan <= 0) return 0;
       const fraction = loopSpan / totalSpan;
-      const targetZoom = Math.max(1, Math.min(300, Math.round(0.72 / fraction) || 1));
-      zoom = targetZoom;
-      if(el('zoom')) el('zoom').value = String(targetZoom);
-      bounds = timelineBounds(state.locators, zoom);
-      if(el('timeline-track')) el('timeline-track').style.width = 'calc(' + bounds.width + '% - 96px)';
-      drawGrid();drawCursor();
-      centerTimeline(start.time, end.time);
+      return Math.max(1, Math.min(300, Math.round(0.72 / fraction) || 1));
     }
-    function centerTimeline(startTime, endTime) {
+    /** The zoom of the page: the slider and the axis follow it. */
+    function applyZoom(targetZoom) {
+      if(!targetZoom) return false;
+      zoom=targetZoom;
+      if(el('zoom')) el('zoom').value=String(targetZoom);
+      return true;
+    }
+    function applyAutoZoom() {
+      autoZoomTimer = null;
+      if(userAdjustedZoom||userAdjustedView) return;
+      const state = client.view().state;
+      if(!state) return;
+      const shown = displayRange(), start = shown.start, end = shown.end;
+      if(!start) return;
+      if(!end) {
+        // Até STOP: the window is sixteen bars from the resolved start. The
+        // capture never grows an end of its own: the window is a view.
+        const {windowBeats,visualEnd}=stopWindow(state,start);
+        if(!applyZoom(windowZoom(windowBeats))) return;
+        syncBounds(state.locators);
+        measureArrangement(start.time,visualEnd);
+        return;
+      }
+      if(!applyZoom(explicitEndZoom(start,end))) return;
+      syncBounds(state.locators);
+      measureArrangement(start.time, end.time);
+    }
+    /** The opening with Até STOP: the view frames the resolved start while
+     * the flag is armed, the destination owns a ruler and the reader never
+     * chose the view by hand. The flag is disarmed after the frame, so the
+     * polls never frame it again. */
+    function openStopFrame() {
+      if(!stopFrameArmed||userAdjustedZoom||userAdjustedView)return;
+      if(destination!=='record'&&destination!=='arrangement')return;
+      const shown=displayRange();
+      if(!shown.start||shown.end)return;
+      stopFrameArmed=false;
+      applyAutoZoom();
+    }
+    /** The measured axis belongs to the visible editor: the ruler of the
+     * Record and of the Arrangement is measured, painted and centred. The
+     * Clip owns no ruler and is never measured. */
+    function measureArrangement(startTime, endTime) {
+      if(destination!=='arrangement'&&destination!=='record')return;
+      syncArrangementAxis();
+      drawGrid();drawCursor();
+      centerTimeline(startTime, endTime);
+    }
+    /** The visible axis of the Arrangement opens on the range of the
+     * capture. A viewport the reader chose by hand is never replaced by
+     * the automatic one. */
+    function centerArrangement() {
+      syncArrangementAxis();
+      drawGrid();drawCursor();
+      if(userAdjustedZoom||userAdjustedView)return;
+      const current=resolved();
+      if(current.start&&current.end&&current.end.time>current.start.time)applyAutoZoom();
+    }
+    function centerTimeline(startTime, endTime, manual) {
       const timeline = el('timeline') || el('timeline-track')?.parentElement;
       if(!timeline) return;
+      // A viewport the reader chose by hand is never replaced by the
+      // automatic one: only the reader's own zoom moves the axis.
+      if(!manual&&(userAdjustedZoom||userAdjustedView)) return;
       const track = el('timeline-track');
       const offsetLeft = track?.getBoundingClientRect && timeline.getBoundingClientRect
         ? track.getBoundingClientRect().left-timeline.getBoundingClientRect().left+timeline.scrollLeft-(timeline.clientLeft||0)
@@ -470,6 +1233,9 @@
         targetScroll = minLeftVisible;
       }
       timeline.scrollLeft = Math.max(0, targetScroll);
+      // The scroll the reader sees is the one the page owns: an automatic
+      // frame never looks like a gesture of the reader.
+      lastScrollLeft=timeline.scrollLeft;
     }
     function drawCursor() {
       const view=client.view(),state=view.state,transport=state?.transport,position=transport?.songTimeBeats;
@@ -493,15 +1259,29 @@
     }
     function render(view) {
       const state=view.state, transport=state?.transport;
-      if(state?.session?.songId && displaySongId!==state.session.songId){displaySongId=state.session.songId;displayMeter=null;fixedPoint=null;startIndex='cursor';endIndex='';passes=1;markerSignature='';rangeSignature='';}
+      if(state?.session?.songId && displaySongId!==state.session.songId){displaySongId=state.session.songId;displayMeter=null;retireSelection();passes=1;markerSignature='';rangeSignature='';}
+      // Another scope is another Set: the local selection is retired.
+      const scope=String(state?.scope??'');
+      if(scope!==selectionScope){selectionScope=scope;retireSelection();}
       const meterKnown=Number.isInteger(state?.meter?.numerator)&&state.meter.numerator>0&&[1,2,4,8,16,32].includes(state?.meter?.denominator);
       if(meterKnown)displayMeter={...state.meter};
       el('position').setAttribute('data-meter-stale',String(!meterKnown));el('position').title=!meterKnown&&displayMeter?t('staleMeter'):'';
       const known=transport?.connected && transport.isPlaying?.fresh && transport.recordMode?.fresh;
       const stopped=known && transport.isPlaying.value===false && transport.recordMode.value===false;
       if(stopped&&fixedPoint===null&&transport.songTimeBeats?.fresh&&Number.isFinite(transport.songTimeBeats.value))fixedPoint=transport.songTimeBeats.value;
+      // The default start is the cursor at the stop position. It is taken
+      // once: a choice of the reader is never replaced by it.
+      if(!selectionTouched&&!selection.start&&Number.isFinite(fixedPoint)) selection=rangeApi.updateSelection(selection,{type:'start',value:{source:'cursor',time:fixedPoint}},markers());
       const working=view.busy || Boolean(state?.pending);
-      const editable=view.writable && !working && stopped;
+      // A pending action, a pre-roll, an attempt or a running Session owns
+      // the range: the reader cannot change it while the host is recording.
+      const locked=rangeLocked(view);
+      const editable=view.writable && !locked && stopped;
+      applyModeChrome(view);
+      // The take focus is a local view of the Arrangement: leaving it
+      // retires the focus before the chrome of the editor is applied.
+      if(destination!=='arrangement'&&focus?.isOpen?.())focus.close();
+      applyEditorChrome();
       renderSession(view);
       const activeTake = known && transport.recordMode.value === true;
       el('status').textContent=view.error && !activeTake?reason(view.error):state?.preRoll?.phase==='running'?t('preRolling'):working?t('working'):t(!known?'unknown':transport.recordMode.value?'recordObserved':transport.isPlaying.value?'playing':'stopped');
@@ -509,43 +1289,77 @@
       el('stop').disabled=!view.writable;
       for(const id of ['start-marker','end-marker']) el(id).disabled=!editable;
       el('passages').disabled=!editable;
-      el('passages-field').hidden=destination==='clip'||endIndex==='';el('free-mode').hidden=destination==='clip'||endIndex!=='';
-      el('click').disabled=!view.writable || view.clicking || !transport?.metronome?.fresh;
-      el('click').textContent=t('click')+' · '+(transport?.metronome?.fresh?t(transport.metronome.value?'on':'off'):'?');
+      el('passages').hidden=destination==='clip';
+      // The CLIP destination records whole scenes: the count-in and the
+      // pass count belong to the Arrangement, not to it.
+      if(el('pre-roll-inline'))el('pre-roll-inline').hidden=destination==='clip';
+      const metronome=transport?.metronome;
+      // The label never claims a metronome the host did not observe.
+      const metronomeKnown=metronome?.fresh===true&&typeof metronome?.value==='boolean';
+      el('click').disabled=!view.clickable || view.clicking;
+      el('click').textContent=t('click')+' · '+(metronomeKnown?t(metronome.value?'on':'off'):'?');
       el('return-arrangement').disabled=!view.writable||!view.fresh||working||!known||transport.recordMode.value!==false||Boolean(state?.attemptActive)||state?.safety?.backToArranger!==true||!state?.session?.rows.every(row=>row.ready===true);
+      // The way back to the Arrangement is the native one: the host offers
+      // it or it is not there. The local Arrangement is a view of the page
+      // and never hides it. Its cell keeps its width, so the CLICK never
+      // moves because of the state.
       el('return-arrangement').hidden=state?.safety?.backToArranger!==true;
       el('arm-mode').disabled=!editable||Boolean(state?.attemptActive);
       el('arm-mode').textContent=t(armMode==='multi'?'armMulti':'armExclusive');
       el('arm-mode').setAttribute('aria-pressed',String(armMode==='exclusive'));
-      for(const bars of [0,1,2,4]) {
-        el('pre-roll-'+bars).disabled=!editable;
-        el('pre-roll-'+bars).setAttribute('aria-pressed',String(preRollBars===bars));
-      }
+      // ARM ALL is one collective write over every armable track.
+      const collective=collectiveState(view,null);
+      el('arm-all').disabled=!canArmCollective(view)||!collective.targets.length;
+      el('arm-all').setAttribute('aria-pressed',collective.pressed);
+      el('arm-all').title=collective.targets.length?String(collective.targets.length)+' '+t('armableTracks'):t('noArmableTracks');
       if(el('pre-roll-inline')) {
         el('pre-roll-inline').disabled=!editable;
-        el('pre-roll-inline').value=String(preRollBars);
-        const inlineGroup=el('pre-roll-inline').parentElement;
-        if(inlineGroup)inlineGroup.hidden=destination==='clip';
+        const preRollText=preRollBars===0?t('preRollOff'):String(preRollBars);
+        if(el('pre-roll-value')&&el('pre-roll-value').textContent!==preRollText)el('pre-roll-value').textContent=preRollText;
       }
       renderTracks(view);
+      takes?.render?.();
+      focus?.render?.(view);
+      // The focus owns its own open state: the chrome of the editor is
+      // applied again after the focus painted itself.
+      applyEditorChrome();
+      // The axis of the editor is measured only while the Arrangement is
+      // the visible destination: the compact Record mode never measures a
+      // hidden row. Outside the Arrangement the inline placement of the
+      // ruler is cleared, so no margin of another layout stays behind.
+      syncArrangementAxis();
+      if(destination==='arrangement')focus?.geometryChanged?.();
+      updateArrangementRows(view);
       for(const marker of el('markers').children) marker.disabled=!editable;
+      // The page owns no marker action: the marker is created in Live and
+      // the page only reads the catalog of the Set.
       if(!state) {el('start').disabled=true;el('cursor').hidden=true;return;}
       if(destination==='clip') {
         const targets=sessionTargets(view),session=state.session;
+        // The Clip owns no range of the capture: the note of the range of
+        // another destination never stays behind in the footer.
+        if(el('range-note')&&el('range-note').textContent)el('range-note').textContent='';
+        if(el('combined-footer')&&el('combined-footer').dataset.critical==='true')el('combined-footer').dataset.critical='false';
         el('start').disabled=!view.writable||!view.fresh||working||!known||transport.recordMode.value!==false||state.attemptActive||Boolean(state.trackPending)||!targets;
         el('status').dataset.recording=String(state.session?.owned.some(item=>item.state==='recording')??false);
         if(!view.error){const owned=session?.owned||[];el('status').textContent=t(session?.stopping?'sessionStopping':working?'working':owned.some(item=>item.state==='recording')?'sessionState.recording':owned.some(item=>item.state==='queued')?'sessionState.queued':owned.some(item=>item.state==='playing')?'sessionState.playing':session?.active?owned.some(item=>item.state==='unknown')?'unknown':'finishSession':!armedTracks(view).length?'armTracks':!sceneTarget?'chooseScene':!targets?'emptySceneRequired':'ready');}
         return;
       }
       const markerKey=JSON.stringify([state.locators,displayMeter]);
+      syncBounds(state.locators);
+      paintMarkerAxis();
       if(markerSignature!==markerKey && doc.activeElement!==el('start-marker') && doc.activeElement!==el('end-marker')) {
-        const previous=startIndex!==''?previousLocators[Number(startIndex)]:null;
-        const previousEnd=endIndex!==''?previousLocators[Number(endIndex)]:null;markerSignature=markerKey;
+        markerSignature=markerKey;
+        // The open selectors display this catalog: an option means the
+        // marker it shows, never the marker that sits at that index now.
+        optionCatalog=state.locators.slice();
+        markerCues.clear();
         el('start-marker').replaceChildren();el('end-marker').replaceChildren();el('markers').replaceChildren();
         option(el('start-marker'),'cursor',t('here')+' · '+positionLabel(fixedPoint,state.meter));option(el('start-marker'),'use-current',t('useCursor'));
-        option(el('start-marker'),'',t('chooseMarker'));option(el('end-marker'),'',t('untilStop'));
+        option(el('start-marker'),'',t('chooseMarker'));option(el('start-marker'),'missing',t('reason.MARKER_CHANGED')).disabled=true;
+        option(el('end-marker'),'',t('untilStop'));option(el('end-marker'),'next',t('nextMarker'));
         option(el('end-marker'),'missing',t('reason.MARKER_CHANGED')).disabled=true;
-        bounds=timelineBounds(state.locators,zoom);el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';gridSignature='';
+        gridSignature='';
         state.locators.forEach((cue,index)=>{
           const label=cue.name+' · '+positionLabel(cue.time,state.meter);
           option(el('start-marker'),String(index),label);option(el('end-marker'),String(index),label);
@@ -554,30 +1368,32 @@
           const name=doc.createElement('span');name.className='rec-marker-name';name.textContent=cue.name;
           marker.appendChild(position);marker.appendChild(name);
           marker.className='rec-marker';marker.dataset.index=String(index);marker.style.left=percent(cue.time)+'%';
-          marker.addEventListener('click',()=>{
+          markerCues.set(marker,cue);
+          marker.addEventListener('pointerdown',event=>activation.down(marker,event));
+          marker.addEventListener('pointercancel',()=>activation.cancel());
+          marker.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' ')activation.key();});
+          marker.addEventListener('click',event=>{
             if(marker.disabled || !client.view().state) return;
-            startIndex=String(index);updateRange();invoke('recordingSeekMarker',markerRef(cue));
-            if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
+            if(!activation.tap(marker,event)) return;
+            selectMarker(cue);
           });
           el('markers').appendChild(marker);
         });
-        const preserved=previous?state.locators.findIndex(cue=>cue.name===previous.name && cue.time===previous.time):-1;
-        startIndex=preserved>=0?String(preserved):previous?'':startIndex==='cursor'?'cursor':'';
-        const retainedEnd=previousEnd?state.locators.findIndex(cue=>cue.name===previousEnd.name && cue.time===previousEnd.time):-1;
-        endIndex=retainedEnd>=0?String(retainedEnd):previousEnd?'missing':endIndex;
-        previousLocators=state.locators.map(cue=>({...cue}));
+        // The badges of the ruler were rebuilt: they follow the axis.
+        layoutMarkerLabels();
       }
       const rangeKey=JSON.stringify([state.range||null,state.capture?.total]);
       if(rangeSignature!==rangeKey) {
         rangeSignature=rangeKey;
         if(state.range) {
-          if(state.capture&&(state.capture.total===null||Number.isInteger(state.capture.total)&&state.capture.total>=1&&state.capture.total<=10))passes=state.capture.total;
-          const index=state.locators.findIndex(cue=>cue.name===state.range.start.name && cue.time===state.range.start.time);
-          if(state.range.start.source==='cursor'){fixedPoint=state.range.start.time;startIndex='cursor';}else startIndex=index>=0?String(index):'';
-          looping=Boolean(state.range.end);
-          const end=state.range.end && state.locators.findIndex(cue=>cue.name===state.range.end.name && cue.time===state.range.end.time);
-          endIndex=typeof end==='number' && end>=0?String(end):state.range.end?'missing':'';
-          if(looping && startIndex!=='' && endIndex!=='' && !userAdjustedZoom) scheduleAutoZoom();
+          const total=state.capture?.total;
+          if(state.capture&&(total===null||Number.isInteger(total)&&total>=1&&total<=10)) {
+            // The surface offers 1, 2, 3 and unlimited. A pass count outside
+            // that set is normalized to one and reported, never hidden.
+            if(total===null||total===1||total===2||total===3){passes=total;passesReported=null;}
+            else {passes=1;passesReported=total;}
+          }
+          adoptNativeRange(state.range);
         }
       }
       const hereOption=[...el('start-marker').children].find(item=>item.value==='cursor');
@@ -586,19 +1402,63 @@
         if(hereOption.textContent!==nextText) hereOption.textContent=nextText;
       }
       updateRange();
+      const rangeSelection=resolved();
+      const rangeNote=rangeNoteText(rangeSelection);
+      if(el('range-note')&&el('range-note').textContent!==rangeNote)el('range-note').textContent=rangeNote;
+      // A reason of the range owns the whole footer of the combined band:
+      // an error is never clipped, never shortened and never hidden.
+      const critical=Boolean(rangeNote)&&(rangeSelection.editingStart||!rangeSelection.valid);
+      if(el('combined-footer')&&el('combined-footer').dataset.critical!==String(critical))el('combined-footer').dataset.critical=String(critical);
       const armed=armedTracks(view);
-      const validEnd=!looping||cueAt(endIndex)&&cueAt(endIndex).time>(startAt()?.time??Infinity);
-      el('start').disabled=!editable || !armed.length || Boolean(state.trackPending) || !startAt() || !validEnd;
-      if(!view.error && !working && stopped) el('status').textContent=t(!armed.length?'armTracks':!startAt()?'chooseMarker':!validEnd?'chooseEnd':state.capture?.phase==='complete'?'completed':looping?'ready':'freeReady');
+      const current=resolved();
+      // The pass count belongs to a bounded capture: without a valid end
+      // marker the button stays visible and says that it cannot be used.
+      el('passages').disabled=!editable||!bounded()||!current.valid;
+      el('start').disabled=!editable || !armed.length || Boolean(state.trackPending) || !current.valid;
+      if(!view.error && !working && stopped) el('status').textContent=t(!armed.length?'armTracks':!current.valid?statusKey(current.reason):state.capture?.phase==='complete'?'completed':bounded()?'ready':'freeReady');
       if(!view.error&&state.capture?.phase==='unconfirmed')el('status').textContent=reason(state.capture.error);
       else if(!view.error&&known&&transport.recordMode.value&&state.capture)el('status').textContent=t('recordObserved')+' · '+state.capture.pass+'/'+(state.capture.total??'∞');
       for(const marker of el('markers').children) marker.disabled=!editable;
       drawGrid();drawCursor();
+      // The opening with Até STOP runs at the end of the render: the axis
+      // is measured, the window is framed and the flag falls.
+      openStopFrame();
     }
-    for(const mode of ['arrangement','clip'])el(mode+'-mode').addEventListener('click',()=>{
-      if(el(mode+'-mode').disabled)return;destination=mode;render(client.view());poll();
+    for(const mode of ['record','arrangement','clip'])el(mode+'-mode')?.addEventListener('keydown',event=>{
+      // The modes are mutually exclusive: the arrow keys walk the switch
+      // without choosing a mode the reader did not confirm.
+      if(!['ArrowLeft','ArrowRight'].includes(event.key))return;
+      const modes=['record','arrangement','clip'];
+      const step=event.key==='ArrowRight'?1:modes.length-1;
+      const next=el(modes[(modes.indexOf(mode)+step)%modes.length]+'-mode');
+      if(!next||next.disabled)return;
+      event.preventDefault();
+      next.focus?.();
     });
-    if (el('session-cfg')) el('session-cfg').addEventListener('click',()=>{el('session-settings').hidden=!el('session-settings').hidden;el('session-cfg').setAttribute('aria-expanded',String(!el('session-settings').hidden));});
+    /** A destination with a ruler arms the opening: the view frames the
+     * resolved start of the capture. */
+    function armStopFrame(mode) {
+      if(mode==='record'||mode==='arrangement')stopFrameArmed=true;
+    }
+    for(const mode of ['record','arrangement','clip'])el(mode+'-mode')?.addEventListener('click',()=>{
+      const button=el(mode+'-mode');
+      if(!button)return;
+      // A locked mode never switches: the host owns the capture.
+      if(button.disabled||mode===destination)return;
+      destination=mode;
+      // Leaving the Arrangement retires the take focus: it is a local view
+      // of one track of the editor.
+      if(mode!=='arrangement'&&focus?.isOpen?.())focus.close();
+      // Entering a destination with a ruler arms the opening: the view
+      // frames the resolved start of the capture.
+      armStopFrame(mode);
+      // The switch is a local choice: it reads, it never writes.
+      render(client.view());
+      // The Arrangement opens on the range of the capture: the axis of the
+      // visible editor is measured and centred on it.
+      if(mode==='arrangement')centerArrangement();
+      poll();
+    });
     for(const direction of ['prev','next'])el('session-'+direction).addEventListener('click',()=>{
       if(el('session-'+direction).disabled)return;sceneOffset+=direction==='next'?8:-8;sceneTarget=null;invoke('getSessionRecordingState',{offset:sceneOffset});
     });
@@ -609,53 +1469,84 @@
       render(client.view());
     });
     el('start-marker').addEventListener('change',()=>{
-      startIndex=el('start-marker').value;
-      if(startIndex==='use-current'){
-        const position=client.view().state?.transport.songTimeBeats;
-        if(position?.fresh&&Number.isFinite(position.value)){fixedPoint=position.value;startIndex='cursor';markerSignature='';}
-        else startIndex='';
-      }
-      updateRange();const cue=cueAt(startIndex);
-      if(cue) invoke('recordingSeekMarker',markerRef(cue));
-      else render(client.view());
-      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
+      // A disabled selector owns no choice: a change queued after a lock
+      // never changes the capture range.
+      if(el('start-marker').disabled||rangeLocked(client.view())) return;
+      // Choosing a start is a local decision: it never seeks and never
+      // writes to the host.
+      selectionTouched=true;
+      selection=rangeApi.updateSelection(selection,{type:'start',value:startFromValue(el('start-marker').value)},optionCatalog);
+      // The choice of the reader owns the view: the flags of the automatic
+      // view fall before the render, so the opening runs in the same render.
+      userAdjustedZoom=false;userAdjustedView=false;stopFrameArmed=true;
+      render(client.view());
+      if(bounded()) scheduleAutoZoom();
     });
     el('end-marker').addEventListener('change',()=>{
-      const previous=endIndex;endIndex=el('end-marker').value;if(previous===''&&endIndex!=='')passes=1;render(client.view());
-      if(looping) { userAdjustedZoom=false; scheduleAutoZoom(); }
+      if(el('end-marker').disabled||rangeLocked(client.view())) return;
+      const previous=selection.endMode;
+      selectionTouched=true;
+      selection=rangeApi.updateSelection(selection,{type:'end',...endFromValue(el('end-marker').value)},optionCatalog);
+      if(previous==='stop'&&selection.endMode!=='stop')passes=1;
+      // The choice of the reader owns the view: the flags of the automatic
+      // view fall before the render, so the opening runs in the same render.
+      userAdjustedZoom=false;userAdjustedView=false;stopFrameArmed=true;
+      render(client.view());
+      if(bounded()) scheduleAutoZoom();
     });
-    el('passages').addEventListener('change',()=>{if(el('passages').disabled)return;passes=el('passages').value==='infinite'?null:Number(el('passages').value);render(client.view());});
+    el('arm-all').addEventListener('click',()=>{
+      if(el('arm-all').disabled)return;
+      armCollective(client.view(),null);
+    });
+    el('passages').addEventListener('click',()=>{
+      if(el('passages').disabled)return;
+      // 1, 2, 3 and unlimited: a cycle, never a hidden dropdown.
+      const order=[1,2,3,null];
+      const index=order.indexOf(passes);
+      passes=order[(index+1)%order.length];
+      // The reader chose the pass count: the host's normalization notice is
+      // cleared instead of lingering over an explicit choice.
+      passesReported=null;
+      render(client.view());
+    });
     function setPreRoll(bars) {
       if(![0,1,2,4].includes(bars))return;
       preRollBars=bars;
       try { root.localStorage?.setItem(PRE_ROLL_KEY,String(bars)); } catch { /* The current page preference still works. */ }
       render(client.view());
     }
-    el('pre-roll-inline')?.addEventListener('change',()=>{
-      if(!el('pre-roll-inline').disabled)setPreRoll(Number(el('pre-roll-inline').value));
-    });
-    for(const bars of [0,1,2,4]) el('pre-roll-'+bars).addEventListener('click',()=>{
-      if(!el('pre-roll-'+bars).disabled)setPreRoll(bars);
+    el('pre-roll-inline')?.addEventListener('click',()=>{
+      if(el('pre-roll-inline').disabled)return;
+      const order=[0,1,2,4];
+      setPreRoll(order[(order.indexOf(preRollBars)+1)%order.length]);
     });
     el('zoom').addEventListener('input',()=>{
       clearTimeout(autoZoomTimer);autoZoomTimer=null;userAdjustedZoom=true;
-      zoom=Number(el('zoom').value);bounds=timelineBounds(client.view().state?.locators || [],zoom);
-      el('timeline-track').style.width='calc('+bounds.width+'% - 96px)';drawGrid();drawCursor();
-      const start=startAt(),end=looping?cueAt(endIndex):null;
+      zoom=Number(el('zoom').value);syncBounds(client.view().state?.locators || []);
+      syncArrangementAxis();drawGrid();drawCursor();
+      const current=resolved(),start=current.start,end=current.end;
       if(start){
         const center=end&&end.time>start.time?(start.time+end.time)/2:start.time;
-        centerTimeline(center,center);
+        // The zoom of the reader moves the axis: it is not an automatic
+        // frame and it owns the view.
+        centerTimeline(center,center,true);
       }
     });
     el('start').addEventListener('click',()=>{
       if(destination==='clip') {
         const view=client.view(),targets=sessionTargets(view);if(!el('start').disabled&&targets)invoke('recordingSessionRecord',{songId:view.state.session.songId,scene:sceneTarget,targets,bars:Number(el('session-bars').value),quantization:el('session-quantization').value});return;
       }
-      const view=client.view(),tracks=armedTracks(view),start=startAt(),end=looping?cueAt(endIndex):null;
-      if(!el('start').disabled&&canControl(view,'arm')&&tracks.length&&start) invoke('recordingRecord',{tracks:tracks.map(track=>({index:track.index,id:track.id,name:track.name})),range:{start:markerRef(start),end:end?markerRef(end):null,loop:Boolean(end)&&passes!==1},preRollBars,passes:end?passes:null});
+      const view=client.view(),tracks=armedTracks(view),current=resolved(),end=current.end;
+      if(!el('start').disabled&&canControl(view,'arm')&&tracks.length&&current.valid) invoke('recordingRecord',{tracks:tracks.map(track=>({index:track.index,id:track.id,name:track.name})),range:{start:current.start,end:end||null,loop:Boolean(end)&&passes!==1},preRollBars,passes:end?passes:null});
     });
     el('stop').addEventListener('click',()=>invoke(destination==='clip'||client.view().state?.session?.active?'recordingSessionStop':'recordingStop'));
-    el('click').addEventListener('click',()=>invoke('recordingClick',{enabled:!client.view().state?.transport.metronome.value}));
+    el('click').addEventListener('click',()=>{
+      // The handler checks the same observation the button is built from: a
+      // click never inverts a metronome the host did not observe.
+      const view=client.view();
+      if(!view.clickable||view.clicking)return;
+      invoke('recordingClick',{enabled:!view.state.transport.metronome.value});
+    });
     el('return-arrangement').addEventListener('click',()=>{if(!el('return-arrangement').disabled)client.command('recordingReturnToArrangement').then(()=>{destination='arrangement';render(client.view());poll();}).catch(()=>{});});
     function animate() {
       frame=null;if(doc.hidden || doc.body.dataset.page!=='recording' || !client.view().connected) return;
@@ -668,10 +1559,42 @@
       render(client.view());
       animate();refreshTimer=setTimeout(poll,750);
     }
-    root.addEventListener('resize',drawGrid);
-    root.addEventListener('ableton-rc:phone-client-id',event=>{client.session(true,event.detail?.role || 'viewer');poll();});
-    root.addEventListener('ableton-rc:phone-ws-close',()=>{client.session(false);clearTimeout(refreshTimer);if(frame!=null) root.cancelAnimationFrame?.(frame);frame=null;});
-    root.addEventListener('ableton-rc:page-change',poll);
+    // The geometry of the editor is measured only while the Arrangement is
+    // the visible destination: the compact Record mode never scans a row
+    // and a resize of the page never touches the hidden editor.
+    root.addEventListener('resize',()=>{
+      if(destination!=='arrangement'&&destination!=='record')return;
+      syncArrangementAxis();drawGrid();
+      if(destination!=='arrangement')return;
+      arrangementRows?.geometryChanged();focus?.geometryChanged?.();
+    });
+    // The ruler scrolls with its own scrollport: the lane follows the same
+    // measured axis. A scroll that a gesture of the reader really made
+    // owns the view of the axis from then on.
+    el('timeline')?.addEventListener('scroll',()=>{
+      const timeline=el('timeline');
+      const value=timeline?timeline.scrollLeft:0;
+      const moved=value!==lastScrollLeft;
+      lastScrollLeft=value;
+      if(moved&&(pointerOnTimeline||Date.now()-lastPointerUp<=500))userAdjustedView=true;
+      if(destination==='arrangement'){arrangementRows?.geometryChanged();focus?.geometryChanged?.();}
+    });
+    // The gesture of the reader on the ruler: a wheel or a finger owns the
+    // view of the axis. The Record and the Arrangement are the only
+    // destinations with a ruler.
+    el('timeline')?.addEventListener('wheel',()=>{if(destination==='record'||destination==='arrangement')userAdjustedView=true;});
+    el('timeline')?.addEventListener('pointerdown',()=>{pointerOnTimeline=true;});
+    el('timeline')?.addEventListener('pointerup',()=>{pointerOnTimeline=false;lastPointerUp=Date.now();});
+    el('timeline')?.addEventListener('pointercancel',()=>{pointerOnTimeline=false;lastPointerUp=Date.now();});
+    root.addEventListener('ableton-rc:phone-client-id',event=>{retireSelection();client.session(true,event.detail?.role || 'viewer');poll();});
+    root.addEventListener('ableton-rc:phone-ws-close',()=>{retireSelection();client.session(false);clearTimeout(refreshTimer);if(frame!=null) root.cancelAnimationFrame?.(frame);frame=null;});
+    root.addEventListener('ableton-rc:page-change',()=>{
+      focus?.close?.();
+      // The page opens again with the opening armed: the view of the
+      // reader belongs to the page that left, not to this one.
+      stopFrameArmed=true;userAdjustedZoom=false;userAdjustedView=false;
+      poll();
+    });
     doc.addEventListener('visibilitychange',poll);
     doc.addEventListener('rcsurface:languagechange',()=>{markerSignature='';render(client.view());});
     // The handshake can finish before this deferred setup runs (reload with a
@@ -680,7 +1603,7 @@
     if(open){client.session(true,open.role||'viewer');poll();}
     render(client.view());return client;
   }
-  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, timelineGrid, preRollPreference, formatVolumeDb, setup});
+  root.RcRecording = Object.freeze({createClient, positionToBeats, beatsToPosition, timelineBounds, timelineGrid, preRollPreference, formatVolumeDb, markerTapGuard, setup});
   if (root.document) {
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded',setup,{once:true});
     else setup();

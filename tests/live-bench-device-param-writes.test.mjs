@@ -9,16 +9,24 @@ import { commands } from "../src/live/mappings.ts";
 /**
  * A fake DeviceParameter whose setValue resolves after a configurable delay.
  * Records every applied value so tests can assert on the staircase or sine
- * pattern that the bench produced.
+ * pattern that the bench produced. It also counts the writes in flight, which
+ * is how the parallel cap is proven.
  */
 function makeParam({ min = 0, max = 1, isQuantized = false, delayMs = 15 } = {}) {
   let value = min + (max - min) / 2;
   const writes = [];
+  const state = { pending: 0, maxPending: 0 };
   const getValue = async () => value;
   const setValue = async (next) => {
     writes.push(next);
-    if (delayMs > 0) await new Promise((done) => setTimeout(done, delayMs));
-    value = next;
+    state.pending += 1;
+    if (state.pending > state.maxPending) state.maxPending = state.pending;
+    try {
+      if (delayMs > 0) await new Promise((done) => setTimeout(done, delayMs));
+      value = next;
+    } finally {
+      state.pending -= 1;
+    }
   };
   return {
     min,
@@ -28,6 +36,7 @@ function makeParam({ min = 0, max = 1, isQuantized = false, delayMs = 15 } = {})
     getValue,
     setValue,
     writes,
+    state,
   };
 }
 
@@ -61,6 +70,58 @@ async function measureHostTimerMs(delayMs = 15, samples = 20) {
     await new Promise((done) => setTimeout(done, delayMs));
   }
   return (performance.now() - started) / samples;
+}
+
+/**
+ * Lets the promise microtask queue drain. The mocked clock only advances
+ * timers, but every `await` in the handler resumes in a microtask.
+ */
+async function flushMicrotasks(count) {
+  for (let i = 0; i < count; i += 1) {
+    await Promise.resolve();
+  }
+}
+
+/**
+ * Drives the mocked clock forward until the bench promise settles.
+ *
+ * `mock.timers.tick()` is synchronous, so every step is followed by a few
+ * microtask flushes: the handler resumes only after the awaited `setValue`
+ * promise settles, and that is a promise continuation, not a timer. The pump
+ * is bounded, so a handler that never settles fails instead of hanging.
+ */
+async function pumpUntilSettled(mock, promise, { steps = 2000, flushes = 8 } = {}) {
+  const state = { settled: false, value: undefined, error: undefined };
+  promise.then(
+    (value) => {
+      state.settled = true;
+      state.value = value;
+    },
+    (error) => {
+      state.settled = true;
+      state.error = error;
+    },
+  );
+  for (let step = 0; step < steps && !state.settled; step += 1) {
+    mock.tick(1);
+    await flushMicrotasks(flushes);
+  }
+  await flushMicrotasks(flushes);
+  assert.ok(state.settled, "bench handler did not settle within the bounded pump");
+  if (state.error) throw state.error;
+  return state.value;
+}
+
+/** Runs the real bench handler against the mocked clock and drains it. */
+async function runBenchOnVirtualClock(mock, options) {
+  const promise = commands.benchDeviceParamWrites.handler({
+    trackIndex: 0,
+    deviceIndex: 0,
+    paramIndex: 0,
+    seconds: 1,
+    ...options,
+  });
+  return pumpUntilSettled(mock, promise);
 }
 
 test("benchDeviceParamWrites rejects missing or out-of-range seconds", async () => {
@@ -147,27 +208,85 @@ test("benchDeviceParamWrites single mode: each setValue completes with the natur
   }
 });
 
-test("benchDeviceParamWrites parallel mode: at least as fast as single, no skipped ticks", async () => {
-  const param = makeParam({ delayMs: 15 });
-  installContext(param);
+test("benchDeviceParamWrites parallel mode: beats single on a virtual clock without skipping ticks", async (t) => {
+  // The handler measures its one second window with Date.now() and paces the
+  // parallel writes with setInterval, so mocking setTimeout, setInterval and
+  // Date makes the comparison deterministic. performance.now() stays real,
+  // therefore no real-latency field is asserted here.
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const singleParam = makeParam({ delayMs: 15 });
+  const parallelParam = makeParam({ delayMs: 15 });
   try {
-    const single = await commands.benchDeviceParamWrites.handler({
-      trackIndex: 0, deviceIndex: 0, paramIndex: 0,
-      seconds: 1, mode: "single",
+    installContext(singleParam);
+    const single = await runBenchOnVirtualClock(t.mock.timers, { mode: "single" });
+    clearExtensionContext();
+
+    installContext(parallelParam);
+    const original = await parallelParam.getValue();
+    const parallel = await runBenchOnVirtualClock(t.mock.timers, {
+      mode: "parallel", parallel: 4, intervalMs: 5,
     });
-    const parallel = await commands.benchDeviceParamWrites.handler({
-      trackIndex: 0, deviceIndex: 0, paramIndex: 0,
-      seconds: 1, mode: "parallel", parallel: 4, intervalMs: 5,
-    });
-    // Parallel with the same SDK latency cannot go faster than single in a
-    // perfectly serial fake. It must at least match single (no slowdown)
-    // and never report skipped ticks when inFlight.size < parallel.
-    assert.ok(parallel.completed >= single.completed,
-      `parallel (${parallel.completed}) should be ≥ single (${single.completed})`);
+
+    // Parallel mode overlaps four writes at a time, so it must beat the
+    // serial single mode on the very same virtual timeline.
+    assert.ok(parallel.completed > single.completed,
+      `parallel (${parallel.completed}) must beat single (${single.completed}) on the virtual clock`);
+    assert.equal(single.mode, "single");
+    assert.equal(single.failed, 0);
+    assert.equal(single.started, single.completed + single.failed);
+    assert.equal(singleParam.state.pending, 0, "the single run must have drained every write");
+    assert.equal(parallel.mode, "parallel");
     assert.equal(parallel.parallel, 4);
+    assert.equal(parallel.failed, 0);
+    assert.equal(parallel.started, parallel.completed + parallel.failed);
+    // intervalMs=5 with delayMs=15 keeps the bench below the cap of four,
+    // so no tick may be skipped.
     assert.equal(parallel.skipped, 0,
       `parallel with intervalMs=5 and delayMs=15 must not skip; got ${parallel.skipped} skips`);
+    // The cap of four is proven by the fake device: never more than four
+    // writes in flight, and more than one so the mode really overlapped.
+    assert.ok(parallelParam.state.maxPending <= 4,
+      `cap of 4 exceeded: max ${parallelParam.state.maxPending} writes in flight`);
+    assert.ok(parallelParam.state.maxPending > 1,
+      `parallel mode must overlap writes; max ${parallelParam.state.maxPending} in flight`);
+    assert.equal(parallelParam.state.pending, 0, "every write must have drained before the handler returned");
+    // The last applied write restores the original value of the parameter.
+    assert.equal(parallelParam.writes.at(-1), original,
+      "the last applied write must restore the original value");
+    assert.equal(await parallelParam.getValue(), original,
+      "the parameter must end on its original value");
   } finally {
+    t.mock.timers.reset();
+    clearExtensionContext();
+  }
+});
+
+test("benchDeviceParamWrites parallel mode: skips ticks once the cap is reached", async (t) => {
+  // A cap of two with 50 ms writes and a 5 ms interval cannot keep up: the
+  // bench must report the skipped ticks instead of running three writes at once.
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const param = makeParam({ delayMs: 50 });
+  try {
+    installContext(param);
+    const original = await param.getValue();
+    const result = await runBenchOnVirtualClock(t.mock.timers, {
+      mode: "parallel", parallel: 2, intervalMs: 5,
+    });
+    assert.equal(result.mode, "parallel");
+    assert.equal(result.parallel, 2);
+    assert.ok(result.skipped > 0,
+      `a cap of 2 with delayMs=50 and intervalMs=5 must skip ticks; got ${result.skipped}`);
+    assert.equal(result.failed, 0);
+    assert.equal(result.started, result.completed + result.failed);
+    assert.ok(param.state.maxPending <= 2,
+      `cap of 2 exceeded: max ${param.state.maxPending} writes in flight`);
+    assert.equal(param.state.pending, 0, "every write must have drained before the handler returned");
+    assert.equal(param.writes.at(-1), original,
+      "the last applied write must restore the original value");
+    assert.equal(await param.getValue(), original,
+      "the parameter must end on its original value");
+  } finally {
+    t.mock.timers.reset();
     clearExtensionContext();
   }
 });

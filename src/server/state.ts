@@ -7,14 +7,30 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as http from "node:http";
 import * as https from "node:https";
-import { type AddressInfo } from "node:net";
-import { loadCerts, useHttps, httpsOptions } from "./cert.js";
+import { type AddressInfo, type Socket } from "node:net";
+import { loadCerts, useHttps, httpsOptions, onCertificateChange } from "./cert.js";
 import { handleHttp } from "./http.js";
 import { handleUpgrade, wssInit, stopAllWsClients } from "./ws.js";
 import { regenerateTokens } from "./session-auth.js";
-import { getLanAddresses } from "../util/helpers.js";
+import { getPublishedLan, noteHttpsConnection, startLanRuntime, stopLanRuntime } from "./lan-runtime.js";
 
 export { useHttps } from "./cert.js";
+
+// The certificate can be issued while the server is still starting, so the
+// bound HTTPS server is tracked before the instance is published.
+let boundHttpsServer: https.Server | null = null;
+
+// A new certificate has to reach the running server: the phone is already
+// connected when the machine moves to another network.
+onCertificateChange((options) => {
+  try {
+    boundHttpsServer?.setSecureContext(options);
+  } catch (err) {
+    console.error(
+      `[ableton-rc-surface] could not apply the new certificate: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+});
 
 /**
  * Deterministic default listen port.
@@ -44,6 +60,36 @@ export function getServerGeneration(): number { return serverGeneration; }
 
 export function setActualPort(p: number | null) { actualPort = p; }
 export function setActualHttpsPort(p: number | null) { actualHttpsPort = p; }
+
+/** The server's life: published once it accepts connections, stopped when it goes away. */
+export type ServerLifecycleEvent = "published" | "stopped";
+
+const lifecycleListeners = new Set<(event: ServerLifecycleEvent) => void>();
+
+/**
+ * Follow the server's life. The returned function drops the listener.
+ *
+ * The server module knows nothing about the OSC transport: it only says when
+ * it is published and when it stops, and whoever listens decides what that
+ * means. A test that runs a real server therefore never talks to a Live
+ * that happens to be open on the same machine.
+ */
+export function onServerLifecycle(listener: (event: ServerLifecycleEvent) => void): () => void {
+  lifecycleListeners.add(listener);
+  return () => { lifecycleListeners.delete(listener); };
+}
+
+/** One broken listener must not silence the others. */
+function announceLifecycle(event: ServerLifecycleEvent): void {
+  for (const listener of [...lifecycleListeners]) {
+    try {
+      listener(event);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error(`[ableton-rc-surface] server lifecycle listener failed: ${detail}`);
+    }
+  }
+}
 
 interface ListenableServer {
   listen(port: number, hostname: string): unknown;
@@ -193,6 +239,7 @@ async function initializeServer(generation: number): Promise<void> {
     srv.on("upgrade", (req, socket, head) => handleUpgrade(req, socket, head));
     if (httpsSrv) {
       httpsSrv.on("upgrade", (req, socket, head) => handleUpgrade(req, socket, head));
+      httpsSrv.on("connection", (socket: Socket) => noteHttpsConnection(socket.localAddress, socket.remoteAddress));
     }
 
     // An obsolete listener must never clear a newer session's state.
@@ -222,6 +269,11 @@ async function initializeServer(generation: number): Promise<void> {
       try {
         httpsPort = await listenOnPreferredOrRandom(httpsSrv, targetHttpsPort, "0.0.0.0", true);
         httpsSrv.on("error", handleRuntimeError);
+        const bound = httpsSrv;
+        boundHttpsServer = bound;
+        bound.on("close", () => {
+          if (boundHttpsServer === bound) boundHttpsServer = null;
+        });
       } catch (httpsErr) {
         // HTTPS bind failed: continue HTTP-only. Log but don't abort.
         const detail = httpsErr instanceof Error ? httpsErr.message : String(httpsErr);
@@ -232,11 +284,18 @@ async function initializeServer(generation: number): Promise<void> {
     }
 
     if (generation !== serverGeneration) return;
+
+    // The LAN runtime watches the machine while the server runs. It needs
+    // the certificate in place before it publishes an address.
+    await startLanRuntime();
+    if (generation !== serverGeneration) return;
+
     actualPort = port;
     actualHttpsPort = httpsPort;
     serverInstance = srv;
     httpsServerInstance = httpsSrv;
     published = true;
+    announceLifecycle("published");
     printListenInfo();
   } finally {
     // Until publication this invocation owns its sockets, including a bind
@@ -248,15 +307,18 @@ async function initializeServer(generation: number): Promise<void> {
   }
 
   function printListenInfo(): void {
-    const ips = getLanAddresses();
+    const { primaryIp, otherIps } = getPublishedLan();
+    const ips = primaryIp ? [primaryIp, ...otherIps] : [];
     console.log(`[ableton-rc-surface] HTTP listening on http://127.0.0.1:${actualPort}`);
     if (actualHttpsPort) {
       console.log(`[ableton-rc-surface] HTTPS listening on https://0.0.0.0:${actualHttpsPort}`);
     }
     console.log(`[ableton-rc-surface]   Local Mappings URL: http://127.0.0.1:${actualPort}/static/admin/mappings.html`);
-    for (const ip of ips) {
+    for (let index = 0; index < ips.length; index += 1) {
+      const ip = ips[index] ?? "";
+      const label = index === 0 ? "LAN phone URL (QR):" : "LAN phone URL:";
       if (actualHttpsPort) {
-        console.log(`[ableton-rc-surface]   LAN phone URL: https://${ip}:${actualHttpsPort}/`);
+        console.log(`[ableton-rc-surface]   ${label} https://${ip}:${actualHttpsPort}/`);
       } else {
         console.warn(`[ableton-rc-surface]   LAN phone unavailable: HTTPS did not start (${ip})`);
       }
@@ -271,7 +333,12 @@ export async function stopServer(): Promise<void> {
   const starting = startingServer;
   const srv = serverInstance;
   const httpsSrv = httpsServerInstance;
+  stopLanRuntime();
+  boundHttpsServer = null;
   if (!srv && !httpsSrv && !starting) return;
+  // Everything that rides on the server (the OSC transport) is released
+  // before the sockets close.
+  announceLifecycle("stopped");
   serverInstance = null;
   httpsServerInstance = null;
   actualPort = null;

@@ -140,7 +140,7 @@ test('site generation replaces a stale English fallback from its catalog before 
     assert.doesNotMatch(generated['docs/index.html'],/STALE ENGLISH FALLBACK/);
     for(const html of [generated['docs/index.html'],generated['docs/pt-br.html']]) {
       const graph=JSON.parse(html.match(/<script type="application\/ld\+json">\n([\s\S]*?)\n<\/script>/)[1])['@graph'];
-      const app=graph.find(node=>node['@type']==='SoftwareApplication');assert.equal(app.softwareVersion,'2.0.0');
+      const app=graph.find(node=>node['@type']==='SoftwareApplication');assert.equal(app.softwareVersion,JSON.parse(read('package.json')).version);
       for(const feature of ['AUT','REC','PALM/FACE'])assert.ok(app.featureList.some(text=>text.includes(feature)),feature);
     }
   } finally {fs.rmSync(fixture,{recursive:true,force:true});}

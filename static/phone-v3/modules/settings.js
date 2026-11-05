@@ -95,7 +95,17 @@
       catch { doc.getElementById('settings-error').textContent = t('invalid'); }
       render();
     });
-    doc.getElementById('settings-enable-sensors').addEventListener('click', () => doc.getElementById('permission-activate')?.click());
+    // The permission request starts inside this gesture: the controller asks
+    // every API that needs one before it awaits anything. The hidden bridge
+    // button stays as the fallback for anything that still clicks it.
+    doc.getElementById('settings-enable-sensors').addEventListener('click', () => {
+      const controller = root.RcSensorPermissionController;
+      if (controller && typeof controller.request === 'function') {
+        controller.request();
+        return;
+      }
+      doc.getElementById('permission-activate')?.click();
+    });
     doc.getElementById('settings-calibrate-sensors').addEventListener('click', () => { close(); root.PageCalibration?.start('sensors'); });
     render();
     return {open, close, render};

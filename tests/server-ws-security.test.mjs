@@ -403,7 +403,12 @@ test("admin WS connection: allowed in all actions", async () => {
   ws.send(JSON.stringify({ id: "req-admin-server-info", cmd: "getServerInfo", args: {} }));
   const adminCmdRes = await adminCmdPromise;
   assert.equal(adminCmdRes.ok, true, "admin can execute getServerInfo");
-  assert.ok(adminCmdRes.result.phoneUrl, "getServerInfo returns server info to admin");
+  const serverInfo = adminCmdRes.result;
+  if (serverInfo.primaryIp === "") {
+    assert.equal(serverInfo.phoneUrl, null, "no address means no phone URL");
+  } else {
+    assert.ok(serverInfo.phoneUrl, "getServerInfo returns server info to admin");
+  }
 
   ws.close();
 });

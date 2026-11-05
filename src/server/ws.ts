@@ -60,6 +60,7 @@ import {
 } from "./ws-bounds.js";
 import { sendWithBackpressure } from "./backpressure.js";
 import { getQueryParam } from "../util/url.js";
+import { noteControllerConnection } from "./lan-runtime.js";
 
 export type ClientMode = "performance" | "admin";
 
@@ -611,6 +612,32 @@ export function pushClientUpdate(
   gate.timer.unref?.();
 }
 
+/**
+ * A phone that reached this machine from another device proves the network
+ * it used: the LAN runtime lifts that address above the ones the machine
+ * only guesses. An admin page is not a phone, and a stale token is nobody.
+ */
+export function provesNetwork(
+  isAdminPath: boolean,
+  role: SessionRole,
+  tokenValid: boolean,
+): boolean {
+  if (isAdminPath) return false;
+  if (role !== "controller") return false;
+  return tokenValid;
+}
+
+/** The rule of the network proof, applied to one connection. */
+function noteControllerNetwork(
+  isAdminPath: boolean,
+  role: SessionRole,
+  tokenValid: boolean,
+  req: http.IncomingMessage,
+): void {
+  if (!provesNetwork(isAdminPath, role, tokenValid)) return;
+  void noteControllerConnection(req.socket.localAddress, req.socket.remoteAddress);
+}
+
 function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isAdminPath: boolean): void {
   wss.on("connection", (ws: WebSocket, req) => {
     if (!validateSameOrigin(req)) {
@@ -629,6 +656,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
         ? "stale"
         : "none";
     const isAdmin = role === "admin";
+    noteControllerNetwork(isAdminPath, role, classification.tokenValid, req);
     const ts = new Date().toISOString();
     // getQueryParam, not `new URL`: Live's extension host has no URL global,
     // so this used to throw and every reconnect was handed a brand-new id.
@@ -760,8 +788,10 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
       pushClientUpdate(info);
     });
 
-    ws.on("close", () => {
-      console.log(`[ableton-rc-surface] ${label} id=${clientId} disconnected`);
+    ws.on("close", (code, reason) => {
+      console.log(
+        `[ableton-rc-surface] ${label} id=${clientId} disconnected code=${code} reason=${String(reason ?? "")}`,
+      );
       // Per-socket bookkeeping always runs, superseded or not.
       if (isAdmin) adminSockets.delete(ws);
       clearClientUpdateGate(info);
@@ -986,6 +1016,16 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     if (typeof newName === "string") {
       info.displayName = sanitizeClientName(newName);
       return { handled: true, pushClientUpdate: true };
+    }
+    return { handled: true, pushClientUpdate: false };
+  } else if (t === "resume") {
+    // The phone says hello again on every reconnect (see the phone's
+    // session module). The greeting carries no state: it must never replace
+    // the last snapshot, or the admin panel empties the client card on every
+    // reconnect and only fills it again with the next snapshot.
+    const resumeName = parsed["display_name"];
+    if (typeof resumeName === "string") {
+      info.displayName = sanitizeClientName(resumeName);
     }
     return { handled: true, pushClientUpdate: false };
   } else {

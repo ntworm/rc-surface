@@ -123,9 +123,8 @@ test("60s @ 5Hz LFO: no glitches, no NaN, no out-of-range values", async () => {
     // validate that values are NOT constant (motor is actually working)
     const distinct = new Set(applied.map((a) => a.value.toFixed(4)));
     assert.ok(distinct.size > 100, `LFO produced too few distinct values (${distinct.size}) — likely stuck`);
-
-    teardown();
   } finally {
+    teardown();
     clock.restore();
   }
 });
@@ -170,9 +169,8 @@ test("endurance: motor survives 60s of mixed shape/rate changes", async () => {
       if (!Number.isFinite(a.value) || a.value < 0 || a.value > 1) bad += 1;
     }
     assert.equal(bad, 0, `${bad} samples were bad (NaN or out of range)`);
-
-    teardown();
   } finally {
+    teardown();
     clock.restore();
   }
 });
@@ -218,9 +216,8 @@ test("disabling a modulator mid-run stops it from applying values", async () => 
     // distinct values before (probably = 1).
     const distinctAfter = new Set(applied.slice(samplesBeforeStop).map((a) => a.value.toFixed(6)));
     assert.ok(distinctAfter.size <= 1, `motor kept producing ${distinctAfter.size} distinct values after disable`);
-
-    teardown();
   } finally {
+    teardown();
     clock.restore();
   }
 });
@@ -266,9 +263,8 @@ test("CPU budget: 4 modulators at 4ms tick stays under 4ms per tick (avg)", asyn
     // any one runner.
     const burstBudget = process.env.CI ? 40 : 16;
     assert.ok(max < burstBudget, `max tick took ${max.toFixed(3)}ms (burst budget ${burstBudget}ms)`);
-
-    teardown();
   } finally {
+    teardown();
     clock.restore();
   }
 });

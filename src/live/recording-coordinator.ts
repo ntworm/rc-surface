@@ -9,9 +9,10 @@ import type { OSCTransport } from './osc-transport.js';
 import { RECORDING_CONFIRM_MS, RECORDING_FRESH_MS } from './recording-transport.js';
 import {SessionRecording,type SessionSong} from './session-recording.js';
 import {ArrangementCapture} from './arrangement-capture.js';
+import {readTrackTree,trackDescendants,type TrackTree,type TrackTreeTrack} from './recording-track-tree.js';
 
 interface VolumeParameter { min:number; max:number; defaultValue:number; getValue():Promise<number>; setValue(value:number):Promise<void> }
-interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: {volume?:VolumeParameter} }
+interface Track { name: string; handle: { id: string | number | bigint }; arm: boolean; solo: boolean; mute: boolean; mixer?: {volume?:VolumeParameter}; groupTrack?: TrackTreeTrack | null }
 interface Cue { name: string; time: number; handle: { id: string | number | bigint } }
 interface Song {
   tracks: readonly Track[]; cuePoints: readonly Cue[];
@@ -19,6 +20,12 @@ interface Song {
   scenes?:NonNullable<SessionSong['scenes']>;
 }
 interface TrackRef { index: number; id: string; name: string }
+/** One explicit ARM cohort: a group, or every armable normal track. */
+interface ArmRequest { scope: string; group: TrackRef | null; tracks: TrackRef[]; enabled: boolean; armMode: 'multi' | 'exclusive' }
+/** The ARM vector this cohort means, before and after the write. */
+interface ArmPlan { before: boolean[]; desired: boolean[]; cohort: TrackRef[]; hierarchy: ArmHierarchy[] }
+/** The whole hierarchy a plan was made for: index, id, parent group, kind. */
+interface ArmHierarchy { index: number; id: string; groupId: string | null; isGroup: boolean }
 interface MarkerRef { name: string; time: number }
 type StartRef=MarkerRef|{source:'cursor';time:number};
 interface MarkerRange { start: StartRef; end: MarkerRef | null; loop: boolean }
@@ -76,6 +83,9 @@ export class RecordingCoordinator extends EventEmitter {
   private preRollRequested = false;
   private preRollError: string | null = null;
   private cueGeneration = 0;
+  /** Instance-unique scope seed. The scope is not a durable Set identity:
+   * a replaced Song, a lost link or a reconnect retires it. */
+  private readonly scopeId = randomUUID();
   private readonly session:SessionRecording;
   private readonly volumes=new Map<Track,{value:number;defaultValue:number|null;at:number}>();
   private capture:CaptureOwner|null=null;
@@ -164,9 +174,23 @@ export class RecordingCoordinator extends EventEmitter {
     }));
     this.check(operation);
   }
+  /** An opaque scope for one Song generation of this coordinator instance.
+   *
+   * Reading it never arms, preflights or captures anything: it only reports
+   * which Song generation a command was issued against. A replaced Song, a
+   * lost link or a reconnect retires the scope, so a stale scope can never
+   * authorize a write against a different Set. */
+  public scopeToken(): string {
+    this.currentSong();
+    return this.scopeId + ':' + this.cueGeneration;
+  }
   public snapshot() {
     const song = this.currentSong();
+    // The hierarchy is read from the tracks themselves. It is unknown, never
+    // guessed, when the Song's own identity is not coherent.
+    const tree = readTrackTree(song);
     return {
+      scope: this.scopeToken(),
       transport: this.osc.recording.snapshot(), pending: this.operation?.name === 'read' ? null : this.operation?.name ?? null,
       // Observed conservative preflight is bounded; capture/take preservation
       // and count-in are not exposed by these APIs.
@@ -177,7 +201,9 @@ export class RecordingCoordinator extends EventEmitter {
       session:this.session.snapshot(),
       loopRegion: {start: this.value('loopStart'), length: this.value('loopLength')},
       safety: Object.fromEntries(flags.map(key => [key, this.value(key)])),
+      trackTreeValid: tree.valid,
       tracks: song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name,
+        groupId: tree.tracks[index]?.groupId ?? null, isGroup: tree.tracks[index]?.isGroup ?? false,
         arm: this.value('arm:' + index), solo: this.value('solo:' + index), mute: this.value('mute:' + index),
         canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index),
         volume: this.trackVolume(track)?.value ?? null, volumeDefault:this.trackVolume(track)?.defaultValue ?? null })),
@@ -692,6 +718,221 @@ export class RecordingCoordinator extends EventEmitter {
     } finally {if(this.trackMutation===operation)this.trackMutation=null;}
     return this.snapshot();
   }
+  /**
+   * One explicit ARM cohort: a group, or every armable normal track.
+   *
+   * The caller states the cohort it means; the coordinator re-derives that
+   * cohort from the current tree and refuses any difference. A changed
+   * topology or a changed armability therefore never silently widens or
+   * narrows the write, and Live's own exclusive-ARM preference is never
+   * touched: an exclusive cohort clears the outside tracks itself.
+   */
+  public async armTracks(args: unknown, context?: CommandExecutionContext) {
+    this.requireContext(context);
+    const request = this.armRequest(args);
+    if (request.scope !== this.scopeToken()) fail('SCOPE');
+    this.idle(context);
+    if (this.punch || this.armedByRecorder.length) fail('STOP_REQUIRED');
+    return this.run('tracks', context, async operation => {
+      const song = this.currentSong();
+      const identities = song.tracks.map((track, index) => ({ index, id: String(track.handle.id), name: track.name }));
+      await this.readArms(operation, song);
+      this.identities(identities);
+      this.stopped();
+      if (this.armedByRecorder.length) fail('STOP_REQUIRED');
+      const tree = readTrackTree(song);
+      if (!tree.valid) fail('IDENTITY');
+      const group = this.armGroup(song, tree, request.group);
+      const plan = this.armPlan(song, tree, request, group);
+      await this.writeArms(operation, song, identities, request, group, plan);
+      this.preparedToken = null;
+    });
+  }
+  private armRequest(args: unknown): ArmRequest {
+    if (!args || typeof args !== 'object' || Array.isArray(args)) fail('ARGUMENTS');
+    const request = args as Record<string, unknown>;
+    const keys = ['scope', 'group', 'tracks', 'enabled', 'armMode'];
+    if (Object.keys(request).length !== keys.length || !keys.every(key => Object.hasOwn(request, key))) fail('ARGUMENTS');
+    return {
+      scope: this.armScope(request['scope']),
+      group: this.armGroupRef(request['group']),
+      tracks: this.armCohortRef(request['tracks']),
+      enabled: this.armEnabled(request['enabled']),
+      armMode: this.armMode(request['armMode']),
+    };
+  }
+  private armScope(value: unknown): string {
+    if (typeof value !== 'string' || !value) fail('ARGUMENTS');
+    return value;
+  }
+  private armEnabled(value: unknown): boolean {
+    if (typeof value !== 'boolean') fail('ARGUMENTS');
+    return value;
+  }
+  private armMode(value: unknown): 'multi' | 'exclusive' {
+    if (value !== 'multi' && value !== 'exclusive') fail('ARGUMENTS');
+    return value as 'multi' | 'exclusive';
+  }
+  private armGroupRef(value: unknown): TrackRef | null {
+    if (value === null) return null;
+    if (typeof value !== 'object' || Array.isArray(value)) fail('ARGUMENTS');
+    return this.trackRef(value as TrackRef);
+  }
+  private armCohortRef(value: unknown): TrackRef[] {
+    if (!Array.isArray(value) || value.length > 256) fail('ARGUMENTS');
+    return this.refs(value as TrackRef[]);
+  }
+  /** The group the caller named: an exact track that is a group here. */
+  private armGroup(song: Song, tree: TrackTree, group: TrackRef | null): number | null {
+    if (group === null) return null;
+    const track = song.tracks[group.index];
+    if (!track || String(track.handle.id) !== group.id || track.name !== group.name) fail('IDENTITY');
+    if (song.tracks.filter(item => String(item.handle.id) === group.id).length !== 1) fail('IDENTITY');
+    const entry = tree.tracks[group.index];
+    if (!entry || !entry.isGroup) fail('IDENTITY');
+    return group.index;
+  }
+  /** The armable tracks below the group, or every armable normal track. */
+  private armCohort(song: Song, tree: TrackTree, group: number | null): TrackRef[] {
+    const wanted = group === null
+      ? tree.tracks.map(entry => entry.id)
+      : trackDescendants(tree, tree.tracks[group]!.id);
+    const ids = new Set(wanted);
+    const cohort: TrackRef[] = [];
+    for (const entry of tree.tracks) {
+      if (!ids.has(entry.id) || entry.isGroup) continue;
+      if (this.value('canArm:' + entry.index) !== true) continue;
+      const track = song.tracks[entry.index];
+      if (!track) continue;
+      cohort.push({ index: entry.index, id: entry.id, name: track.name });
+    }
+    return cohort;
+  }
+  /** The ARM vector of the whole Set: a group has no ARM value at all. */
+  private armVector(song: Song): (boolean | null)[] {
+    const vector: (boolean | null)[] = [];
+    for (let index = 0; index < song.tracks.length; index++) {
+      if (this.value('canArm:' + index) === false) { vector.push(false); continue; }
+      const arm = this.value('arm:' + index);
+      vector.push(typeof arm === 'boolean' ? arm : null);
+    }
+    return vector;
+  }
+  /** The write this cohort means, refused when it is not the caller's one. */
+  private armPlan(song: Song, tree: TrackTree, request: ArmRequest, group: number | null): ArmPlan {
+    const cohort = this.armCohort(song, tree, group);
+    if (!this.sameCohort(cohort, request.tracks)) fail('IDENTITY');
+    const vector = this.armVector(song);
+    if (vector.some(value => value === null)) fail('UNKNOWN');
+    const before = vector.map(value => value === true);
+    const desired = before.slice();
+    for (const ref of cohort) desired[ref.index] = request.enabled;
+    this.clearOutside(tree, desired, cohort, request);
+    return { before, desired, cohort, hierarchy: this.hierarchy(tree) };
+  }
+  /** An exclusive cohort clears the tracks outside it; a group is never one. */
+  private clearOutside(tree: TrackTree, desired: boolean[], cohort: TrackRef[], request: ArmRequest): void {
+    if (request.armMode !== 'exclusive' || !request.enabled) return;
+    const cohortIndexes = new Set(cohort.map(ref => ref.index));
+    for (const entry of tree.tracks) {
+      if (entry.isGroup || cohortIndexes.has(entry.index)) continue;
+      desired[entry.index] = false;
+    }
+  }
+  private sameCohort(left: readonly TrackRef[], right: readonly TrackRef[]): boolean {
+    if (left.length !== right.length) return false;
+    return left.every((ref, at) => {
+      const other = right[at]!;
+      return ref.index === other.index && ref.id === other.id && ref.name === other.name;
+    });
+  }
+  /** The complete hierarchy the plan was made for, entry by entry. */
+  private hierarchy(tree: TrackTree): ArmHierarchy[] {
+    return tree.tracks.map((entry, at) => ({ index: entry.index, id: entry.id,
+      groupId: tree.tracks[at]?.groupId ?? null, isGroup: tree.tracks[at]?.isGroup ?? false }));
+  }
+  /** Every entry of the hierarchy must still hold, in the same order. */
+  private sameHierarchy(left: readonly ArmHierarchy[], right: readonly ArmHierarchy[]): boolean {
+    if (left.length !== right.length) return false;
+    return left.every((entry, at) => {
+      const other = right[at]!;
+      return entry.index === other.index && entry.id === other.id
+        && entry.groupId === other.groupId && entry.isGroup === other.isGroup;
+    });
+  }
+  /** The tree, the hierarchy and the intended cohort still hold, right now. */
+  private revalidateCohort(song: Song, group: number | null, plan: ArmPlan): void {
+    const tree = readTrackTree(song);
+    if (!tree.valid) fail('IDENTITY');
+    if (!this.sameHierarchy(this.hierarchy(tree), plan.hierarchy)) fail('IDENTITY');
+    if (!this.sameCohort(this.armCohort(song, tree, group), plan.cohort)) fail('IDENTITY');
+  }
+  /**
+   * The ARM write itself.
+   *
+   * Every setter re-checks the scope, the Song, every name and handle, the
+   * tree, the whole hierarchy the plan was made for, the intended cohort,
+   * the context and the stopped transport, and every cached ARM value is
+   * dropped before a setter runs: a native ARM setter may affect its peers
+   * before it applies or throws. The confirmation is checked again after the
+   * last read: a changed hierarchy, scope, Song or cohort is never a success.
+   * A failed write leaves the ARM vector unknown until the next fresh read.
+   */
+  private async writeArms(operation: Operation, song: Song, identities: TrackRef[], request: ArmRequest, group: number | null, plan: ArmPlan): Promise<void> {
+    const changed = new Map<number, boolean>();
+    // The write counts as started before the setter is invoked: a native
+    // setter may apply and then throw.
+    let writesStarted = false;
+    try {
+      for (let index = 0; index < song.tracks.length; index++) {
+        if (plan.before[index] === plan.desired[index]) continue;
+        this.check(operation);
+        this.identities(identities);
+        if (this.getSong() !== song) fail('IDENTITY');
+        this.stopped();
+        if (this.scopeToken() !== request.scope) fail('SCOPE');
+        this.revalidateCohort(song, group, plan);
+        for (const affected of identities) this.observed.delete('arm:' + affected.index);
+        writesStarted = true;
+        song.tracks[index]!.arm = plan.desired[index]!;
+        changed.set(index, plan.desired[index]!);
+      }
+      await this.readArms(operation, song, changed);
+      // The confirmation can arrive after the hierarchy, the scope, the Song
+      // or the cohort changed: the write is then unknown, never a success.
+      this.check(operation);
+      if (this.getSong() !== song) fail('IDENTITY');
+      if (this.scopeToken() !== request.scope) fail('SCOPE');
+      this.revalidateCohort(song, group, plan);
+      this.confirmArms(song, identities, request, plan);
+    } catch (error) {
+      if (writesStarted) this.invalidateArms(song, request.scope, operation);
+      throw error;
+    }
+  }
+  /** The ARM vector of a failed write is unknown until the next fresh read.
+   * Only the operation that still owns this Song generation may retire those
+   * observations: a later STOP, a new Song or a new operation owns its own. */
+  private invalidateArms(song: Song, scope: string, operation: Operation): void {
+    if (this.operation !== operation) return;
+    // The ownership lookup is best-effort: a context or a Song that vanished
+    // during the failed write must never mask the error that failed it, and a
+    // lookup that did not complete retires no observation of any other owner.
+    let owned = false;
+    try { owned = this.getSong() === song && this.scopeToken() === scope; }
+    catch { return; }
+    if (!owned) return;
+    for (const key of [...this.observed.keys()]) if (key.startsWith('arm:')) this.observed.delete(key);
+  }
+  /** The whole ARM vector, not only the cohort, must be the intended one. */
+  private confirmArms(song: Song, identities: TrackRef[], request: ArmRequest, plan: ArmPlan): void {
+    this.identities(identities);
+    this.stopped();
+    const actual = this.armVector(song);
+    if (actual.some(value => value === null)) fail('UNKNOWN');
+    for (const ref of plan.cohort) if (actual[ref.index] !== request.enabled) fail('ARM_UNCONFIRMED');
+    if (plan.desired.some((value, index) => actual[index] !== value)) fail('ARM_COLLATERAL_DISARM');
+  }
   public async renameTrack(expected: TrackRef, value: unknown, context?: CommandExecutionContext) {
     this.requireContext(context);const ref=this.trackRef(expected);
     if(typeof value!=='string' || !value.trim() || value.trim().length>128 || /[\u0000-\u001f\u007f-\u009f]/.test(value)) fail('NAME');
@@ -811,7 +1052,13 @@ export class RecordingCoordinator extends EventEmitter {
     this.idle(context); this.currentSong();
     if(this.punch || this.armedByRecorder.length || this.capture?.ownedPunchOut) fail('STOP_REQUIRED');
     const range = this.markerRange(requested);
-    if(passes!==undefined && (passes!==null&&(!Number.isInteger(passes)||passes<1||passes>10) || !range.end&&passes!==null || range.end&&range.loop!==(passes!==1)))fail('PASSAGES');
+    // The Loop flag follows the passage count: one pass is never a loop,
+    // two to ten passes and unlimited passes are always a loop.
+    const expectedLoop = passes === 1 ? false : true;
+    if (passes !== undefined
+      && (passes !== null && (!Number.isInteger(passes) || passes < 1 || passes > 10)
+        || (!range.end && passes !== null)
+        || (range.end && range.loop !== expectedLoop))) fail('PASSAGES');
     if (![0,1,2,4].includes(preRollBars)) fail('PRE_ROLL_RANGE');
     const refs=this.refs(track),song=this.currentSong(),strict=Array.isArray(track);
     for(const ref of refs){const candidate=song.tracks[ref.index];if(!candidate||String(candidate.handle.id)!==ref.id||candidate.name!==ref.name)fail('IDENTITY');}

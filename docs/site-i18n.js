@@ -348,8 +348,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: 'v2.0.0 is the current release. Seven pages, XY gesture loops and an expanded pose bank; configure it from a fresh state.',
-      'pt-BR': 'v2.0.0 é a versão atual. Sete páginas, loops XY e banco ampliado de poses; configure a partir do zero.',
+      en: 'v2.1.0 adds compact REC views, the Network tab and the Mac connection fixes. Existing 2.0 profiles remain compatible.',
+      'pt-BR': 'v2.1.0 traz as vistas compactas do REC, a aba Rede e as correções de conexão no Mac. Perfis 2.0 continuam compatíveis.',
     },
     'lp.docs.001': {
       en: 'Reference documents',
@@ -387,6 +387,10 @@
     'lp.map.001': {
       en: "Surface map <span class=\"tail\">— figs. 1 to 11</span>",
       'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 11</span>",
+    },
+    'lp.map.figScope': {
+      en: "Every plan figure on this sheet is drawn for the released 2.0.0 layout. They are schematics of that release — not screenshots, and not the screen of the candidate you are running. The User Guide describes the current candidate.",
+      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout lançado na 2.0.0. São esquemas daquele lançamento — não são capturas de tela, nem a tela da candidata que você está usando. O Guia de Uso descreve a candidata atual.",
     },
     'lp.map.004': {
       en: 'Fig. 1',
@@ -1706,6 +1710,10 @@
       en: "REC — Arrangement / CLIP",
       'pt-BR': "REC — Arrangement / CLIP",
     },
+    'lp.rec.versionNotice': {
+      en: "This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The candidate you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that candidate; the User Guide describes it in full.",
+      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A candidata que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa candidata; o Guia de Uso descreve por completo.",
+    },
     'lp.rec.figure': {
       en: "Fig. 7",
       'pt-BR': "Fig. 7",
@@ -1719,24 +1727,24 @@
       'pt-BR': "Marcadores / compasso.beat / Zoom",
     },
     'lp.rec.timelineFlow': {
-      en: "Create markers in Live. Tap a marker to position native playback, then use header Play to listen. Zoom and scroll preserve musical scale; both end cards have gutters.",
-      'pt-BR': "Crie marcadores no Live. Toque para posicionar o playback nativo e use Play do topo para ouvir. Zoom e rolagem preservam a escala musical; as duas pontas têm margens.",
+      en: "Markers are prepared in Live and appear in the catalog; the phone creates none. Choosing a marker is a local selection that never seeks Live’s transport. Zoom and scroll preserve musical scale; both end cards have gutters.",
+      'pt-BR': "Os marcadores são preparados no Live e aparecem no catálogo; o celular não cria nenhum. Escolher um marcador é uma seleção local que nunca procura posição no transporte do Live. Zoom e rolagem preservam a escala musical; as duas pontas têm margens.",
     },
     'lp.rec.dest': {
-      en: "ARRANGEMENT / CLIP switch · CLICK",
-      'pt-BR': "Seletor ARRANGEMENT / CLIP · CLICK",
+      en: "RECORD / ARRANGEMENT / CLIP switch · CLICK",
+      'pt-BR': "Seletor GRAVAR / ARRANGEMENT / CLIP · CLICK",
     },
     'lp.rec.destFlow': {
-      en: "Switches between timeline recording in Arrangement and scene recording in Session. CLICK top right is shared with TRN and is never locked.",
-      'pt-BR': "Alterna entre gravação na timeline do Arrangement e gravação de cenas na Session. CLICK no topo direito é compartilhado com TRN e nunca é travado.",
+      en: "One fixed mode bar switches the three local views, with Record as the default. The capture bar (REC / STOP / CLICK) is shared by all three and keeps the same place in every view. CLICK is shared with TRN: it switches Live’s metronome whenever the observed state is fresh, during setup, pre-roll, REC and playback.",
+      'pt-BR': "Uma barra de modo fixa troca as três visões locais, com Gravar como padrão. A barra de captura (REC / STOP / CLICK) é compartilhada pelas três e fica no mesmo lugar em cada visão. CLICK é compartilhado com TRN: liga e desliga o metrônomo do Live sempre que o estado observado está fresco, na montagem, no pré-roll, durante o REC e no playback.",
     },
     'lp.rec.range': {
       en: "START / END markers",
       'pt-BR': "Marcadores START / END",
     },
     'lp.rec.rangeFlow': {
-      en: "Choose a START marker; optionally choose a later END marker. Live confirms the region before REC. Without END, recording runs FREE until STOP.",
-      'pt-BR': "Escolha um marcador START; opcionalmente escolha um END posterior. O Live confirma a região antes do REC. Sem END, a gravação roda LIVRE até STOP.",
+      en: "Choose a START marker; the END is the Next marker, an explicit marker, or Until STOP for an open-ended capture. Live confirms the region before REC, and the range stays frozen while the capture is owned.",
+      'pt-BR': "Escolha um marcador START; o FIM é o próximo marcador, um marcador explícito ou Até STOP para gravação sem fim definido. O Live confirma a região antes do REC, e o trecho fica congelado enquanto a captura está em andamento.",
     },
     'lp.rec.preRoll': {
       en: "PRE-ROLL OFF / 1 / 2 / 4",
@@ -1747,36 +1755,36 @@
       'pt-BR': "OFF começa no marcador. 1/2/4 tocam compassos anteriores com click até Punch In abrir no marcador. Esta preferência do navegador não altera o count-in nativo, somente leitura.",
     },
     'lp.rec.passesTitle': {
-      en: "PRE-ROLL and PASSES / FREE",
-      'pt-BR': "PRÉ-ROLL e PASSES / LIVRE",
+      en: "PRE-ROLL and PASSES / Until STOP",
+      'pt-BR': "PRÉ-ROLL e PASSES / Até STOP",
     },
     'lp.rec.passesFlow': {
-      en: "PRE-ROLL (OFF/1/2/4) plays earlier bars before Punch In opens. With an END marker, PASSES sets 1–10 or infinite loops. Without END, FREE records continuously until STOP.",
-      'pt-BR': "PRÉ-ROLL (OFF/1/2/4) toca compassos anteriores com click até o Punch In. Com marcador END, PASSES define 1–10 ou voltas infinitas. Sem END, o modo LIVRE grava continuamente até STOP.",
+      en: "PRE-ROLL (OFF/1/2/4) plays earlier bars before Punch In opens. PASSES becomes available once the END is bounded and sets 1, 2, 3 or infinite passes; Until STOP records open-ended until STOP.",
+      'pt-BR': "PRÉ-ROLL (OFF/1/2/4) toca compassos anteriores com click até o Punch In. PASSES fica disponível quando o FIM é limitado e define 1, 2, 3 ou passagens infinitas; Até STOP grava sem fim definido até STOP.",
     },
     'lp.rec.tracks': {
-      en: "Track cards / volume knob / ARM MULTI",
-      'pt-BR': "Cartões de track / knob de volume / ARM MULTI",
+      en: "Track rows / volume fader / ARM MULTI",
+      'pt-BR': "Linhas de track / fader de volume / ARM MULTI",
     },
     'lp.rec.tracksFlow': {
-      en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP keeps armed inputs intact. Groups can SOLO/MUTE but cannot ARM.",
-      'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP mantém as entradas armadas. Grupos têm SOLO/MUTE, sem ARM.",
+      en: "ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP keeps armed inputs intact. A group row keeps its own fader, and arming it arms the armable descendants inside it.",
+      'pt-BR': "ARM MULTI acumula entradas. EXCLUSIVE desarma outras somente ao apertar ARM de uma track. REC confirma o conjunto armado visível; STOP mantém as entradas armadas. A linha de um grupo tem o próprio fader, e armá-la arma os descendentes armáveis dentro dele.",
     },
     'lp.rec.transport': {
-      en: "REC / STOP / BACK TO ARR",
-      'pt-BR': "REC / STOP / VOLTAR AO ARR",
+      en: "REC / STOP / CLICK · BACK TO ARR",
+      'pt-BR': "REC / STOP / CLICK · VOLTAR AO ARR",
     },
     'lp.rec.transportFlow': {
-      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. BACK TO ARR appears when Session overrode Arrangement.",
-      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. VOLTAR AO ARR aparece quando a Session sobrepôs o Arrangement.",
+      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. BACK TO ARR appears when Session overrode Arrangement, and returns explicitly once every Session clip is idle.",
+      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. VOLTAR AO ARR aparece quando a Session sobrepôs o Arrangement e retorna explicitamente quando todos os clips da Session estão ociosos.",
     },
     'lp.rec.clip': {
       en: 'CLIP / Session scene',
       'pt-BR': 'CLIP / cena da Session',
     },
     'lp.rec.clipFlow': {
-      en: "CLIP replaces the timeline with a paged Session grid. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending until fresh stop confirmation releases it. BACK TO ARR explicitly returns after all Session clips are idle, without Pause/Play. No existing-clip overdub or take/comp browser.",
-      'pt-BR': "CLIP substitui a timeline por uma grade de Session paginada. Escolha a cena alvo; LENGTH (1/2/4/8/16 compassos) e QUANTIZE (Global/None/1 bar/1 beat) ajustados no próprio painel. REC observa fila/gravação/playback; STOP afeta apenas alvos que ainda possui, mantém ARM/transporte global e pode ficar pendente até confirmação fresca liberar a tentativa. BACK TO ARR retorna explicitamente após Session inteira ociosa, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.",
+      en: "CLIP replaces the timeline with a paged Session grid on the same shared track rows. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending until fresh stop confirmation releases it. BACK TO ARR explicitly returns after all Session clips are idle, without Pause/Play. No existing-clip overdub or take/comp browser.",
+      'pt-BR': "CLIP substitui a timeline por uma grade de Session paginada, nas mesmas linhas de track compartilhadas. Escolha a cena alvo; LENGTH (1/2/4/8/16 compassos) e QUANTIZE (Global/None/1 bar/1 beat) ajustados no próprio painel. REC observa fila/gravação/playback; STOP afeta apenas alvos que ainda possui, mantém ARM/transporte global e pode ficar pendente até confirmação fresca liberar a tentativa. BACK TO ARR retorna explicitamente após Session inteira ociosa, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.",
     },
     'lp.rec.start': {
       en: "START",

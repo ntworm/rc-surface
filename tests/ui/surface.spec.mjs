@@ -315,7 +315,8 @@ test.describe('RC Surface UI & E2E Suite', () => {
     const stage = page.locator('#btn-stage-mode');
     await stage.click();
     await expect(page.locator('body')).toHaveClass(/stage-mode/);
-    await expect(stage).toHaveText('EXIT');
+    await expect(stage).toHaveAttribute('aria-label', 'EXIT FULLSCREEN');
+    await expect(stage).toHaveAttribute('title', 'EXIT FULLSCREEN');
     await expect(stage).toHaveAttribute('aria-pressed', 'true');
     const fullscreen = await page.evaluate(() => Boolean(document.fullscreenElement));
     test.skip(!fullscreen, 'this browser refused fullscreen, so there is nothing to drop');
@@ -324,7 +325,7 @@ test.describe('RC Surface UI & E2E Suite', () => {
     // button. The page must not stay on stage with an EXIT and no fullscreen.
     await page.evaluate(() => document.exitFullscreen());
     await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
-    await expect(stage).toHaveText('STAGE');
+    await expect(stage).toHaveAttribute('aria-label', 'FULLSCREEN');
     await expect(stage).toHaveAttribute('aria-pressed', 'false');
 
     // The button still toggles both ways afterwards.
@@ -352,7 +353,7 @@ test.describe('RC Surface UI & E2E Suite', () => {
     await expect(page.locator('body')).not.toHaveClass(/stage-mode/);
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
-    await expect(stage).toHaveText('STAGE');
+    await expect(stage).toHaveAttribute('aria-label', 'FULLSCREEN');
   });
 
   test('STAGE labels its exit in the interface language', async ({ page }) => {
@@ -360,12 +361,40 @@ test.describe('RC Surface UI & E2E Suite', () => {
     await page.evaluate(() => window.RcSurfaceI18n.setLocale('pt-BR'));
     const stage = page.locator('#btn-stage-mode');
     await stage.click();
-    await expect(stage).toHaveText('SAIR');
+    await expect(stage).toHaveAttribute('aria-label', 'SAIR DA TELA CHEIA');
+    await expect(stage).toHaveAttribute('title', 'SAIR DA TELA CHEIA');
     // A language change while on stage keeps the exit label, not STAGE.
     await page.evaluate(() => window.RcSurfaceI18n.setLocale('en'));
-    await expect(stage).toHaveText('EXIT');
+    await expect(stage).toHaveAttribute('aria-label', 'EXIT FULLSCREEN');
     await stage.click();
-    await expect(stage).toHaveText('STAGE');
+    await expect(stage).toHaveAttribute('aria-label', 'FULLSCREEN');
+  });
+
+  test('STAGE draws a fixed icon button that never shows words', async ({ page }) => {
+    await page.setViewportSize({ width: 851, height: 393 });
+    const stage = page.locator('#btn-stage-mode');
+    const icon = stage.locator('svg.stage-mode-icon');
+    await expect(icon).toHaveCount(1);
+    await expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(await icon.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+    expect(await stage.textContent()).toBe('');
+
+    const before = await stage.boundingBox();
+    expect(Math.abs(before.width - 24), 'the button is a fixed 24px square').toBeLessThanOrEqual(1);
+    expect(Math.abs(before.height - 24), 'the button is a fixed 24px square').toBeLessThanOrEqual(1);
+
+    await stage.click();
+    await expect(stage).toHaveAttribute('aria-pressed', 'true');
+    // The glyph swaps, the icon stays: the button is never refilled with words.
+    await expect(icon).toHaveCount(1);
+    expect(await stage.textContent()).toBe('');
+
+    const after = await stage.boundingBox();
+    expect(Math.abs(after.width - before.width), 'the box is fixed across states').toBeLessThanOrEqual(1);
+    expect(Math.abs(after.height - before.height), 'the box is fixed across states').toBeLessThanOrEqual(1);
+
+    await stage.click();
+    await expect(stage).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('VID uses six-capture slots without a Takes selector and restores legacy banks', async ({ page }) => {

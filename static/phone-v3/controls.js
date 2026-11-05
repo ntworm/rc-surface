@@ -798,6 +798,17 @@
     for (const [name, state] of modulatorStates) emitModulatorState(name, state);
   }
 
+  // A close stops the modulators of that client on the host (ws.ts,
+  // clearHostModulatorsForClient), so a new session has to say again which
+  // ones are running. Only the active ones: an inactive update parks an
+  // unrelated target at 0. The send is immediate, not coalesced — a coalesced
+  // emit waits for an animation frame that a hidden tab never runs.
+  window.addEventListener('ableton-rc:phone-client-id', () => {
+    for (const [name, state] of modulatorStates) {
+      if (state.active) sendModulatorState(name, state);
+    }
+  });
+
   function paintModulatorValue(el, value) {
     const fill = el?.querySelector('.mod-val-bar');
     const transform = `scaleY(${clamp(value,0,1)})`;
@@ -1252,17 +1263,40 @@
     // refuse or lack fullscreen (iPhone Safari) keep the visual stage mode.
     let heldFullscreen = false;
 
+    // The localized wording behind the icon: the accessible name and the
+    // tooltip. The catalog is the source; the fallback keeps the button
+    // readable without it.
+    function stageLabel(key) {
+      const translated = window.RcSurfaceI18n?.t?.(key);
+      if (typeof translated === 'string' && translated.trim() && translated !== key) return translated;
+      return key === 'hdr.exit' ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+    }
+
+    // The button draws an icon, never words: the wording lives in the
+    // accessible name and the tooltip. The i18n handle follows the state,
+    // so a language change while on stage repaints EXIT/SAIR instead of
+    // reverting the name to STAGE.
+    function applyLabel(active) {
+      const key = active ? 'hdr.exit' : 'hdr.stage';
+      btn.setAttribute('data-i18n-aria-label', key);
+      btn.setAttribute('data-i18n-title', key);
+      const label = stageLabel(key);
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+    }
+
     function render(active) {
       document.body.classList.toggle('stage-mode', active);
       btn.classList.toggle('on', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      // The i18n handle follows the state, so a language change while on
-      // stage repaints EXIT/SAIR instead of reverting the label to STAGE.
-      const key = active ? 'hdr.exit' : 'hdr.stage';
-      btn.setAttribute('data-i18n', key);
-      btn.textContent = window.RcSurfaceI18n?.t?.(key) || (active ? 'EXIT' : 'STAGE');
+      applyLabel(active);
       window.dispatchEvent(new Event('resize'));
     }
+
+    // A language change keeps naming what the button does next.
+    document.addEventListener('rcsurface:languagechange', () => {
+      applyLabel(document.body.classList.contains('stage-mode'));
+    });
 
     async function enter() {
       render(true);

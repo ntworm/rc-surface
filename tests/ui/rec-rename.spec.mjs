@@ -37,7 +37,9 @@ for(const locale of ['en','pt-BR'])test(`REC inline track rename keeps polling f
   await input.fill('Unsaved draft');const before=polls;
   await expect.poll(()=>polls).toBeGreaterThan(before);
   await expect(input).toHaveValue('Unsaved draft');await expect(input).toBeFocused();
-  await page.locator('#rec-position').click();expect(writes).toHaveLength(0);
+  // The status of the page is an inert target: the blur of the editor never
+  // saves a draft.
+  await page.locator('#rec-status').click();expect(writes).toHaveLength(0);
   await input.press('Escape');await expect(input).toHaveCount(0);await expect(name).toHaveText('1 · Drums');
   await name.dblclick();await input.fill('Drum Bus');
   expect((await input.boundingBox()).height).toBeGreaterThanOrEqual(44);

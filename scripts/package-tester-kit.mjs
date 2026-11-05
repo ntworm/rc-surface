@@ -63,6 +63,8 @@ const stageDocs = [
   "docs/CONTRACTS.md",
   "docs/CONTRACTS.pt-BR.md",
   ".github/release-notes/v2.0.0.md",
+  ".github/release-notes/v2.0.1.md",
+  ".github/release-notes/v2.1.0.md",
   "vendor/README.md",
   "FUNDING.md",
   "internal/README.md",

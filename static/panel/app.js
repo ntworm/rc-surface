@@ -283,6 +283,22 @@ window.addEventListener("DOMContentLoaded", () => {
     otherIps: window.INITIAL_OTHER_IPS ?? [],
     adminToken: window.INITIAL_ADMIN_TOKEN ?? null,
   };
+
+  // The Network tab reads the machine on its own clock, so it needs the
+  // socket and the drawing helpers before the first paint.
+  window.RcSurfaceNetworkTab.init({
+    send: (cmd, args, cb) => sendWS(cmd, args, cb),
+    translate,
+    ensureQr: ensureQRCode,
+    clearQr: clearQRCode,
+    bindCopy: bindCopyButton,
+    startServer: () => {
+      const btn = document.getElementById("btn-start");
+      if (btn) btn.click();
+    },
+    refreshServer: refreshServerInfo,
+  });
+
   updateServerUI();
 
   initTabs();
@@ -311,6 +327,9 @@ function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".tab-content").forEach(c => c.classList.toggle("active", c.id === `tab-${tab}`));
+
+  // The Network tab reads the machine only while it is open.
+  window.RcSurfaceNetworkTab?.setVisible(tab === "network");
 
   if (tab === "mappings") {
     renderMappingsTab();
@@ -706,6 +725,8 @@ function updateClientsStrip() {
   const pulse = document.getElementById("conn-pulse");
   if (pulse) pulse.classList.toggle("active", count > 0);
 
+  // A phone on the line is the proof the network works.
+  window.RcSurfaceNetworkTab?.setConnected(count > 0);
 }
 
 // Latest CPU reading from getServerInfo.cpuUsage (0-100). Used by the
@@ -1127,8 +1148,58 @@ function clearQRCode(frame) {
   frame.innerHTML = "";
 }
 
+// The panel's own translator: the catalog lives in the i18n module, and a
+// missing key returns itself, which is a bug report rather than a blank.
+function translate(key, params) {
+  return window.RcSurfaceI18n ? window.RcSurfaceI18n.t(key, params) : key;
+}
+
+// The address the user picks on the Main tab: the machine keeps the choice
+// and tells the panel which address it published.
+function chooseNetworkAddress(choice) {
+  sendWS("setNetworkChoice", choice, refreshServerInfo);
+}
+
+// The one sentence that says why the panel shows what it shows: the same
+// line the Network tab draws.
+function networkReasonLine() {
+  return window.RcSurfaceNetwork.reasonLine(serverInfo, translate);
+}
+
+// The URL under the address. A stopped server has none and says so; a
+// running server without one says why, and never that it is off.
+function updatePrimaryUrl(active) {
+  const el = document.getElementById("iface-primary-url");
+  if (!el) return;
+  if (!active) {
+    el.dataset.i18n = "panel.notRunning";
+    el.textContent = translate("panel.notRunning");
+    return;
+  }
+  delete el.dataset.i18n;
+  el.textContent = serverInfo.phoneUrl || networkReasonLine();
+}
+
+// The placeholder where the QR would be. It keeps its translated text only
+// while the server is off: a running server that has no QR says why.
+function updateQrPlaceholder(active) {
+  const el = document.getElementById("qr-placeholder");
+  if (!el) return;
+  if (!active) {
+    el.dataset.i18n = "panel.startForQr";
+    el.textContent = translate("panel.startForQr");
+    return;
+  }
+  delete el.dataset.i18n;
+  el.textContent = networkReasonLine();
+}
+
 function updateServerUI() {
   if (!serverInfo) return;
+  // The Main selector and the Network tab read one description of the
+  // network, so the two places can never say different things.
+  window.RcSurfaceNetwork.render(serverInfo, chooseNetworkAddress, translate);
+  window.RcSurfaceNetworkTab?.setServerInfo(serverInfo);
 
   const active = serverInfo.isRunning;
   const dot = document.getElementById("footer-dot");
@@ -1139,34 +1210,13 @@ function updateServerUI() {
   document.getElementById("btn-start").classList.toggle("hidden", active);
   document.getElementById("btn-stop").classList.toggle("hidden", !active);
 
-  // Interfaces info — primary IP/URL live on the Main tab now. The
-  // "Other Interfaces" sub-list was migrated away in A1 (now displayed
-  // inline under Network); keep the function null-safe in case server
-  // still sends otherIps for diagnostic purposes.
+  // Interfaces info — the primary IP/URL live on the Main tab now. The
+  // "Other Interfaces" sub-list was migrated away in A1 (the addresses are
+  // listed inline under Network) and the markup that held it is gone, so
+  // there is nothing left to draw here.
   const primaryIp = serverInfo.primaryIp || "—";
   document.getElementById("iface-primary-ip").textContent = primaryIp;
-  document.getElementById("iface-primary-url").textContent = serverInfo.phoneUrl || "Server not running";
-
-  const otherList = document.getElementById("iface-list");
-  if (otherList) {
-    otherList.innerHTML = "";
-    if (serverInfo.otherIps && serverInfo.otherIps.length > 0) {
-      serverInfo.otherIps.forEach(ip => {
-        const url = `http://${ip}:${serverInfo.port}/`;
-        const row = document.createElement("div");
-        row.className = "iface-row";
-        row.innerHTML = `
-          <span class="ip">${url}</span>
-          <button class="btn sm copy-btn" data-url="${url}">Copy</button>
-        `;
-        otherList.appendChild(row);
-      });
-      // Bind new copies
-      initCopyButtons();
-    } else {
-      otherList.innerHTML = `<div style="color:var(--text3);font-size:11px;padding:8px">No other interfaces detected</div>`;
-    }
-  }
+  updatePrimaryUrl(active);
 
   // Connection mode info — IDs must exist in the active HTML. A1 keeps
   // them inside the Main tab's Network block; the null-safety here is
@@ -1186,6 +1236,8 @@ function updateServerUI() {
 
   const row = document.getElementById("qr-row");
   const placeholder = document.getElementById("qr-placeholder");
+
+  updateQrPlaceholder(active);
 
   if (active && serverInfo.phoneUrl) {
     if (row) row.classList.remove("hidden");
@@ -1380,6 +1432,10 @@ function setupLanguageSelector() {
   i18n.bindSelector(document.querySelector('.lang-select'), (locale) => {
     sendWS('setLocale', { locale }, () => {});
   });
+
+  // A new language means new sentences everywhere the panel draws its own
+  // text: the reason line, the actions and the rows.
+  i18n.subscribe(() => updateServerUI());
 
   sendWS('getLocale', {}, (res) => {
     if (res && res.ok && res.result && res.result.locale) {

@@ -3,12 +3,15 @@
 // Source: https://github.com/ntworm/rc-surface
 //
 // queryInitialState registers `start_listen` for tempo, is_playing, metronome,
-// both signature halves, current_song_time, beat and selected_track —
+// both signature halves, beat and selected_track —
 // AbletonOSC pushes every one of those on change. The 500 ms poll used to ask
 // for the same values anyway, and the 2 s heartbeat asked for the tempo a
 // third time. That was ~12 OSC messages a second out and as many replies back,
 // forever, restating what had just been pushed — and every reply walks
 // handleIncoming and can emit an 'update' to all connected phones.
+//
+// The playhead listener is not part of that set: it follows Launch Clip,
+// because Live logs every push it makes.
 //
 // Polling is now a recovery path: it runs when the push stream goes quiet.
 import test from "node:test";
@@ -183,7 +186,8 @@ test("a quiet stream re-registers the listeners once the re-registration interva
   for (const address of [
     "/live/song/start_listen/is_playing",
     "/live/song/start_listen/tempo",
-    "/live/song/start_listen/current_song_time",
+    // The playhead listener follows Launch Clip, so a set without it stops it.
+    "/live/song/stop_listen/current_song_time",
     "/live/song/start_listen/beat",
     "/live/view/start_listen/selected_track",
   ]) {

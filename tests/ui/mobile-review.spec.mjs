@@ -25,20 +25,35 @@ for(const locale of ['en','pt-BR'])test(`Reviewed mobile candidate preserves nat
   }));
   await page.setViewportSize({width:851,height:393});await page.goto('/?lang='+locale);await page.evaluate(()=>document.fonts.ready);
   await page.locator('.tab[data-page="recording"]').click();await expect(page.locator('.rec-track-card')).toHaveCount(10);
+  // The reviewed candidate lives in the Arrangement editor; Record is the default destination.
+  await page.locator('#rec-arrangement-mode').click();await expect(page.locator('#rec-arrangement-panel')).toBeVisible();expect(writes).toHaveLength(0);
   for(const viewport of [{width:568,height:320},{width:667,height:375},{width:851,height:393},{width:932,height:430},{width:1280,height:800}]) {
     await page.setViewportSize(viewport);
     const boxes=await page.locator('.rec-track-card').first().evaluate(card=>({card:card.getBoundingClientRect().toJSON(),
       controls:[...card.querySelectorAll('.rec-track-vol,button')].map(node=>node.getBoundingClientRect().toJSON())}));
-    for(const control of boxes.controls){expect(control.left).toBeGreaterThanOrEqual(boxes.card.left);expect(control.right).toBeLessThanOrEqual(boxes.card.right);}
+    // A control that is hidden keeps an empty rect: it has no hit area and no
+    // place inside the card, so only the visible boxes are contained.
+    for(const control of boxes.controls){
+      if(control.width===0&&control.height===0)continue;
+      expect(control.left).toBeGreaterThanOrEqual(boxes.card.left);expect(control.right).toBeLessThanOrEqual(boxes.card.right);}
     await expect(page.locator('.rec-track-vol-val').first()).toBeHidden();
-    expect((await page.locator('.rec-track-vol-dial').first().boundingBox()).width).toBe(26);
+    expect((await page.locator('.rec-track-vol-rail').first().boundingBox()).width).toBeGreaterThan(40);
     if(viewport.width<=950) {
       const geometry=await page.evaluate(()=>{
-        const mode=document.querySelector('.rec-destination').getBoundingClientRect(),buttons=[...document.querySelectorAll('.rec-destination button')].map(node=>node.getBoundingClientRect());
-        return {modeCenter:mode.x+mode.width/2,buttonsCenter:(buttons[0].left+buttons[1].right)/2,
+        const bar=document.querySelector('header.topbar').getBoundingClientRect();
+        // The destinations live in the thin line under the top bar and the
+        // CLICK lives in the top bar: the page of the recorder owns neither
+        // of them any more.
+        const modes=document.querySelector('#rec-header-modes').getBoundingClientRect();
+        const first=document.querySelector('#rec-record-mode').getBoundingClientRect();
+        const click=document.querySelector('#rec-click').getBoundingClientRect();
+        return {bar,modes,first,click,
           record:document.querySelector('#rec-start').getBoundingClientRect().toJSON(),markerFont:parseFloat(getComputedStyle(document.querySelector('.rec-marker')).fontSize)};
       });
-      expect(Math.abs(geometry.modeCenter-geometry.buttonsCenter)).toBeLessThan(2);
+      expect(Math.abs(geometry.first.x-(geometry.bar.x+6)),'the destinations keep the left padding of the top bar').toBeLessThan(2);
+      expect(geometry.modes.y,'the destinations live under the top bar').toBeGreaterThanOrEqual(geometry.bar.bottom-1);
+      expect(geometry.click.y,'the CLICK lives in the top bar').toBeGreaterThanOrEqual(geometry.bar.y);
+      expect(geometry.click.bottom,'the CLICK lives in the top bar').toBeLessThanOrEqual(geometry.bar.bottom);
       expect(geometry.record.width).toBeLessThanOrEqual(100);expect(geometry.record.height).toBe(44);expect(geometry.markerFont).toBeGreaterThanOrEqual(11);
       const row=await page.locator('#rec-pre-roll-inline').boundingBox();expect(Math.abs(row.y-geometry.record.y)).toBeLessThan(1);
     }
@@ -48,25 +63,35 @@ for(const locale of ['en','pt-BR'])test(`Reviewed mobile candidate preserves nat
   const volume=page.locator('.rec-track-vol').first();await expect(volume).toHaveAttribute('aria-valuetext','17%');
   for(const value of [0,0.5,1]) {
     tracks[0].volume=value;await expect(volume).toHaveAttribute('aria-valuenow',String(value));
-    const arc=await volume.locator('.rec-track-vol-dial').evaluate(node=>({sweep:parseFloat(node.style.getPropertyValue('--rec-volume-sweep')),paint:getComputedStyle(node,'::before').backgroundImage}));
-    expect(arc.sweep).toBeCloseTo(value*270);expect(arc.paint).toContain('conic-gradient');
+    const arc=await volume.locator('.rec-track-vol-fill').evaluate(node=>({level:parseFloat(node.parentElement.parentElement.style.getPropertyValue('--rec-volume-level')),width:node.getBoundingClientRect().width,track:node.parentElement.getBoundingClientRect().width}));
+    expect(arc.level).toBeCloseTo(value);expect(arc.width/arc.track).toBeCloseTo(value,1);
     await expect(volume.locator('.rec-track-vol-val')).toBeHidden();
   }
   tracks[0].volume=0.17;await expect(volume).toHaveAttribute('aria-valuenow','0.17');
+  // A raw boundingBox() does not auto-scroll, so the fader can sit below the
+  // viewport and the manual mouse gesture would miss the visible control.
+  await volume.scrollIntoViewIfNeeded();await expect(volume).toBeInViewport();
   const box=await volume.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
-  await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y-30,{steps:12});
+  await page.mouse.down();await page.mouse.move(box.x+box.width/2+30,box.y+box.height/2,{steps:12});
   // Wait for the last pointer sample to reach the host: an earlier write can pass 0.4 while it is still queued.
   const dragged=Number(await volume.getAttribute('aria-valuenow'));await page.mouse.up();
   expect(dragged).toBeGreaterThan(0.4);await expect.poll(()=>tracks[0].volume).toBe(dragged);
   expect(writes.every(message=>message.cmd==='recordingTrackVolume'&&message.args.track.id==='track-a')).toBe(true);
   tracks[0].volume=0.24;await expect(volume).toHaveAttribute('aria-valuetext','24%');
-  await page.locator('#rec-start-marker').selectOption('1');await page.locator('#rec-end-marker').selectOption('2');
+  // The marker selection is local: it never asks the host to seek.
+  const markerWrites=writes.length;await page.locator('#rec-start-marker').selectOption('1');await page.locator('#rec-end-marker').selectOption('2');expect(writes).toHaveLength(markerWrites);
   await expect(page.locator('#rec-zoom')).toHaveValue('212');
-  const fit=await page.evaluate(()=>{
-    const viewport=document.querySelector('#rec-timeline').getBoundingClientRect(),markers=[...document.querySelectorAll('.rec-marker')].slice(1,3).map(node=>node.getBoundingClientRect());
-    return {fraction:(markers[1].left-markers[0].left)/viewport.width,left:markers[0].left-viewport.left,right:viewport.right-markers[1].left};
+  // The physical common axis: the chosen range sits inside the visible
+  // ruler and its middle stands in the middle of it.
+  const axis=await page.evaluate(()=>{
+    const timeline=document.getElementById('rec-timeline').getBoundingClientRect();
+    const markers=[...document.querySelectorAll('.rec-marker')];
+    const start=markers[1].getBoundingClientRect(),end=markers[2].getBoundingClientRect();
+    return {timeline,start,end};
   });
-  expect(fit.fraction).toBeGreaterThan(0.6);expect(fit.fraction).toBeLessThan(0.85);expect(fit.left).toBeGreaterThan(0);expect(fit.right).toBeGreaterThan(0);
+  expect(axis.start.x+axis.start.width/2,'the first marker of the range is inside the ruler').toBeGreaterThan(axis.timeline.x);
+  expect(axis.end.x+axis.end.width/2,'the last marker of the range is inside the ruler').toBeLessThan(axis.timeline.x+axis.timeline.width);
+  expect(Math.abs((axis.start.x+axis.start.width/2+axis.end.x+axis.end.width/2)/2-(axis.timeline.x+axis.timeline.width/2)),'the range sits in the middle of the ruler').toBeLessThanOrEqual(2);
   await page.locator('#page-recording').screenshot({path:testInfo.outputPath('review-rec-'+locale+'.png')});
   await page.locator('.tab[data-page="performance"]').click();
   for(const viewport of [{width:568,height:320},{width:851,height:393},{width:1280,height:800}]) {

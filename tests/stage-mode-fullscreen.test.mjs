@@ -101,7 +101,15 @@ function makeFakeDom() {
 
   const button = {
     classList: { toggle() {}, contains() { return false; }, add() {}, remove() {} },
-    setAttribute() {},
+    // The attributes are observed, not applied: the stage button presents
+    // itself with an icon and an accessible name, never with words.
+    attributes: Object.create(null),
+    setAttribute(name, value) {
+      button.attributes[name] = String(value);
+    },
+    getAttribute(name) {
+      return name in button.attributes ? button.attributes[name] : null;
+    },
     textContent: "",
   };
 
@@ -229,6 +237,41 @@ test("debounce: a burst of fullscreenchange events triggers at most one re-arm",
     rearmCount >= 1 && rearmCount <= 2,
     `rearm count ${rearmCount} should be 1 (or 2 if the debounce window expired) within 400ms`,
   );
+});
+
+test("the stage button names the next action and never shows it as text", async () => {
+  const dom = makeFakeDom();
+  const c = createStageModeController({ document: dom.document, button: dom.button });
+  c.mount();
+
+  // Enter: the button names the action it performs next.
+  const enterPromise = c.enter();
+  dom.complete.request();
+  await enterPromise;
+
+  assert.equal(dom.button.getAttribute("aria-pressed"), "true", "the button keeps its own pressed state");
+  assert.equal(dom.button.getAttribute("data-i18n-aria-label"), "hdr.exit", "the i18n key follows the state");
+  assert.equal(dom.button.getAttribute("data-i18n-title"), "hdr.exit", "the tooltip key follows the state");
+  assert.equal(dom.button.getAttribute("aria-label"), "EXIT FULLSCREEN", "the accessible name describes the next action");
+  assert.equal(dom.button.getAttribute("title"), "EXIT FULLSCREEN", "the tooltip describes the next action");
+  assert.equal(dom.button.textContent, "", "the icon is never replaced by visible words");
+
+  // A language change while on stage keeps naming the exit action.
+  for (const listener of dom.document.listeners) {
+    if (listener.type === "rcsurface:languagechange") listener.handler();
+  }
+  assert.equal(dom.button.getAttribute("aria-label"), "EXIT FULLSCREEN", "a language change keeps the exit wording");
+  assert.equal(dom.button.getAttribute("data-i18n-aria-label"), "hdr.exit", "a language change keeps the exit key");
+
+  // Leave: the button names the enter action again.
+  const exitPromise = c.exit();
+  dom.complete.exit();
+  await exitPromise;
+
+  assert.equal(dom.button.getAttribute("aria-pressed"), "false");
+  assert.equal(dom.button.getAttribute("aria-label"), "FULLSCREEN");
+  assert.equal(dom.button.getAttribute("data-i18n-aria-label"), "hdr.stage");
+  assert.equal(dom.button.textContent, "", "the icon is never replaced by visible words");
 });
 
 test("explicit exit() prevents re-arm even when fullscreenchange fires", async () => {

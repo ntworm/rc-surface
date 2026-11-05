@@ -16,7 +16,7 @@ import { TextDecoder, TextEncoder } from 'node:util';
 // (resolved at runtime by the host's module loader) instead of the wrapper.
 import * as osc from 'osc-min';
 import { EventEmitter } from 'node:events';
-import { LISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, SESSION_REC, REC, REC_LOOP, REC_PREFLIGHT, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
+import { LISTEN, UNLISTEN, GET, CMD, RESPONSE, CLIP, CLIP_RESPONSE, SESSION_REC, REC, REC_LOOP, REC_PREFLIGHT, LISTENER_QUIET_MS as OSC_LISTENER_QUIET_MS } from '../osc-tokens.js';
 import { RecordingTransport } from './recording-transport.js';
 
 if (typeof (globalThis as any).TextEncoder === 'undefined') {
@@ -337,6 +337,9 @@ export class OSCTransport extends EventEmitter {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    // The playhead listener outlives the socket unless it is stopped, and
+    // Live logs every push it makes; stop it while the socket is still up.
+    if (this.clipLaunchActive) this.send(UNLISTEN.currentSongTime);
     const g = globalThis as any;
     if (this.onMessageCallback) {
       // Only mutate shared state when we actually own the listener set.
@@ -363,6 +366,14 @@ export class OSCTransport extends EventEmitter {
       try { this.client.close(); } catch {}
       this.client = null;
     }
+    // The link is gone: say so before the state says otherwise. Launch Clip
+    // only re-arms its listeners when it sees the link go from down to up,
+    // so a silent release would leave it waiting for a message that never
+    // comes.
+    if (this.state.connected) {
+      this.markLinkLost();
+      this.emit('update', this.state);
+    }
     this.state.available = false;
     this.state.connected = false;
     this.recording.dispose();
@@ -373,6 +384,8 @@ export class OSCTransport extends EventEmitter {
     this.globalQuantization = null;
     this.trackSlotListeners.clear();
     this.clipPositionListeners.clear();
+    // Released: whoever registered listeners through this transport must register them again on the next start.
+    this.emit('released');
   }
 
   public send(address: string, args: any[] = []): void {
@@ -453,6 +466,11 @@ export class OSCTransport extends EventEmitter {
     }
 
     let updated = false;
+
+    // A message that brings the transport back is an edge in its own right:
+    // Launch Clip only re-arms on this transition, so the update must go out
+    // even when no value changed.
+    if (!wasConnected) updated = true;
 
     if (address === RESPONSE.tempo) {
       const bpm = args[0]?.value;
@@ -604,7 +622,11 @@ export class OSCTransport extends EventEmitter {
     this.send(LISTEN.metronome);
     this.send(LISTEN.signatureNumerator);
     this.send(LISTEN.signatureDenominator);
-    this.send(LISTEN.currentSongTime);
+    // The playhead listener pushes every change and Live logs each one on its
+    // main thread, so it only exists while Launch Clip needs it. Stopping it
+    // also clears a listener left behind by an earlier build or session.
+    if (this.clipLaunchActive) this.send(LISTEN.currentSongTime);
+    else this.send(UNLISTEN.currentSongTime);
     this.send(LISTEN.beat);
     this.send(LISTEN.selectedTrack);
     this.recording.registerListeners();
@@ -627,12 +649,15 @@ export class OSCTransport extends EventEmitter {
     if (active) {
       this.send(CLIP.listenGlobalQuantization);
       this.send(CLIP.getGlobalQuantization);
+      // Launch Clip wants the playhead fresher than the 500 ms poll.
+      this.send(LISTEN.currentSongTime);
       return;
     }
     for (const trackIndex of [...this.trackSlotListeners]) this.unlistenTrackSlots(trackIndex);
     for (const [trackIndex, slotIndex] of [...this.clipPositionListeners.values()]) {
       this.unlistenClipPosition(trackIndex, slotIndex);
     }
+    this.send(UNLISTEN.currentSongTime);
   }
 
   /** Press the slot's launch button. No extra argument: Live quantizes. */
@@ -744,12 +769,11 @@ export class OSCTransport extends EventEmitter {
    * assume the registered listeners are feeding us.
    *
    * `queryInitialState` registers `start_listen` for tempo, is_playing,
-   * metronome, both signature halves, current_song_time, beat and
-   * selected_track — AbletonOSC pushes all of those on change. Asking for the
-   * same values on a fixed 500 ms cadence on top of that was ~12 messages a
-   * second out and as many back, forever, restating what had just been pushed.
-   * The polling is a recovery path, so it only runs when there is something to
-   * recover from.
+   * metronome, both signature halves, beat and selected_track — AbletonOSC
+   * pushes all of those on change. Asking for the same values on a fixed
+   * 500 ms cadence on top of that was ~12 messages a second out and as many
+   * back, forever, restating what had just been pushed. The polling is a
+   * recovery path, so it only runs when there is something to recover from.
    */
   public isListenerStreamQuiet(now: number = Date.now()): boolean {
     return this.lastPushAt === null

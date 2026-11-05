@@ -56,6 +56,7 @@ async function httpGet(port, path) {
             statusCode: res.statusCode,
             location: res.headers["location"] ?? null,
             setCookie: res.headers["set-cookie"] ?? null,
+            contentType: res.headers["content-type"] ?? null,
             body,
           })
         );
@@ -167,4 +168,25 @@ test("H1: an already-bookmarked URL with the token still works untouched", async
   const ctrlToken = getControllerToken();
   const { statusCode } = await httpGet(port, `/static/phone-v3/?token=${ctrlToken}`);
   assert.equal(statusCode, 200, "old links must not break");
+});
+
+// ------------------------------------------------------------------
+// A malformed escape is a bad address, not a server fault
+// ------------------------------------------------------------------
+
+test("H2: GET /static/%E0%A4%A answers 400, not a 500 with a stack", async () => {
+  // %E0%A4%A is a truncated UTF-8 sequence: decodeURIComponent throws on it.
+  // The throw used to escape the static handler and end as a 500 "server
+  // error" with the stack in the body.
+  const { statusCode, contentType, body } = await httpGet(port, "/static/%E0%A4%A");
+  assert.equal(statusCode, 400, `Expected 400, got ${statusCode}`);
+  assert.match(contentType ?? "", /text\/plain/, "the answer is plain text");
+  assert.match(body, /bad request/i);
+  assert.doesNotMatch(body, /URIError|decodeURIComponent|\bat\s+\S+\s+\(/, "no stack in the body");
+});
+
+test("H2: a well-formed escaped path is still decoded and looked up", async () => {
+  const { statusCode, body } = await httpGet(port, "/static/no-such-file-%20here");
+  assert.equal(statusCode, 404, `Expected 404, got ${statusCode}`);
+  assert.match(body, /not found/);
 });

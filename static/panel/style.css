@@ -6,6 +6,46 @@
 /* Form controls do not inherit font-family; without this every button in the
    panel falls back to Arial. Family only, so each control keeps its size. */
 button, input, select, textarea { font-family: inherit; }
+.network-address-field { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+.network-address-field select { background:var(--ctrl);color:var(--text);border:1px solid var(--border);border-radius:0;padding:5px; }
+.network-address-field select:focus-visible { outline:1px solid var(--accent); }
+.network-reason { font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px; }
+
+/* Network tab */
+.net-top{display:grid;grid-template-columns:minmax(0,1fr) 176px;gap:14px;margin-bottom:14px}
+.net-now{background:var(--surface);border:1px solid var(--border);padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}
+.net-now .ip{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)}
+.net-now .ip.off{color:var(--text3)}
+.net-now .why{font-size:11px;color:var(--text);line-height:1.5}
+.net-now .why b{color:var(--text);font-weight:700}
+.net-now .why .warn{color:var(--accent)}
+.net-now .why .on{color:var(--ok)}
+.net-state{font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px}
+.net-state:empty{display:none}
+.net-actions{display:flex;gap:6px;flex-wrap:wrap}
+.net-actions:empty{display:none}
+.net-actions .btn{height:28px}
+.net-qr{background:var(--surface);border:1px solid var(--border);padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.net-qr .frame{background:#fff;padding:6px;line-height:0;min-width:152px;min-height:152px}
+.net-qr .label{font-size:10px;color:var(--text2);letter-spacing:.3px;text-transform:uppercase}
+.net-rows{border:1px solid var(--border);margin-bottom:14px}
+.net-rows:empty{display:none}
+.net-row{display:grid;grid-template-columns:150px 74px minmax(0,1fr) 62px;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11px}
+.net-row:last-child{border-bottom:none}
+.net-row.sel{box-shadow:inset 2px 0 0 var(--accent)}
+.net-row .a{font-family:var(--mono);color:var(--text);font-weight:700}
+.net-row.sel .a{color:var(--accent)}
+.net-row .k{font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--text2);text-transform:uppercase}
+.net-row .d{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.net-row.dim .a,.net-row.dim .d,.net-row.dim .k{color:var(--text3)}
+.net-row .btn{justify-self:end}
+.net-diag{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 10px;background:var(--surface);border:1px solid var(--border);padding:9px 12px;font-size:11px;line-height:1.45}
+.net-diag .s{font-size:10px;font-weight:700;letter-spacing:.3px}
+.net-diag .ok{color:var(--ok)}
+.net-diag .warn{color:var(--accent)}
+.net-diag .wait{color:var(--text2)}
+.net-diag code{grid-column:2;font-family:var(--mono);font-size:10px;color:var(--text2);word-break:break-all}
+.net-diag .btn{grid-column:2;justify-self:start}
 
 
 /* ── Design Tokens ──────────────────────────────────────────── */
@@ -939,25 +979,6 @@ body{
   font-size:12px;
   color:var(--text);
   word-break:break-all;
-}
-.iface-list{margin-bottom:12px}
-.iface-row{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 10px;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:0;
-  margin-bottom:4px;
-  transition:border-color var(--transition);
-}
-.iface-row:hover{border-color:var(--text3)}
-.iface-row .ip{
-  font-family:var(--mono);
-  font-size:11px;
-  color:var(--text);
-  flex:1;
 }
 .conn-mode{
   background:var(--surface);

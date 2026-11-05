@@ -541,6 +541,12 @@ export class ClipLaunchEngine {
       this.forgetLiveState();
       this.broadcastAll();
     });
+    // A release can happen before the link ever came up: there is no
+    // link-lost edge then, but the listeners are gone just the same.
+    oscTransport.on("released", () => {
+      this.forgetLiveState();
+      this.broadcastAll();
+    });
   }
 
   private wasPlaying = false;
@@ -1193,7 +1199,11 @@ export class ClipLaunchEngine {
       this.clearLedger(state);
       state.fired = null;
       state.playing = null;
+      // The link dropped: the index AbletonOSC knew is stale, so the next
+      // connection asks Live for the track listeners again (refresh -> syncListeners).
+      state.oscIndex = null;
     }
+    this.oscIndexToKey.clear();
     this.verifiedNames = null;
   }
 

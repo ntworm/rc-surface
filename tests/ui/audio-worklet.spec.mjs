@@ -8,7 +8,7 @@ test('real AudioWorklet loads local modules and detects audio with rAF disabled'
     const feed = new AudioContext();
     await feed.resume();
     const tone = new OscillatorNode(feed, { frequency: 93.75 });
-    const gain = new GainNode(feed, { gain: 0.4 });
+    const gain = new GainNode(feed, { gain: 0 });
     const destination = feed.createMediaStreamDestination();
     tone.connect(gain).connect(destination);
     tone.start();
@@ -17,19 +17,37 @@ test('real AudioWorklet loads local modules and detects audio with rAF disabled'
     window.requestAnimationFrame = () => 1;
     const processor = new window.AudioProcessor();
     let timer;
+    let count = 0;
+    let last = null;
     // The tone's onset is a broadband transient that saturates every attack
     // detector for a frame or two; on a slow CI host the first frame with
     // energy can still be that onset, where snare reads ~1.0 alongside kick.
     // Wait for a settled frame where the low-band kick dominates, which is the
     // property under test; the timeout is the real failure.
     const observed = new Promise((resolve, reject) => {
-      timer = setTimeout(() => reject(new Error('No settled descriptor frame')), 8000);
+      timer = setTimeout(() => reject(new Error(`No settled descriptor frame: count=${count} `
+        + `last=${JSON.stringify(last)} descriptorMode=${processor.descriptorMode} `
+        + `feed.state=${feed.state} audioContext.state=${processor.audioContext?.state}`)), 8000);
       processor.onDescriptorUpdate = (value) => {
+        count += 1;
+        last = value;
         if (value.kick > 0.01 && value.low > 0.1 && value.kick > value.snare && value.low > value.mid) resolve(value);
       };
     });
+    // Handle the rejection now so a startup failure cannot go unhandled.
+    observed.catch(() => undefined);
     try {
       await processor.start();
+      // A compatibility fallback never produces the frame under test.
+      if (processor.descriptorMode !== 'worklet') {
+        throw new Error(`Expected descriptor mode worklet, got ${processor.descriptorMode}`);
+      }
+      // Repeated low-tone onsets on the feed audio clock (16 pulses of 250 ms).
+      const start = feed.currentTime + 0.05;
+      for (let i = 0; i < 16; i += 1) {
+        gain.gain.setValueAtTime(0.4, start + 0.5 * i);
+        gain.gain.setValueAtTime(0, start + 0.5 * i + 0.25);
+      }
       const values = await observed;
       return { mode: processor.descriptorMode, values };
     } finally {

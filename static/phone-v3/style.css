@@ -100,6 +100,13 @@ body { display: flex; flex-direction: column; touch-action: none; }
   margin-left: auto;
   display: flex;
   align-items: center;
+  /* Reserved width. The contextual calibration owns a slot in this group,
+     so the group keeps the same width whether that button is shown (SNS /
+     AUD / VID) or not: the always-on controls never move. It only grows
+     past the reservation if a label really needs the room. */
+  width: max-content;
+  min-width: 248px;
+  flex: 0 0 auto;
 }
 .sync-mode-btn {
   height: 24px;
@@ -130,7 +137,48 @@ body { display: flex; flex-direction: column; touch-action: none; }
 .sync-mode-btn.stage {
   border-color: #3a3a3a;
   color: #e5e5ea;
-  min-width: 58px;
+  /* Stage mode is an icon, not a word. The button keeps a fixed 24x24
+     square in every locale and in both states, so it never resizes the
+     header. The localized wording (FULLSCREEN / EXIT FULLSCREEN / TELA
+     CHEIA / SAIR DA TELA CHEIA) lives in the accessible name and the
+     tooltip, never as visible text. */
+  box-sizing: border-box;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* The icon itself: an inline SVG, hidden from the accessibility tree and
+   transparent to the pointer, so the button keeps its native click box. */
+.sync-mode-btn.stage .stage-mode-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.sync-mode-btn.stage .stage-mode-icon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+/* The glyph follows the state: the corners open to enter stage mode, the
+   arrows fold back in to leave it. */
+.sync-mode-btn.stage .stage-mode-icon-retract {
+  display: none;
+}
+.sync-mode-btn.stage.on .stage-mode-icon-expand {
+  display: none;
+}
+.sync-mode-btn.stage.on .stage-mode-icon-retract {
+  display: inline;
 }
 .sync-mode-btn.stage.on {
   background: rgba(191, 90, 242, 0.12);
@@ -138,14 +186,86 @@ body { display: flex; flex-direction: column; touch-action: none; }
   color: #ffffff;
   box-shadow: 0 0 10px rgba(191, 90, 242, 0.38);
 }
+/* The contextual calibration lives in the reserved slot of the sync group.
+   Its box is sized here, not by its label, so the slot is the same width on
+   every page. The button itself stays hidden (and unfocusable) until the
+   SNS / AUD / VID pages ask for it. */
+.topbar #btn-calibrate-sensors-header {
+  flex: 0 0 68px;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  height: 24px;
+  padding: 0 2px;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- REC header: the local destinations and the CLICK ---- */
+/* The three local destinations of the REC page live in the header. They
+   sit in a thin line under the top bar, in every width: the OSC indicator
+   changes the width of the status at runtime, so the destinations never
+   share the row of the top bar with it. The line is drawn by the top bar
+   itself: the box of the top bar and of every global control never
+   changes, and the content of the page moves down by the line. */
+.rec-header-modes { display: none; }
+body[data-header-page="recording"] .topbar { position: relative; margin-bottom: 26px; }
+body[data-header-page="recording"] .rec-header-modes {
+  position: absolute; top: 100%; left: 0; right: 0; height: 26px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 6px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+}
+/* The destinations are a header control and carry the metric of the tabs
+   of the header: the uppercase of the page never reaches this row. */
+.rec-header-mode {
+  min-width: 54px; height: 22px; padding: 0 8px;
+  border: 1px solid var(--border); border-radius: 0;
+  background: var(--surface-soft); color: var(--text2);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  text-transform: uppercase; white-space: nowrap; cursor: pointer;
+}
+.rec-header-mode[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--bg2);
+}
+body.stage-mode .rec-header-modes {
+  padding-left: calc(8px + env(safe-area-inset-left));
+  padding-right: calc(8px + env(safe-area-inset-right));
+}
+body.stage-mode .rec-header-mode { height: 21px; }
+/* The CLICK of the REC page lives in the header, in the reserved gap of
+   the calibration: the gear of the settings is hidden on the REC page, so
+   the block keeps the same width and the sync group never moves. The box
+   of the button is fixed per language: the whole status of the metronome
+   fits in English and in Portuguese and no ellipsis hides ON, OFF or the
+   unknown. */
+.rec-header-click { display: none; white-space: nowrap; overflow: hidden; }
+.rec-header-click:disabled { opacity: .45; cursor: default; }
+body[data-header-page="recording"] .rec-header-click { display: block; }
+html[lang="en"] .rec-header-click { width: 100px; }
+html[lang="pt-BR"] .rec-header-click { width: 140px; }
 
 /* Keep contextual calibration reachable, including narrow landscape phones. */
 @media (max-width: 1000px) {
-  .topbar .tab { min-width: 40px; padding: 0 4px; }
-  .topbar .ableton-panel { gap: 3px; padding: 1px 3px; }
-  .topbar .sync-mode-block { gap: 3px !important; }
-  .topbar .status { max-width: 42px; }
-  body.stage-mode .topbar .tab { min-width: 40px; }
+  /* Narrow landscape: one row has to hold seven tabs, the transport panel,
+     the sync group and the status, so the gaps and the reserved button
+     boxes shrink. No label is abbreviated, no control is dropped. */
+  .topbar { gap: 4px; }
+  .topbar .tab { min-width: 36px; padding: 0 4px; }
+  .topbar .ableton-panel { gap: 2px; padding: 1px 2px; }
+  .topbar .ablt-map-btn:not(.transport-btn) { min-width: 28px; padding: 0 2px; }
+  .topbar .ablt-map-btn.transport-btn { min-width: 24px; }
+  .topbar .ablt-val { padding: 0 2px; }
+  .topbar .sync-mode-block { gap: 3px !important; width: max-content; min-width: 244px; }
+  .topbar .status { width: 42px; max-width: 42px; }
+  body.stage-mode .topbar .tab { min-width: 36px; }
+  .rec-header-mode { min-width: 36px; padding: 0 4px; }
+  body.stage-mode .rec-header-modes {
+    padding-left: calc(6px + env(safe-area-inset-left));
+    padding-right: calc(6px + env(safe-area-inset-right));
+  }
 }
 @media (max-width: 800px) {
   .topbar, body.stage-mode .topbar {
@@ -172,6 +292,10 @@ body { display: flex; flex-direction: column; touch-action: none; }
   cursor: pointer;
   user-select: none;
   transition: background 0.15s, border-color 0.15s;
+  /* Fixed box: the status text changes with the connection, and a box that
+     changes width would drag the sync group and the stage button with it.
+     The text may ellipsize inside this box, as it already did. */
+  width: 90px;
   max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -235,6 +359,14 @@ body.stage-mode .status-block {
 body.stage-mode .tab {
   min-width: 46px;
   height: 21px;
+}
+/* Narrow landscape: the stage header keeps its 30px height, so the side
+   padding gives the single row back a few pixels it needs. */
+@media (max-width: 1000px) {
+  body.stage-mode .topbar {
+    padding-left: calc(6px + env(safe-area-inset-left));
+    padding-right: calc(6px + env(safe-area-inset-right));
+  }
 }
 body.stage-mode .page {
   padding:

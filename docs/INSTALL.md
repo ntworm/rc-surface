@@ -9,6 +9,16 @@ your first pad-to-Live mapping working.
 
 If you only want the short version: see the [Quick start](../README.md#quick-start) in the README.
 
+## Updating from 2.0 to 2.1.0
+
+Version 2.1.0 is distributed as a [pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Before using it for a performance, check Start/Close and the QR in the native Live panel, then record and replay a take in a copy of your Set on the target Mac. Automated CI does not replace that acceptance.
+
+It replaces the 2.0.1 preview. REC gains three local views (Record, Arrangement, Clip) over one capture bar, native track rows with groups, and marker ranges; the destinations and CLICK move into the REC header. On a Mac the AbletonOSC link now starts with the server, a phone tab left in the background keeps its connection, running modulators come back after a reconnect and the camera pauses while the page is hidden.
+
+Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel now includes all its scripts and font, so Start and the automatic-start preference work offline. The QR now uses the address that reaches your network: the one with a route out first, then one with a gateway, and virtual adapters and VPNs last. The **Network** tab in the panel shows why, lets you pin an address and has **FIND SETUP** for when the phone does not open; **Network address** on the Main tab offers the same choice and the server remembers it. After changing networks there is nothing to restart: the panel prepares a certificate for the new address and the phone asks you to accept it once. A choice made in an earlier 2.0.1 preview lived in the browser and is not carried over.
+
+Install AbletonOSC in Remote Scripts inside the configured User Library, rather than inside the Live application. This survives Live updates. REC and SYNC require AbletonOSC.
+
 ## Upgrading to 2.0.0
 
 2.0.0 breaks compatibility with previous projects, presets, mappings and performance settings. Install the supplied package, reload the browser and configure the surface from a fresh state. The host uses `storageDirectory/surface-v2/` for mappings, presets and projects with schema 2. Old files are neither deleted nor automatically imported; do not copy 1.x data into this folder or use the old rename migrator as a 2.0 upgrade.
@@ -22,7 +32,7 @@ You need:
 - **Ableton Live 12.4.5+ Suite (Beta)** with the Extensions SDK host enabled.
 - A computer and a phone on the **same WiFi network**.
 - A modern browser on the phone: Chrome 90+, Safari 15.4+, Edge 90+, or any Chromium-based Android browser.
-- **Optional (for Deep Sync)**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
+- **Required for REC, Launch Clip, TRN and beat sync; optional for basic control**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
 - **Optional (for MIDI Trigger Notes)**: `RC-Midi-Receiver.amxd` saved in your Ableton User Library.
 - Optional, for advanced features: a phone with a working gyroscope, accelerometer, microphone, and camera.
 - Camera hand tracking works on the local network; its MediaPipe runtime and
@@ -38,7 +48,7 @@ The extension itself is built on the
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.
-   The source version is **2.0.0**; a local candidate is not a declaration
+   The source version is **2.1.0**; a local candidate is not a declaration
    that the matching public release exists. Use the version and verification instructions
    supplied with the actual package.
 2. Double-click the file. Live's extension installer opens.
@@ -53,14 +63,14 @@ If you cloned the repository and ran `npm ci` followed by
 the same `.ablx` file in the project root. Install it the same way
 (double-click).
 
-### Optional: Install AbletonOSC (for Deep Sync)
+### Install AbletonOSC (required for REC and SYNC)
 
 To enable beat-accurate sync for toggle, the flashing metronome header, and the full-screen transport control overlay (`TRN` button), you must install and configure **AbletonOSC**:
 
 1. Download **AbletonOSC** from the repository: [AbletonOSC GitHub](https://github.com/ideoforms/AbletonOSC). Click **Code** -> **Download ZIP**.
 2. Extract the ZIP and place the `AbletonOSC` folder in your Ableton Live **MIDI Remote Scripts** directory:
-   - **Windows**: `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\`
-   - **macOS**: Right-click the Ableton Live app in Applications, choose **Show Package Contents**, and navigate to `Contents/App-Resources/MIDI Remote Scripts/`.
+   - **Windows**: `C:\Users\<user>\Documents\Ableton\User Library\Remote Scripts\AbletonOSC\`
+   - **macOS**: `~/Music/Ableton/User Library/Remote Scripts/AbletonOSC/`.
 3. Open Ableton Live's **Link/Tempo/MIDI** Preferences.
 4. Add **AbletonOSC** as a Control Surface in the list. Under **Input** and **Output**, leave them as **None**.
 5. Once configured, the extension will automatically detect it and sync using ports `11000` (outgoing) and `11001` (incoming). Stock AbletonOSC replies only on `11001`: if another RC extension holds it while Live starts, the surface listens on a fallback port and moves back to `11001` as soon as it frees.
@@ -177,9 +187,10 @@ A landscape-only controller. The phone is best held with both thumbs
 on the screen in landscape orientation; a portrait overlay will show
 otherwise.
 
-The first time you open the app, your browser will ask for permission
-to access sensors (motion, orientation). Tap *Allow* — these are
-required for the sensor panel and the level bubble.
+Sensors start automatically when your browser allows it. If sensor access
+needs a tap, open **SNS**, tap the **⚙** gear in the top bar, then tap
+**Enable sensors**. You can retry after a denial or an error. Camera and
+microphone require separate permission.
 
 ## 5. Sanity check: make your first mobile mapping
 
@@ -253,6 +264,10 @@ a public tunnel, or a public reverse proxy. Those deployments are outside the
 tested threat model, even when the public endpoint supplies a trusted
 certificate.
 
+A public IP never goes into the QR by itself, because the QR carries the
+control token. If a public address is all the computer has, the panel says so
+and only shows a QR after you click **USE** on that address.
+
 ## 8. Certificate lifecycle
 
 The bridge generates a fresh self-signed cert on first run, using
@@ -261,15 +276,34 @@ the `selfsigned` npm package. The cert:
 - Is RSA 2048-bit, signed with SHA-256.
 - Has a one-year validity (`notAfterDate` defaults to one year from
   generation).
-- Includes `subjectAltName` entries for `localhost`, `127.0.0.1`, and
-  current LAN IPs. If the LAN IP changes and the stored cert no longer
-  covers the phone URL, the extension regenerates the cert.
+- Includes `subjectAltName` entries for `localhost`, `127.0.0.1`, and the
+  addresses of the physical adapters, keeping earlier ones up to 32 entries.
+  A new address on a virtual adapter does not touch the cert. When the
+  computer moves to a network the cert does not cover, the extension issues
+  a new one without a restart, and the phone asks you to accept it once.
 - Is stored with `0600` permissions in the Live storage directory.
 
 To force a new cert, stop Live, delete the `certs/` folder under
 `Preferences/Extensions/<id>/`, and restart.
 
 ## 9. Troubleshooting
+
+### The page opens on the computer but not on the phone
+
+The computer opens the page on any of its own addresses, so that proves
+nothing about the network. Open the **Network** tab in the panel:
+
+- See which address the QR uses and why. The phone cannot reach an address
+  on a virtual adapter.
+- Click **FIND SETUP**. The panel shows one QR per address, 25 seconds each.
+  Point the phone at it. When the phone connects, that address is remembered
+  on this network for 30 days.
+- Read **Diagnosis**. It reads the certificate and the firewall without
+  changing them. If a firewall rule is missing, it gives you the command to
+  copy. Run it yourself in PowerShell as administrator.
+- If no address reaches the phone, check that the phone is off mobile data
+  and on the same network, then look for client isolation or a guest network
+  on the router. The computer cannot detect those from here.
 
 ### Phone shows "ERR_CONNECTION_REFUSED"
 
@@ -284,6 +318,18 @@ To force a new cert, stop Live, delete the `certs/` folder under
   Upgrade the phone or use another supported browser/device on the same LAN.
 - Some corporate-managed phones have admin policies that block
   certificate bypass. Use a personal phone.
+
+### Phone shows "ERR_LOCAL_NETWORK_PERMISSION_MISSING"
+
+- This error means the browser blocked this site's access to the local network.
+- **Chrome on Android**: open the site info (the icon left of the address bar)
+  → *Permissions* → *Local network access* → *Allow* for the current Surface
+  address, then reload the same QR URL.
+- If the per-site option is missing, open *Chrome Settings* → *Site settings* →
+  *Local network access*, allow the site, then reload.
+- If the page still will not load, continue with the connection checks below.
+  Certificate warnings are separate.
+  Chrome's reference: <https://support.google.com/chrome/answer/114662?co=GENIE.Platform%3DAndroid&hl=en>
 
 ### Camera and microphone don't work
 

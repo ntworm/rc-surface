@@ -74,7 +74,8 @@ test("the toggle is reachable in both ways the panel renders", async () => {
   // Over HTTP when the server is up...
   assert.match(panel, /autostart=\$\{autostart\}/);
   // ...and from disk when it is not, which is the case this setting creates.
-  assert.match(panel, /window\.INITIAL_AUTOSTART = /);
+  const offline = await fs.readFile(new URL("../src/ui/offline-panel.ts", import.meta.url), "utf8");
+  assert.match(offline, /window\.INITIAL_AUTOSTART = /);
   const app = await fs.readFile(new URL("../static/panel/app.js", import.meta.url), "utf8");
   assert.match(app, /window\.INITIAL_AUTOSTART/);
   assert.match(app, /URLSearchParams[\s\S]{0,60}autostart/);

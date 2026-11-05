@@ -33,6 +33,12 @@ export const LISTEN = {
   selectedTrack:       "/live/view/start_listen/selected_track",
 } as const;
 
+// The playhead listener pushes every change and Live logs each one, so it
+// only exists while Launch Clip is active; this stops it again.
+export const UNLISTEN = {
+  currentSongTime: "/live/song/stop_listen/current_song_time",
+} as const;
+
 // ── poll/heartbeat getters ──────────────────────────────────────────────────
 
 export const GET = {
@@ -161,6 +167,7 @@ export const LISTENER_QUIET_MS = 1_500;
 
 export type OscAddress =
   | typeof LISTEN[keyof typeof LISTEN]
+  | typeof UNLISTEN[keyof typeof UNLISTEN]
   | typeof GET[keyof typeof GET]
   | typeof CMD[keyof typeof CMD]
   | typeof CLIP[keyof typeof CLIP]

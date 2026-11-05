@@ -11,7 +11,8 @@ import * as path from "node:path";
 import { getExtensionContext, requireCtx, requireTrack } from "../context.js";
 import { trackedClients, broadcastTriggerNoteState, broadcastClipLaunchState } from "../server/ws.js";
 import { playheadActive, playheadStartTime, playheadBaseTimeMs, setPlayheadActive, setPlayheadStartTime, setPlayheadBaseTimeMs, broadcastPlayheadState } from "./state.js";
-import { pickLanIps, getLanAddresses, stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
+import { stripWslDrivePrefix, sanitizeFilenameComponent } from "../util/helpers.js";
+import { getPublishedLan } from "../server/lan-runtime.js";
 import { pressReceiverNote, findMidiReceiver, noteNameToMidiNumber, MIDI_PACKET_PARAMETER, type HeldMidiNote } from "./midi-receiver.js";
 import { oscTransport, validateGlobalClipQuantization } from "./osc-transport.js";
 import { globalWriteScheduler } from "../server/write-scheduler.js";
@@ -38,6 +39,7 @@ import {
 } from "./clip-launch.js";
 import type { CommandExecutionContext } from "./catalog/types.js";
 import { recordingCommands } from './recording-commands.js';
+import { networkCommands } from './network-commands.js';
 import { buildServerAccessUrls } from "../server/access-urls.js";
 import {
   buildProjectConfig,
@@ -1758,6 +1760,7 @@ let benchInFlight = false;
 
 export const commands: Record<string, CommandSpec> = {
   ...recordingCommands,
+  ...networkCommands,
   getTransportLiteState: {
     description: "Get current Transport Lite state from AbletonOSC",
     handler: async () => {
@@ -1875,13 +1878,13 @@ export const commands: Record<string, CommandSpec> = {
       const isRunning = serverState.serverInstance !== null;
       const port = serverState.actualPort;
       const httpsPort = serverState.actualHttpsPort;
-      const { primary, others } = pickLanIps(getLanAddresses());
+      const { primaryIp, otherIps, network } = getPublishedLan();
       const localeModule = await import("../server/locale.js");
       const { phoneUrl, adminUrl } = buildServerAccessUrls({
         isRunning,
         httpPort: port,
         httpsPort,
-        primaryIp: primary,
+        primaryIp,
         controllerToken: ctrlToken,
         adminToken: admToken,
         locale: localeModule.getLocale(),
@@ -1897,14 +1900,15 @@ export const commands: Record<string, CommandSpec> = {
         port,
         httpsPort,
         useHttps: serverState.useHttps,
-        primaryIp: primary,
-        otherIps: others,
+        primaryIp,
+        otherIps,
         phoneUrl,
         adminUrl,
         statusText,
         cpuUsage,
         controllerToken: ctrlToken,
         adminToken: admToken,
+        network,
       };
     }
   },

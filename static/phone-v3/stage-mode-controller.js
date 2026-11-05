@@ -33,6 +33,30 @@
 
 const DEFAULT_REARM_DEBOUNCE_MS = 350;
 
+// The interface language owns the button wording: the catalog is loaded by
+// the page, and the fallback keeps the button readable without it.
+const DEFAULT_LABELS = { enter: "FULLSCREEN", exit: "EXIT FULLSCREEN" };
+
+function translate(key, fallback) {
+  try {
+    const i18n = typeof window !== "undefined" ? window.RcSurfaceI18n : null;
+    if (i18n && typeof i18n.t === "function") {
+      const value = i18n.t(key);
+      if (typeof value === "string" && value.trim() && value !== key) return value;
+    }
+  } catch {
+    // no-op: the fallback wording stays readable
+  }
+  return fallback;
+}
+
+function currentLabels() {
+  return {
+    enter: translate("hdr.stage", DEFAULT_LABELS.enter),
+    exit: translate("hdr.exit", DEFAULT_LABELS.exit),
+  };
+}
+
 export function createStageModeController(options = {}) {
   if (!options || typeof options !== "object") {
     throw new TypeError("createStageModeController requires an options object");
@@ -73,7 +97,21 @@ export function createStageModeController(options = {}) {
       } catch {
         // setAttribute may not exist on the test stub
       }
-      button.textContent = active ? "EXIT" : "STAGE";
+      // The button draws an icon, never words: the localized wording lives
+      // in the accessible name and the tooltip. The data attributes keep
+      // them in step with the state, so a language change repaints the
+      // same wording.
+      const labels = currentLabels();
+      const label = active ? labels.exit : labels.enter;
+      const key = active ? "hdr.exit" : "hdr.stage";
+      try {
+        button.setAttribute("data-i18n-aria-label", key);
+        button.setAttribute("data-i18n-title", key);
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+      } catch {
+        // setAttribute may not exist on the test stub
+      }
     }
     // notify any listeners (e.g. controls.js dispatches resize for
     // layout reflow on stage entry/exit)
@@ -88,6 +126,24 @@ export function createStageModeController(options = {}) {
 
   function isFullscreenActive() {
     return !!doc.fullscreenElement;
+  }
+
+  // A language change must not turn the exit label back into the enter
+  // label: the button keeps naming what it does next.
+  function updateButtonLabel() {
+    if (!button) return;
+    const labels = currentLabels();
+    const active = isInStageMode();
+    const label = active ? labels.exit : labels.enter;
+    const key = active ? "hdr.exit" : "hdr.stage";
+    try {
+      button.setAttribute("data-i18n-aria-label", key);
+      button.setAttribute("data-i18n-title", key);
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    } catch {
+      // setAttribute may not exist on the test stub
+    }
   }
 
   function requestRootFullscreen() {
@@ -185,6 +241,7 @@ export function createStageModeController(options = {}) {
     if (mounted) return;
     mounted = true;
     doc.addEventListener("fullscreenchange", onFullscreenChange);
+    doc.addEventListener("rcsurface:languagechange", updateButtonLabel);
     if (button && typeof button.addEventListener === "function") {
       button.addEventListener("click", () => {
         if (isInStageMode()) {

@@ -25,7 +25,11 @@ test("getServerInfo uses HTTPS phone URL without standalone Mix exposure", async
     assert.equal(info.isRunning, true);
     assert.equal(info.useHttps, true);
     assert.equal(typeof info.httpsPort, "number");
-    assert.match(info.phoneUrl, new RegExp(`^https://[^:]+:${info.httpsPort}/(?:\\?token=.+)?$`));
+    if (info.primaryIp === "") {
+      assert.equal(info.phoneUrl, null, "no address means no phone URL");
+    } else {
+      assert.match(info.phoneUrl, new RegExp(`^https://[^:]+:${info.httpsPort}/(?:\\?token=.+)?$`));
+    }
     assert.equal(Object.hasOwn(info, "mixUrl"), false);
     assert.equal(Object.hasOwn(info, "mixQrSrc"), false);
   } finally {

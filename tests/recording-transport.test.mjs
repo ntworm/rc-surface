@@ -333,3 +333,167 @@ test('REC metronome is its own lane: it confirms while a REC write is pending an
   assert.equal(started.recordMode.value, true);
   assert.equal(started.metronome.value, true);
 });
+
+test('REC position read needs a new observation, never reuses the cached one and owns no transport lane', async t => {
+  const { rec, sent, push, seed } = fixture(t);
+  seed();
+  let done = false;
+  const reading = rec.readPosition().then(value => { done = true; return value; });
+  await flush();
+  assert.equal(done, false, 'a cached position never confirms a new read');
+  assert.equal(sent.filter(([address]) => address === GET.currentSongTime).length, 1);
+  assert.equal(rec.snapshot().pending, null, 'the position read owns no transport lane');
+  push(RESPONSE.currentSongTime, 12);
+  const position = await reading;
+  assert.equal(position.value, 12);
+  assert.equal(typeof position.observedAt, 'number');
+  assert.equal(rec.snapshot().pending, null);
+});
+
+test('REC position read times out, can be canceled and never blocks a REC write', async t => {
+  const { rec, push, seed } = fixture(t);
+  seed();
+  const pending = rec.readPosition();
+  const rejected = assert.rejects(pending, /not observed/);
+  await flush();
+  t.mock.timers.tick(2001);
+  await rejected;
+  assert.equal(rec.snapshot().pending, null);
+  const controller = new AbortController();
+  const canceled = rec.readPosition(controller.signal);
+  const cancelRejected = assert.rejects(canceled, /canceled/);
+  controller.abort(Error('position read canceled'));
+  await cancelRejected;
+  assert.equal(rec.snapshot().pending, null);
+});
+
+test('REC position read leaves the transport lane free for a REC write', async t => {
+  const { rec, push, seed } = fixture(t);
+  seed();
+  const reading = rec.readPosition();
+  const starting = rec.startRecording();
+  await flush();
+  assert.equal(rec.snapshot().pending, 'start', 'the pending position read never owns the write lane');
+  push(REC.getRecordMode, 1); await flush();
+  push(RESPONSE.isPlaying, 1); await flush();
+  const state = await starting;
+  assert.equal(state.recordMode.value, true);
+  push(RESPONSE.currentSongTime, 16);
+  assert.equal((await reading).value, 16);
+});
+
+test('REC note read waits for two new reports, owns no transport lane and never writes', async t => {
+  const { rec, sent, push, seed } = fixture(t);
+  seed();
+  let done = false;
+  const reading = rec.readNoteState().then(state => { done = true; return state; });
+  await flush();
+  assert.equal(done, false, 'cached observations must not confirm a note read');
+  assert.deepEqual(sent.map(([address]) => address),
+    [REC.listenRecordMode, REC.getRecordMode, GET.isPlaying], 'only the two getters and the listener are requested');
+  assert.equal(writes(sent).length, 0, 'a note read never writes');
+  assert.equal(rec.snapshot().pending, null, 'a note read owns no transport lane');
+  push(REC.getRecordMode, 0);
+  await flush();
+  assert.equal(done, false, 'one new field is not enough');
+  push(RESPONSE.isPlaying, 0);
+  const state = await reading;
+  assert.equal(state.recordMode.value, false);
+  assert.equal(state.isPlaying.value, false);
+  assert.equal(rec.snapshot().pending, null);
+});
+
+test('REC note read before a REC start never takes the operation slot', async t => {
+  const { rec, sent, push, seed } = fixture(t);
+  seed();
+  const reading = rec.readNoteState();
+  await flush();
+  assert.equal(rec.snapshot().pending, null, 'the note read owns no transport lane');
+  const starting = rec.startRecording();
+  await flush();
+  assert.equal(rec.snapshot().pending, 'start', 'the REC write keeps the transport lane');
+  push(REC.getRecordMode, 1); await flush();
+  push(RESPONSE.isPlaying, 1); await flush();
+  const started = await starting;
+  assert.equal(started.recordMode.value, true);
+  assert.equal(started.isPlaying.value, true);
+  const note = await reading;
+  assert.equal(note.recordMode.value, true, 'the note read sees the same fresh reports');
+  assert.equal(note.isPlaying.value, true);
+  assert.equal(sent.filter(([address]) => address === CMD.startPlaying).length, 0, 'the note read never starts playback');
+});
+
+test('REC note read during a pending REC write never blocks or fails that write', async t => {
+  const { rec, push, seed } = fixture(t);
+  seed();
+  const starting = rec.startRecording();
+  await flush();
+  const reading = rec.readNoteState();
+  await flush();
+  assert.equal(rec.snapshot().pending, 'start');
+  push(REC.getRecordMode, 1); await flush();
+  push(RESPONSE.isPlaying, 1); await flush();
+  const started = await starting;
+  assert.equal(started.recordMode.value, true);
+  assert.equal(started.isPlaying.value, true);
+  const note = await reading;
+  assert.equal(note.recordMode.value, true);
+  assert.equal(note.isPlaying.value, true);
+});
+
+test('REC note read times out and is canceled without touching the REC lane', async t => {
+  const { rec, push, seed } = fixture(t);
+  seed();
+  const pending = rec.readNoteState();
+  const timedOut = assert.rejects(pending, /REC:UNKNOWN/);
+  await flush();
+  t.mock.timers.tick(RECORDING_CONFIRM_MS + 1);
+  await timedOut;
+  assert.equal(rec.snapshot().pending, null);
+  assert.equal(rec.listenerCount('observation'), 0, 'a timed out note read leaves no waiter behind');
+  const controller = new AbortController();
+  const canceled = rec.readNoteState(controller.signal);
+  const cancelRejected = assert.rejects(canceled, /REC:UNKNOWN/);
+  await flush();
+  controller.abort(Error('note read canceled'));
+  await cancelRejected;
+  assert.equal(rec.listenerCount('observation'), 0, 'a canceled note read leaves no waiter behind');
+  assert.equal(rec.snapshot().pending, null);
+});
+
+test('REC note read retires alone on a failed getter or a lost link', async t => {
+  const { osc, rec, push, seed } = fixture(t);
+  seed();
+  const failed = rec.readNoteState();
+  const failedRejected = assert.rejects(failed, /REC:UNKNOWN/);
+  await flush();
+  rec.sendFailed(REC.getRecordMode, Error('note getter failed'));
+  await failedRejected;
+  assert.equal(rec.listenerCount('observation'), 0, 'the failed note read leaves no waiter behind');
+  const lost = rec.readNoteState();
+  const lostRejected = assert.rejects(lost, /REC:CONNECTION/);
+  await flush();
+  osc.state.connected = false;
+  rec.invalidate();
+  await lostRejected;
+  assert.equal(rec.snapshot().pending, null);
+});
+
+test('REC note read cleanup never cancels a pending REC write', async t => {
+  const { rec, push, seed } = fixture(t);
+  seed();
+  const starting = rec.startRecording();
+  await flush();
+  const controller = new AbortController();
+  const reading = rec.readNoteState(controller.signal);
+  const rejected = assert.rejects(reading, /REC:UNKNOWN/);
+  await flush();
+  controller.abort(Error('note read canceled'));
+  await rejected;
+  assert.equal(rec.snapshot().pending, 'start', 'the REC write keeps the transport lane');
+  push(REC.getRecordMode, 1); await flush();
+  push(RESPONSE.isPlaying, 1); await flush();
+  const state = await starting;
+  assert.equal(state.recordMode.value, true);
+  assert.equal(state.isPlaying.value, true);
+});

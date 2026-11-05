@@ -15,7 +15,7 @@ import { authenticateRequest, checkSameOrigin, classifyRequestToken, getAdminTok
 import { getQueryParam, stripQueryParam } from "../util/url.js";
 import { getPublicCommandsMetadata } from "./command-dispatch.js";
 import { lastUpgradeRejection, getRateLimitDiagnostics } from "./ws.js";
-import { getLanAddresses, pickLanIps } from "../util/helpers.js";
+import { getPublishedLan } from "./lan-runtime.js";
 import { buildServerAccessUrls } from "./access-urls.js";
 
 const MIME_TYPES: Record<string, string> = {
@@ -76,14 +76,14 @@ async function servePanelHtml(
   const isRunning = serverInstance !== null;
   const port = actualPort;
   const httpsPort = actualHttpsPort;
-  const { primary, others } = pickLanIps(getLanAddresses());
+  const { primaryIp, otherIps } = getPublishedLan();
   const ctrlToken = getControllerToken();
   const adminToken = getAdminToken();
   const { phoneUrl } = buildServerAccessUrls({
     isRunning,
     httpPort: port,
     httpsPort,
-    primaryIp: primary,
+    primaryIp,
     controllerToken: ctrlToken,
     adminToken,
   });
@@ -100,8 +100,8 @@ async function servePanelHtml(
     window.INITIAL_PORT = ${JSON.stringify(port)};
     window.INITIAL_HTTPS_PORT = ${JSON.stringify(httpsPort)};
     window.INITIAL_PHONE_URL = ${JSON.stringify(phoneUrl)};
-    window.INITIAL_PRIMARY_IP = ${JSON.stringify(primary)};
-    window.INITIAL_OTHER_IPS = ${JSON.stringify(others)};
+    window.INITIAL_PRIMARY_IP = ${JSON.stringify(primaryIp)};
+    window.INITIAL_OTHER_IPS = ${JSON.stringify(otherIps)};
     window.INITIAL_STATUS_TEXT = ${JSON.stringify(statusText)};
     window.INITIAL_ADMIN_TOKEN = ${JSON.stringify(adminToken)};
     window.INITIAL_CLIENTS = [];
@@ -124,20 +124,35 @@ function resolveStaticDir(): string {
   return fsSync.existsSync(bundled) ? bundled : path.join(process.cwd(), "static");
 }
 
+/**
+ * The file inside the static folder that a request names, or null when the
+ * address is malformed: a broken percent escape (%E0%A4%A) is a bad request.
+ */
+function staticFilePath(staticDir: string, reqUrl: string): string | null {
+  const rawPath = reqUrl.split("?")[0] ?? "/";
+  const relativePath = rawPath.startsWith("/static/")
+    ? rawPath.slice("/static/".length)
+    : rawPath.replace(/^\/+/, "");
+  try {
+    const decoded = decodeURIComponent(relativePath);
+    return path.join(staticDir, path.normalize(decoded).replace(/^[\\/]+/, ""));
+  } catch {
+    return null;
+  }
+}
+
 async function serveStaticFile(
   req: http.IncomingMessage,
   reqUrl: string,
   res: http.ServerResponse,
 ): Promise<void> {
   const staticDir = resolveStaticDir();
-  const rawPath = reqUrl.split("?")[0] ?? "/";
-  const relativePath = rawPath.startsWith("/static/")
-    ? rawPath.slice("/static/".length)
-    : rawPath.replace(/^\/+/, "");
-  const normalized = path
-    .normalize(decodeURIComponent(relativePath))
-    .replace(/^[\\/]+/, "");
-  let filePath = path.join(staticDir, normalized);
+  let filePath = staticFilePath(staticDir, reqUrl);
+  if (filePath === null) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("bad request\n");
+    return;
+  }
 
   if (
     !filePath.startsWith(staticDir + path.sep) &&

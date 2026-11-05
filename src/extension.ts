@@ -62,12 +62,14 @@ import {
   triggerNoteScheduler,
 } from "./live/mappings.js";
 import { continuousTargetActuator } from "./live/continuous-target-actuator.js";
-import { startServer, stopServer, getServerGeneration } from "./server/state.js";
+import { startServer, stopServer, getServerGeneration, onServerLifecycle } from "./server/state.js";
 import { configureAutostartStorage, DEFAULT_AUTOSTART } from "./server/autostart.js";
 import { oscTransport } from "./live/osc-transport.js";
 
 let activated = false;
 let activationGeneration = 0;
+/** Drops the transport's subscription to the server's life. */
+let serverLifecycleUnsubscribe: (() => void) | null = null;
 
 /**
  * Idempotent: repeated calls only re-run `startServer()`. Each
@@ -123,8 +125,14 @@ function activate(activation: ActivationContext): void {
   // network at launch — the case when another RC extension is sharing this
   // machine. Only this automatic start is gated; the panel's Start button
   // still works, and the panel renders from disk when nothing is listening.
+  // The network choice is read first: the server announces the address the
+  // user pinned, and a choice that arrives late is a choice that is lost.
+  const networkReady = import("./server/lan-settings.js")
+    .then((m) => m.configureNetworkStorage(storageDir, isCurrentActivation))
+    .catch(() => { /* the network choice falls back to automatic */ });
   void configureAutostartStorage(storageDir, isCurrentActivation)
     .catch(() => DEFAULT_AUTOSTART)
+    .then((enabled) => networkReady.then(() => enabled))
     .then((enabled) => {
       if (!isCurrentActivation() || getServerGeneration() !== serverGeneration) return;
       if (!enabled) {
@@ -136,19 +144,33 @@ function activate(activation: ActivationContext): void {
       });
     });
 
-  // 6. Background loops: live-state broadcast and smooth-timer
+  // 6. The AbletonOSC transport follows the server: it listens only while
+  // the HTTP/WS server is published and releases when the server stops.
+  // Without a published server nobody can reach the extension, and
+  // AbletonOSC would push every playhead change into a Live that never
+  // asked for it.
+  serverLifecycleUnsubscribe = onServerLifecycle((event) => {
+    if (event === "published") {
+      try {
+        oscTransport.start();
+      } catch (err) {
+        console.error(`[ableton-rc-surface] oscTransport.start failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return;
+    }
+    try {
+      oscTransport.dispose();
+    } catch (err) {
+      console.error(`[ableton-rc-surface] oscTransport.dispose failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  });
+
+  // 7. Background loops: live-state broadcast and smooth-timer
   // interpolation. Both are idempotent.
   startLiveStateBroadcastLoop();
   startSmoothTimer();
   continuousTargetActuator.start();
   startHostReconcileTimer();
-
-  // 7. Start OSC Transport
-  try {
-    oscTransport.start();
-  } catch (err) {
-    console.error(`[ableton-rc-surface] oscTransport.start failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
 
   console.log("[ableton-rc-surface] activate() done; awaiting requests");
 }
@@ -174,6 +196,13 @@ function deactivate(): void {
   try { continuousTargetActuator.stop(); } catch (err) { console.error(`[ableton-rc-surface] continuousTargetActuator.stop failed: ${err instanceof Error ? err.message : String(err)}`); }
   try { stopHostReconcileTimer(); } catch (err) { console.error(`[ableton-rc-surface] stopHostReconcileTimer failed: ${err instanceof Error ? err.message : String(err)}`); }
   try { stopLiveStateBroadcastLoop(); } catch (err) { console.error(`[ableton-rc-surface] stopLiveStateBroadcastLoop failed: ${err instanceof Error ? err.message : String(err)}`); }
+
+  // The transport follows the server's life: stop listening for it before
+  // the server stops, so the release below is the only one that happens.
+  if (serverLifecycleUnsubscribe) {
+    try { serverLifecycleUnsubscribe(); } catch (err) { console.error(`[ableton-rc-surface] server lifecycle unsubscribe failed: ${err instanceof Error ? err.message : String(err)}`); }
+    serverLifecycleUnsubscribe = null;
+  }
 
   stopServer().catch((err) => {
     console.error(`[ableton-rc-surface] stopServer failed: ${err instanceof Error ? err.message : String(err)}`);

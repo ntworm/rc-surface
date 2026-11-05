@@ -76,11 +76,31 @@
       <button id="btn-cfg-mode" class="ablt-map-btn" type="button" aria-pressed="false" data-i18n="hdr.cfg">CFG</button>
     </div>
 
+    <!-- The local destinations of the REC page: they live in the header,
+         in the thin line under the top bar. The state of the OSC indicator
+         changes the width of the status at runtime, so the destinations
+         never share the row of the top bar with it. -->
+    <div id="rec-header-modes" class="rec-header-modes" role="group" aria-label="Recording destination" data-i18n-aria-label="rec.destination">
+      <button id="rec-record-mode" type="button" class="rec-header-mode" aria-pressed="true">Record</button>
+      <button id="rec-arrangement-mode" type="button" class="rec-header-mode" aria-pressed="false">ARRANGEMENT</button>
+      <button id="rec-clip-mode" type="button" class="rec-header-mode" aria-pressed="false">CLIP</button>
+    </div>
+
     <div class="sync-mode-block" style="gap: 6px;">
       <button id="btn-sync-mode" class="sync-mode-btn sync" data-i18n="hdr.sync">SYNC</button>
       <button id="btn-sync-settings" class="sync-mode-btn" style="min-width: 32px; padding: 0 4px;">⚙</button>
       <button id="btn-calibrate-sensors-header" class="sync-mode-btn" style="min-width: 65px;" hidden aria-describedby="calibration-message">CALIBRATE</button>
-      <button id="btn-stage-mode" class="sync-mode-btn stage" aria-pressed="false" data-i18n="hdr.stage">STAGE</button>
+      <!-- The CLICK of the REC page lives in the header, in the reserved
+           gap of the calibration: the gear of the settings is hidden on the
+           REC page, so the block keeps its own width. The whole status of
+           the metronome fits in the box of the button, in every language. -->
+      <button id="rec-click" type="button" class="sync-mode-btn rec-header-click" data-i18n="rec.click">CLICK</button>
+      <!-- Stage mode is an icon button: a fixed 24x24 box that draws the
+           corners opening (enter) or folding back (leave). The localized
+           wording (FULLSCREEN / EXIT FULLSCREEN / TELA CHEIA / SAIR DA TELA
+           CHEIA) lives in the accessible name and the tooltip, never as
+           visible text, so the icon is never replaced by words. -->
+      <button id="btn-stage-mode" class="sync-mode-btn stage" type="button" aria-pressed="false" aria-label="FULLSCREEN" title="FULLSCREEN" data-i18n-aria-label="hdr.stage" data-i18n-title="hdr.stage"><svg class="stage-mode-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path class="stage-mode-icon-expand" d="M6 1.5H2.5V5M10 1.5h3.5V5M6 14.5H2.5V11M10 14.5h3.5V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"></path><path class="stage-mode-icon-retract" d="M1.5 1.5L5.5 5.5M5.5 5.5h-3M5.5 5.5v-3M14.5 1.5L10.5 5.5M10.5 5.5h3M10.5 5.5v-3M1.5 14.5L5.5 10.5M5.5 10.5h-3M5.5 10.5v3M14.5 14.5L10.5 10.5M10.5 10.5h3M10.5 10.5v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"></path></svg></button>
     </div>
 
     <div class="status-block">
@@ -102,6 +122,10 @@
     </div>
   </div>
 
+  <!-- Legacy bridge for the sensor permission. The page never opens this
+       prompt: the Settings sensor action asks for the motion/orientation
+       permissions inside the user's gesture. The button stays hidden and
+       only reacts to a click, for callers that still use it. -->
   <div id="permission-banner" class="banner hidden">
     <span data-i18n="app.enableSensors">Ativar sensores</span>
     <button id="permission-activate" data-i18n="app.ok">OK</button>
@@ -581,56 +605,144 @@
       <header class="rec-heading">
         <h1 data-i18n="rec.title">REC</h1>
       </header>
-      <div class="rec-row rec-destination" role="group" aria-label="Recording destination" data-i18n-aria-label="rec.destination">
-        <span class="rec-mode-switch"><button id="rec-arrangement-mode" type="button" aria-pressed="true">ARRANGEMENT</button><button id="rec-clip-mode" type="button" aria-pressed="false">CLIP</button></span>
-        <button id="rec-click" type="button" data-i18n="rec.click">CLICK</button>
-      </div>
+      <!-- The shared capture band: the transport and the context of the
+           capture are one band in every destination. A wide surface takes
+           it as one row of 44 and a narrow one as two rows of 44 + 4 + 44:
+           its height never follows the destination and never follows the
+           state. The local destinations live in the header and the CLICK
+           lives in the header too: the band of the capture owns the
+           transport, the range and the way back to the Arrangement. -->
+      <div id="rec-capture-band" class="rec-capture-band">
       <div class="rec-row rec-main">
         <button id="rec-start" type="button" class="rec-start">REC</button>
         <button id="rec-stop" type="button" class="rec-stop">STOP</button>
-        <label class="rec-inline-preroll"><span data-i18n="rec.preRoll">PRE-ROLL</span><select id="rec-pre-roll-inline" data-i18n-aria-label="rec.preRollBars" aria-label="Pre-roll bars"><option value="0" data-i18n="rec.preRollOff">OFF</option><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
-        <div id="rec-free-mode" class="rec-free-mode"><span data-i18n="rec.freeRecording">FREE</span><span data-i18n="rec.untilStop">Until STOP</span></div>
-        <label id="rec-passages-field" class="rec-inline-preroll" hidden><span data-i18n="rec.passages">PASSES</span><select id="rec-passages" data-i18n-aria-label="rec.passages" aria-label="Passes"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="infinite">∞</option></select></label>
-        <button id="rec-return-arrangement" type="button" data-i18n="rec.returnArrangement" data-i18n-aria-label="rec.returnArrangementLabel">BACK TO ARR</button>
+        <button id="rec-pre-roll-inline" type="button" class="rec-cycle rec-slot"><span class="rec-cycle-label" data-i18n="rec.preRoll">PRE-ROLL</span><span class="rec-cycle-value" id="rec-pre-roll-value">OFF</span></button>
+        <button id="rec-passages" type="button" class="rec-cycle rec-slot"><span class="rec-cycle-label" data-i18n="rec.passages">PASSES</span><span class="rec-cycle-value" id="rec-passages-value">1</span></button>
+        <!-- The Clip owns the two config slots of the transport row: the
+             native length and the native quantization of the session. -->
+        <label id="rec-bars-slot" class="rec-slot rec-slot-select" hidden><span class="rec-slot-label" data-i18n="rec.length">LENGTH</span><select id="rec-session-bars" aria-label="Recording bars" data-i18n-aria-label="rec.length"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="8">8</option><option value="16">16</option></select></label>
+        <label id="rec-quant-slot" class="rec-slot rec-slot-select" hidden><span class="rec-slot-label" data-i18n="rec.quantization">QUANTIZE</span><select id="rec-session-quantization"><option value="global" data-i18n="rec.global">Global</option><option value="none" data-i18n="rec.noQuantization">None</option><option value="bar" data-i18n="rec.oneBar">1 bar</option><option value="beat" data-i18n="rec.oneBeat">1 beat</option></select></label>
+        <!-- The way back to the Arrangement is a native action of the band:
+             its cell of 88 keeps its place even when the host does not
+             offer the action, so the transport never moves. -->
+        <span class="rec-bta-slot"><button id="rec-return-arrangement" type="button" data-i18n="rec.returnArrangement" data-i18n-aria-label="rec.returnArrangementLabel">BACK TO ARR</button></span>
       </div>
-      <div id="rec-arrangement-panel" class="rec-arrangement-panel">
-      <section class="rec-marker-strip" aria-label="Arrangement markers" data-i18n-aria-label="rec.locators">
-        <header class="rec-row">
-          <span data-i18n="rec.locators">Arrangement markers</span>
-          <output id="rec-position">?</output>
-          <label class="rec-zoom"><span data-i18n="rec.zoom">ZOOM</span><input id="rec-zoom" type="range" min="1" max="300" step="1" value="1"></label>
-        </header>
-        <div id="rec-timeline" class="rec-timeline">
-          <div id="rec-timeline-track" class="rec-timeline-track">
-            <div id="rec-grid" class="rec-grid" aria-hidden="true"></div>
-            <div id="rec-region" class="rec-region" hidden></div>
-            <div id="rec-markers" class="rec-markers"></div>
-            <div id="rec-cursor" class="rec-cursor" hidden aria-hidden="true"></div>
+      <!-- The shared range of the capture: it belongs to the transport of
+           every mode and never to the editor, which the Record mode
+           hides. The note of the range lives with the editor content, so
+           the band above keeps its own row of 44. -->
+      <div id="rec-range-row" class="rec-range-row">
+        <label class="rec-slot rec-slot-select"><span class="rec-slot-label" data-i18n="rec.startMarker">START</span><select id="rec-start-marker"></select></label>
+        <label id="rec-end-field" class="rec-slot rec-slot-select"><span class="rec-slot-label" data-i18n="rec.endMarker">END</span><select id="rec-end-marker"></select></label>
+        <label class="rec-slot rec-slot-zoom rec-zoom"><span class="rec-slot-label" data-i18n="rec.zoom">ZOOM</span><input id="rec-zoom" type="range" min="1" max="300" step="1" value="1"></label>
+      </div>
+      <!-- The Clip owns the second context row: its native paging arrows
+           and the empty slot they share. The caption of the scene travels
+           with its value, in the combined band below. -->
+      <div id="rec-scene-row" class="rec-range-row" hidden>
+        <span class="rec-slot"></span>
+        <button id="rec-session-prev" type="button" data-i18n-aria-label="rec.previousScenes">&lt;</button>
+        <button id="rec-session-next" type="button" data-i18n-aria-label="rec.nextScenes">&gt;</button>
+      </div>
+      </div>
+      <!-- The combined band: one row of 44 with the arming controls on the
+           left and the ruler of the capture on the right, and a footer of
+           12 with the position, the status and the note of the range. It
+           sits outside the editor content: the transport, the arming
+           controls and the ruler never scroll with the editor, and the
+           ruler starts above the axis of the audio lanes. -->
+      <div id="rec-combined-band" class="rec-combined-band">
+        <div class="rec-combined-main">
+          <div id="rec-combined-controls" class="rec-combined-controls">
+            <button id="rec-arm-all" type="button" aria-pressed="false" data-i18n="rec.armAll">ARM ALL</button>
+            <button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button>
+          </div>
+          <div id="rec-combined-editor" class="rec-combined-editor">
+            <div id="rec-arrangement-panel" class="rec-arrangement-panel rec-marker-strip" aria-label="Arrangement markers" data-i18n-aria-label="rec.locators">
+              <div id="rec-timeline" class="rec-timeline">
+                <div id="rec-timeline-track" class="rec-timeline-track">
+                  <div id="rec-grid" class="rec-grid" aria-hidden="true"></div>
+                  <div id="rec-region" class="rec-region" hidden></div>
+                  <div id="rec-markers" class="rec-markers"></div>
+                  <div id="rec-cursor" class="rec-cursor" hidden aria-hidden="true"></div>
+                </div>
+              </div>
+            </div>
+            <div id="rec-combined-session" class="rec-combined-session" hidden>
+              <span class="rec-slot-label" data-i18n="rec.scene">SCENE</span>
+              <output id="rec-session-target">—</output>
+            </div>
           </div>
         </div>
-      </section>
-      <div class="rec-row rec-range">
-        <label><span data-i18n="rec.startMarker">START</span><select id="rec-start-marker"></select></label>
-        <label id="rec-end-field"><span data-i18n="rec.endMarker">END</span><select id="rec-end-marker"></select></label>
-      </div>
-      <div class="rec-row rec-pre-roll" role="group" aria-label="Pre-roll bars" data-i18n-aria-label="rec.preRollBars">
-        <span data-i18n="rec.preRoll">PRE-ROLL</span>
-        <button id="rec-pre-roll-0" type="button" aria-pressed="true" data-i18n="rec.preRollOff">OFF</button>
-        <button id="rec-pre-roll-1" type="button" aria-pressed="false">1</button>
-        <button id="rec-pre-roll-2" type="button" aria-pressed="false">2</button>
-        <button id="rec-pre-roll-4" type="button" aria-pressed="false">4</button>
-      </div>
-      </div>
-      <section id="rec-session-panel" class="rec-session-panel" hidden aria-label="Session clips" data-i18n-aria-label="rec.sessionClips">
-        <header class="rec-row"><span data-i18n="rec.scene">SCENE</span><output id="rec-session-target">—</output><button id="rec-session-prev" type="button" data-i18n-aria-label="rec.previousScenes">&lt;</button><button id="rec-session-next" type="button" data-i18n-aria-label="rec.nextScenes">&gt;</button></header>
-        <div id="rec-session-settings" class="rec-row rec-session-settings">
-          <label><span data-i18n="rec.length">LENGTH</span><select id="rec-session-bars" aria-label="Recording bars" data-i18n-aria-label="rec.length"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="8">8</option><option value="16">16</option></select><span data-i18n="rec.bars">bars</span></label>
-          <label><span data-i18n="rec.quantization">QUANTIZE</span><select id="rec-session-quantization"><option value="global" data-i18n="rec.global">Global</option><option value="none" data-i18n="rec.noQuantization">None</option><option value="bar" data-i18n="rec.oneBar">1 bar</option><option value="beat" data-i18n="rec.oneBeat">1 beat</option></select></label>
+        <div id="rec-combined-footer" class="rec-combined-footer">
+          <output id="rec-position" class="rec-position">?</output>
+          <span id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">Waiting for Live</span>
+          <output id="rec-range-note" class="rec-range-note" role="status" aria-live="polite"></output>
         </div>
+      </div>
+      <!-- The editor content: the Arrangement owns the only vertical
+           overflow of the page. The transport, the range of the capture and
+           the combined band stay outside it, so they never move while the
+           editor is read. The Record mode keeps the page still and gives
+           the only overflow to the track list. -->
+      <div id="rec-content" class="rec-content">
+      <!-- The take focus: one track of the Arrangement, its native take
+           lanes and the local inspection of a whole clip or of a phrase.
+           It is a local view: it never writes, never seeks and never
+           plays. -->
+      <section id="rec-focus" class="rec-focus" hidden aria-label="Take focus" data-i18n-aria-label="rec.focusLabel">
+        <header class="rec-focus-head">
+          <span id="rec-focus-track" class="rec-focus-track"></span>
+          <span id="rec-focus-clip" class="rec-focus-clip"></span>
+          <span id="rec-focus-interval" class="rec-focus-interval"></span>
+          <button id="rec-focus-all-tracks" type="button" data-i18n="rec.focusAllTracks">ALL TRACKS</button>
+        </header>
+        <div class="rec-focus-bar">
+          <button id="rec-focus-whole" type="button" aria-pressed="true" data-i18n="rec.focusWhole">WHOLE CLIP</button>
+          <button id="rec-focus-phrase" type="button" aria-pressed="false" data-i18n="rec.focusPhrase">TRECHO</button>
+          <button id="rec-focus-listen" type="button" disabled data-i18n="rec.focusListen">LISTEN</button>
+          <span id="rec-focus-listen-reason" class="rec-focus-listen-reason"></span>
+        </div>
+        <div id="rec-focus-phrase-fields" class="rec-focus-phrase" hidden>
+          <label><span data-i18n="rec.focusPhraseStart">START</span><input id="rec-focus-phrase-start" type="number" step="0.25" inputmode="decimal"></label>
+          <label><span data-i18n="rec.focusPhraseEnd">END</span><input id="rec-focus-phrase-end" type="number" step="0.25" inputmode="decimal"></label>
+        </div>
+        <p id="rec-focus-status" class="rec-focus-status" role="status" aria-live="polite"></p>
+        <p id="rec-focus-note" class="rec-focus-note"></p>
+      </section>
+      <details id="rec-takes" class="rec-takes">
+        <summary data-i18n="rec.takes">Take lanes</summary>
+        <div class="rec-takes-body">
+          <div class="rec-row rec-takes-controls">
+            <label class="rec-takes-track"><span data-i18n="rec.takesTrack">TRACK</span><select id="rec-takes-track" aria-label="Track" data-i18n-aria-label="rec.takesTrack"></select></label>
+            <button id="rec-takes-reload" type="button" data-i18n="rec.takesReload">RELOAD</button>
+          </div>
+          <p id="rec-takes-status" class="rec-takes-status" role="status" aria-live="polite"></p>
+          <div id="rec-takes-list" class="rec-takes-list"></div>
+          <p id="rec-takes-target" class="rec-takes-target"></p>
+          <div class="rec-row rec-takes-actions">
+            <button id="rec-take-good" type="button" data-i18n="rec.good">GOOD</button>
+            <button id="rec-take-review" type="button" data-i18n="rec.review">REVIEW</button>
+            <button id="rec-take-clear" type="button" data-i18n="rec.takesClear">NO MARK</button>
+          </div>
+          <div class="rec-row rec-takes-paging">
+            <button id="rec-takes-back" type="button" data-i18n="rec.takesBack">BACK</button>
+            <span id="rec-takes-page" class="rec-takes-page"></span>
+            <button id="rec-takes-next" type="button" data-i18n="rec.takesNext">NEXT</button>
+          </div>
+        </div>
+      </details>
+      <section id="rec-session-panel" class="rec-session-panel" hidden aria-label="Session clips" data-i18n-aria-label="rec.sessionClips">
         <div class="rec-session-scroll"><div id="rec-session-grid" class="rec-session-grid"></div></div>
       </section>
-      <div class="rec-row rec-track-heading"><span id="rec-status" class="rec-status" role="status" aria-live="polite" data-i18n="rec.unknown">Waiting for Live</span><button id="rec-arm-mode" type="button" aria-pressed="false">ARM MULTI</button></div>
+      <!-- One pane holds the track rows. The heading of the tracks, with
+           the arming controls and the status of the page, lives in the
+           combined band above: there is one instance of it in every
+           destination. -->
+      <div class="rec-tracks">
       <section id="rec-track-grid" class="rec-track-grid" aria-label="Tracks" data-i18n-aria-label="rec.tracks"></section>
+      </div>
+      </div>
       <details class="rec-help">
         <summary data-i18n="rec.info">INFO</summary>
         <p data-i18n="rec.markerHelp">Create markers in Live. Tap one to position playback, then use the header Play.</p>
@@ -962,10 +1074,20 @@
   <script src="calibration.js"></script>
   <script src="modules/calibration.js"></script>
   <script src="sensor-capabilities.js"></script>
+  <script src="sensor-permission-controller.js"></script>
   <script src="config-mode.js"></script>
   <script src="app.js"></script>
   <script src="mapping-mode.js"></script>
   <script src="automation-mode.js"></script>
+  <script src="modules/recording-data.js"></script>
+  <script src="modules/recording-focus.js"></script>
+  <script src="modules/recording-takes-focus.js"></script>
+  <script src="modules/recording-takes.js"></script>
+  <script src="modules/recording-requests.js"></script>
+  <script src="modules/recording-arrangement-reads.js"></script>
+  <script src="modules/recording-arrangement-model.js"></script>
+  <script src="modules/recording-arrangement.js"></script>
+  <script src="modules/recording-range-selection.js"></script>
   <script src="modules/recording.js"></script>
   <output id="aut-message" role="status"></output>
   <div id="automation-config-menu" class="cfg-menu hidden" role="dialog" aria-modal="false"></div>

@@ -33,7 +33,7 @@ export function buildServerAccessUrls(options: ServerAccessUrlOptions): ServerAc
   const lang = locale ? `&lang=${encodeURIComponent(locale)}` : "";
 
   return {
-    phoneUrl: isRunning && httpsPort !== null
+    phoneUrl: isRunning && httpsPort !== null && primaryIp !== ""
       ? `https://${primaryIp}:${httpsPort}/?token=${controllerToken}${lang}`
       : null,
     adminUrl: isRunning && httpPort !== null

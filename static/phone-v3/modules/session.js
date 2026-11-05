@@ -153,6 +153,10 @@
     setStatus('\u26A1 ...', '');
 
     socket.onopen = () => {
+      // A socket that was already replaced can still deliver its queued
+      // events. The current session owns the page: an event of a retired
+      // socket is ignored before it can send, persist or notify.
+      if (ws !== socket) return;
       const storedId = window.PhoneIdentity?.load() || null;
       const displayName = localStorage.getItem('ableton-rc:display_name') || '';
       socket.send(JSON.stringify({ type: 'resume', client_id: storedId || null, display_name: displayName || undefined, ts: Date.now() }));
@@ -163,6 +167,9 @@
     };
 
     socket.onmessage = (e) => {
+      // Same rule as onopen: a retired socket never answers a command, never
+      // claims the session and never announces a client id.
+      if (ws !== socket) return;
       try {
         const msg = JSON.parse(e.data);
         if (handlePhoneCommandResponse(msg)) return;
@@ -241,14 +248,22 @@
   }
 
   function startHeartbeat() {
+    // A tab in the background runs its timers about once a minute. A tick that
+    // arrives late proves only that the page was throttled, so it pings and
+    // waits for the next tick instead of closing a healthy socket; the server
+    // still drops a dead connection with its own protocol ping.
+    let lastTickAt = Date.now();
     setInterval(() => {
+      const now = Date.now();
+      const late = now - lastTickAt > 2 * PING_MS;
+      lastTickAt = now;
       if (ws && ws.readyState === WebSocket.OPEN && clientId) {
-        if (lastPongAt && Date.now() - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
+        if (!late && lastPongAt && now - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
           setStatus('\u25cf CONNECTION LOST', 'disconnected');
           ws.close();
           return;
         }
-        ws.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+        ws.send(JSON.stringify({ type: 'ping', ts: now }));
       }
     }, PING_MS);
   }

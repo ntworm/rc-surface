@@ -1,22 +1,38 @@
 /* Copyright © 2026 Gabriel Worm
  * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 */
-body[data-page="recording"] { touch-action:pan-y; }
-.page-recording { overflow:auto; touch-action:pan-y; padding:12px; display:block; background:var(--bg2); color:var(--text); color-scheme:dark; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
-.rec-workspace { max-width:1000px; margin:0 auto; display:grid; gap:10px; font-family:"Departure Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+/* Both axes are allowed on the page of the recorder: the ruler owns the
+   horizontal pan and the track list owns the vertical one. An ancestor
+   that allowed a single axis would intersect the touch action of the
+   ruler to none and swallow the finger. */
+body[data-page="recording"] { touch-action:pan-y pan-x; }
+/* The REC page: one layout for the three destinations. The page itself
+   never scrolls, the capture band sits outside the editor content and the
+   editor owns the only vertical overflow. */
+.page-recording { --rec-gutter:48px; --rec-ruler-h:64px; overflow:hidden; touch-action:pan-y pan-x; padding:4px; display:flex; flex-direction:column; background:var(--bg2); color:var(--text); color-scheme:dark; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
+/* The ruler of the capture owns a real height: the bar numbers of the
+   grid and the name of a marker need room under the badge. A short
+   surface keeps a shorter ruler and never loses the badge. */
+@media (max-height:400px) { .page-recording { --rec-ruler-h:56px; } }
+/* One workspace for the three destinations: the whole width of the page,
+   the same padding and the same rows in every mode. */
+.rec-workspace { width:100%; max-width:none; margin:0; display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-height:0; min-width:0; font-family:"Departure Mono",ui-monospace,"SF Mono",Menlo,monospace; }
 .rec-workspace h1 { font-size:14px; margin:0; white-space:nowrap; }
 .rec-workspace .rec-inline-preroll { display:none; }
-.rec-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.rec-heading { display:none; }
 .rec-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.rec-arrangement-panel { display:grid; gap:10px; min-width:0; }
-.rec-destination { gap:0; }
-.rec-workspace .rec-destination button { min-height:44px; }
-.rec-workspace .rec-destination button[aria-pressed="true"] { background:var(--accent); color:var(--bg2); border-color:var(--accent); }
+.rec-arrangement-panel { display:block; min-width:0; }
+/* The local destinations of the REC page live in the header, in the thin
+   line under the top bar, and the CLICK lives in the header too: the page
+   of the recorder owns no bar of its own. */
+/* The BACK TO ARR cell keeps its width when the button is hidden: the
+   transport of the band never moves because of the state of the capture. */
+.rec-bta-slot { display:block; width:88px; height:44px; }
+.rec-workspace .rec-bta-slot > button { width:100%; height:44px; min-height:44px; min-width:0; padding:2px 4px; font-size:10px; line-height:1.1; white-space:normal; }
 .rec-session-panel { min-width:0; display:grid; gap:8px; }
-.rec-session-panel > header { font-size:11px; }
 .rec-workspace .rec-session-panel button,.rec-workspace .rec-session-panel select { min-height:44px; }
-#rec-session-cfg { margin-left:auto; }
-.rec-session-settings { padding:8px; border:1px solid var(--border); }
-.rec-session-scroll { overflow:auto; max-height:240px; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); color-scheme:dark; }
+/* The matrix of the Clip scrolls on its own horizontal axis only: the
+   vertical overflow belongs to the editor content around it. */
+.rec-session-scroll { overflow-x:auto; overflow-y:hidden; max-height:none; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); color-scheme:dark; }
 .rec-workspace .rec-session-grid button:disabled { opacity:1; }
 .rec-session-scroll::-webkit-scrollbar { width:8px; height:8px; }
 .rec-session-scroll::-webkit-scrollbar-track { background:var(--surface); }
@@ -28,184 +44,187 @@ body[data-page="recording"] { touch-action:pan-y; }
 .rec-session-cell[data-state="recording"] { color:#ff5555; border-color:#ff5555; }
 .rec-session-cell[data-state="playing"],.rec-session-cell[data-state="queued"] { color:var(--flux,#c8be50); border-color:var(--flux,#c8be50); }
 .rec-workspace .rec-session-grid [aria-pressed="true"] { border-color:var(--accent); background:var(--accent-bg); }
+/* Take lanes: one expandable list inside REC, below the timeline and the
+   range row. It reads on demand and never writes on its own. */
+.rec-takes { min-width:0; border:1px solid var(--border); background:var(--surface); padding:4px 8px; }
+.rec-workspace .rec-takes > summary { min-height:44px; display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text2); cursor:pointer; }
+.rec-takes-body { display:grid; gap:6px; }
+.rec-takes-controls { gap:6px; }
+.rec-takes-track { flex:1; min-width:0; }
+.rec-takes-track select { flex:1; min-width:0; }
+.rec-takes-status,.rec-takes-target { margin:0; font-size:10px; color:var(--text2); min-height:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-takes-target { color:var(--text); }
+.rec-takes-list { display:grid; gap:4px; max-height:260px; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
+/* An open take list grows with the page: no inner scrollbar may hide a clip
+   or an action from the reader. */
+.rec-takes[open] .rec-takes-list { max-height:none; overflow:visible; }
+.rec-takes-note { margin:0; font-size:10px; color:var(--text2); }
+.rec-takes-lane { font-size:10px; color:var(--text3); }
+.rec-workspace .rec-takes-clip { display:grid; grid-template-columns:1fr auto; gap:2px 6px; align-items:center; text-align:left; font-size:10px; padding:4px 6px; }
+.rec-takes-clip-name { grid-column:1; grid-row:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-takes-clip-mark { grid-column:2; grid-row:1; font-size:9px; color:var(--text2); }
+.rec-takes-clip-pos { grid-column:1 / -1; grid-row:2; font-size:9px; color:var(--text3); }
+.rec-workspace .rec-takes-clip[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-bg); }
+.rec-takes-clip[data-mark="good"] .rec-takes-clip-mark { color:var(--accent); }
+.rec-takes-clip[data-mark="review"] .rec-takes-clip-mark { color:var(--flux,#c8be50); }
+.rec-takes-paging { gap:6px; font-size:10px; color:var(--text2); }
+.rec-takes-page { flex:1; text-align:center; }
 .rec-workspace button,.rec-workspace select,.rec-workspace input { min-height:56px; min-width:56px; padding:8px; border:1px solid var(--border); border-radius:0; background:var(--surface-soft); color:var(--text); font:inherit; font-size:12px; touch-action:manipulation; }
 .rec-workspace button:focus-visible,.rec-workspace select:focus-visible,.rec-workspace input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .rec-workspace button:disabled,.rec-workspace select:disabled,.rec-workspace input:disabled { opacity:.45; }
 .rec-workspace label { font-size:11px; display:flex; align-items:center; gap:8px; }
 .rec-workspace [hidden] { display:none; }
-.rec-track-heading { justify-content:space-between; font-size:11px; color:var(--text2); }
-.rec-workspace #rec-arm-mode { min-height:44px; padding:6px 10px; font-size:11px; }
-.rec-track-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:8px; min-width:0; }
-.rec-track-card { min-width:0; padding:8px; border:1px solid var(--border); background:var(--surface); }
-.rec-track-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; align-content:center; font-size:11px; }
+/* One pane holds the track cards. The heading of the tracks, with the
+   arming controls and the status of the page, lives in the combined band
+   above the editor: there is one instance of it in every destination. */
+.rec-tracks { display:contents; }
+/* Track rows: one full-width row per track. The control gutter on the left
+   keeps the same width for an ordinary track and for a group, so every lane
+   starts at the same place and the ruler can align with all of them. */
+.rec-track-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:4px; min-width:0; }
+/* The control column holds the name and the actions. The disclosure of a
+   group lives inside the name column: an ordinary row reserves no space
+   for a control it does not show, and every lane of every row still
+   starts at the same place, so the ruler can align with all of them. */
+.rec-track-row { display:grid; grid-template-columns:minmax(0,244px) minmax(0,1fr); grid-template-rows:auto auto; grid-template-areas:"name lane" "actions lane"; align-items:center; gap:0 8px; min-width:0; padding:4px 6px; border:1px solid var(--border); background:var(--surface); }
+.rec-track-group-toggle { grid-area:name; justify-self:start; align-self:center; min-width:44px; min-height:44px; width:44px; padding:0; font-size:12px; line-height:1; }
+.rec-track-name { grid-area:name; justify-self:start; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; max-width:200px; align-content:center; font-size:11px; }
+/* The name of a group leaves room for the disclosure of its own row. The
+   compact Record row is a flex line: its disclosure is a control of its own
+   and never indents the name. */
+#page-recording:not([data-rec-mode="record"]) .rec-track-row[data-group="true"] .rec-track-name { margin-left:48px; max-width:152px; }
 .rec-track-name { cursor:text; touch-action:manipulation; }
 .rec-track-name:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-.rec-track-actions { display:flex; align-items:center; gap:4px; }
-.rec-track-vol { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; min-height:44px; width:44px; height:44px; box-sizing:border-box; padding:1px; cursor:ns-resize; touch-action:none; user-select:none; -webkit-user-select:none; }
+.rec-track-actions { grid-area:actions; display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; }
+.rec-track-lane { grid-area:lane; align-self:stretch; min-width:0; position:relative; overflow:hidden; border-left:1px solid var(--border); }
+/* The lane holds the real clips of the track. The catalog clip is a real
+   element: its own name, its own interval and its own actions. */
+.rec-track-clips { position:absolute; top:0; left:0; width:0; height:44px; }
+.rec-arrangement-clip { position:absolute; top:2px; height:40px; display:flex; align-items:center; gap:4px; padding:0 4px; box-sizing:border-box; border:1px solid var(--border); background:var(--surface-soft); overflow:hidden; }
+.rec-arrangement-clip:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.rec-arrangement-clip-name { position:relative; z-index:1; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+.rec-workspace .rec-arrangement-clip-wave { min-height:30px; min-width:32px; padding:0 4px; font-size:9px; }
+.rec-arrangement-peaks { position:absolute; top:0; bottom:0; z-index:0; display:flex; align-items:flex-end; gap:1px; pointer-events:none; opacity:.9; }
+.rec-arrangement-peak { flex:1 1 auto; min-width:1px; background:var(--accent); }
+.rec-arrangement-bar { position:absolute; left:0; right:0; bottom:0; height:44px; display:flex; align-items:center; gap:4px; padding:0 4px; box-sizing:border-box; }
+.rec-arrangement-status { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; color:var(--text2); }
+.rec-workspace .rec-arrangement-bar button { min-height:44px; min-width:44px; padding:2px 6px; font-size:9px; }
+.rec-track-vol { position:relative; display:flex; align-items:center; min-width:96px; min-height:44px; width:96px; height:44px; box-sizing:border-box; padding:0 4px; cursor:ew-resize; touch-action:none; user-select:none; -webkit-user-select:none; }
 .rec-track-vol:focus-visible { outline:2px solid var(--accent); outline-offset:-1px; }
 .rec-track-vol[aria-disabled="true"] { opacity:0.45; pointer-events:none; }
-.rec-track-vol-dial { position:relative; width:26px; height:26px; border-radius:50%; background:var(--surface); border:1px solid var(--border); box-sizing:border-box; }
-/* The arc carries normalized mixer magnitude over the same 270-degree sweep as the pointer. */
-.rec-track-vol-dial::before { content:""; position:absolute; inset:-4px; border-radius:50%; background:conic-gradient(from 225deg,var(--accent) 0deg var(--rec-volume-sweep,0deg),var(--border) var(--rec-volume-sweep,0deg) 270deg,transparent 270deg 360deg); mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px)); pointer-events:none; }
-.rec-track-vol[data-active="true"] .rec-track-vol-dial, .rec-track-vol:hover .rec-track-vol-dial { border-color:var(--accent); }
-.rec-track-vol-pointer { position:absolute; top:4px; left:50%; width:2px; height:7px; margin-left:-1px; background:var(--accent); transform-origin:50% 8px; }
+.rec-track-vol-rail { position:relative; width:100%; height:6px; background:var(--border); }
+.rec-track-vol-fill { position:absolute; left:0; top:0; bottom:0; width:calc(var(--rec-volume-level,0) * 100%); background:var(--accent); }
+.rec-track-vol-thumb { position:absolute; top:50%; left:calc(var(--rec-volume-level,0) * 100%); width:14px; height:14px; margin:-7px 0 0 -7px; background:var(--surface); border:1px solid var(--accent); box-sizing:border-box; }
+.rec-track-vol[data-active="true"] .rec-track-vol-thumb { background:var(--accent); }
 .rec-track-vol-val { display:none; }
 .rec-track-vol[data-active="true"] .rec-track-vol-val { color:var(--accent); font-weight:700; }
+/* The click level has no setter in the current surface: the page shows no
+   knob it cannot move. The native CLICK stays. */
 .rec-workspace .rec-track-actions button { min-height:44px; min-width:44px; padding:4px; font-size:10px; }
 .rec-track-actions button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:var(--accent-bg); }
 /* Red carries armed capture state; flux carries active solo. */
 .rec-track-actions [data-property="arm"][aria-pressed="true"] { color:#ff5555; border-color:#ff5555; }
 .rec-track-actions [data-property="solo"][aria-pressed="true"] { color:var(--flux,#c8be50); border-color:var(--flux,#c8be50); }
+.rec-track-actions [data-property="arm"][aria-pressed="mixed"] { color:var(--accent); border-color:var(--accent); }
+/* The cycling transport controls: the value is always visible on the button. */
+.rec-workspace .rec-cycle { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:44px; min-width:0; padding:4px 6px; font-size:12px; line-height:1.1; overflow:hidden; }
+/* The capture buttons of the band share one explicit height of 44 in
+   every destination: REC, STOP, PRE-ROLL and PASSES never differ. */
+.rec-workspace .rec-main > button { height:44px; min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center; padding:2px 6px; font-size:13px; }
+.rec-workspace .rec-main > button.rec-cycle { gap:2px; }
+/* The note of the range lives in the footer of the combined band: it
+   reports an unusable selection and never repeats the value of the END
+   menu. It is never shortened: a reason is never hidden by an ellipsis. */
+.rec-range-note { display:block; flex:1 1 auto; min-width:0; font-size:9px; line-height:12px; color:var(--text2); overflow:hidden; white-space:nowrap; }
+.rec-workspace .rec-cycle .rec-cycle-label { color:var(--text2); font-size:9px; }
+.rec-workspace .rec-cycle .rec-cycle-value { color:var(--text); font-size:12px; }
+.rec-workspace #rec-arm-all { flex:1 1 auto; min-width:0; min-height:44px; padding:2px 6px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-workspace #rec-arm-mode { flex:1 1 auto; min-width:0; min-height:44px; padding:2px 6px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-workspace #rec-arm-all[aria-pressed="true"] { color:#ff5555; border-color:#ff5555; }
+.rec-workspace #rec-arm-all[aria-pressed="mixed"] { color:var(--accent); border-color:var(--accent); }
 .page-recording::-webkit-scrollbar { width:8px; }
 .page-recording::-webkit-scrollbar-track { background:var(--surface); }
 .page-recording::-webkit-scrollbar-thumb { background:var(--text3); border-radius:0; }
-.rec-main { position:sticky; top:0; z-index:3; background:var(--bg2); padding:4px 0; }
-.rec-main .rec-start,.rec-main .rec-stop { flex:1; font-size:18px; }
+/* The band is outside the editor content: the transport never scrolls
+   with the editor and needs no sticky row of its own. */
 /* Red distinguishes REC and the priority STOP action. */
 .rec-workspace .rec-start { border-color:#ff5555; color:#ff5555; }
 .rec-workspace .rec-stop { background:#ff5555; color:var(--bg2); border-color:#ff5555; }
-.rec-status { min-height:32px; display:flex; align-items:center; font-size:11px; color:var(--text2); }
+/* The status of the page and the position of the host live in the footer
+   of the combined band: they are compact and they never grow the band. */
+.rec-status { display:block; flex:0 1 auto; min-width:0; max-width:45%; min-height:12px; font-size:9px; line-height:12px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .rec-status[data-recording="true"] { color:#ff5555; }
 #rec-position[data-meter-stale="true"] { color:var(--text3); text-decoration:underline dotted; }
 .rec-note,.rec-help { color:var(--text2); font-size:11px; }
 .rec-help p { line-height:1.5; }
-.rec-range label { flex:1; min-width:200px; }
-.rec-range select { flex:1; min-width:0; }
 .rec-workspace #rec-loop[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); }
 .rec-pre-roll { gap:0; }
 .rec-pre-roll > span { margin-right:8px; font-size:11px; color:var(--text2); }
 .rec-pre-roll button + button { border-left:0; }
 .rec-workspace .rec-pre-roll button[aria-pressed="true"] { color:var(--accent); background:var(--accent-bg); border-color:var(--accent); }
-.rec-marker-strip { min-width:0; border:1px solid var(--border); background:var(--surface); padding:8px; }
-.rec-marker-strip > header { font-size:10px; color:var(--text2); justify-content:space-between; }
-.rec-workspace .rec-zoom { margin-left:auto; }
-.rec-workspace .rec-zoom input { appearance:none; -webkit-appearance:none; min-height:44px; height:44px; width:100px; padding:0; border:0; background:transparent; cursor:ew-resize; }
+/* The ruler of the capture: it lives in the combined band, above the axis
+   of the audio lanes, and it has no box of its own. */
+.rec-marker-strip { min-width:0; }
+.rec-workspace .rec-zoom input { appearance:none; -webkit-appearance:none; flex:1 1 auto; min-width:0; min-height:44px; height:44px; width:100%; padding:0; border:0; background:transparent; cursor:ew-resize; }
 .rec-zoom input::-webkit-slider-runnable-track { height:4px; border:0; border-radius:0; background:var(--border); }
 .rec-zoom input::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; box-sizing:border-box; width:12px; height:20px; margin-top:-8px; border:0; border-radius:0; background:var(--accent); }
 .rec-zoom input::-moz-range-track { height:4px; border:0; border-radius:0; background:var(--border); }
 .rec-zoom input::-moz-range-thumb { box-sizing:border-box; width:12px; height:20px; border:0; border-radius:0; background:var(--accent); }
 .rec-timeline { overflow-x:auto; overflow-y:hidden; touch-action:pan-x; color-scheme:dark; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
-.rec-timeline-track { position:relative; min-width:0; height:88px; border-top:1px solid var(--text3); margin:12px 48px 0; }
+.rec-timeline-track { position:relative; min-width:0; height:var(--rec-ruler-h); border-top:1px solid var(--text3); margin:0 var(--rec-gutter) 0; }
 .rec-markers { position:absolute; inset:0; }
 /* Bar/beat ruler: hairlines behind the markers, bar numbers along the bottom. */
 .rec-grid { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 .rec-grid-bar,.rec-grid-beat { position:absolute; top:0; bottom:0; width:0; border-left:1px solid var(--border); }
 .rec-grid-beat { opacity:.6; }
 .rec-grid-bar { border-left-color:var(--text3); display:flex; align-items:flex-end; padding:0 0 1px 3px; font-size:8px; line-height:1; color:var(--text3); white-space:nowrap; }
-.rec-workspace .rec-marker { position:absolute; top:10px; width:88px; min-width:44px; min-height:56px; padding:4px; transform:translateX(-50%); font-size:10px; overflow:hidden; white-space:nowrap; border:0; border-left:2px solid var(--text3); background:var(--surface-soft); text-align:left; }
+/* The badge of a marker is a compact target of the combined band: it
+   keeps the 44px of a finger and the gutter of the ruler holds it. */
+.rec-workspace .rec-marker { position:absolute; top:0; width:76px; min-width:44px; min-height:44px; height:44px; padding:2px 4px; transform:translateX(-50%); font-size:11px; overflow:hidden; white-space:nowrap; border:0; border-left:2px solid var(--text3); background:var(--surface-soft); text-align:left; }
 .rec-marker-position,.rec-marker-name { display:block; overflow:hidden; text-overflow:ellipsis; }
-.rec-marker-position { margin-bottom:6px; color:var(--text2); }
+/* A badge that would touch another badge keeps its own place on the axis
+   and loses its text: the compact trace never moves the marker, never
+   removes it and never hides its accessible name. The text is hidden,
+   never shrunk. */
+.rec-workspace .rec-marker[data-compact="true"] { width:24px; min-width:24px; padding:0; }
+.rec-workspace .rec-marker[data-compact="true"] .rec-marker-position,
+.rec-workspace .rec-marker[data-compact="true"] .rec-marker-name { display:none; }
+/* The two lines of the badge fit inside its own 44px: the position of the
+   marker and its name stay readable at the size of the finger. */
+.rec-marker-position { margin-bottom:0; font-size:10px; line-height:12px; color:var(--text2); }
+.rec-workspace .rec-marker-name { line-height:14px; }
 .rec-workspace .rec-marker[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); }
 .rec-cursor { position:absolute; top:0; bottom:0; width:2px; background:var(--text); pointer-events:none; }
 .rec-region { position:absolute; top:0; bottom:0; background:var(--accent-bg); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; }
-@media(max-width:620px) { .rec-range label { min-width:150px; } .rec-workspace { gap:8px; } .rec-workspace .rec-main button { min-height:48px; } }
-
 @media (max-width: 950px) and (orientation: landscape), (max-height: 520px) and (orientation: landscape) {
   .page-recording {
-    padding: 2px 6px;
-    overflow-y: hidden;
+    /* The gutter holds the first marker badge: half of its width (42px) and
+       a margin, so the label at the start of the ruler is never clipped. */
+    --rec-gutter: 44px;
+    padding: 4px 6px;
   }
+  /* One column and one order: the destination, the capture band and the
+     editor content. The content owns the only vertical overflow of the
+     Arrangement; the transport stays outside it and never moves. */
   .rec-workspace {
-    display: grid;
-    grid-template-columns: minmax(290px, 1.25fr) minmax(210px, 0.85fr);
-    grid-template-rows: 32px 56px auto;
-    column-gap: 8px;
-    row-gap: 2px;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
     align-content: start;
-    max-height: calc(100vh - 44px);
-  }
-  .rec-heading {
-    display: none;
+    min-height: 0;
   }
   .rec-workspace h1 {
     font-size: 11px;
     line-height: 1;
   }
-  .rec-status {
-    min-height: 16px;
-    font-size: 10px;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 160px;
-  }
-  .rec-destination {
-    grid-column: 1;
-    grid-row: 1;
-    gap: 0;
-    justify-content: center;
-  }
-  .rec-workspace .rec-destination button {
-    min-height: 32px;
-    padding: 2px 6px;
-    font-size: 10px;
-  }
-  .rec-main {
-    grid-column: 1;
-    grid-row: 2;
-    position: static;
-    padding: 0;
-    gap: 4px;
-    justify-content: center;
-    display:grid;
-    grid-template-columns:1fr 1fr 1.15fr 1.2fr;
-    align-items:end;
-    padding-top:10px;
-    max-width:420px;
-    width:100%;
-    justify-self:center;
-    box-sizing:border-box;
-  }
-  .rec-main .rec-start, .rec-main .rec-stop {
-    flex: 1 1 80px;
-    max-width: none;
-    min-height: 44px;
-    font-size: 11px;
-    padding: 2px 8px;
-  }
-  .rec-workspace .rec-main button {
-    min-height: 44px;
-    height: 44px;
-    min-width: 44px;
-    padding: 2px 6px;
-    font-size: 10px;
-  }
-.rec-destination #rec-click { white-space:nowrap; font-size:9px; line-height:1.2; }
-  .rec-workspace .rec-inline-preroll { display:block; position:relative; height:44px; min-width:0; }
-  .rec-workspace .rec-inline-preroll[hidden] { display:none; }
-  .rec-inline-preroll > span { position:absolute; top:4px; left:0; right:0; text-align:center; font-size:8px; pointer-events:none; }
-  .rec-workspace .rec-inline-preroll select { width:100%; min-width:0; min-height:44px; height:44px; padding:14px 3px 0; text-align:center; font-size:11px; }
-  .rec-arrangement-panel > .rec-pre-roll { display:none; }
-  .rec-arrangement-panel, .rec-session-panel {
-    grid-column: 1;
-    grid-row: 3;
+  .rec-workspace .rec-cycle .rec-cycle-label { font-size:8px; }
+  .rec-workspace .rec-cycle .rec-cycle-value { font-size:11px; }
+  .rec-session-panel {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-  }
-  .rec-session-panel > header {
-    font-size: 9px;
-    gap: 4px;
-    min-height: 20px;
-  }
-  .rec-session-settings {
-    padding: 2px 4px;
-    gap: 4px;
-    flex-wrap: nowrap;
-  }
-  .rec-session-settings label {
-    flex: 1;
-    min-width: 65px;
-    font-size: 9px;
-    gap: 2px;
-  }
-  .rec-session-settings select {
-    min-height: 28px;
-    padding: 2px 4px;
-    font-size: 9px;
   }
   .rec-workspace .rec-session-panel button {
     min-height: 28px;
@@ -213,121 +232,90 @@ body[data-page="recording"] { touch-action:pan-y; }
     padding: 2px 4px;
     font-size: 9px;
   }
-  .rec-marker-strip {
-    padding: 2px 4px;
-  }
-  .rec-marker-strip > header {
-    font-size: 9px;
-    min-height: 20px;
-  }
-  .rec-workspace .rec-zoom {
-    margin-left: auto;
-    gap: 4px;
-    font-size: 9px;
-  }
-  .rec-workspace .rec-zoom input {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 72px;
-    min-height: 44px;
-    height: 44px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
   .rec-zoom input::-webkit-slider-runnable-track { height:3px; }
   .rec-zoom input::-webkit-slider-thumb { width:10px; height:14px; margin-top:-5.5px; }
   .rec-zoom input::-moz-range-track { height:3px; }
   .rec-zoom input::-moz-range-thumb { width:10px; height:14px; }
-  .rec-timeline-track {
-    height: clamp(64px, calc(100dvh - 260px), 88px);
-    margin: 2px 28px 0;
-  }
-  .rec-workspace .rec-marker {
-    top: 2px;
-    width: 84px;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 4px;
-    font-size: 11px;
-  }
-  .rec-marker-position {
-    margin-bottom: 2px;
-    font-size: 10px;
-  }
-  .rec-range {
-    gap: 4px;
-    flex-wrap: nowrap;
-  }
-  .rec-range label {
-    flex: 1;
-    min-width: 65px;
-    font-size: 9px;
-    gap: 2px;
-  }
-  .rec-range select {
-    min-height: 28px;
-    padding: 2px 4px;
-    font-size: 9px;
-  }
   .rec-workspace #rec-loop {
     min-height: 28px;
     min-width: 36px;
     padding: 2px 6px;
     font-size: 9px;
   }
-  .rec-pre-roll {
-    gap: 0;
-    flex-wrap: nowrap;
+  .rec-takes {
+    padding: 2px 4px;
+    max-height: 64px;
+    overflow: auto;
+    scrollbar-width: thin;
   }
-  .rec-pre-roll > span {
-    font-size: 9px;
-    margin-right: 4px;
-  }
-  .rec-workspace .rec-pre-roll button {
+  .rec-workspace .rec-takes > summary {
     min-height: 28px;
-    min-width: 30px;
-    padding: 2px 6px;
     font-size: 9px;
   }
-  .rec-track-heading {
-    grid-column: 2;
-    grid-row: 1;
-    margin-bottom: 2px;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 32px;
+  .rec-takes-body {
+    gap: 2px;
   }
-  .rec-workspace #rec-arm-mode {
+  .rec-takes-list {
+    max-height: 48px;
+  }
+  .rec-workspace .rec-takes button,
+  .rec-workspace .rec-takes select {
     min-height: 28px;
-    padding: 2px 6px;
+    min-width: 28px;
+    padding: 2px 4px;
     font-size: 9px;
   }
+  .rec-takes-lane,
+  .rec-takes-status,
+  .rec-takes-target,
+  .rec-takes-clip-pos,
+  .rec-takes-clip-mark {
+    font-size: 8px;
+  }
+  /* The open take list expands naturally: the editor content owns the
+     scroll, the list is never clipped by a fixed height, and the heading
+     and the track cards come after the list instead of beside it. The
+     transport stays outside the scroll owner and remains reachable. */
+  .rec-workspace:has(#rec-takes[open]) #rec-takes {
+    max-height: none;
+    overflow: visible;
+  }
+  .rec-workspace:has(#rec-takes[open]) .rec-track-grid {
+    max-height: none;
+    overflow: visible;
+  }
+  /* The rows share one full-width band under the combined band: a row can
+     use the whole width of the surface and the pane never steals it from
+     the transport or the ruler. */
+  .rec-tracks {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 2px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* The editor content owns the vertical overflow of the Arrangement: the
+     list itself never becomes a second scroll owner. */
   .rec-track-grid {
-    grid-column: 2;
-    grid-row: 2 / 4;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    max-height: calc(100vh - 84px);
+    overflow: visible;
+    min-height: 0;
     padding-right: 2px;
-    scrollbar-width: thin;
   }
-  .rec-track-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
+  .rec-track-row {
     padding: 2px 6px;
     min-height: 44px;
+    flex: 0 0 auto;
   }
+  /* The landscape row keeps two accessible lines: the name owns its own
+     44px line above the 44px actions, so every target stays reachable. */
   .rec-track-name {
-    flex: 1;
     min-height: 44px;
+    line-height: 44px;
     align-content: center;
     font-size: 10px;
     padding: 0 4px;
@@ -342,20 +330,14 @@ body[data-page="recording"] { touch-action:pan-y; }
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    max-width: 100%;
   }
   .rec-track-vol {
-    min-width: 44px;
+    min-width: 88px;
     min-height: 44px;
-    width: 44px;
+    width: 88px;
     height: 44px;
-  }
-  .rec-track-vol-dial {
-    width: 26px;
-    height: 26px;
-  }
-  .rec-track-vol-pointer {
-    height: 7px;
-    transform-origin: 50% 8px;
   }
   .rec-track-vol-val {
     font-size: 7px;
@@ -366,29 +348,239 @@ body[data-page="recording"] { touch-action:pan-y; }
     padding: 2px;
     font-size: 9px;
   }
+  /* The lane of the row keeps the preview and the secondary actions of the
+     track: they share the compact line of the lane and never overlap. */
+  .rec-workspace .rec-arrangement-bar {
+    height: 28px;
+    gap: 2px;
+    padding: 0 2px;
+  }
+  .rec-workspace .rec-arrangement-bar button {
+    min-height: 28px;
+    min-width: 28px;
+    padding: 1px 4px;
+    font-size: 9px;
+  }
+  .rec-workspace .rec-arrangement-clip {
+    height: 32px;
+  }
+  .rec-workspace .rec-arrangement-clip-wave {
+    min-height: 28px;
+    min-width: 28px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
   .rec-note, .rec-help {
     display: none;
   }
+  /* The take focus owns the band under the transport: the shared timeline
+     stays above it and the take lanes take the rest of the editor. */
+  .rec-focus { padding:2px 4px; gap:2px; }
+  .rec-focus-head { font-size:9px; gap:4px; }
+  .rec-focus-bar { gap:4px; }
+  .rec-workspace .rec-focus-bar button { min-height:28px; min-width:28px; font-size:9px; padding:2px 4px; }
+  .rec-focus-phrase label { font-size:9px; gap:2px; }
+  .rec-workspace .rec-focus-phrase input { min-height:28px; width:72px; font-size:9px; padding:2px 4px; }
+  .rec-focus-status,.rec-focus-note { font-size:8px; min-height:10px; }
+  .rec-focus-lane { grid-template-columns:72px minmax(0,1fr); min-height:28px; }
+  .rec-focus-axis { height:28px; }
+  .rec-focus-axis .rec-takes-clip { height:28px; min-height:28px; }
 }
 
 @media (max-width:620px) and (orientation:landscape) {
   .rec-workspace .rec-marker { width:76px; }
 }
 
-/* Capture controls: FIM owns the free/bounded distinction; no second Loop mode. */
-.rec-workspace .rec-destination { display:grid; grid-template-columns:1fr auto 1fr; }
-.rec-mode-switch { grid-column:2; display:flex; }
-.rec-destination #rec-click { grid-column:3; justify-self:end; padding:3px 5px; font-size:9px; }
-.rec-workspace .rec-main { display:grid; grid-template-columns:1fr 1fr 1.15fr 1.2fr; }
-.rec-workspace .rec-inline-preroll { display:block; position:relative; height:44px; min-width:0; }
-.rec-workspace .rec-inline-preroll[hidden],.rec-free-mode[hidden] { display:none; }
-.rec-inline-preroll>span { position:absolute; top:4px; left:0; right:0; text-align:center; font-size:8px; pointer-events:none; }
-.rec-workspace .rec-inline-preroll select { width:100%; min-width:0; min-height:44px; height:44px; padding:14px 3px 0; text-align:center; font-size:11px; }
-.rec-free-mode { display:flex; height:44px; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--border); gap:4px; min-width:0; font-size:10px; }
-.rec-free-mode>span:first-child { font-size:8px; color:var(--text2); }
-.rec-workspace .rec-pre-roll { display:none; }
+/* The capture band: one transport row and one context row in every
+   destination. A narrow surface keeps the two rows of 44 + 4 + 44; a wide
+   surface takes one row of 44 (see the wide rule at the end of this
+   file). The height of the band never follows the destination and never
+   follows the state. */
+.rec-capture-band { display:flex; flex-direction:column; gap:4px; flex:0 0 auto; min-width:0; }
+.rec-main { display:grid; grid-template-columns:88px 88px minmax(0,1fr) minmax(0,1fr) 88px; gap:4px; align-items:stretch; position:static; z-index:auto; background:transparent; padding:0; width:100%; max-width:none; }
+.rec-workspace .rec-main .rec-start,.rec-workspace .rec-main .rec-stop { font-size:18px; }
 .rec-cursor { bottom:auto; height:7px; }
-.rec-range { flex-wrap:nowrap; }
-.rec-range label { min-width:0; }
-.rec-workspace #rec-return-arrangement:not([hidden]) { grid-column:1/-1; }
-.rec-workspace .rec-main:has(.rec-inline-preroll[hidden]):has(#rec-free-mode[hidden]):has(#rec-passages-field[hidden]) { grid-template-columns:1fr 1fr; }
+/* The context row: the range of the capture and its zoom, or the scene of
+   the Clip and its paging. Every slot is exactly 44 high. */
+.rec-range-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,150px); gap:4px; align-items:center; flex:0 0 auto; min-width:0; height:44px; }
+#rec-scene-row { grid-template-columns:minmax(0,1fr) 44px 44px; }
+.rec-workspace .rec-slot { position:relative; display:block; height:44px; min-height:44px; min-width:0; }
+/* The caption of a slot sits inside the hit area of its own control: the
+   slot keeps one row of 44 and never two. */
+.rec-workspace .rec-slot-label { position:absolute; left:6px; top:50%; transform:translateY(-50%); font-size:9px; line-height:1; color:var(--text2); pointer-events:none; }
+.rec-workspace .rec-slot-select select { width:100%; min-width:0; height:44px; min-height:44px; padding:2px 4px 2px 64px; font-size:10px; }
+.rec-workspace .rec-slot-zoom { display:flex; align-items:center; gap:4px; }
+.rec-workspace .rec-slot-zoom .rec-slot-label { position:static; transform:none; }
+.rec-workspace .rec-slot output { display:block; height:44px; line-height:44px; padding-left:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+#rec-scene-row button { width:44px; height:44px; min-height:44px; min-width:44px; padding:0; font-size:12px; }
+
+/* The combined band: one row of 44 with the arming controls on the left
+   and the ruler of the capture on the right, and a footer of 12 with the
+   position, the status and the note of the range. It sits outside the
+   editor content: the transport, the arming controls and the ruler never
+   scroll with the editor. The left column keeps the width of the control
+   gutter of a track row, so the ruler starts above the axis of the audio
+   lanes. */
+.rec-combined-band { display:flex; flex-direction:column; flex:0 0 auto; min-width:0; }
+.rec-combined-main { position:relative; display:flex; align-items:stretch; gap:4px; height:var(--rec-ruler-h); min-height:var(--rec-ruler-h); }
+.rec-combined-controls { display:flex; align-items:center; gap:4px; flex:0 0 244px; min-width:0; }
+.rec-combined-editor { position:relative; flex:1 1 auto; min-width:0; overflow:hidden; }
+/* The open focus gives the whole band to the ruler: the arming column is
+   hidden and the editor covers the band, so the measured axis of the focus
+   starts where the ruler starts and never behind the arming. */
+.rec-workspace[data-focus="open"] .rec-combined-controls { visibility:hidden; pointer-events:none; }
+.rec-workspace[data-focus="open"] .rec-combined-editor { position:absolute; inset:0; }
+.rec-combined-session { display:flex; align-items:center; gap:6px; height:var(--rec-ruler-h); min-width:0; padding:0 6px; overflow:hidden; }
+.rec-combined-session output { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* The caption of the scene travels with its value: it sits in the flow of
+   the combined session and never over the ruler. */
+.rec-workspace .rec-combined-session .rec-slot-label { position:static; transform:none; }
+.rec-combined-footer { display:flex; align-items:center; gap:6px; height:12px; min-height:12px; overflow:hidden; }
+.rec-position { flex:0 0 auto; font-size:9px; line-height:12px; color:var(--text2); }
+/* The note of the range owns the whole footer when it names a reason: the
+   position and the status step aside, an error is never clipped, never
+   shortened and never hidden. */
+.rec-combined-footer[data-critical="true"] .rec-status { display:none; }
+.rec-combined-footer[data-critical="true"] .rec-position { display:none; }
+.rec-combined-footer[data-critical="true"] .rec-range-note { color:var(--text); }
+/* The Clip owns two cells of 88: the caption of the slot sits above its
+   own value, so LENGTH and QUANTIZE stay readable in every language. */
+#rec-bars-slot .rec-slot-label, #rec-quant-slot .rec-slot-label { top:6px; left:4px; transform:none; font-size:8px; }
+#rec-bars-slot select, #rec-quant-slot select { padding:14px 4px 2px; }
+
+/* A narrow portrait phone keeps the name on its own line above the compact
+   control line, and the reserved lane stays on the right. The landscape
+   layout keeps its single full-width row. */
+@media (max-width:620px) and (orientation:portrait) {
+  /* The narrow portrait keeps the whole Arrangement inside the page. The
+     auto margins of the wide rule leave the workspace at the width its
+     transport asks for (360px), so a 320px page would scroll sideways.
+     The workspace takes the width the page offers and every band of it
+     may shrink into that width. */
+  .rec-workspace { width:100%; min-width:0; }
+  .rec-heading { width:100%; min-width:0; }
+  /* The title of the page never widens the page: a name that does not fit
+     the narrow surface ends in an ellipsis instead of a sideways scroll. */
+  .rec-workspace h1 { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .rec-track-row { grid-template-columns:minmax(0,1fr); grid-template-areas:"name" "actions" "lane"; row-gap:4px; min-width:0; }
+  .rec-track-row .rec-track-vol { min-width:72px; width:72px; }
+  .rec-workspace .rec-track-actions button { min-width:44px; padding:2px; }
+  .rec-track-actions { flex-wrap:wrap; row-gap:4px; }
+  /* The narrow portrait stacks the combined band: the ruler takes the whole
+     width of the surface under the arming controls, so it still shares the
+     axis of the lanes of the rows. */
+  .rec-combined-main { flex-direction:column; height:auto; }
+  .rec-combined-controls { flex:0 0 44px; width:100%; }
+  .rec-combined-editor { flex:0 0 var(--rec-ruler-h); width:100%; }
+  /* The reserved lane keeps a real height in the narrow portrait: the 44px
+     preview and the 44px secondary bar own their own lines. The portrait
+     stays outside the supported orientations of the phone. */
+  .rec-track-lane { min-height:88px; }
+}
+
+/* The take focus: a local view of one track of the Arrangement. It shows
+   the native take lanes below the shared timeline and never writes. */
+.rec-focus { display:grid; gap:6px; min-width:0; border:1px solid var(--border); background:var(--surface); padding:6px 8px; }
+.rec-focus-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:11px; min-width:0; }
+.rec-focus-track { color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-focus-clip { color:var(--text2); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-focus-interval { color:var(--text3); font-size:10px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-focus-head button { margin-left:auto; }
+.rec-workspace .rec-focus-head button { height:44px; min-height:44px; }
+.rec-focus-bar { display:flex; flex-wrap:wrap; gap:6px; min-width:0; }
+.rec-workspace .rec-focus-bar button { min-height:44px; min-width:44px; font-size:11px; }
+.rec-focus-bar button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:var(--accent-bg); }
+/* The unavailable LISTEN says why, in the words of the interface: no
+   invented audio, no hidden reason. */
+.rec-focus-listen-reason { flex:0 1 auto; min-width:0; font-size:9px; line-height:1.2; color:var(--text3); }
+.rec-focus-phrase { display:flex; flex-wrap:wrap; gap:8px; min-width:0; }
+.rec-focus-phrase label { font-size:10px; gap:4px; }
+.rec-workspace .rec-focus-phrase input { width:92px; min-height:44px; }
+.rec-focus-status,.rec-focus-note { margin:0; font-size:10px; color:var(--text2); min-height:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-focus-note { color:var(--text); }
+/* The lanes of the focus: the native lane rows, on the measured axis. The
+   axis clips what the zoom pushed out of the view: a clip or a range never
+   grows the page. */
+.rec-focus-lane { display:grid; grid-template-columns:96px minmax(0,1fr); align-items:stretch; gap:0 6px; min-width:0; min-height:44px; }
+.rec-focus-lane .rec-takes-lane { grid-column:1; display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-focus-axis { grid-column:2; position:relative; min-width:0; height:44px; overflow:hidden; }
+.rec-focus-clips { position:absolute; inset:0; }
+.rec-focus-axis .rec-takes-clip { position:absolute; top:0; height:44px; min-height:44px; }
+.rec-focus-axis .rec-takes-clip[data-focus-selected="true"] { outline:2px solid var(--accent); outline-offset:-2px; }
+.rec-focus-range { position:absolute; top:0; bottom:0; background:var(--accent-bg); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; }
+/* The focus replaces the track rows: the toolbar and the shared timeline
+   keep their place and the take lanes take the rest of the page. */
+.rec-workspace[data-focus="open"] .rec-tracks { display:none; }
+.rec-workspace[data-focus="open"] .rec-takes > summary,
+.rec-workspace[data-focus="open"] .rec-takes-track { display:none; }
+.rec-workspace[data-focus="open"] .rec-takes,
+.rec-workspace[data-focus="open"] .rec-takes-list { max-height:none; overflow:visible; }
+/* The editor content: the three destinations share the same scroll
+   owners. The Record mode gives the only overflow to the track list, the
+   Arrangement and the Clip to the content that holds the ruler, the
+   session matrix and the mixer rows. The transport stays outside it. */
+.rec-content { display:grid; gap:10px; min-width:0; min-height:0; align-content:start; }
+/* The content never anchors itself: an opening focus never moves the page
+   under the reader. */
+#rec-content { overflow-anchor:none; }
+#page-recording:not([data-rec-mode="record"]) .rec-content { display:flex; flex-direction:column; gap:10px; flex:1 1 auto; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--text3) var(--surface); }
+#page-recording:not([data-rec-mode="record"]) .rec-track-grid { overflow:visible; max-height:none; }
+#page-recording:not([data-rec-mode="record"]) .rec-tracks { grid-template-rows:auto auto; overflow:visible; }
+#page-recording:not([data-rec-mode="record"]) .rec-takes { max-height:none; overflow:visible; }
+#page-recording[data-rec-mode="record"] .rec-content { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden; gap:0; }
+
+/* The compact Record mode: the page itself never scrolls, the track list
+   owns the only vertical overflow and the capture controls stay fixed.
+   The Arrangement and the Clip keep the editor layout above. The id of the
+   page keeps these rules above the rules of an open take list. */
+#page-recording[data-rec-mode="record"] .rec-tracks {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: 2px;
+}
+#page-recording[data-rec-mode="record"] .rec-track-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  /* The list keeps a readable height even when it is empty. */
+  min-height: 48px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+#page-recording[data-rec-mode="record"] .rec-track-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 2px 6px;
+}
+#page-recording[data-rec-mode="record"] .rec-track-group-toggle { flex: 0 0 44px; }
+#page-recording[data-rec-mode="record"] .rec-track-name { flex: 1 1 auto; min-width: 0; max-width: none; min-height: 44px; line-height: 1.15; font-size: 10px; }
+#page-recording[data-rec-mode="record"] .rec-track-actions { flex: 0 0 auto; flex-wrap: wrap; row-gap: 2px; max-width: 68%; }
+#page-recording[data-rec-mode="record"] .rec-track-vol { flex: 0 0 72px; min-width: 72px; width: 72px; min-height: 44px; height: 44px; }
+#page-recording[data-rec-mode="record"] .rec-track-lane { display: none; }
+/* The semantic hidden attribute owns the workspace: a hidden panel never
+   becomes a tile of a grid or a row of a flex box. */
+.rec-workspace [hidden] { display:none !important; }
+
+/* The wide surface takes the capture band as one row of 44: the transport,
+   the context of the capture, the way back to the Arrangement and the
+   range share eight columns of 88, 88, 88, 88, 88, 120, 120 and 112. The
+   scene of the Clip keeps the last three columns with its two native
+   paging controls, and the row of the range keeps its own three slots.
+   The height of the band never follows the destination and never follows
+   the state. */
+@media (min-width: 851px) {
+  .rec-capture-band { display:grid; grid-template-columns:88px 88px 88px 88px 88px minmax(120px,1fr) minmax(120px,1fr) 112px; gap:4px; align-items:center; }
+  .rec-main, #rec-range-row { display:contents; }
+  #rec-scene-row { grid-column:6 / -1; }
+}

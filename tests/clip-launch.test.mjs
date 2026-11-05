@@ -915,6 +915,8 @@ test("the OSC traffic stays within fire, stop, listeners and getters", async () 
     "/live/clip/start_listen/playing_position", "/live/clip/stop_listen/playing_position",
     "/live/clip/get/launch_quantization", "/live/clip/get/launch_mode", "/live/clip/get/legato",
     "/live/song/start_listen/clip_trigger_quantization", "/live/song/get/clip_trigger_quantization",
+    // The playhead listener exists only while Launch Clip is active.
+    "/live/song/start_listen/current_song_time", "/live/song/stop_listen/current_song_time",
     "/live/song/get/track_names",
   ]);
   for (const [address] of sent) assert.ok(allowed.has(address), address);
@@ -944,5 +946,53 @@ test("TRN status asks Live for the global quantization once when no Launch Clip 
   oscTransport.globalQuantization = null;
   await commands.getClipLaunchStatus.handler({});
   assert.equal(reads(), 1, "nothing is sent without the AbletonOSC link");
+  oscTransport.send = realSend;
+});
+
+// Stop releases the OSC transport: it drops the Launch Clip with it and says
+// so, so the engine knows the link is down. The next connection has to bring
+// the Launch Clip back, or a set that was started again would never ask Live
+// for its listener again.
+test("a Stop that released the transport re-arms Launch Clip on the next connection", async () => {
+  setup();
+  await mapClip(G1, "Base", () => ({}));
+  const firedListens = () => sent.filter(([address]) => address === "/live/track/start_listen/fired_slot_index");
+  const launchListens = () => sent.filter(([address]) => address === "/live/song/start_listen/clip_trigger_quantization");
+  const firedBefore = firedListens().length;
+  const launchBefore = launchListens().length;
+  assert.ok(firedBefore >= 1, "the rule listens to its track");
+  assert.ok(launchBefore >= 1, "and Live is asked for the Launch Clip listener");
+  oscTransport.dispose();
+  assert.equal(oscTransport.state.connected, false, "the release takes the link down");
+  assert.equal(oscTransport.clipLaunchActive, false, "and drops the Launch Clip with it");
+  push("/live/song/get/is_playing", 1); // the transport is back, and nothing changed
+  assert.equal(oscTransport.state.connected, true);
+  assert.equal(oscTransport.clipLaunchActive, true, "the new connection re-arms the Launch Clip");
+  assert.ok(launchListens().length > launchBefore, "and Live is asked for the Launch Clip listener again");
+  assert.ok(firedListens().length > firedBefore, 'the rule asks Live for its track listener again');
+  // Leave the singleton the way the other tests expect it.
+  oscTransport.state.available = true;
+  oscTransport.state.connected = true;
+  oscTransport.state.isPlaying = true;
+  oscTransport.send = realSend;
+});
+
+// A release that never had a link: the transport goes down before Live ever
+// answered, so there is no link-lost edge to notice. The release itself has
+// to say that the listeners are gone, or the rule stays mute for good.
+test("a release that never had a link still re-arms Launch Clip on the next connection", async () => {
+  setup();
+  await mapClip(G1, "Base", () => ({}));
+  const firedListens = () => sent.filter(([address]) => address === "/live/track/start_listen/fired_slot_index");
+  const firedBefore = firedListens().length;
+  assert.ok(firedBefore >= 1, "the rule listens to its track");
+  oscTransport.state.connected = false; // the link never came up
+  oscTransport.dispose();
+  push("/live/song/get/is_playing", 1); // the transport is back
+  assert.ok(firedListens().length > firedBefore, 'the rule asks Live for its track listener again');
+  // Leave the singleton the way the other tests expect it.
+  oscTransport.state.available = true;
+  oscTransport.state.connected = true;
+  oscTransport.state.isPlaying = true;
   oscTransport.send = realSend;
 });

@@ -50,6 +50,9 @@ export class RecordingTransport extends EventEmitter {
   private operation: Operation | null = null;
   /** The metronome is its own lane: a click change never waits behind, nor blocks, a REC operation. */
   private metronomeOperation: Operation | null = null;
+  /** The note lane: bounded read-only observations for the take-lane mark.
+   * A note read never takes the transport-wide operation slot. */
+  private readonly noteReads = new Set<Operation>();
   private preRollProgress: PreRollProgress | null = null;
   private readonly observations = {
     recordMode: empty<boolean>(), isPlaying: empty<boolean>(),
@@ -110,8 +113,10 @@ export class RecordingTransport extends EventEmitter {
   }
 
   public invalidate(): void {
-    this.operation?.abort.abort(new Error('AbletonOSC lost before recording state was observed'));
-    this.metronomeOperation?.abort.abort(new Error('AbletonOSC lost before recording state was observed'));
+    const lost = new Error('AbletonOSC lost before recording state was observed');
+    this.operation?.abort.abort(lost);
+    this.metronomeOperation?.abort.abort(lost);
+    for (const note of this.noteReads) note.abort.abort(lost);
     this.preRollProgress = null;
     this.observations.recordMode = empty(); this.observations.isPlaying = empty();
     this.observations.songTimeBeats = empty(); this.observations.metronome = empty();
@@ -125,6 +130,10 @@ export class RecordingTransport extends EventEmitter {
       this.operation?.abort.abort(error);
     }
     if (address === REC.setMetronome || address === getters.metronome) this.metronomeOperation?.abort.abort(error);
+    // A failed getter leaves a note read without evidence: retire it alone.
+    if (address === getters.recordMode || address === getters.isPlaying) {
+      for (const note of this.noteReads) note.abort.abort(error);
+    }
   }
 
   public async readState(): Promise<RecordingTransportState> {
@@ -133,6 +142,93 @@ export class RecordingTransport extends EventEmitter {
       await this.wait(operation, Object.keys(getters) as Field[], () => true, () => this.requestState(), false);
       return this.snapshot();
     });
+  }
+
+  /** One bounded position read on its own lane.
+   *
+   * A marker tap must never take the transport-wide operation slot: REC keeps
+   * running while the position is observed, and a read never cancels a write.
+   * The reply is anonymous UDP, so a fresh observation is evidence of the
+   * position, never an acknowledgement of this request. The previous cached
+   * value is never reused, not even one millisecond old.
+   */
+  public async readPosition(signal?: AbortSignal): Promise<{ value: number; observedAt: number }> {
+    if (!this.link.isConnected()) throw new Error('AbletonOSC is not connected');
+    const revision = this.revision;
+    const abort = new AbortController();
+    const cancel = () => abort.abort(signal?.reason ?? Error('Position read was canceled'));
+    if (signal?.aborted) cancel(); else signal?.addEventListener('abort', cancel, { once: true });
+    try {
+      return await new Promise<{ value: number; observedAt: number }>((resolve, reject) => {
+        let done = false;
+        const finish = (error?: unknown, value?: { value: number; observedAt: number }) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          this.off('observation', observed);
+          abort.signal.removeEventListener('abort', cancelled);
+          if (error !== undefined) reject(error); else resolve(value as { value: number; observedAt: number });
+        };
+        const cancelled = () => finish(abort.signal.reason);
+        const observed = () => {
+          if (done || abort.signal.aborted) return;
+          if (!this.link.isConnected()) { finish(new Error('AbletonOSC lost before the position was observed')); return; }
+          const field = this.observations.songTimeBeats;
+          if (field.revision <= revision || field.observedAt === null || field.value === null) return;
+          finish(undefined, { value: field.value, observedAt: field.observedAt });
+        };
+        const timer = setTimeout(() => finish(new Error('Requested recording state was not observed within 2000 ms')), RECORDING_CONFIRM_MS);
+        this.on('observation', observed);
+        abort.signal.addEventListener('abort', cancelled, { once: true });
+        if (abort.signal.aborted) cancelled();
+        else { try { this.link.send(getters.songTimeBeats); } catch (error) { finish(error); } }
+      });
+    } finally {
+      signal?.removeEventListener('abort', cancel);
+    }
+  }
+
+  /** One bounded, read-only observation for the take-lane note lane.
+   *
+   * A note read owns no transport-wide slot: a REC write keeps running while
+   * it waits, and this read never writes. Only the two getters and the usual
+   * record-mode listener are requested. The reply is anonymous UDP, so a
+   * fresh observation is evidence of the state, never an acknowledgement of
+   * this request. A cached value is never reused, not even one millisecond
+   * old: both fields must be observed again after this read begins.
+   */
+  public async readNoteState(signal?: AbortSignal): Promise<RecordingTransportState> {
+    const operation: Operation = { name: 'note', abort: new AbortController() };
+    const forward = () => operation.abort.abort(signal?.reason ?? Error('REC:UNKNOWN'));
+    if (signal?.aborted) forward(); else signal?.addEventListener('abort', forward, { once: true });
+    // The state is captured together with the observation that satisfied the
+    // wait. A concurrent write may invalidate the fields a moment later, and
+    // the evidence of this read stays the evidence it observed.
+    let observed: RecordingTransportState | null = null;
+    const capture = () => { observed = this.snapshot(); };
+    this.on('observation', capture);
+    this.noteReads.add(operation);
+    try {
+      if (!this.link.isConnected()) throw Error('REC:CONNECTION');
+      await this.wait(operation, ['recordMode', 'isPlaying'], () => true,
+        () => this.sendBatch([[REC.listenRecordMode], [REC.getRecordMode], [GET.isPlaying]]), false);
+      if (operation.abort.signal.aborted) throw operation.abort.signal.reason;
+      return observed ?? this.snapshot();
+    } catch (error) {
+      throw this.noteFailure(error);
+    } finally {
+      this.off('observation', capture);
+      this.noteReads.delete(operation);
+      signal?.removeEventListener('abort', forward);
+    }
+  }
+
+  /** A note read never leaks an internal error: an unobserved state is
+   * REC:UNKNOWN and a lost link is REC:CONNECTION. */
+  private noteFailure(error: unknown): Error {
+    if (error instanceof Error && error.message.startsWith('REC:')) return error;
+    if (!this.link.isConnected()) return Error('REC:CONNECTION');
+    return Error('REC:UNKNOWN');
   }
 
   /** A user action may supersede a passive read, never another write. */
@@ -310,7 +406,7 @@ export class RecordingTransport extends EventEmitter {
   }
 
   private current(operation: Operation): boolean {
-    return this.operation === operation || this.metronomeOperation === operation;
+    return this.operation === operation || this.metronomeOperation === operation || this.noteReads.has(operation);
   }
 
   private sendBatch(packets: Packet[]): void {

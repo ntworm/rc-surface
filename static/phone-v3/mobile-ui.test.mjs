@@ -810,3 +810,35 @@ test('Performance has one centred Toggles group and both XY trail layers',()=>{
   assert.doesNotMatch(html,/LFO [15][–-][48]|>STUTTER CONFIG</);
   assert.match(css,/perf-toggles > \.section-head[^}]*justify-content: center/);
 });
+
+test('the REC page keeps one instance of every capture control and a shared range',()=>{
+  const html=read('index.html');
+  // The compact Record mode and the Arrangement share the same controls:
+  // a duplicated control is a second way to say the same thing.
+  for (const id of ['rec-record-mode','rec-arrangement-mode','rec-clip-mode','rec-start-marker',
+    'rec-end-marker','rec-range-row','rec-click','rec-start','rec-stop',
+    'rec-pre-roll-inline','rec-passages','rec-track-grid']) {
+    assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,`${id} must exist exactly once`);
+  }
+  // The page owns no marker action: the marker is created in Live. The
+  // retired add-marker control and its free and status variants are gone.
+  assert.doesNotMatch(html,/id="rec-(?:add-marker|marker-free|free-marker|marker-status)/,'the page owns no marker action');
+  // The shared range and the capture band live outside the editor panel,
+  // which the Record mode hides.
+  assert.ok(html.indexOf('id="rec-range-row"')<html.indexOf('id="rec-arrangement-panel"'));
+  assert.ok(html.indexOf('id="rec-capture-band"')<html.indexOf('id="rec-content"'));
+  // The CLICK of the header keeps a fixed box per language and shows the
+  // whole status of the metronome in every language: no ellipsis hides ON,
+  // OFF or the unknown.
+  const header=read('style.css');
+  const english=cssBlock(header,'html[lang="en"] .rec-header-click');
+  const portuguese=cssBlock(header,'html[lang="pt-BR"] .rec-header-click');
+  assert.match(english,/width:\s*100px/);
+  assert.match(portuguese,/width:\s*140px/);
+  const click=cssBlock(header,'.rec-header-click');
+  assert.match(click,/white-space:\s*nowrap/);
+  assert.doesNotMatch(click,/text-overflow:\s*ellipsis/);
+  // The destinations and the CLICK live in the header of the page.
+  assert.match(html,/id="rec-header-modes"[^>]*class="rec-header-modes"[^>]*role="group"/);
+  assert.match(html,/id="rec-click"[^>]*class="sync-mode-btn rec-header-click"/);
+});

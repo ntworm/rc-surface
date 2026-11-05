@@ -38,10 +38,10 @@ faixa de cima:
 | SNS | Sensores: leitura ao vivo de movimento e orientação |
 | AUD | Microfone e as entradas de análise de áudio |
 | VID | Câmera, rastreio de mãos e poses estáticas aprendidas |
-| REC | Marcadores/Loop/pré-roll do Arrangement ou CLIP vazio da Session |
+| REC | Estação de gravação: três visões locais (Gravar, Arrangement, Clip) sobre uma barra de captura compartilhada e uma barra de modo fixa |
 
 A faixa de cima também tem o modos **MAP / AUT / CFG**, perto do indicador de BPM, e mais
-**SYNC**, **STAGE** e **CALIBRAR** contextual em SNS/AUD/VID. Veja
+**SYNC**, **TELA CHEIA** e **CALIBRAR** contextual em SNS/AUD/VID. Veja
 [§ 7 Controles da barra superior](#7-controles-da-barra-superior) e
 [§ 8 Modo MAP](#8-modo-map--mapeamento-pelo-celular).
 
@@ -248,27 +248,28 @@ câmera anteriores à calibração. Falha/cancelamento do vídeo desfaz seus aju
 Recalibrar substitui a calibração anterior daquela aba. O botão não ativa
 microfone/câmera sozinho. Isso não é calibração de latência.
 
-### STAGE
+### TELA CHEIA
 
-Alterna o **modo palco**:
+Alterna o **modo tela cheia**:
 
-- Esconde a barra de cima, as abas e os rótulos — tudo menos os próprios
-  controles de performance.
-- Pede tela cheia ao navegador, para a interface ocupar o aparelho inteiro e
-  nada mais roubar o foco no meio do set.
-- Aperte de novo — ou saia da tela cheia por qualquer gesto do sistema — para
-  sair.
+- Pede tela cheia ao navegador, para a interface ocupar o aparelho inteiro.
+- Mantém na tela o cabeçalho compacto, as abas, o status e o transporte; some
+  só o que não é essencial: o título da seção, a dica e o readout do XY.
+- O controle do cabeçalho é um ícone fixo de expandir/recolher, sem nenhuma
+  palavra visível. O título e o nome de acessibilidade dele são localizados,
+  então um leitor de tela anuncia no seu idioma. Aperte o mesmo ícone de novo —
+  ou saia da tela cheia pelo navegador ou pelo sistema — para sair do modo.
 
-Use o modo palco tocando: ele tira a moldura e dá a maior superfície possível
-para os controles.
+Use o modo tela cheia tocando: dá a maior superfície possível para os
+controles. Outros aplicativos ainda podem interromper a tela cheia.
 
 > **Limitação conhecida — 12/07/2026:** ligar o sensor de áudio ou a câmera com
-> o modo palco em tela cheia pode fazer o Chrome sair da tela cheia. No Samsung
+> o modo tela cheia pode fazer o Chrome sair da tela cheia. No Samsung
 > S25F testado, a tela cheia pode não voltar a ficar disponível até a aba do
 > controlador ser fechada e aberta de novo. Quando der, ligue áudio e câmera
-> antes de entrar no modo palco. Quando a tela cheia cai desse jeito, o modo
-> palco agora sai junto, em vez de deixar um botão **SAIR** numa página que já
-> não está em tela cheia.
+> antes de entrar no modo tela cheia. Quando a tela cheia cai desse jeito, o
+> modo agora sai junto, em vez de deixar o ícone de recolher ATIVO numa
+> página que já não está em tela cheia.
 
 ### Cabeçalho contextual e ajustes do TRN
 
@@ -276,8 +277,9 @@ O cabeçalho mostra só o que age na aba atual: **AUT** no PERF (loops do XY 1/X
 2), **CFG** no PERF e no MIX, e **MAP** em todas as abas menos REC. Sair de uma
 aba desliga o modo que ela não aceita; um MAP aberto fecha ao entrar no REC, sem
 mudar mappings. A composição original das abas e do transporte permanece; controles comuns
-mantêm a posição entre abas. **STAGE/SAIR** e status continuam visíveis, inclusive no
-Stage Mode e em telas estreitas na horizontal.
+mantêm a posição entre abas. O ícone de expandir/recolher da tela cheia e o
+status continuam visíveis, inclusive no modo tela cheia e em telas estreitas
+na horizontal.
 
 **TRN** abre o Transporte Lite. A primeira linha tem **PLAY**, **STOP**,
 **PREV** e **NEXT**; a segunda tem **CLICK**, **QUANTIZAÇÃO GLOBAL** e
@@ -564,7 +566,7 @@ A aba MIX tem oito knobs (`knob-1`..`knob-8`) e oito faders
 (`fader-1`..`fader-8`).
 
 Os dois painéis dividem igualmente a largura e a altura disponíveis, inclusive
-no STAGE. Knobs planos com arco ficam em uma grade 4×2; a faixa de arrasto não muda.
+na TELA CHEIA. Knobs planos com arco ficam em uma grade 4×2; a faixa de arrasto não muda.
 IDs 1–6 e perfis antigos continuam compatíveis; 7–8 são controles adicionais.
 Use Tab e setas (Shift para passos maiores), Home/End para os limites. O reset
 do knob volta a 50%; o reset dos faders é descrito abaixo.
@@ -716,8 +718,10 @@ segundos. Valores antigos são descartados e deixam de ser mapeados.
 - `error` — a chamada de permissão falhou; tente novamente pelo botão.
 
 Movimento e orientação são rastreados de forma independente: uma API negada
-não afeta a outra. O pedido de permissão só aparece em navegadores que o
-exigem (permissão por gesto, estilo iOS).
+não afeta a outra. Os sensores começam automaticamente quando o navegador
+permite. Se o acesso precisar de um toque, abra **SNS**, toque no **⚙** da
+barra de cima e depois em **Ativar sensores**. Você pode repetir depois de uma
+recusa ou de um erro. Câmera e microfone exigem permissões próprias.
 
 ### MOVIMENTO
 
@@ -764,7 +768,7 @@ Em janelas maiores no desktop, AUD usa dials maiores e campos distribuídos pela
 área dos detectores de áudio. Os ponteiros acompanham o arco do valor ao redor do centro do dial.
 VID prioriza a largura da câmera, com os controles no topo e uma prévia proporcional
 ao lado de três cartões de poses empilhados, com botões de tamanho limitado. Telas baixas em
-paisagem mantêm a organização compacta do celular, tanto normal quanto em STAGE.
+paisagem mantêm a organização compacta do celular, tanto normal quanto em TELA CHEIA.
 
 ### Entrada de áudio
 
@@ -1186,59 +1190,130 @@ VID inicia com três poses aprendidas. **+ ADICIONAR POSE**, ao lado do seletor 
 
 ## 16. REC: Arrangement / CLIP
 
-O knob de volume de cada faixa ajusta o mixer nativo, não o ganho de entrada.
-Arraste verticalmente ou use as setas; duplo-clique restaura o padrão do parâmetro
-no Live. O arco ao redor mostra o nível normalizado sem rótulo numérico; teclado
-e leitor de tela mantêm a indicação em porcentagem, não dB. Valor desconhecido ou
-vencido bloqueia o controle. Mudanças externas aparecem na próxima leitura;
-troca de conexão ou Set cancela o gesto. STOP mantém prioridade sobre volume.
-A leitura nativa de volume continua durante play, REC e pré-roll, independente
-de timeout em outras leituras do transporte. ARM/desarme exigem transporte
-parado: armar durante gravação começaria a gravar aquela track no Live.
+O REC lista as tracks do Live como linhas nativas, na ordem em que o Live as
+informa. Cada linha traz seus próprios botões **ARM**, **SOLO** e **MUTE** e um
+fader horizontal para o nível nativo do mixer daquela track. O fader move o
+próprio parâmetro de volume do Live, não o ganho de entrada: arraste na
+horizontal e o duplo-clique restaura o valor padrão desse parâmetro no Live.
+O fader não tem mostrador numérico permanente; a posição horizontal mostra o
+nível, e teclado e leitor de tela informam o nível normalizado em porcentagem,
+não dB. Valor desconhecido ou vencido bloqueia o fader. Mudanças externas
+aparecem na próxima leitura; troca de conexão ou Set cancela o gesto. STOP
+mantém prioridade sobre o volume. A leitura nativa de volume continua
+durante play, REC e pré-roll, independente de timeout em outras leituras do
+transporte.
 
-Escolha **ARRANGEMENT / CLIP** dentro de REC. Abrir a página, trocar o destino,
-selecionar cena ou abrir CFG nunca arma faixa nem inicia playback/gravação.
-A troca de destino fica bloqueada enquanto existe tentativa REC própria. STOP
+Tracks de grupo ganham sua própria linha, com um controle de expansão local.
+Expandir mostra os membros do grupo apenas no celular: a estrutura de grupo do
+Live nunca é alterada, e o RC Surface nunca cria grupo. Na linha de um grupo,
+**SOLO**, **MUTE** e o fader agem sobre o próprio grupo, igual à track de grupo
+do Live, e não são escritos em cada membro. **ARM** é a exceção: armar uma
+linha de grupo mira os descendentes armáveis observados dentro daquele grupo,
+porque o Live não expõe um único controle de arm para o grupo.
+
+**ARM ALL** arma todas as tracks armáveis observadas de uma vez. **ARM MULTI**
+(o padrão) mantém outras entradas armadas; **ARM EXCLUSIVE** desarma as
+outras quando você aperta o ARM de uma track. Essa escolha é regra do próprio
+RC Surface: a preferência global de arm do Live nunca é mudada, e um resultado
+incompatível do host é informado em vez de repetido.
+
+Armar exige uma observação fresca de transporte parado via AbletonOSC. Armar
+com o transporte rodando começaria a gravar aquela track no Live, então um
+estado de transporte desconhecido ou vencido bloqueia o pedido.
+
+O **CLICK** liga e desliga o metrônomo do Live, e continua valendo durante
+montagem, pré-roll, REC e playback. A chave é independente do resto da barra e
+fica disponível sempre que o estado observado é recente e conhecido. A API
+atual da extensão não expõe o nível do metrônomo, então não há controle de
+nível ao lado do **CLICK**: ajuste o nível real no Live, nunca outro valor por
+procuração.
+
+O REC precisa do AbletonOSC para o transporte e o estado de gravação; a API da
+extensão sozinha não comanda isso. As linhas nativas, a expansão de grupo e a
+prévia de waveform ainda exigem aceite no seu conjunto com Live.
+
+O REC é uma página global com três visões **locais**:
+**GRAVAR / ARRANGEMENT / CLIP**, com **GRAVAR** como padrão. Os três modos e o
+**CLICK** ficam no cabeçalho da página REC, e uma barra de captura fixa
+(**REC / STOP**) é compartilhada pelas três. Abrir a página, trocar de visão,
+selecionar cena ou abrir CFG nunca arma track nem inicia playback/gravação. A
+troca de visão fica bloqueada enquanto existe tentativa REC própria; STOP
 segue essa posse. Nomes, ARM MULTI/EXCLUSIVE e SOLO/MUTE são compartilhados.
+
+**GRAVAR** mostra a barra de captura compartilhada — **REC** e **STOP** — junto
+com a configuração da captura (**PRÉ-ROLL** **OFF / 1 / 2 / 4**,
+**OFF** por padrão; **PASSES** **1 / 2 / 3 / ∞**, uma passagem por padrão;
+**INÍCIO** e **FIM**), as linhas nativas de track e a lista compacta de
+marcadores. No celular deitado, só a lista de tracks rola na vertical; as
+faixas acima dela ficam no lugar. Esta visão não lê clips, nem take lanes, nem
+waveforms — isso pertence ao **ARRANGEMENT**. As tracks e os marcadores usados
+na captura são preparados no Live: o RC Surface nunca cria track e nunca cria
+marcador. **ARRANGEMENT** é o editor do Arrangement (timeline de marcadores e
+clips, clips nativos, foco de takes); **CLIP** é a visão já existente de
+gravação na Session. Os controles de captura pertencem à página REC, e não a
+uma visão só, e apenas o **REC** usa o início e o fim escolhidos para abrir
+uma captura.
+
+Os controles de modo e gravação mantêm a posição quando você troca de visão.
+GRAVAR e ARRANGEMENT compartilham a régua compacta de marcadores; as tracks
+rolam abaixo dela.
 
 ### Arrangement
 
-Crie os marcadores do Arrangement no Live antes, depois abra **REC** com o
-playback parado:
+Crie os marcadores do Arrangement no Live antes — o RC Surface não tem
+controle que crie marcador, e os marcadores que você preparou aparecem no
+catálogo — depois abra **REC** com o playback parado:
 
-1. Arme as entradas nos cartões de tracks abaixo da timeline. Cada cartão
-   mostra **ARM / SOLO / MUTE** observados. **ARM MULTI** é o padrão e mantém
-   outras entradas armadas; **ARM EXCLUSIVE** desarma outras tracks somente
-   quando você aperta ARM de uma track. Trocar o modo ou dar um toque simples no nome não
-   altera o Live. Grupos têm SOLO/MUTE, mas não podem ser armados. A preferência
+1. Arme as entradas nas linhas de track do REC. Cada linha mostra
+   **ARM / SOLO / MUTE** observados, e **ARM ALL** arma todas as tracks
+   armáveis de uma vez. **ARM MULTI** é o padrão e mantém outras entradas
+   armadas; **ARM EXCLUSIVE** desarma outras tracks somente quando você aperta
+   ARM de uma track. Trocar o modo ou dar um toque simples no nome não
+   altera o Live. Um grupo não é armado como um objeto só: armar a linha de um
+   grupo arma os descendentes armáveis observados dentro dele. A preferência
    global de arm do Live não muda; um resultado incompatível do host é informado.
    ARM confirma o conjunto de entradas armáveis sem esperar Loop, compasso ou click.
    Se a confirmação falhar, os estados ARM ficam desconhecidos até nova leitura;
    a escrita pode já ter sido aplicada. A superfície não a repete automaticamente.
-2. Comece na posição fixa **Aqui**, use **Usar cursor atual** para fixar outra
-   posição ou escolha um marcador inicial. Gravação livre não exige marcadores.
-   Cada marcador mostra **compasso.beat** acima
-   do nome. Use **Zoom** e a rolagem para inspecionar os marcadores e a posição
-   observada do playback. Uma grade fina de compassos e beats fica atrás dos
+2. Escolha o início da captura na linha **INÍCIO** da configuração da captura:
+   a posição fixa **Aqui**, a posição captada por **Usar cursor atual** ou um
+   marcador escolhido na lista. Cada marcador mostra **compasso.beat** acima
+   do nome.
+   Escolher um marcador é uma seleção local: nunca procura posição no
+   transporte do Live nem inicia playback ou gravação. Tocar no marcador que já
+   é o início atual prepara o próximo toque para mover o início; tocar em um
+   marcador anterior move o início; tocar em um marcador posterior o escolhe
+   como fim.
+   Use **Zoom** e a rolagem para inspecionar os marcadores, os clips
+   nativos do Arrangement e a posição observada do playback. Marcadores e clips
+   dividem a mesma timeline, então aproximar e rolar movem os dois juntos.
+   Uma grade fina de compassos e beats fica atrás dos
    marcadores, com o número do compasso embaixo; os beats aparecem ao aproximar
    e os números rareiam ao afastar.
    A lista segue o tempo da timeline, inclusive marcadores novos no início, com
    ordem estável nos empates e nomes completos. Compasso temporariamente atrasado
    mantém o último display confirmado com indicador pontilhado, sem autorizar REC.
-   Salto de marcador confirma transporte parado/record off e identidade/monitor
-   selecionado sem esperar estados do mixer sem relação. REC confirma o conjunto.
-3. Deixe **FIM = Até STOP** para gravar livremente. Escolher um marcador final
-   depois do início libera **PASSAGENS**: 1–10 passagens no total ou ∞ até STOP.
-   Um trecho novo começa com uma passagem. Fim inválido/removido bloqueia REC
-   sem mudar silenciosamente para gravação livre. Coloque o fim depois da
-   ressonância desejada dos pratos/instrumentos.
-4. Escolha **PRÉ-ROLL OFF / 1 / 2 / 4** compassos e aperte **REC**. OFF é o
-   padrão e começa diretamente no marcador. As outras opções tocam os compassos
-   anteriores com click até o Punch In nativo abrir a captura no marcador.
+   REC confirma o conjunto inteiro antes de abrir a captura.
+3. A barra de captura traz **REC**, **STOP**, **PRÉ-ROLL** e **PASSES**.
+   **PRÉ-ROLL** alterna **OFF / 1 / 2 / 4** compassos, com **OFF**
+   como padrão, e **PASSES** alterna **1 / 2 / 3 / ∞**, em que ∞ são
+   passagens ilimitadas até você apertar **STOP**. **PASSES** fica disponível
+   quando o fim é limitado — **Próximo marcador** ou um marcador explícito —,
+   e o padrão é uma passagem. Uma contagem fora desses valores é normalizada
+   para **1**, e a página avisa.
+   A linha **FIM** oferece **Próximo marcador** (o primeiro marcador depois do
+   início escolhido), um marcador explícito ou **Até STOP** para gravação sem
+   fim definido. Início ou fim ausente, ambíguo ou inválido, ou um fim em
+   **Próximo marcador** sem marcador seguinte, bloqueiam REC e dizem o motivo;
+   nunca mudam silenciosamente para gravação sem fim definido. Coloque o fim
+   depois da ressonância desejada dos pratos/instrumentos.
+4. Aperte **REC**. Com **PRÉ-ROLL OFF** a captura abre direto no início
+   selecionado. As outras opções tocam os compassos anteriores com click até
+   o Punch In nativo abrir a captura no início selecionado.
 5. Aperte **STOP** para parar playback e gravação. Suas tracks permanecem armadas,
    permitindo novos takes consecutivos sem precisar rearmar.
 
-REC grava exatamente as tracks armadas mostradas nos cartões. Fica desabilitado
+REC grava exatamente as tracks armadas mostradas nas linhas. Fica desabilitado
 sem entradas armadas e confirma o conjunto inteiro antes de gravar. ARM fica
 bloqueado durante gravação ou pré-roll; SOLO/MUTE continuam disponíveis para
 escuta. Uma track de terceiro armada depois nunca entra na limpeza do STOP.
@@ -1250,34 +1325,37 @@ nas pontas nem caracteres de controle. Só o nome daquela identidade é alterado
 renomeação externa, faixa substituída/reordenada ou troca de Set rejeita a edição
 antiga. Use STOP da superfície para encerrar REC/pré-roll antes de renomear.
 
-Para ouvir, clique em um marcador na faixa ou escolha o marcador inicial e use
-**Play no cabeçalho**. A seleção usa o salto nativo de marcador do Live para
-que Play comece nesse marcador. Selecionar posiciona o transporte parado sem
-iniciar playback nem gravação. A faixa serve de referência de marcadores e
-posição, sem waveform de áudio nem seleção de take lanes. Um marcador movido
-ou removido precisa ser escolhido novamente.
+A faixa de marcadores é referência do trecho de captura: escolher um marcador
+ali só muda o que o **REC** vai capturar, e nunca move o transporte do Live nem
+inicia playback ou gravação. Os clips em take lanes são inspecionados na visão
+**TAKES** daquela track, aberta pela linha da track ou pelo clip do
+Arrangement que você escolheu. Um marcador movido ou removido precisa ser
+escolhido novamente.
 
-Gravação livre desliga o Arrangement Loop. Gravação limitada confirma o trecho
+Gravação livre — uma captura **Até STOP** — desliga o Arrangement Loop.
+Gravação limitada confirma o trecho
 e o Punch Out nativo antes de começar. Uma passagem deixa Loop desligado;
 repetição finita desliga Loop na última passagem observada e confirma STOP após
 o limite nativo de captura. Pré-roll só antes da primeira passagem. O plano
 aceito roda no computador; reconectar o celular nunca repete REC. Posição
 ausente/ambígua não confirma conclusão. Perda de OSC ou troca de Set aposenta
 o plano; a gravação pode continuar, então confira o Live e use STOP.
-STOP preserva início fixo, trecho, quantidade e ARM para outro REC. O Live
-guarda as take lanes; escolha/comping ficam no computador. Configure monitoração
-lá; para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
+STOP preserva início fixo, trecho, quantidade e ARM para outro REC. Enquanto a
+captura é propriedade da tentativa, o trecho fica congelado: marcadores criados
+depois não mudam o trecho já em captura. O Live
+guarda as take lanes; comping e edição de áudio ficam no computador. Configure
+monitoração lá; para ouvir o Arrangement, escolha Monitor Auto/Off em vez de In.
 
 Pré-roll é uma preferência salva neste navegador, separada do count-in nativo
 do Live. Usa a fórmula de compasso observada para calcular a antecipação;
-é preciso haver tempo suficiente antes do marcador. Não resolve mudanças
+é preciso haver tempo suficiente antes do início. Não resolve mudanças
 anteriores de fórmula a partir de um mapa de compassos. REC confirma transporte
-parado e record mode desligado, liga Punch In nativo no marcador e inicia
+parado e record mode desligado, liga Punch In nativo no início e inicia
 playback da posição anterior antes de ligar record mode. Se o playback já
-chegou ao marcador antes dessa confirmação, aborta em vez de iniciar captura
+chegou ao início antes dessa confirmação, aborta em vez de iniciar captura
 atrasada. O host acompanha o pré-roll depois de devolver o comando, portanto
 quatro compassos não ficam limitados pelo timeout de comando do celular.
-Na primeira passagem observada pelo marcador, restaura o click original, a menos
+Na primeira passagem observada pelo início, restaura o click original, a menos
 que você tenha mudado o **CLICK** durante o pré-roll: sua escolha é mantida.
 STOP restaura somente click, Punch In e início temporário do Loop ainda
 pertencentes à tentativa, mantendo as entradas armadas; o início temporário só
@@ -1319,12 +1397,94 @@ O fluxo OSC/SDK tem regressões offline; limites de captura do Punch In nativo,
 preferências de count-in/metrônomo, monitoração de áudio, preservação dos takes
 e toque no celular ainda exigem aceitação no seu conjunto com Live.
 
+### Clips nativos do Arrangement e prévia de waveform
+
+Os clips do Arrangement são desenhados na mesma timeline dos marcadores, nos
+intervalos que o Live realmente informa, então cada clip fica onde pertence.
+Nomes de clips, nomes de lanes e posições de início e fim vêm do Live, nunca
+de uma estimativa.
+
+- **Metadados limitados:** os detalhes dos clips são lidos por track, em
+  páginas de até 64 clips. **Carregar** (ou **Atualizar**) lê a track que
+  você está vendo, **Mais** pede a próxima página e **Voltar** retorna à
+  anterior. A página nunca varre o Set inteiro a cada polling, então um Set
+  grande não transforma uma atualização em varredura completa.
+- **Atualização do catálogo:** nomes de clips, intervalos e o catálogo de takes
+  mostram a última leitura explícita; nada acompanha as edições de clips no
+  Live. Se você renomear, mover ou apagar um clip no Live, use **Atualizar**
+  (ou **Carregar**), ou recarregue a página, e escolha o clip de novo — a
+  escolha anterior não é mais a atual. Enquanto uma track está em foco para
+  inspeção de takes, edições feitas no Live não são observadas antes dessa nova
+  leitura.
+- **Prévia de waveform:** a waveform é uma ação explícita sobre um clip de
+  áudio do Arrangement visível, e somente com o transporte parado. A extensão
+  renderiza o intervalo selecionado antes dos efeitos no próprio armazenamento
+  temporário e mostra os picos que voltaram; nada é inventado e nenhum arquivo
+  de sample original é lido. O intervalo visível tem limite de 128 beats, então
+  um clip longo precisa de uma faixa mais estreita. Nada é renderizado em
+  segundo plano: não há prévia durante playback ou gravação, e nenhum polling
+  dispara uma.
+- **Limites e erros:** quando o clip passa do limite, não tem áudio
+  renderizável ou o render falha, o clip mantém nome e intervalo nativos na
+  timeline. Só a waveform falta.
+
+### Notas em clips de take lanes
+
+Em **ARRANGEMENT**, cada linha de track tem uma ação **TAKES**: ela abre um
+foco exclusivo naquela track, dentro da mesma página REC, com todos os takes
+nativos daquela track. Tocar num clip nativo do Arrangement faz o mesmo, e o
+foco fica restrito ao intervalo daquele clip. A visão geral mantém o painel de
+takes oculto até você abrir um foco. As outras tracks ficam escondidas
+enquanto você está lá, o transporte e o **CLICK** continuam ao alcance, e
+**Todas as tracks** devolve a lista completa. As lanes mantêm seus nomes
+nativos, e os clips mantêm os intervalos que o Live informa, inclusive
+intervalos que se sobrepõem. A visão nunca adivinha a ordem das passagens e
+começa sem take escolhido.
+
+- **Escolher um take:** tocar num take só o seleciona visualmente. Não toca,
+  não faz audition, não move nem reescreve nada.
+- **Duas faixas:** **CLIP INTEIRO** cobre o intervalo completo da origem que você
+  está olhando: o clip inteiro do Arrangement que você abriu, ou, na visão da
+  própria track, o intervalo inteiro do take que você escolheu
+  explicitamente.
+  **TRECHO** cobre a parte dele que você está olhando. As duas são só
+  inspeção. **TRECHO** nunca edita nem combina áudio, nunca faz punch in e
+  nunca cria loop.
+- **Anotando takes:** toque em **GOOD** ou **REVIEW** para incluir o prefixo
+  `[RC:GOOD] ` ou `[RC:REVIEW] ` no nome do clip do take que você escolheu
+  explicitamente, preservando o restante do nome. Toque em **SEM NOTA** para
+  remover o prefixo conhecido em uma ação explícita e deliberada. A marca é
+  uma etiqueta de nome nesse clip, então depois de recarregar você escolhe o
+  clip de novo.
+- **Escritas protegidas:** alterar o nome de um clip exige transporte observado
+  como parado e recente, modo de gravação desligado, nenhuma tentativa REC ativa
+  e permissão de controller/admin. Antes de escrever, RC Surface confere no
+  Live a track, a lane, o nome e o intervalo do clip escolhido. Alvos de
+  track/lane/clip vencidos ou alterados, troca de sessão/Set ou transporte fora
+  do estado parado rejeitam a escrita e exigem nova leitura antes de qualquer
+  ação. Se o resultado de uma escrita ficar sem confirmação ou expirar, confira
+  o nome no Live; nada é reexecutado ou repetido automaticamente.
+- **Independência da track principal:** qualquer cópia de clip existente na lane
+  principal do Arrangement permanece independente. A marcação é apenas uma
+  etiqueta no nome: ela não promove um take para a lane principal, não faz
+  comp, não mantém nem compara takes, não extrai áudio nem atesta a qualidade
+  do áudio gravado.
+- **Sem audition de um take:** o botão **OUVIR** fica indisponível aqui, porque
+  nenhuma API disponível toca a take lane que você escolheu. Escute, faça comp
+  e promova no Live; o áudio da lane principal do Arrangement não é o take
+  selecionado. A prévia de waveform do Arrangement acima é outra coisa: ela
+  desenha clips do Arrangement, nunca uma take lane, e não é reprodução de
+  áudio.
+- **Persistência no Set:** a persistência dos nomes nativos exige salvar o Set
+  manualmente no Live (**Save Set**); a conferência ao salvar e reabrir depende
+  de aceite humano.
 
 ### CLIP: gravar uma cena vazia da Session
 
-1. Arme as entradas nos cards compartilhados. Escolha **CLIP** e selecione
-   explicitamente uma linha de cena. Toda faixa armada precisa ter slot vazio
-   nessa mesma cena. Clips existentes são referência; selecioná-los não dispara.
+1. Arme as entradas nas linhas de track compartilhadas. Abra a visão **CLIP** e
+   selecione explicitamente uma linha de cena. Toda faixa armada precisa ter
+   slot vazio nessa mesma cena. Clips existentes são referência; selecioná-los
+   não dispara.
 2. Abra **CFG** para **1 / 2 / 4 / 8 / 16 compassos** (padrão 4) e quantização
    nativa: **Global / Nenhuma / 1 compasso / 1 beat** (padrão Global). São escolhas
    locais desta página, sem persistência em projeto. Global segue o Live; as outras
@@ -1342,7 +1502,7 @@ e toque no celular ainda exigem aceitação no seu conjunto com Live.
 
 A grade mostra até oito cenas por janela, com rolagem interna escura e botões
 anterior/próximo. Rolar não muda o conjunto armado. Pré-roll, marcadores/Loop do
-Arrangement e Punch In ficam ocultos e não são usados em CLIP. ARM e renomeação
+Arrangement e Punch In não são usados em CLIP. ARM e renomeação
 ficam bloqueados durante a tentativa própria; SOLO/MUTE são ações explícitas.
 
 STOP respeita a quantização nativa e pode mostrar **Parada pendente**; confirme
@@ -1361,7 +1521,7 @@ repetir parada, disparo ou limpeza na reconexão. Sem link, pare no Live.
 Quando Session substitui o playback do Arrangement, **VOLTAR AO ARR** aparece em
 REC. Após todas as faixas de Session confirmadas ociosas e gravação desligada,
 aperte para retornar explicitamente. O comando confirma o sinal nativo e só então
-seleciona ARRANGEMENT. Com transporte rodando, Arrangement continua na posição
+seleciona a visão **ARRANGEMENT**. Com transporte rodando, Arrangement continua na posição
 atual; não envia Pause/Play, move playhead, muda arm/Loop/Punch In nem apaga clips.
 Clip ativo/na fila/desconhecido bloqueia o retorno. Abrir REC, trocar destino ou
 parar clips nunca retorna automaticamente.
@@ -1369,8 +1529,10 @@ parar clips nunca retorna automaticamente.
 Os disparos multifaixa são pedidos OSC sequenciais, sem transação atômica no host.
 Falha parcial tenta parar somente os alvos emitidos cuja identidade e posse
 observada ainda estão confirmadas. A superfície não apaga nem sobrescreve clip
-existente. Este primeiro CLIP não tem overdub de clip existente, navegador de
-take lanes, audition ou seleção de comp. Gravação nativa de áudio/MIDI, duração,
+existente. A grade CLIP da Session não faz overdub de clips existentes,
+audition de áudio nem seleção de comp; a visão **TAKES** em REC refere-se
+aos nomes de clips das take lanes do Arrangement, de forma independente do alvo
+de gravação na Session. Gravação nativa de áudio/MIDI, duração,
 quantização e limites de captura ainda exigem aceite no seu Live; a prova
 automatizada usa mocks SDK/OSC.
 

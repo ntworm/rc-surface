@@ -9,10 +9,52 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import selfsigned from "selfsigned";
 import { getExtensionContext } from "../context.js";
-import { getLanAddresses, stripWslDrivePrefix } from "../util/helpers.js";
+import { stripWslDrivePrefix } from "../util/helpers.js";
+import { getNetworkSnapshot, type LanSnapshot } from "./lan-candidates.js";
 
 export let useHttps = false;
 export let httpsOptions: { key: Buffer; cert: Buffer } | null = null;
+
+type CertificateOptions = { key: Buffer; cert: Buffer };
+
+let certificateListener: ((options: CertificateOptions) => void) | null = null;
+
+/** Registers the listener that is told about every new certificate, so a
+ *  running server can take the new one without a restart. */
+export function onCertificateChange(
+  listener: ((options: { key: Buffer; cert: Buffer }) => void) | null,
+): void {
+  certificateListener = listener;
+}
+
+/** The addresses the certificate has to cover for this network: every real
+ *  adapter, and the one that was chosen even when it is virtual. */
+export function requiredCertAddresses(snapshot: LanSnapshot): string[] {
+  const addresses = new Set<string>();
+  for (const candidate of snapshot.candidates) {
+    if (candidate.kind === "virtual" || candidate.kind === "vpn") continue;
+    if (candidate.public) continue;
+    addresses.add(candidate.ip);
+  }
+  if (snapshot.selected) addresses.add(snapshot.selected.ip);
+  return [...addresses];
+}
+
+/** Keeps the addresses the certificate already names, adds the ones it now
+ *  needs, and forgets the oldest when there are too many. */
+export function mergeCertAddresses(
+  previous: readonly string[],
+  required: readonly string[],
+): string[] {
+  const kept = previous.filter(address => !required.includes(address));
+  return [...new Set([...kept, ...required])].slice(-32);
+}
+
+/** True when the certificate in use covers the address. */
+export function certificateCovers(address: string): boolean {
+  if (httpsOptions === null) return false;
+  return certCoversRequiredAltNames(httpsOptions.cert, [address]);
+}
 
 // selfsigned's SubjectAltNameEntry has type: 1|2|6|7, value?: string,
 // ip?: string. We re-export it so callers can typecheck without depending
@@ -165,12 +207,12 @@ function extractIpv4Sans(der: Uint8Array): string[] {
 export async function loadCerts(): Promise<void> {
   const extensionContext = getExtensionContext();
   const storageDir = extensionContext?.environment?.storageDirectory;
-  const lanIps = getLanAddresses();
-  const altNames = buildSubjectAltNames(lanIps);
+  const lanIps = requiredCertAddresses(getNetworkSnapshot());
+  const lanIpText = lanIps.join(", ") || "none";
 
   if (!storageDir) {
     console.warn("[ableton-rc-surface] storageDirectory unavailable, generating ephemeral HTTPS certs (will not persist)");
-    await generateAndApplyEphemeral(altNames);
+    await generateAndApplyEphemeral(lanIps);
     return;
   }
 
@@ -179,81 +221,165 @@ export async function loadCerts(): Promise<void> {
   const keyPath = path.join(certDir, "ableton-rc-server.key");
   const certPath = path.join(certDir, "ableton-rc-server.crt");
 
+  let persisted: CertificateOptions | null = null;
   try {
     const [key, cert] = await Promise.all([
       fs.readFile(keyPath),
       fs.readFile(certPath),
     ]);
-    if (!certCoversRequiredAltNames(cert, lanIps)) {
+    if (certCoversRequiredAltNames(cert, lanIps)) {
+      persisted = { key, cert };
+    } else {
       console.log(
-        `[ableton-rc-surface] persisted HTTPS cert missing LAN SAN (${lanIps.join(", ") || "none"}); regenerating`,
+        `[ableton-rc-surface] persisted HTTPS cert missing LAN SAN (${lanIpText}); regenerating`,
       );
-      throw new Error("cert_san_stale");
     }
-    httpsOptions = { key, cert };
+  } catch {
+    // The files do not exist yet: the certificate is generated below.
+  }
+
+  if (persisted) {
+    httpsOptions = persisted;
     useHttps = true;
     console.log(`[ableton-rc-surface] loaded HTTPS certs from ${certDir}`);
     return;
-  } catch {
-    // Files don't exist or SAN is stale -- generate and persist.
   }
 
   try {
+    // The addresses the old certificate named stay in the new one: a phone
+    // that trusted the certificate on one address keeps trusting it when
+    // the machine moves to another network.
+    const previous = await previousSanAddresses(certPath);
+    const options = await generateCertificate(mergeCertAddresses(previous, lanIps));
     await fs.mkdir(certDir, { recursive: true });
-    const pems = await selfsigned.generate(
-      [{ name: "commonName", value: "ableton-rc-surface.local" }],
-      {
-        algorithm: "sha256",
-        keySize: 2048,
-        extensions: [
-          { name: "basicConstraints", cA: false },
-          { name: "keyUsage", digitalSignature: true, keyEncipherment: true },
-          { name: "subjectAltName", altNames },
-        ],
-      },
-    );
     await Promise.all([
-      fs.writeFile(keyPath, pems.private, { mode: 0o600 }),
-      fs.writeFile(certPath, pems.cert, { mode: 0o600 }),
+      fs.writeFile(keyPath, options.key, { mode: 0o600 }),
+      fs.writeFile(certPath, options.cert, { mode: 0o600 }),
     ]);
-    httpsOptions = {
-      key: Buffer.from(pems.private, "utf8"),
-      cert: Buffer.from(pems.cert, "utf8"),
-    };
+    httpsOptions = options;
     useHttps = true;
     console.log(
-      `[ableton-rc-surface] generated and saved new HTTPS certs to ${certDir} (LAN SAN: ${lanIps.join(", ") || "none"})`,
+      `[ableton-rc-surface] generated and saved new HTTPS certs to ${certDir} (LAN SAN: ${lanIpText})`,
     );
   } catch (err) {
-    console.error(`[ableton-rc-surface] could not generate/persist HTTPS certs: ${err instanceof Error ? err.message : String(err)}; falling back to HTTP (camera/mic will not work on phone)`);
+    console.error(`[ableton-rc-surface] could not generate/persist HTTPS certs: ${describeError(err)}; falling back to HTTP (camera/mic will not work on phone)`);
     useHttps = false;
     httpsOptions = null;
   }
 }
 
-async function generateAndApplyEphemeral(
-  altNames: SubjectAltNameEntry[],
-): Promise<void> {
+/** The message of a failure, in one word. */
+function describeError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Issues a certificate that covers the given addresses, without restarting
+ * the server: the new certificate is handed to the listener, which puts it
+ * on the running listener. One call at a time, so two networks changing at
+ * once cannot issue two certificates over each other.
+ */
+export async function ensureCertificateCovers(addresses: readonly string[]): Promise<boolean> {
+  return runCertificateWork(() => coverAddresses(addresses));
+}
+
+let certificateQueue: Promise<unknown> = Promise.resolve();
+
+function runCertificateWork<T>(work: () => Promise<T>): Promise<T> {
+  const result = certificateQueue.then(work, work);
+  certificateQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+async function coverAddresses(addresses: readonly string[]): Promise<boolean> {
+  if (httpsOptions === null) return false;
+  if (addresses.every(address => certificateCovers(address))) return true;
   try {
-    const pems = await selfsigned.generate(
-      [{ name: "commonName", value: "ableton-rc-surface.local" }],
-      {
-        algorithm: "sha256",
-        keySize: 2048,
-        extensions: [
-          { name: "basicConstraints", cA: false },
-          { name: "keyUsage", digitalSignature: true, keyEncipherment: true },
-          { name: "subjectAltName", altNames },
-        ],
-      },
+    const previous = sanAddresses(httpsOptions.cert).filter(address => address !== "127.0.0.1");
+    const options = await generateCertificate(mergeCertAddresses(previous, [...addresses]));
+    await persistCertificate(options);
+    httpsOptions = options;
+    useHttps = true;
+    notifyCertificateChange(options);
+    console.log(
+      `[ableton-rc-surface] issued a new HTTPS certificate for ${addresses.join(", ") || "no address"}`,
     );
-    httpsOptions = {
-      key: Buffer.from(pems.private, "utf8"),
-      cert: Buffer.from(pems.cert, "utf8"),
-    };
+    return true;
+  } catch (err) {
+    console.warn(
+      `[ableton-rc-surface] could not issue a certificate for the new address: ${describeError(err)}`,
+    );
+    return false;
+  }
+}
+
+function notifyCertificateChange(options: CertificateOptions): void {
+  if (!certificateListener) return;
+  try {
+    certificateListener(options);
+  } catch (err) {
+    console.warn(
+      `[ableton-rc-surface] the certificate listener failed: ${describeError(err)}`,
+    );
+  }
+}
+
+/** The IPv4 addresses a certificate already names. */
+function sanAddresses(cert: Buffer): string[] {
+  const der = pemToDer(cert);
+  if (!der) return [];
+  return extractIpv4Sans(der);
+}
+
+/** The addresses the persisted certificate named, when it can be read. */
+async function previousSanAddresses(certPath: string): Promise<string[]> {
+  try {
+    const cert = await fs.readFile(certPath);
+    return sanAddresses(cert).filter(address => address !== "127.0.0.1");
+  } catch {
+    return [];
+  }
+}
+
+/** One self-signed certificate for the given addresses. */
+async function generateCertificate(addresses: readonly string[]): Promise<CertificateOptions> {
+  const altNames = buildSubjectAltNames([...addresses]);
+  const pems = await selfsigned.generate(
+    [{ name: "commonName", value: "ableton-rc-surface.local" }],
+    {
+      algorithm: "sha256",
+      keySize: 2048,
+      extensions: [
+        { name: "basicConstraints", cA: false },
+        { name: "keyUsage", digitalSignature: true, keyEncipherment: true },
+        { name: "subjectAltName", altNames },
+      ],
+    },
+  );
+  return {
+    key: Buffer.from(pems.private, "utf8"),
+    cert: Buffer.from(pems.cert, "utf8"),
+  };
+}
+
+/** Writes the certificate where the next start will find it. */
+async function persistCertificate(options: CertificateOptions): Promise<void> {
+  const storageDir = getExtensionContext()?.environment?.storageDirectory;
+  if (!storageDir) return;
+  const certDir = path.join(stripWslDrivePrefix(storageDir), "certs");
+  await fs.mkdir(certDir, { recursive: true });
+  await Promise.all([
+    fs.writeFile(path.join(certDir, "ableton-rc-server.key"), options.key, { mode: 0o600 }),
+    fs.writeFile(path.join(certDir, "ableton-rc-server.crt"), options.cert, { mode: 0o600 }),
+  ]);
+}
+
+async function generateAndApplyEphemeral(addresses: readonly string[]): Promise<void> {
+  try {
+    httpsOptions = await generateCertificate(addresses);
     useHttps = true;
   } catch (err) {
-    console.error(`[ableton-rc-surface] ephemeral selfsigned generation failed: ${err instanceof Error ? err.message : String(err)}; falling back to HTTP`);
+    console.error(`[ableton-rc-surface] ephemeral selfsigned generation failed: ${describeError(err)}; falling back to HTTP`);
     useHttps = false;
     httpsOptions = null;
   }

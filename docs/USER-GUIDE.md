@@ -37,10 +37,10 @@ the top strip:
 | SNS    | Sensors: live readouts for motion and orientation            |
 | AUD    | Microphone and audio-analysis inputs                         |
 | VID    | Camera, hand tracking, and learned static poses             |
-| REC    | Arrangement markers/Loop/pre-roll or empty Session CLIP recording |
+| REC    | Recording station: three local views (Record, Arrangement, Clip) over one shared capture bar and one fixed mode bar |
 
 The top strip also holds the **MAP / AUT / CFG** header modes near the BPM display plus
-**SYNC**, **STAGE**, and contextual **CALIBRATE** on SNS/AUD/VID. See
+**SYNC**, **FULLSCREEN**, and contextual **CALIBRATE** on SNS/AUD/VID. See
 [§ 7 Top-bar controls](#7-top-bar-controls) and
 [§ 8 MAP mode](#8-map-mode---mobile-mapping).
 
@@ -256,27 +256,28 @@ settings changed by calibration. A failed/canceled camera attempt rolls back its
 changes. Recalibrating replaces the previous calibration on that page. No button
 opens microphone/camera permissions automatically. This is not latency calibration.
 
-### STAGE
+### FULLSCREEN
 
-Toggles **Stage Mode**:
+Toggles **Fullscreen Mode**:
 
-- Hides the top bar, tabs, and labels (everything except the
-  performance controls themselves).
-- Requests browser fullscreen so the phone UI fills the screen and
-  nothing else can steal focus mid-set.
-- Press again — or exit fullscreen by any system gesture — to leave
-  Stage Mode.
+- Requests browser fullscreen so the phone UI fills the screen.
+- Keeps the compact header, tabs, status and transport on screen; only the
+  section title, the hint line and the XY readout disappear.
+- The header control is a fixed expand/retract icon with no visible word
+  label. Its title and its accessibility name are localized, so a screen
+  reader announces it in your language. Press the same icon again — or leave
+  fullscreen from the browser or the system — to end the mode.
 
-Use Stage Mode when performing: it removes the chrome and gives you
-the largest possible surface for the controls.
+Use Fullscreen Mode when performing: it gives the controls the largest
+possible surface. Other apps can still interrupt fullscreen.
 
 > **Known limitation — 2026-07-12:** enabling the audio sensor or camera
-> while Stage Mode is fullscreen can make Chrome exit fullscreen. On the
+> while Fullscreen Mode is fullscreen can make Chrome exit fullscreen. On the
 > tested Samsung S25F, fullscreen may not become available again until the
 > controller tab is closed and reopened. Enable audio/camera before entering
-> Stage Mode when possible. When fullscreen ends this way, Stage Mode now ends
-> with it instead of leaving an **EXIT** button on a page that is no longer
-> fullscreen.
+> Fullscreen Mode when possible. When fullscreen ends this way, the mode now
+> ends with it instead of leaving the RETRACT icon active on a page that is no
+> longer fullscreen.
 
 ### Contextual header and TRN settings
 
@@ -284,8 +285,9 @@ The header shows only what acts on the current tab: **AUT** on PERF (XY 1/XY 2
 loops), **CFG** on PERF and MIX, and **MAP** on every tab except REC. Leaving a
 tab turns off a mode it does not support; an open MAP closes when you enter REC,
 without changing mappings. The original tabs/transport composition stays in place; common controls
-keep the same position between tabs. **STAGE/EXIT** and status remain visible,
-including in Stage Mode and narrow landscape screens.
+keep the same position between tabs. The fullscreen expand/retract icon and the
+status remain visible, including in Fullscreen Mode and narrow landscape
+screens.
 
 **TRN** opens Transport Lite. The first row holds **PLAY**, **STOP**, **PREV**
 and **NEXT**; the second holds **CLICK**, **GLOBAL QUANTIZATION** and
@@ -569,7 +571,7 @@ The MIX tab has eight knobs (`knob-1`..`knob-8`) and eight faders
 (`fader-1`..`fader-8`).
 
 The two panels share the available width and height equally, including in
-STAGE. Flat arc knobs use a four-by-two grid; drag range stays unchanged.
+FULLSCREEN. Flat arc knobs use a four-by-two grid; drag range stays unchanged.
 IDs 1–6 and old profiles remain compatible; 7–8 are additional controls.
 Use Tab and arrow keys (Shift for larger steps), Home/End for bounds. Knob
 reset returns to 50%; fader reset is described below.
@@ -718,8 +720,10 @@ Each panel header shows the current sensor state, honest per API:
 - `error` — the permission call itself failed; retry with the button.
 
 Motion and orientation are tracked independently: one denied API does
-not affect the other. A permission prompt only appears on browsers
-that require one (iOS-style gesture permission).
+not affect the other. Sensors start automatically when your browser allows it.
+If sensor access needs a tap, open **SNS**, tap the **⚙** gear in the top bar,
+then tap **Enable sensors**. You can retry after a denial or an error. Camera
+and microphone require separate permission.
 
 ### MOTION
 
@@ -766,7 +770,7 @@ On larger desktop windows, AUD uses larger dials and fields distributed through
 the audio detector workspace. Analysis needles follow the value arc around the dial center.
 VID prioritizes camera width, with its controls at the top and a proportional
 preview beside three stacked pose cards with bounded action buttons. Short landscape screens retain the
-compact phone arrangement, in both normal and STAGE modes.
+compact phone arrangement, in both normal and FULLSCREEN modes.
 
 ### Audio input
 
@@ -1173,57 +1177,128 @@ VID starts with three learned poses. **+ ADD POSE**, beside the REC recognition 
 
 ## 16. REC: Arrangement / CLIP
 
-Each track's volume knob controls its native mixer level, not input gain. Drag
-vertically or use arrow keys; double-click restores Live's parameter default.
-The surrounding arc shows normalized level without a numeric label; keyboard
-and screen-reader feedback remain in percent, not dB. Unknown or stale values disable the
-control. External mixer changes appear on the next read; connection or Set
-changes cancel a gesture. STOP keeps priority over volume adjustment. Native
-volume reads continue during play, REC and a running pre-roll, independently
-of unrelated transport-read timeouts. ARM/disarm require stopped transport;
-arming during recording would start recording that track in Live.
+REC lists your Live tracks as native rows, in the order Live reports them.
+Every row carries its own **ARM**, **SOLO** and **MUTE** buttons and a
+horizontal fader for that track's native mixer level. The fader moves Live's
+own volume parameter, not the input gain: drag it sideways, and double-click
+restores that parameter's default value in Live. The fader has no permanent
+numeric readout; its horizontal position shows the level, and keyboard and
+screen-reader feedback report the normalized level in percent, not dB. An
+unknown or stale value disables the fader. External mixer changes appear on
+the next read; a connection or Set change cancels a gesture. STOP keeps
+priority over volume adjustment. Native volume reads continue during play,
+REC and a running pre-roll, independently of unrelated transport-read
+timeouts.
 
-Select **ARRANGEMENT / CLIP** inside REC. Opening the page, changing destination,
-choosing a scene or opening CFG never arms a track or starts playback/recording.
-Destination changes are blocked while a REC attempt is owned. STOP follows its
-owner. Track names, ARM MULTI/EXCLUSIVE and SOLO/MUTE are shared.
+Group tracks get their own row with a local expand control. Expanding shows
+the group's members in the phone only: Live's group structure is never
+changed, and RC Surface never creates a group. On a group row, **SOLO**,
+**MUTE** and the fader act on the group itself, exactly like Live's group
+track, and are not written to each member. **ARM** is the exception: arming a
+group row targets the armable descendants observed inside that group, because
+Live exposes no single arm control for a group.
+
+**ARM ALL** arms every observed armable track at once. **ARM MULTI** (the
+default) keeps other inputs armed; **ARM EXCLUSIVE** disarms the others when
+you press a track's ARM. That choice is RC Surface's own rule: Live's global
+arm preference is never changed, and an incompatible host arm result is
+reported instead of repeated.
+
+Arming needs a fresh observation of a stopped transport through AbletonOSC.
+Arming while the transport runs would start recording that track in Live, so
+an unknown or stale transport state blocks the request.
+
+**CLICK** turns Live's metronome on and off, and it keeps working during
+setup, pre-roll, REC and playback. The switch is independent of the rest of
+the band and stays available whenever the observed state is fresh and known.
+The current extension API does not expose the metronome level, so there is no
+level control beside **CLICK**: adjust the actual level in Live, never another
+value by proxy.
+
+REC needs AbletonOSC for the transport and the recording state; the extension
+API alone does not drive them. The native rows, the group expansion and the
+waveform preview still need acceptance on your Live setup.
+
+REC is one global page with three **local** views:
+**RECORD / ARRANGEMENT / CLIP**, with **RECORD** as the default. The three
+destinations and the **CLICK** live in the header of the REC page, and one
+fixed capture bar (**REC / STOP**) is shared by all three. Opening the page,
+changing view, choosing a scene or opening CFG never arms a track and never
+starts playback/recording. Changing view is blocked while a REC attempt is
+owned; STOP follows its owner. Track names, ARM MULTI/EXCLUSIVE and SOLO/MUTE
+are shared.
+
+**RECORD** shows the shared capture bar — **REC** and **STOP** — together with
+the capture configuration (**PRE-ROLL** **OFF / 1 / 2 / 4**, **OFF**
+by default; **PASSES** **1 / 2 / 3 / ∞**, one pass by default; **START** and
+**END**), the native track rows and the compact marker list. On a landscape
+phone only the track list scrolls vertically; the bands above it stay in place.
+This view reads no clips, no take lanes and no waveforms — that data belongs
+to **ARRANGEMENT**. Tracks and the markers you capture against are prepared in
+Live: RC Surface never creates a track and never creates a marker.
+**ARRANGEMENT** is the Arrangement editor (marker and clip timeline, native
+clips, take focus); **CLIP** is the existing Session recording view. The
+capture controls belong to the REC page rather than to one view, and only
+**REC** uses the chosen start and end to open a capture.
+
+The mode and recording controls keep their positions when you change views.
+RECORD and ARRANGEMENT share the compact marker ruler; the tracks scroll below
+it.
 
 ### Arrangement
 
-Create the Arrangement markers in Live first, then open **REC** with playback
-stopped:
+Create the Arrangement markers in Live first — RC Surface has no control that
+creates a marker, and the markers you prepared show up in the catalog — then
+open **REC** with playback stopped:
 
-1. Use the track cards below the timeline to arm your inputs. Each card shows
-   the observed **ARM / SOLO / MUTE** state. **ARM MULTI** is the default and
-   keeps other inputs armed; **ARM EXCLUSIVE** disarms other tracks only when
-   you press a track's ARM. Changing this mode or single-clicking a name does not
-   change Live. Groups have SOLO/MUTE but cannot be armed. Live's global arm
-   preference is unchanged; an incompatible host arm result is reported.
-   ARM confirms the armable input set without waiting for Loop, meter or click.
-   If confirmation fails, ARM states become unknown until a fresh read; a write
-   may already have applied. The surface does not repeat it automatically.
-2. Start at the fixed **Here** position, use **Use current cursor** to capture a
-   new start, or choose a start marker. No marker is required for free recording.
-   Each marker shows its **bar.beat** above its name.
-   Use **Zoom** and scroll to inspect the markers and observed playback position.
+1. Arm your inputs on the REC track rows. Each row shows the observed
+   **ARM / SOLO / MUTE** state, and **ARM ALL** arms every armable track at
+   once. **ARM MULTI** is the default and keeps other inputs armed;
+   **ARM EXCLUSIVE** disarms other tracks only when you press a track's ARM.
+   Changing this mode or single-clicking a name does not change Live. A group
+   cannot be armed as one object: arming a group row arms the armable
+   descendants observed inside it. Live's global arm preference is unchanged;
+   an incompatible host arm result is reported. ARM confirms the armable input
+   set without waiting for Loop, meter or click. If confirmation fails, ARM
+   states become unknown until a fresh read; a write may already have applied.
+   The surface does not repeat it automatically.
+2. Choose the start of the capture in the **START** row of the capture
+   configuration: the fixed **Here** position, the position captured by **Use
+   current cursor**, or a marker you pick from the list. Each marker shows its
+   **bar.beat** above its name.
+   Picking a marker is a local selection: it never seeks Live's transport and
+   never starts playback or recording. Tapping the marker that is already the
+   current start prepares the next tap to move the start; tapping an earlier
+   marker moves the start; tapping a later marker chooses it as the end.
+   Use **Zoom** and scroll to inspect the markers, the native Arrangement clips
+   and the observed playback position. Markers and clips share one timeline, so
+   zooming and scrolling move both together.
    A fine bar/beat grid sits behind the markers, with bar numbers along the
    bottom; beats appear as you zoom in and labels thin out when zoomed out.
    The list follows timeline time, including newly created early markers, with
    stable equal-time order and full names. A temporarily stale meter keeps its
    last confirmed display with a dotted indicator; it cannot authorize REC.
-   Marker jumps check stopped/record-off transport and selected identity/monitor
-   without waiting for unrelated mixer states. REC still checks the full set.
-3. Leave **END = Until STOP** for free recording. Choosing an end marker after
-   the start reveals **PASSES**: 1–10 total passes or ∞ until STOP. A new bounded
-   selection starts at one pass. An invalid/missing end blocks REC without
-   silently switching to free recording. Put the end after the wanted decay.
-4. Choose **PRE-ROLL OFF / 1 / 2 / 4** bars, then press **REC**. OFF is the
-   default and starts directly at the marker. Other choices play the preceding
-   bars with click before native Punch In opens capture at the selected marker.
+   REC still checks the full set before it opens a capture.
+3. The capture bar carries **REC** and **STOP**; the configuration row carries
+   **PRE-ROLL** and **PASSES**.
+   **PRE-ROLL** cycles **OFF / 1 / 2 / 4** bars, with **OFF** as the
+   default, and **PASSES** cycles **1 / 2 / 3 / ∞**, where ∞ means unlimited
+   passes until you press **STOP**. **PASSES** becomes available once the end
+   is bounded — **Next marker** or an explicit marker — and the default is one
+   pass. A count that is not one of those values is normalized to **1**, and
+   the page says so.
+   The **END** row offers **Next marker** (the first marker after the selected
+   start), an explicit marker, or **Until STOP** for an open-ended capture. A
+   missing, ambiguous or invalid start or end, or a **Next marker** end with no
+   following marker, blocks REC and says why; it never silently falls back to
+   an open-ended capture. Put the end after the wanted decay.
+4. Press **REC**. With **PRE-ROLL OFF** the capture opens directly at the
+   selected start. The other choices play the preceding bars with click before
+   native Punch In opens capture at the selected start.
 5. Press **STOP** to stop playback and recording. Your armed tracks remain armed,
    allowing successive takes without re-arming.
 
-REC records exactly the armed tracks shown in the cards. It is disabled with
+REC records exactly the armed tracks shown in the rows. It is disabled with
 no armed inputs and verifies the entire set again before recording. ARM changes
 are blocked during recording or pre-roll; SOLO/MUTE remain available for
 listening. A newly armed third-party track is never adopted for STOP cleanup.
@@ -1235,14 +1310,14 @@ without control characters. Renaming changes only that exact track's name;
 an external rename, replaced/reordered track or Set change rejects a stale edit.
 Stop an owned REC/pre-roll attempt with the surface STOP before renaming.
 
-To listen, click a marker in the strip or choose the start marker, then use
-**Play in the header**. Selecting a marker uses Live's native marker jump, so
-Play starts from that marker. Selection positions the stopped transport without
-starting playback or recording. The strip is a marker and position reference,
-without audio waveforms or take-lane selection. A moved or removed marker must
-be selected again.
+The marker strip is a reference for the capture range: choosing a marker there
+only changes what **REC** will capture, and it never moves Live's transport or
+starts playback or recording. Take-lane clips are inspected in the **TAKES**
+view of that track, opened from the track's row or from the Arrangement clip
+you chose. A moved or removed marker must be selected again.
 
-Free recording turns Arrangement Loop off. Bounded recording confirms the
+Free recording — an **Until STOP** capture — turns Arrangement Loop off.
+Bounded recording confirms the
 region and native Punch Out before starting. One pass leaves Loop off; finite
 repetition disables Loop on the last observed pass and confirms STOP after the
 native capture boundary. Pre-roll runs before the first pass only. These plans
@@ -1250,18 +1325,20 @@ run on the computer after acceptance; a phone reconnect never replays REC.
 Missing/ambiguous position evidence cannot confirm completion. OSC link or Set
 loss retires the plan; recording may continue, so check Live and use STOP.
 STOP retains the fixed start, selected range, count and ARM for another REC.
-Live owns take lanes; selection and comping stay on the computer. Configure
-input monitoring there; choose Monitor Auto/Off for Arrangement listening.
+While a capture is owned, the range is frozen: markers created afterwards do
+not change the range already being recorded. Live owns take lanes; comping and
+audio editing stay on the computer. Configure input monitoring there; choose
+Monitor Auto/Off for Arrangement listening.
 
 Pre-roll is a preference saved in this browser, separate from Live's native
 count-in. It uses the currently observed time signature to calculate the lead-in;
-there must be enough song time before the marker. It does not resolve earlier
+there must be enough song time before the start. It does not resolve earlier
 time-signature changes from a meter map. REC confirms stopped/record-off state,
-enables native Punch In at the marker and starts playback from the lead-in
+enables native Punch In at the start and starts playback from the lead-in
 position before enabling record mode. If playback has already reached the
-marker before that confirmation, it aborts instead of starting a late capture.
+start before that confirmation, it aborts instead of starting a late capture.
 The host monitors the lead-in after the command returns, so four bars are not
-limited by the phone's command timeout. At the first observed marker crossing,
+limited by the phone's command timeout. At the first observed start crossing,
 it restores the original click setting, unless you changed **CLICK** during the
 lead-in: your choice is kept. STOP restores only click, Punch In and
 the temporary Loop start still owned by this attempt, keeping armed inputs intact;
@@ -1303,11 +1380,86 @@ The OSC and SDK flow has offline regression coverage; native Punch In capture
 boundaries, count-in/metronome preferences, audio monitoring, take preservation
 and mobile touch still require acceptance on your Live setup.
 
+### Native Arrangement clips and waveform preview
+
+Arrangement clips are drawn on the same timeline as the markers, at the
+intervals Live actually reports, so a clip always sits where it belongs. Clip
+names, lane names and start/end positions come from Live, never from a guess.
+
+- **Bounded metadata:** clip details are read per track, in pages of up to 64
+  clips. **Load** (or **Refresh**) reads the track you are looking at, **More**
+  asks for the next page and **Back** returns to the previous one. The page
+  never scans the whole Set on every poll, so a large Set does not turn a
+  refresh into a full sweep.
+- **Catalog freshness:** clip names, intervals and the take catalog show the
+  last explicit read; nothing follows clip edits in Live. If you rename, move
+  or delete a clip in Live, use **Refresh** (or **Load**), or reload the page,
+  and choose the clip again — the previous choice is no longer current. While
+  one track is focused for take inspection, edits made in Live are not observed
+  before that next read.
+- **Waveform preview:** a waveform is an explicit action on a visible
+  Arrangement audio clip, and only while the transport is stopped. The
+  extension renders the selected interval before effects into its own
+  temporary storage and shows the peaks that come back; nothing is invented
+  and no original sample file is read. The visible interval is capped at 128
+  beats, so a long clip needs a narrower range. Nothing is rendered in the
+  background: there is no preview during playback or recording, and no poll
+  starts one.
+- **Limits and errors:** when a clip is longer than the cap, has no renderable
+  audio, or the render fails, the clip keeps its native name and interval on
+  the timeline. Only the waveform is missing.
+
+### Take-lane clip notes
+
+In **ARRANGEMENT**, every track row has a **TAKES** action: it opens an
+exclusive focus on that one track inside the same REC page, showing all the
+native takes of that track. Tapping a native Arrangement clip does the same,
+and the focus is restricted to that clip's interval. The overview keeps the
+take panel hidden until you open a focus. The other tracks are hidden while
+you are there, the transport and **CLICK** stay reachable, and **All tracks**
+brings the full list back. Take lanes keep their native names, and clips keep
+the intervals Live reports, including intervals that overlap. The view never
+guesses a pass order, and it starts with no take chosen.
+
+- **Choosing a take:** tapping a take selects it visually and nothing else. It
+  does not play, audition, move or rewrite anything.
+- **Two ranges:** **WHOLE CLIP** covers the full range of the source you are
+  looking at: the whole Arrangement clip you opened, or, in the track's own
+  view, the whole interval of the take you explicitly selected.
+  **PHRASE** covers the part of it you are looking at. Both are inspection
+  only. **PHRASE** never edits or merges audio, never punches in and never
+  loops.
+- **Marking takes:** tap **GOOD** or **REVIEW** to prefix `[RC:GOOD] ` or
+  `[RC:REVIEW] ` into the name of the take clip you explicitly chose, keeping
+  the rest of the name. Tap **NO MARK** to remove a known prefix with an
+  explicit, deliberate action. The mark is a name tag on that one clip, so
+  after a refresh you choose the clip again.
+- **Guarded writes:** writing a take note requires freshly confirmed stopped
+  transport, record mode OFF, no active REC attempt, and controller/admin
+  permission. Before writing, RC Surface checks that the chosen track, lane,
+  clip name and time span still match Live. Stale or changed track/lane/clip
+  targets, session/Set changes, or non-stopped transport reject the write and
+  require re-reading before a new action. If a write outcome is unconfirmed or
+  times out, verify the clip name directly in Live; nothing is replayed or
+  retried automatically.
+- **Independent from main lane:** any existing clip copy on the main
+  Arrangement track lane remains independent. Adding a note is a name tag only:
+  it does not promote a take to the main lane, comp, keep or compare takes,
+  extract audio, or prove audio capture quality.
+- **No audition of a take:** the **LISTEN** button is unavailable here,
+  because no available API plays the take lane you selected. Listen, comp and
+  promote in Live; the audio on the main Arrangement lane is not the take you
+  selected. The Arrangement waveform preview above is a separate thing: it
+  draws Arrangement clips, never a take lane, and it is not audio playback.
+- **Set persistence:** native clip names persist across sessions only when you
+  manually save the Set in Live (**Save Set**); save/reopen verification
+  requires human acceptance.
 
 ### CLIP: record an empty Session scene
 
-1. Arm the inputs with the shared cards. Select **CLIP**, then explicitly choose
-   a scene row. Every armed track must have an empty slot in that same scene.
+1. Arm the inputs with the shared track rows. Open the **CLIP** view, then
+   explicitly choose a scene row. Every armed track must have an empty slot in
+   that same scene.
    Existing clips are displayed for reference; selecting one does not launch it.
 2. Open **CFG** for **1 / 2 / 4 / 8 / 16 bars** (default 4) and native launch
    quantization: **Global / None / 1 bar / 1 beat** (default Global). These are
@@ -1326,7 +1478,7 @@ and mobile touch still require acceptance on your Live setup.
 
 The grid shows up to eight scenes per window, with internal dark scrolling and
 previous/next buttons. Scroll never changes the armed set. Pre-roll, Arrangement
-markers/Loop and Punch In are hidden and unused in CLIP. ARM changes and renaming
+markers/Loop and Punch In are unused in CLIP. ARM changes and renaming
 are blocked while the attempt is owned; SOLO/MUTE remain explicit actions.
 
 STOP respects native quantization and may show **Stop pending**; confirm in Live
@@ -1345,7 +1497,7 @@ after reconnection. Stop in Live if the link is unavailable.
 When Session has overridden Arrangement playback, **BACK TO ARR** appears in REC.
 After every Session track is freshly confirmed idle and recording is off, press
 it to return explicitly to Arrangement. It confirms Live's native return flag and
-selects ARRANGEMENT only on success. If transport is already running, Arrangement
+selects the **ARRANGEMENT** view only on success. If transport is already running, Arrangement
 continues at its current position; the control never pauses/plays, moves the
 playhead, changes arms/Loop/Punch In or deletes clips. Active/queued/unknown clips
 block it. Opening REC, changing destination or stopping clips never returns
@@ -1354,8 +1506,10 @@ automatically.
 Multiple fires are sequential OSC requests, not an atomic host transaction.
 A partial failure attempts to stop only emitted targets whose identities and
 observed ownership remain confirmed. The surface never deletes or overwrites
-an existing clip. This first CLIP mode has no overdub of existing clips, take-lane
-browser, audition or comp selection. Native audio/MIDI recording, duration,
+an existing clip. The Session CLIP grid does not overdub existing clips,
+audition audio, or select comps; the **TAKES** view refers to Arrangement
+take-lane clip names independently of the Session recording target. Native
+audio/MIDI recording, duration,
 quantization and capture boundaries still require acceptance in your Live setup;
 the automated proof uses SDK/OSC mocks.
 

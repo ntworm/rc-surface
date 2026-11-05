@@ -37,3 +37,22 @@ test('LAN controller credentials are exposed only through HTTPS', () => {
   );
   assert.equal(withTls.adminUrl, withoutTls.adminUrl);
 });
+
+test('an empty primary address never becomes a phone URL', () => {
+  const withoutAddress = buildServerAccessUrls({
+    isRunning: true,
+    httpPort: 8730,
+    httpsPort: 8731,
+    primaryIp: '',
+    controllerToken: 'controller-secret',
+    adminToken: 'admin-secret',
+  });
+
+  assert.equal(withoutAddress.phoneUrl, null, 'no address means no phone URL');
+  assert.doesNotMatch(String(withoutAddress.phoneUrl), /https:\/\/:/, 'never an empty host');
+  assert.equal(
+    withoutAddress.adminUrl,
+    'http://127.0.0.1:8730/static/admin/?token=admin-secret',
+    'the local admin surface stays available',
+  );
+});

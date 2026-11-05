@@ -28,7 +28,7 @@ for(const locale of ['en','pt-BR'])for(const viewport of [{width:568,height:320}
     for(const name of [...ORDER].reverse()){await page.locator(`.tab[data-page="${name}"]`).click();await expectHeader(page,name,viewport);}
     await page.locator('.tab[data-page="video"]').click();
     await page.locator('#btn-stage-mode').click();
-    await expect(page.locator('#btn-stage-mode')).toHaveText(await page.evaluate(()=>window.RcSurfaceI18n.t('hdr.exit')));
+    await expect(page.locator('#btn-stage-mode')).toHaveAttribute('aria-label',await page.evaluate(()=>window.RcSurfaceI18n.t('hdr.exit')));
     await expectHeader(page,'video',viewport,true);
     await page.locator('#btn-stage-mode').click();
   });
@@ -45,12 +45,23 @@ for(const locale of ['en','pt-BR'])for(const viewport of [{width:568,height:320}
         await expectHeader(page,name,viewport,stage);
         const header=await page.locator('.topbar').boundingBox(),navigation=await page.locator('.tabs').boundingBox(),transport=await page.locator('.ableton-panel').boundingBox();
         if(viewport.width>800){
+          // The REC page keeps this height: its thin line is a margin
+          // below the top bar and never a row of it.
           expect(header.height,'preserve original single-row height').toBe(stage?30:32);
           expect(Math.abs(navigation.y+navigation.height/2-transport.y-transport.height/2),'tabs and transport stay side by side').toBeLessThanOrEqual(1);
           expect(navigation.x+navigation.width).toBeLessThanOrEqual(transport.x);
         }else{
           expect(header.height,'only the original narrow-screen fallback').toBeLessThanOrEqual(58);
           expect(navigation.y+navigation.height).toBeLessThanOrEqual(transport.y);
+        }
+        // The thin line of the REC page lives below the top bar and never
+        // inside it: the box of the header and of every global control is
+        // the same on every page.
+        if(name==='recording'){
+          const line=await page.locator('#rec-header-modes').boundingBox();
+          expect(line,'the REC page carries its thin line').not.toBeNull();
+          expect(Math.abs(line.height-26),'the thin line is 26px').toBeLessThanOrEqual(1);
+          expect(line.y,'the thin line is right below the top bar').toBeGreaterThanOrEqual(header.y+header.height-1);
         }
 
         const panel=await page.locator('.ableton-panel').boundingBox(),status=await page.locator('#status').boundingBox();

@@ -23,6 +23,7 @@ function harness() {
     DEFAULT_AUTOSTART: true,
     startServer: async () => { calls.starts++; }, stopServer: async () => {},
     getServerGeneration: () => calls.serverGeneration,
+    onServerLifecycle(listener) { return () => {}; },
     closeUdpSocket() {}, oscTransport: { start() {}, dispose() {} },
     require: () => ({ configureLocaleStorage() {} }),
   });

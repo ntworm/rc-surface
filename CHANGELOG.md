@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.1.0 — 2026-11-05
+
+- Give REC three local views (Record, Arrangement, Clip) over one shared capture bar and one fixed mode bar. List tracks as native rows with ARM, SOLO, MUTE and a native volume fader; group rows expand on the phone without changing the Set. Select a range between two markers, focus a take, and move the destinations and CLICK into the REC header. Retire the CUE client.
+- Announce the address that reaches the network, judged per address and not per adapter: the route out first, then a gateway on the same subnet, with hotspots, virtual adapters and VPNs behind them. A cable holding a fixed lighting address and the router address now gives the router address. A public address reaches the QR only by an explicit USE, because the QR carries the control token. A phone that connects proves its network for 30 days.
+- Add a Network tab to the panel: why the address was chosen, USE to pin one, FIND SETUP to walk the addresses with a QR each, and a read-only diagnosis of certificate and firewall that gives a command to copy. The Network address selector on Main offers the same choice and the server keeps it. A choice made in an earlier 2.0.1 preview lived in the browser and is not migrated.
+- Cover a new address without restarting: moving to another network issues a certificate and swaps it on the running server, and the phone is told the new address only once it is covered. A new virtual adapter no longer replaces the certificate.
+- Start the AbletonOSC transport with the server instead of at activation, keep the `current_song_time` listener only while a Launch Clip mapping needs it, keep the socket of a throttled background tab, re-send running modulators to a new session, and pause vision with a notice while the page is hidden. Re-arm Launch Clip after a release that never had a link.
+- Keep the client card when a phone resumes its session, answer 400 to a malformed static path, and hold a pending Network choice in the panel instead of reverting it.
+- Preserve 2.0 mappings, presets and projects; the companion Max devices are unchanged. Physical Mac/Live recording acceptance remains pending.
+
+## 2.0.1 — 2026-10-29
+
+- Fix the stopped-server panel by embedding every local script and font; Start, Close and the automatic-start preference remain usable without an HTTP server.
+- Prefer known physical LAN interfaces over virtual bridges/VPNs for the QR. Add a local Network address selector that preserves the HTTPS port and complete session URL; only announced private addresses covered by the current certificate are offered.
+- Preserve 2.0 mappings, presets and projects. Install AbletonOSC in the User Library so it survives Live updates; REC and SYNC require it. Physical Mac/Live recording acceptance remains pending.
+
 Ableton RC Surface uses a consolidated release history. The complete source
 state is represented by the current release; obsolete preview packages and
 intermediate release records are intentionally not published.

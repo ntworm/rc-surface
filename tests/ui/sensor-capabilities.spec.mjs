@@ -107,15 +107,23 @@ test('permission denied on one API stays independent of the other', async ({ pag
   await page.goto('/?lang=en');
   await sensorTab(page);
 
+  // The page never opens a permission prompt by itself: the banner stays
+  // hidden and the trackers wait for the Settings sensor action.
   const banner = page.locator('#permission-banner');
-  await expect(banner).toBeVisible();
-  await page.locator('#permission-activate').click();
+  await expect(banner).toBeHidden();
+  await expect(page.locator('[data-sensor-status="motion"]')).toHaveText('permission-required');
+
+  // The Settings sensor action asks for the permissions inside the gesture.
+  await page.locator('#btn-sync-settings').click();
+  await expect(page.locator('#settings-enable-sensors')).toBeVisible();
+  await page.locator('#settings-enable-sensors').click();
 
   await expect(page.locator('[data-sensor-status="motion"]')).toHaveText('denied');
   // Orientation's grant proceeds independently; motion stays denied.
   await orientEvent(page, { alpha: 0, beta: 0, gamma: 0 });
   await expect(page.locator('[data-sensor-status="orientation"]')).toHaveText('ready');
   await expect(page.locator('[data-sensor-status="motion"]')).toHaveText('denied');
+  await expect(banner).toBeHidden();
 });
 
 test('CALIBRATE without readings shows a neutral reason and audio/camera stay actionable', async ({ page }) => {

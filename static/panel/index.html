@@ -59,6 +59,9 @@
     <span class="tab-text" data-i18n="panel.tabMappings">Mappings</span><span class="tab-abbr" title="Mappings" data-i18n-title="panel.tabMappings">M</span>
     <span class="badge" id="badge-mappings">0</span>
   </button>
+  <button class="tab-btn" data-tab="network">
+    <span class="tab-text" data-i18n="panel.tabNetwork">Network</span><span class="tab-abbr" title="Network" data-i18n-title="panel.tabNetwork">N</span>
+  </button>
   <span class="lang-select" role="group" data-i18n-aria-label="lang.aria">
     <button type="button" class="lang-btn on" data-set-locale="en" data-i18n="lang.en">EN</button>
     <button type="button" class="lang-btn" data-set-locale="pt-BR" data-i18n="lang.ptBR">PT</button>
@@ -127,6 +130,11 @@
   <!-- Network summary (migrated from former Interfaces tab) -->
   <div class="section-title" style="margin-top:16px" data-i18n="panel.network">Network</div>
   <div class="iface-primary" style="margin-bottom:8px">
+    <label id="network-address-field" class="network-address-field hidden">
+      <span data-i18n="panel.networkAddress">Network address</span>
+      <select id="network-address" aria-label="Network address" data-i18n-aria-label="panel.networkAddress"></select>
+    </label>
+    <div id="network-reason" class="network-reason hidden"></div>
     <div class="ip" id="iface-primary-ip">—</div>
     <div class="url" id="iface-primary-url" data-i18n="panel.notRunning">Server not running</div>
     <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
@@ -216,6 +224,34 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TAB 3: Network                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-network">
+  <div class="net-top">
+    <div class="net-now" id="net-now">
+      <div>
+        <div class="section-title" data-i18n="panel.net.qrAddress">Address in the QR</div>
+        <div class="ip" id="net-ip">—</div>
+        <div class="why" id="net-why"></div>
+      </div>
+      <div class="net-actions" id="net-actions"></div>
+      <div class="net-state" id="net-note"></div>
+    </div>
+    <div class="net-qr">
+      <span class="label" data-i18n="panel.net.phone">Phone</span>
+      <div class="frame" id="net-qr"></div>
+      <span class="label" id="net-port"></span>
+    </div>
+  </div>
+
+  <div class="section-title" data-i18n="panel.net.computerNetworks">Networks on this computer</div>
+  <div class="net-rows" id="net-rows"></div>
+
+  <div class="section-title" data-i18n="panel.net.diagnosis">Diagnosis</div>
+  <div class="net-diag" id="net-diag"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
 <!-- Footer                                                     -->
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div class="autostart-row">
@@ -244,6 +280,8 @@
 <script src="../shared/audio-descriptor-catalog.js"></script>
 <script src="../admin/mappings-core.js"></script>
 <script src="mappings.js"></script>
+<script src="network-address.js"></script>
+<script src="network-tab.js"></script>
 <script src="qrcode.js"></script>
 <script src="app.js"></script>
 </body></html>

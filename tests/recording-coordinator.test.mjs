@@ -958,6 +958,41 @@ test('REC real command and SDK path keep the phone fresh through slow start, act
   assert.equal(callbacks.filter(cmd=>cmd==='recordingRecord').length,1);
 });
 
+test('REC scope token is instance-unique, stable while the Song holds, and retired by a new Song or a lost link',async t=>{
+  const f=fixture(t);
+  const scope=f.coordinator.scopeToken();
+  assert.equal(typeof scope,'string');
+  assert.ok(scope.length>0);
+  assert.equal(f.coordinator.scopeToken(),scope,'reading the scope never changes it');
+  assert.equal(f.coordinator.snapshot().scope,scope,'the snapshot carries the scope');
+  const other=new RecordingCoordinator(f.osc,()=>f.song);
+  assert.notEqual(other.scopeToken(),scope,'the scope is unique per coordinator instance');
+  other.dispose();
+  f.replaceSong({...f.song,tracks:[...f.song.tracks]});
+  assert.notEqual(f.coordinator.scopeToken(),scope,'a replaced Song retires the scope');
+  const afterSong=f.coordinator.scopeToken();
+  f.osc.state.connected=false;f.osc.emit('link-lost');
+  assert.notEqual(f.coordinator.scopeToken(),afterSong,'a lost link retires the scope');
+  assert.equal(f.coordinator.snapshot().scope,f.coordinator.scopeToken());
+});
+
+test('REC reading the scope never mutates preflight, arm, selection or capture state',async t=>{
+  const f=fixture(t);
+  await f.select();
+  f.coordinator.setPoint(8,f.context);
+  const before=f.coordinator.snapshot(),sent=f.sent.length;
+  f.coordinator.scopeToken();
+  const after=f.coordinator.snapshot();
+  assert.equal(after.selected.id,before.selected.id);
+  assert.equal(after.point,before.point);
+  assert.equal(after.preparedToken,before.preparedToken);
+  assert.equal(after.attemptActive,before.attemptActive);
+  assert.equal(after.pending,before.pending);
+  assert.deepEqual(after.safety,before.safety);
+  assert.deepEqual(after.tracks.map(track=>track.arm),before.tracks.map(track=>track.arm));
+  assert.equal(f.sent.length,sent,'reading the scope sends nothing');
+});
+
 test('REC native volume stays observed while the real pre-roll recording operation owns the coordinator',async t=>{
   const f=captureFixture(t),volume=nativeVolume(f);await f.coordinator.refresh();
   await f.coordinator.record([recordingTrack],f.range,f.context,4,1);
@@ -1567,9 +1602,19 @@ for(const outcome of ['SDK throws','incompatible confirmed','peer confirmation m
       const request=name==='getRecordingState'?f.coordinator.refresh():f.coordinator.trackControl(args.track,args.property,args.enabled,args.armMode??'multi',f.context);
       request.then(result=>cb({ok:true,result}),error=>cb({ok:false,error:error.message}));
     }});
+  vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording-range-selection.js',import.meta.url),'utf8'),browser);
   vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording.js',import.meta.url),'utf8'),browser);
   const client=browser.RcRecording.setup();t.after(()=>client.session(false));client.session(true,'controller');await client.command('getRecordingState');
-  const cards=[...node('rec-track-grid').children],arm=index=>cards[index].children[1].children.find(c=>c.dataset?.property==='arm');
+  const cards=[...node('rec-track-grid').children];
+  const arm=index=>{
+    const row=cards[index];
+    if(!row)throw new Error('missing track row '+index);
+    const actions=row.children.find(child=>child.className==='rec-track-actions');
+    if(!actions)throw new Error('missing actions row for track '+index);
+    const button=actions.children.find(child=>child.dataset&&child.dataset.property==='arm');
+    if(!button)throw new Error('missing ARM control for track '+index);
+    return button;
+  };
   const send=f.osc.send;
   f.osc.send=(address,args=[])=>{
     if(afterWrite&&outcome==='peer confirmation missing'&&address===REC_PREFLIGHT.trackArm&&args[0]?.value===0){f.sent.push([address,args]);return;}
@@ -1845,4 +1890,204 @@ test('REC CLICK is never locked: it changes during pre-roll and capture, and the
   assert.equal(f.values.click,false,'STOP keeps the user choice');
   await assert.rejects(f.coordinator.click('on',f.context),/ARGUMENTS/);
   f.retire();await assert.rejects(f.coordinator.click(true,f.context),/SESSION/);
+});
+
+// The phone owns the payload: the real phone module builds it from the
+// operator's marker and passage choices and the real coordinator validates
+// and captures it. Nothing here retypes a payload or stubs a coordinator.
+const phonePassageLevels=[
+  {label:'one',passes:1,loop:false,display:'1',cycles:0},
+  {label:'two',passes:2,loop:true,display:'2',cycles:1},
+  {label:'three',passes:3,loop:true,display:'3',cycles:2},
+  {label:'unlimited',passes:null,loop:true,display:'∞',cycles:3}];
+
+function phoneRecordingHarness(t,f) {
+  const nodes=new Map();let generated=0;
+  const node=id=>{
+    if(!nodes.has(id))nodes.set(id,{id,tagName:'DIV',value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},getAttribute(name){return this[name];},removeAttribute(name){delete this[name];},
+      addEventListener(name,handler){this.listeners.set(name,handler);},removeEventListener(){},
+      replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},focus(){},blur(){},click(){},contains(){return false;}});
+    return nodes.get(id);
+  };
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,
+    getElementById:id=>node(id),
+    createElement:tag=>{const el=node('generated-'+(++generated));el.tagName=String(tag).toUpperCase();return el;},
+    addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];}};
+  const calls=[];let pending=null;const outcome={ok:null,error:null};
+  const browser=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},
+    sendPhoneCommand:(name,args,cb)=>{
+      calls.push({name,args});
+      const payload=args||{};
+      const request=name==='recordingRecord'
+        ?f.coordinator.record(payload.tracks,payload.range,f.context,payload.preRollBars,payload.passes)
+        :name==='recordingSeekMarker'?f.coordinator.seekMarker(payload,f.context)
+        :f.coordinator.refresh();
+      if(name==='recordingRecord')pending=request;
+      request.then(result=>{if(name==='recordingRecord'){outcome.ok=true;outcome.error=null;}cb({ok:true,result});},
+        error=>{if(name==='recordingRecord'){outcome.ok=false;outcome.error=error.message;}cb({ok:false,error:error.message});});
+    }});
+  vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording-range-selection.js',import.meta.url),'utf8'),browser);
+  vm.runInContext(readFileSync(new URL('../static/phone-v3/modules/recording.js',import.meta.url),'utf8'),browser);
+  const client=browser.RcRecording.setup();
+  t.after(()=>client.session(false));
+  client.session(true,'controller');
+  const fire=(id,type)=>{
+    const el=node(id),handler=el.listeners.get(type);
+    if(!handler)throw Error('the phone has no '+type+' handler on '+id);
+    handler({target:el,preventDefault(){},stopPropagation(){}});
+  };
+  const fireNode=(el,type)=>{
+    const handler=el.listeners.get(type);
+    if(!handler)throw Error('the phone has no '+type+' handler on the marker');
+    handler({target:el,preventDefault(){},stopPropagation(){}});
+  };
+  return {calls,outcome,node,
+    ready:()=>client.command('getRecordingState'),
+    select:async(id,value)=>{node(id).value=value;fire(id,'change');for(let i=0;i<200;i++)await Promise.resolve();},
+    click:id=>fire(id,'click'),
+    tap:index=>fireNode(node('rec-markers').children[index],'click'),
+    display:()=>node('rec-passages-value').textContent,
+    payload:()=>calls.find(call=>call.name==='recordingRecord')?.args,
+    pending:()=>pending};
+}
+
+for(const level of phonePassageLevels)
+test('REC the phone start payload for '+level.label+' passages passes the real coordinator contract',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  await phone.select('rec-end-marker','1');
+  for(let cycle=0;cycle<level.cycles;cycle++)phone.click('rec-passages');
+  assert.equal(phone.display(),level.display,'the phone shows the chosen passage count');
+  phone.click('rec-start');
+  const payload=phone.payload();
+  assert.ok(payload,'the phone start button must send a recordingRecord payload');
+  assert.equal(payload.tracks.length,1);
+  assert.equal(payload.tracks[0].index,0);
+  assert.equal(payload.tracks[0].id,'11');
+  assert.equal(payload.tracks[0].name,'Guitar');
+  assert.equal(Object.keys(payload.tracks[0]).length,3);
+  assert.equal(Object.keys(payload.range).length,3);
+  assert.equal(payload.range.start.name,'Take');
+  assert.equal(payload.range.start.time,32);
+  assert.equal(payload.range.end.name,'End');
+  assert.equal(payload.range.end.time,64);
+  assert.equal(payload.range.loop,level.loop,'the phone asks for Loop exactly when more than one pass is wanted');
+  assert.equal(payload.passes,level.passes);
+  assert.equal(payload.preRollBars,0);
+  await phone.pending();
+  assert.equal(phone.outcome.ok,true);
+  assert.equal(phone.outcome.error,null);
+  assert.equal(f.values.playing,true);
+  assert.equal(f.values.record,true);
+  const capture=f.coordinator.snapshot().capture;
+  assert.equal(capture.phase,'recording');
+  assert.equal(capture.pass,1);
+  assert.equal(capture.total,level.passes);
+});
+
+test('REC a phone payload whose loop flag disagrees with its passage count is rejected before any native write',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  await phone.select('rec-end-marker','1');
+  phone.click('rec-start');
+  const payload=phone.payload();
+  assert.ok(payload);
+  assert.equal(payload.passes,1);
+  assert.equal(payload.range.loop,false);
+  await phone.pending();
+  await f.coordinator.stop(f.context);
+  const before=f.sent.length;
+  await assert.rejects(f.coordinator.record(payload.tracks,{...payload.range,loop:true},f.context,payload.preRollBars,payload.passes),/PASSAGES/);
+  assert.equal(f.sent.slice(before).some(([address])=>address.includes('/set/')||address===CMD.startPlaying),false);
+});
+
+test('REC the phone resolves the next marker locally and the real coordinator accepts that range',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  await phone.select('rec-end-marker','next');
+  assert.equal(phone.calls.filter(call=>call.name.startsWith('recording')).length,0,'a local selection never writes to the host');
+  phone.click('rec-start');
+  const payload=phone.payload();
+  assert.ok(payload,'the phone start button must send a recordingRecord payload');
+  assert.equal(payload.range.start.name,'Take');
+  assert.equal(payload.range.start.time,32);
+  assert.equal(payload.range.end.name,'End');
+  assert.equal(payload.range.end.time,64,'the next marker is the earliest later marker of the catalog');
+  assert.equal(payload.range.loop,false);
+  assert.equal(payload.passes,1);
+  await phone.pending();
+  assert.equal(phone.outcome.ok,true);
+  assert.equal(phone.outcome.error,null);
+});
+
+test('REC an explicit end on the phone leaves the next marker mode',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  await phone.select('rec-end-marker','next');
+  assert.equal(phone.node('rec-end-marker').value,'next');
+  await phone.select('rec-end-marker','1');
+  assert.equal(phone.node('rec-end-marker').value,'1','an explicit end leaves the next marker mode');
+  phone.click('rec-start');
+  const payload=phone.payload();
+  assert.equal(payload.range.end.name,'End');
+  assert.equal(payload.range.end.time,64);
+});
+
+test('REC a marker tap on the phone is a local decision that never seeks the host',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  const writes=phone.calls.length;
+  phone.tap(0);
+  assert.equal(phone.calls.length,writes,'a marker tap never writes to the host');
+  assert.equal(phone.node('rec-end-marker').value,'0','the tap chose the end of the local range');
+});
+
+test('REC the phone arms the current start and moves it with the next tap',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  const writes=phone.calls.length;
+  phone.tap(0);
+  assert.equal(phone.calls.length,writes,'a marker tap never writes to the host');
+  assert.equal(phone.node('rec-range-note').textContent,'rec.editStart','the armed start is visible');
+  phone.tap(1);
+  assert.equal(phone.calls.length,writes);
+  assert.equal(phone.node('rec-start-marker').value,'1','the next tap moved the start to the chosen marker');
+});
+
+test('REC the phone blocks a next marker that the catalog does not have',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','1');
+  await phone.select('rec-end-marker','next');
+  assert.equal(phone.node('rec-start').disabled,true,'a range without a next marker never records');
+  assert.equal(phone.node('rec-range-note').textContent,'rec.reason.NO_NEXT');
+  assert.equal(phone.calls.filter(call=>call.name==='recordingRecord').length,0);
+});
+
+test('REC the phone refuses to record when the chosen end marker is gone',async t=>{
+  const f=captureFixture(t);
+  const phone=phoneRecordingHarness(t,f);
+  await phone.ready();
+  await phone.select('rec-start-marker','0');
+  await phone.select('rec-end-marker','1');
+  assert.equal(phone.node('rec-start').disabled,false);
+  f.song.cuePoints=f.song.cuePoints.filter(cue=>cue.name!=='End');
+  await phone.ready();
+  assert.equal(phone.node('rec-start').disabled,true,'a missing end never records');
+  assert.equal(phone.node('rec-range-note').textContent,'rec.reason.END_MISSING');
+  assert.equal(phone.calls.filter(call=>call.name==='recordingRecord').length,0);
 });

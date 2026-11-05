@@ -101,7 +101,11 @@ test("getServerInfo exposes only local phone/admin URLs and no legacy QR fields"
     const info = await commands.getServerInfo.handler({});
 
     assert.equal(info.isRunning, true);
-    assert.match(info.phoneUrl, new RegExp(`^https://[^:]+:${info.httpsPort}/(?:\\?token=.+)?$`));
+    if (info.primaryIp === "") {
+      assert.equal(info.phoneUrl, null, "no address means no phone URL");
+    } else {
+      assert.match(info.phoneUrl, new RegExp(`^https://[^:]+:${info.httpsPort}/(?:\\?token=.+)?$`));
+    }
     assert.match(info.adminUrl, new RegExp(`^http://127\\.0\\.0\\.1:${info.port}/static/admin/(?:\\?token=.+)?$`));
     assert.equal(Object.hasOwn(info, "mixUrl"), false);
     assert.equal(Object.hasOwn(info, "mixQrSrc"), false);
