@@ -30,6 +30,7 @@
       'pt-BR': '<b>RC Surface</b>',
     },
     'lp.top.004': { en: 'About', 'pt-BR': 'Sobre' },
+    'lp.top.new': { en: 'New in 2.1', 'pt-BR': 'Novo na 2.1' },
     'lp.top.005': { en: 'Chain', 'pt-BR': 'Cadeia' },
     'lp.top.006': { en: 'Surface map', 'pt-BR': 'Mapa da superfície' },
     'lp.top.007': { en: 'Controls', 'pt-BR': 'Controles' },
@@ -63,8 +64,56 @@
       'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.",
     },
     'lp.surface.004': {
-      en: "Published releases",
-      'pt-BR': "Versões publicadas",
+      en: "Download 2.1.0 (pre-release)",
+      'pt-BR': "Baixar a 2.1.0 (pré-lançamento)",
+    },
+    'lp.new.title': {
+      en: "New in 2.1.0 <span class=\"tail\">— pre-release, for testing</span>",
+      'pt-BR': "Novo na 2.1.0 <span class=\"tail\">— pré-lançamento, para testes</span>",
+    },
+    'lp.new.why': {
+      en: "A new REC page, a Network tab in the panel, and the fixes from a session on a Mac.",
+      'pt-BR': "Uma página REC nova, uma aba Rede no painel e as correções de uma sessão num Mac.",
+    },
+    'lp.new.recTitle': {
+      en: "REC in three views",
+      'pt-BR': "REC em três vistas",
+    },
+    'lp.new.recBody': {
+      en: "Record, Arrangement and Clip share one capture bar. Tracks appear as native rows with ARM, SOLO, MUTE and a volume fader, and groups open on the phone without changing the Set. Pick a range between two markers and follow a focused take.",
+      'pt-BR': "Gravar, Arrangement e Clip dividem uma barra de captura. As tracks aparecem como linhas nativas com ARM, SOLO, MUTE e fader de volume, e os grupos abrem no celular sem mudar o Set. Escolha um trecho entre dois markers e acompanhe um take em foco.",
+    },
+    'lp.new.netTitle': {
+      en: "The Network tab",
+      'pt-BR': "A aba Rede",
+    },
+    'lp.new.netBody': {
+      en: "The panel shows which address the QR uses and why, lets you pin one with USE, and has FIND SETUP for when the phone does not open. Moving to another network issues a certificate on the running server, with no restart.",
+      'pt-BR': "O painel mostra qual endereço o QR usa e por quê, deixa fixar um com USAR e tem ACHAR CONFIGURAÇÃO para quando o celular não abre. Ao trocar de rede, o servidor em execução emite um certificado novo, sem reiniciar.",
+    },
+    'lp.new.macTitle': {
+      en: "Mac fixes",
+      'pt-BR': "Correções no Mac",
+    },
+    'lp.new.macBody': {
+      en: "The AbletonOSC link starts with the server. Live's playhead listener runs only while a Launch Clip mapping needs it. A phone tab in the background keeps its connection, running modulators come back after a reconnect, and the camera pauses while the page is hidden.",
+      'pt-BR': "O link do AbletonOSC liga junto com o servidor. O listener da posição do Live só roda enquanto um mapeamento de Launch Clip precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar, e a câmera pausa enquanto a página está escondida.",
+    },
+    'lp.new.compatTitle': {
+      en: "Your 2.0 setup stays",
+      'pt-BR': "O que você montou na 2.0 continua",
+    },
+    'lp.new.compatBody': {
+      en: "Mappings, presets and projects from 2.0 keep working. Install 2.1.0 and reload the browser; no data reset is required.",
+      'pt-BR': "Mapeamentos, presets e projetos da 2.0 continuam funcionando. Instale a 2.1.0 e recarregue o navegador; não é preciso zerar dados.",
+    },
+    'lp.new.note': {
+      en: "This is a pre-release: recording and playback still need a check in Live on macOS. The stable version is <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.0.0\">2.0.0</a>. All the changes are in the <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
+      'pt-BR': "Este é um pré-lançamento: gravar e reproduzir ainda precisam de uma conferência no Live no macOS. A versão estável é a <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.0.0\">2.0.0</a>. Todas as mudanças estão nas <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">notas da versão</a>.",
+    },
+    'lp.surface.stable': {
+      en: "Stable 2.0.0",
+      'pt-BR': "Estável 2.0.0",
     },
     'lp.surface.005': {
       en: 'Source & licence',
@@ -79,8 +128,8 @@
       'pt-BR': "Cadeia de sinal <span class=\"tail\">— controle pelo SDK, clock OSC opcional</span>",
     },
     'lp.chain.003': {
-      en: "       HOP 1  ▼  HTTPS · LOCAL CA · WSS     ",
-      'pt-BR': "     SALTO 1  ▼  HTTPS · CA LOCAL · WSS     ",
+      en: "       HOP 1  ▼  HTTPS · SELF-SIGNED · WSS  ",
+      'pt-BR': "     SALTO 1  ▼  HTTPS · AUTOASSINADO · WSS ",
     },
     'lp.chain.004': {
       en: "       HOP 2  ▼  EXTENSIONS SDK · LOCAL     ",
@@ -216,8 +265,8 @@
       'pt-BR': 'Instale a extensão',
     },
     'lp.install.007': {
-      en: "Double-click the <code>.ablx</code> from Published releases to request installation in Live.",
-      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado em Versões publicadas para instalar no Live.",
+      en: "Double-click the <code>.ablx</code> from the 2.1.0 pre-release to request installation in Live.",
+      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado do pré-lançamento 2.1.0 para instalar no Live.",
     },
     'lp.install.009': {
       en: 'Open the panel',
@@ -272,8 +321,8 @@
       'pt-BR': 'O celular não encontra o computador',
     },
     'lp.trouble.005': {
-      en: 'Same Wi-Fi. Live allowed through the firewall. Rescan the current QR.',
-      'pt-BR': 'Mesmo Wi-Fi. Live liberado no firewall. Escaneie o QR atual de novo.',
+      en: 'Same Wi-Fi. Live allowed through the firewall. Rescan the current QR, or open the Network tab in the panel and press FIND SETUP.',
+      'pt-BR': 'Mesmo Wi-Fi. Live liberado no firewall. Escaneie o QR atual de novo, ou abra a aba Rede no painel e clique em ACHAR CONFIGURAÇÃO.',
     },
     'lp.trouble.007': {
       en: 'AbletonOSC not detected',
@@ -389,8 +438,8 @@
       'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 11</span>",
     },
     'lp.map.figScope': {
-      en: "Every plan figure on this sheet is drawn for the released 2.0.0 layout. They are schematics of that release — not screenshots, and not the screen of the candidate you are running. The User Guide describes the current candidate.",
-      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout lançado na 2.0.0. São esquemas daquele lançamento — não são capturas de tela, nem a tela da candidata que você está usando. O Guia de Uso descreve a candidata atual.",
+      en: "Every plan figure on this sheet is drawn for the 2.0.0 layout. They are schematics — not screenshots. The REC page changed in 2.1.0 (see 1.1); the User Guide describes it as it is now.",
+      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout da 2.0.0. São esquemas — não capturas de tela. A página REC mudou na 2.1.0 (veja 1.1); o Guia de Uso descreve como ela é agora.",
     },
     'lp.map.004': {
       en: 'Fig. 1',

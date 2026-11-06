@@ -1097,6 +1097,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
     <nav class="nav" id="nav">
       <a href="#surface" data-i18n="lp.top.004">Sobre</a>
+      <a href="#new" data-i18n="lp.top.new">Novo na 2.1</a>
       <a href="#chain" data-i18n="lp.top.005">Cadeia</a>
       <a href="#map" data-i18n="lp.top.006">Mapa da superfície</a>
       <a href="#controls" data-i18n="lp.top.007">Controles</a>
@@ -1119,11 +1120,39 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <p class="lede" data-i18n="lp.surface.002">Qualquer aparelho com navegador vira um controlador de performance para o Ableton Live. O seu computador serve a superfície na rede local e o celular só precisa abrir um link.</p>
           <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.</p>
           <div class="acts" style="margin-top:20px">
-            <a href="https://github.com/ntworm/rc-surface/releases/latest" data-i18n-html="lp.surface.004">Versões publicadas</a>
+            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Baixar a 2.1.0 (pré-lançamento)</a>
+            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0" data-i18n="lp.surface.stable">Estável 2.0.0</a>
             <a href="https://github.com/ntworm/rc-surface" data-i18n="lp.surface.005">Código e licença</a>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== 1.1 NEW IN 2.1.0 ===================== -->
+  <div class="sec" id="new">
+    <div class="n">1.1</div>
+    <div class="c">
+      <h2 data-i18n-html="lp.new.title">Novo na 2.1.0 <span class="tail">— pré-lançamento, para testes</span></h2>
+      <p class="tnote" data-i18n="lp.new.why">Uma página REC nova, uma aba Rede no painel e as correções de uma sessão num Mac.</p>
+      <div class="cards c2">
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-play"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.recTitle">REC em três vistas</h4>
+          <p class="lead" data-i18n="lp.new.recBody">Gravar, Arrangement e Clip dividem uma barra de captura. As tracks aparecem como linhas nativas com ARM, SOLO, MUTE e fader de volume, e os grupos abrem no celular sem mudar o Set. Escolha um trecho entre dois markers e acompanhe um take em foco.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.netTitle">A aba Rede</h4>
+          <p class="lead" data-i18n="lp.new.netBody">O painel mostra qual endereço o QR usa e por quê, deixa fixar um com USAR e tem ACHAR CONFIGURAÇÃO para quando o celular não abre. Ao trocar de rede, o servidor em execução emite um certificado novo, sem reiniciar.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.macTitle">Correções no Mac</h4>
+          <p class="lead" data-i18n="lp.new.macBody">O link do AbletonOSC liga junto com o servidor. O listener da posição do Live só roda enquanto um mapeamento de Launch Clip precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar, e a câmera pausa enquanto a página está escondida.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-badge"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.compatTitle">O que você montou na 2.0 continua</h4>
+          <p class="lead" data-i18n="lp.new.compatBody">Mapeamentos, presets e projetos da 2.0 continuam funcionando. Instale a 2.1.0 e recarregue o navegador; não é preciso zerar dados.</p></span></div>
+      </div>
+      <p class="tnote" data-i18n-html="lp.new.note">Este é um pré-lançamento: gravar e reproduzir ainda precisam de uma conferência no Live no macOS. A versão estável é a <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0">2.0.0</a>. Todas as mudanças estão nas <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">notas da versão</a>.</p>
     </div>
   </div>
 
@@ -1139,7 +1168,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 │ PHONE BROWSER          TOUCH IMU MIC CAM │◀─┐
 │ PERF · MIX · SNP · SNS · AUD · VID · MAP │  │
 └────────────────────┬─────────────────────┘  │
-<span class="ann" data-i18n="lp.chain.003">     SALTO 1  ▼  HTTPS · CA LOCAL · WSS     </span><span class="ret">  │</span>
+<span class="ann" data-i18n="lp.chain.003">     SALTO 1  ▼  HTTPS · AUTOASSINADO · WSS </span><span class="ret">  │</span>
 ┌─<span class="hot"> NODE 1 </span>─────────────────────────────────┐<span class="ret">  │</span>
 │ RC SURFACE SERVER                 v2.1.0 │<span class="ret">  │</span>
 │ SMOOTH · CURVE EVAL · MORPH · SNAPSHOT   │<span class="ret">  │</span>
@@ -1206,7 +1235,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <label class="surface-tab-map" id="surface-label-aut" for="surface-select-aut">AUT</label>
           <label class="surface-tab-map" id="surface-label-cfg" for="surface-select-cfg">CFG</label>
         </div>
-        <p class="fig-note" data-i18n="lp.map.figScope">Cada figura de planta desta folha foi desenhada para o layout lançado na 2.0.0. São esquemas daquele lançamento — não são capturas de tela, nem a tela da candidata que você está usando. O Guia de Uso descreve a candidata atual.</p>
+        <p class="fig-note" data-i18n="lp.map.figScope">Cada figura de planta desta folha foi desenhada para o layout da 2.0.0. São esquemas — não capturas de tela. A página REC mudou na 2.1.0 (veja 1.1); o Guia de Uso descreve como ela é agora.</p>
         <div class="surface-deck" id="page-plans">
       <figure class="surface-sheet" id="surface-map-perf" data-surface-plan="perf" role="region" aria-labelledby="surface-label-perf">
         <div class="bar">
@@ -3652,7 +3681,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.006">Instale a extensão</h4>
-            <p data-i18n-html="lp.install.007">Dê dois cliques no <code>.ablx</code> baixado em Versões publicadas para instalar no Live.</p>
+            <p data-i18n-html="lp.install.007">Dê dois cliques no <code>.ablx</code> baixado do pré-lançamento 2.1.0 para instalar no Live.</p>
           </div>
         </div>
 
@@ -3709,7 +3738,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="cards c2">
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.004">O celular não encontra o computador</h4>
-          <p class="lead" data-i18n="lp.trouble.005">Mesmo Wi-Fi. Live liberado no firewall. Escaneie o QR atual de novo.</p></span></div>
+          <p class="lead" data-i18n="lp.trouble.005">Mesmo Wi-Fi. Live liberado no firewall. Escaneie o QR atual de novo, ou abra a aba Rede no painel e clique em ACHAR CONFIGURAÇÃO.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-wave"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.007">AbletonOSC não detectado</h4>

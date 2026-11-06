@@ -230,10 +230,10 @@ test('the section numbering the sheet cross-references stays intact', () => {
   // to 2.1 is only meaningful while a heading claims 2.1. Assert both, because
   // deleting one half leaves the other pointing at nothing on the page.
   const eyebrows = landing.match(/<div class="n">\d+\.\d+<\/div>/g) || [];
-  assert.equal(eyebrows.length, 8, 'expected eight numbered sections');
+  assert.equal(eyebrows.length, 9, 'expected nine numbered sections');
   assert.deepEqual(
     eyebrows.map((tag) => tag.replace(/\D*(\d+\.\d+)\D*/, '$1')),
-    ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'],
+    ['1.0', '1.1', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'],
   );
   assert.match(landing, /<h3[^>]*>2\.1 · Clock source<\/h3>/);
 

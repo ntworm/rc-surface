@@ -33,12 +33,12 @@ test('print and no-script readers still get every control family in sequence', (
 });
 
 test('odd cards close their row instead of leaving an empty cell', () => {
-  const count = (open) => {
-    const block = html.slice(html.indexOf(open));
+  const count = (open, from = 0) => {
+    const block = html.slice(html.indexOf(open, from));
     const body = block.slice(0, block.indexOf('\n      </div>'));
     return (body.match(/<(?:div class="card"|article class="story")/g) || []).length;
   };
-  assert.equal(count('<div class="cards c2">') % 2, 1, 'the rule exists for an odd troubleshooting list');
+  assert.equal(count('<div class="cards c2">', html.indexOf('id="trouble"')) % 2, 1, 'the rule exists for an odd troubleshooting list');
   assert.equal(count('<div class="stories">') % 2, 1, 'the rule exists for an odd scenario list');
   assert.match(html, /\.cards\.c2 > \.card:last-child:nth-child\(odd\),\s*\.stories > \.story:last-child:nth-child\(odd\)\{grid-column:1 \/ -1\}/);
   assert.equal((html.match(/<div class="pf-card"/g) || []).length, 5);
