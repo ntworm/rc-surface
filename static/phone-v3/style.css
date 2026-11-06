@@ -5140,8 +5140,6 @@ body.automation-mode .xy-pad[data-name="xy-2"]::before { content:""; position:ab
 .xy-pad[data-aut-state="countdown"] .xy-aut-status { color:#ff453a; }
 body.automation-mode .xy-pad { cursor:crosshair; }
 #btn-aut-mode.on { color:#ff453a; border-color:#ff453a; }
-#aut-message:empty { display:none; }
-#aut-message { position:fixed; bottom:8px; left:8px; right:8px; z-index:2100; padding:8px; background:var(--surface); color:var(--accent); border:1px solid var(--border); }
 
 /* ── VID compact phone layout (2026-10-16) ──────────────────────────────
  * + ADD POSE shares the CAMERA/CONF/REC row, so the pose cards get the old

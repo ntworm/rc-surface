@@ -111,13 +111,12 @@ function makeFakeDom() {
       closest(sel) {
         if (sel === '[data-name]' && this.dataset && this.dataset.name) return this;
         if (sel.startsWith('.page[') && sel.includes('data-page=')) {
-          const m = sel.match(/data-page="([^"]+)"/);
-          const wanted = m ? m[1] : null;
+          const wanted = [...sel.matchAll(/data-page="([^"]+)"/g)].map(match => match[1]);
           const isPage = (this.className || (this.classList && this.classList._set) ? this.className || '' : '').split ? (this.className || '').split(/\s+/).includes('page') : false;
-          if (!wanted) {
+          if (!wanted.length) {
             return this.parent && this.parent.closest ? this.parent.closest(sel) : null;
           }
-          if (isPage && this.dataset && this.dataset.page === wanted) return this;
+          if (isPage && this.dataset && wanted.includes(this.dataset.page)) return this;
           return this.parent && this.parent.closest ? this.parent.closest(sel) : null;
         }
         if (this.parent && this.parent.closest) return this.parent.closest(sel);
@@ -266,8 +265,27 @@ test('pointerup after pointerdown on a CFG control opens the menu', () => {
   assert.equal(documentRef.getElementById('control-config-menu').classList.contains('hidden'), false);
 });
 
+test('holding a control cannot enter CFG before the header button is enabled', () => {
+  for (const [page, name] of [['performance', 'pad-1'], ['performance', 'xy-1'], ['performance', 'knob-1'], ['mixer', 'fader-1']]) {
+    const { cfg, documentRef } = createConfigMode();
+    const control = documentRef.makeElement('div', { name });
+    documentRef.makePage(page, [control]);
+    const event = { target: control, preventDefault() { this.prevented = true; }, stopPropagation() {} };
+    cfg._internals.onContextMenu(event);
+    assert.equal(cfg.state.on, false, name);
+    assert.equal(cfg.state.openFor, null, name);
+    assert.equal(event.prevented, true, 'suppress the browser menu during performance');
+    assert.equal(dispatchPointerDownCapture(documentRef, control)._prevented, undefined, 'normal performance gestures remain available');
+    documentRef.getElementById('btn-cfg-mode')._trigger('click');
+    dispatchPointerDownCapture(documentRef, control);
+    dispatchPointerUpCapture(documentRef, control);
+    assert.equal(cfg.state.openFor, name, 'explicit CFG still selects the control');
+  }
+});
+
 test('contextmenu on a CFG control opens the menu and prevents default', () => {
   const { cfg, documentRef } = createConfigMode();
+  cfg.on();
   const perfPage = documentRef.makePage('performance', []);
   const pad = documentRef.makeElement('div', { name: 'pad-2' });
   perfPage.appendChild(pad);
@@ -292,20 +310,22 @@ test('Escape closes the open menu', () => {
   assert.equal(cfg.state.openFor, null);
 });
 
-test('second right-click on the same control closes CFG; another control opens its own menu',()=>{
+test('after explicit CFG, right-click switches or closes the editor without leaving CFG',()=>{
   const {cfg,documentRef}=createConfigMode();
+  cfg.on();
   const a=documentRef.makeElement('div',{name:'pad-1'}),b=documentRef.makeElement('div',{name:'toggle-2'});
   documentRef.makePage('performance',[a,b]);
   const rightClick=target=>cfg._internals.onContextMenu({target,preventDefault(){},stopPropagation(){}});
   rightClick(a);assert.equal(cfg.state.openFor,'pad-1');
   rightClick(b);assert.equal(cfg.state.openFor,'toggle-2');
-  rightClick(b);assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,false);
+  rightClick(b);assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,true);
   cfg.on();cfg.open('pad-1');rightClick(a);
   assert.equal(cfg.state.openFor,null);assert.equal(cfg.state.on,true,'explicit CFG mode stays enabled');
 });
 
 for(const contextBeforeUp of [true,false]) test(`right mouse sequence switches controls without toggling the new menu off (${contextBeforeUp?'context-first':'up-first'})`,()=>{
   const {cfg,documentRef}=createConfigMode();
+  cfg.on();
   const a=documentRef.makeElement('div',{name:'pad-1'}),b=documentRef.makeElement('div',{name:'pad-2'});
   documentRef.makePage('performance',[a,b]);
   const right=target=>{
@@ -372,10 +392,9 @@ test('renderItems unwraps segment/slider/action/info into populated controls', (
   assert.equal(input.value, '0.5');
 });
 
-test('closing a contextmenu-opened popover turns CFG back off', () => {
-  // P04: a right-click popover is transient. Closing it must reset state.on so
-  // the capture-phase pointerdown handler stops swallowing normal clicks.
+test('closing a contextmenu-opened editor keeps explicit CFG enabled', () => {
   const { cfg, documentRef } = createConfigMode();
+  cfg.on();
   const perfPage = documentRef.makePage('performance', []);
   const pad = documentRef.makeElement('div', { name: 'pad-3' });
   perfPage.appendChild(pad);
@@ -385,7 +404,7 @@ test('closing a contextmenu-opened popover turns CFG back off', () => {
   assert.equal(cfg.state.on, true);
   cfg.close();
   assert.equal(cfg.state.openFor, null);
-  assert.equal(cfg.state.on, false);
+  assert.equal(cfg.state.on, true);
 });
 
 test('switching away from PERF/MIX turns CFG off automatically', () => {

@@ -238,6 +238,23 @@
     el.textContent = info.httpsPort ? translate('panel.net.port', { port: info.httpsPort }) : '';
   }
 
+  // The certificate of this computer: the page where the phone gets it, and
+  // the code that opens that page. Without the page there is nothing to
+  // show, so the whole section goes away.
+  function drawCert(info) {
+    const section = element('net-cert');
+    if (!section) return;
+    const url = info.certUrl || null;
+    section.classList.toggle('hidden', !url);
+    const frame = element('net-cert-qr');
+    if (frame) {
+      if (url) deps.ensureQr(frame, url);
+      else deps.clearQr(frame);
+    }
+    const text = element('net-cert-url');
+    if (text) text.textContent = url || '';
+  }
+
   function drawRows(info) {
     const el = element('net-rows');
     if (!el) return;
@@ -360,6 +377,7 @@
     drawPort(info);
     drawRows(info);
     drawDiag(info);
+    drawCert(info);
   }
 
   global.RcSurfaceNetworkTab = { createPoller, init, setServerInfo, setVisible, setConnected };

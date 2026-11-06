@@ -9,7 +9,7 @@ import * as http from "node:http";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
-import { actualPort, actualHttpsPort, serverInstance, useHttps } from "./state.js";
+import { actualPort, actualHttpsPort, actualCaPort, serverInstance, useHttps } from "./state.js";
 import { commands } from "../live/mappings.js";
 import { authenticateRequest, checkSameOrigin, classifyRequestToken, getAdminToken, getControllerToken, sanitizeRequestUrl, buildSessionCookie } from "./session-auth.js";
 import { getQueryParam, stripQueryParam } from "../util/url.js";
@@ -79,10 +79,11 @@ async function servePanelHtml(
   const { primaryIp, otherIps } = getPublishedLan();
   const ctrlToken = getControllerToken();
   const adminToken = getAdminToken();
-  const { phoneUrl } = buildServerAccessUrls({
+  const { phoneUrl, certUrl } = buildServerAccessUrls({
     isRunning,
     httpPort: port,
     httpsPort,
+    caPort: actualCaPort,
     primaryIp,
     controllerToken: ctrlToken,
     adminToken,
@@ -100,6 +101,7 @@ async function servePanelHtml(
     window.INITIAL_PORT = ${JSON.stringify(port)};
     window.INITIAL_HTTPS_PORT = ${JSON.stringify(httpsPort)};
     window.INITIAL_PHONE_URL = ${JSON.stringify(phoneUrl)};
+    window.INITIAL_CERT_URL = ${JSON.stringify(certUrl)};
     window.INITIAL_PRIMARY_IP = ${JSON.stringify(primaryIp)};
     window.INITIAL_OTHER_IPS = ${JSON.stringify(otherIps)};
     window.INITIAL_STATUS_TEXT = ${JSON.stringify(statusText)};

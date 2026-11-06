@@ -42,6 +42,8 @@ test('window.showToast creates and displays toast element in DOM container', () 
         textContent: '',
         style: {},
         children: [],
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
         appendChild(child) {
           child.parent = this;
           this.children.push(child);
@@ -80,6 +82,7 @@ test('window.showToast creates and displays toast element in DOM container', () 
 
   assert.ok(toastContainer, 'toast-container should be created');
   assert.equal(toastContainer.id, 'toast-container');
+  assert.equal(toastContainer.attributes.role, 'status', 'the toast announces feedback without a duplicate footer');
   assert.equal(toastContainer.children.length, 1);
 
   const toast = toastContainer.children[0];

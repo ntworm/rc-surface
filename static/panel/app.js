@@ -279,6 +279,7 @@ window.addEventListener("DOMContentLoaded", () => {
     httpsPort: window.INITIAL_HTTPS_PORT ?? null,
     statusText: window.INITIAL_STATUS_TEXT || (isRunning ? "Running" : "Stopped"),
     phoneUrl: window.INITIAL_PHONE_URL ?? null,
+    certUrl: window.INITIAL_CERT_URL ?? null,
     primaryIp: window.INITIAL_PRIMARY_IP ?? "\u2014",
     otherIps: window.INITIAL_OTHER_IPS ?? [],
     adminToken: window.INITIAL_ADMIN_TOKEN ?? null,
@@ -1219,7 +1220,7 @@ function updateServerUI() {
   updatePrimaryUrl(active);
 
   // Connection mode info — IDs must exist in the active HTML. A1 keeps
-  // them inside the Main tab's Network block; the null-safety here is
+  // them inside the Network tab; the null-safety here is
   // defence-in-depth for any future HTML restructuring that drops the
   // elements before the JS is updated to match.
   setTextIfPresent("mode-proto", serverInfo.useHttps ? "HTTPS" : "HTTP");

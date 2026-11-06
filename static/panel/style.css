@@ -29,6 +29,14 @@ button, input, select, textarea { font-family: inherit; }
 .net-qr .frame{background:#fff;padding:6px;line-height:0;min-width:152px;min-height:152px}
 .net-qr .label{font-size:10px;color:var(--text2);letter-spacing:.3px;text-transform:uppercase}
 .net-rows{border:1px solid var(--border);margin-bottom:14px}
+.net-cert{margin-top:16px}
+.net-cert-body{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.net-cert-body .net-qr{flex:0 0 auto}
+.net-cert-text{flex:1 1 260px;min-width:0;font-size:11px;line-height:1.5}
+.net-cert-status{color:var(--text2);margin-bottom:8px}
+.net-cert-url{font-family:var(--mono);color:var(--text);word-break:break-all;margin-bottom:8px}
+.net-cert-steps{margin:0;color:var(--text2)}
+.net-cert-steps div{margin-bottom:3px}
 .net-rows:empty{display:none}
 .net-row{display:grid;grid-template-columns:150px 74px minmax(0,1fr) 62px;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11px}
 .net-row:last-child{border-bottom:none}

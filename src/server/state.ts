@@ -8,7 +8,8 @@
 import * as http from "node:http";
 import * as https from "node:https";
 import { type AddressInfo, type Socket } from "node:net";
-import { loadCerts, useHttps, httpsOptions, onCertificateChange } from "./cert.js";
+import { getLocalCaDer, loadCerts, useHttps, httpsOptions, onCertificateChange } from "./cert.js";
+import { createCaDownloadListener } from "./ca-download.js";
 import { handleHttp } from "./http.js";
 import { handleUpgrade, wssInit, stopAllWsClients } from "./ws.js";
 import { regenerateTokens } from "./session-auth.js";
@@ -48,8 +49,11 @@ export const DEFAULT_PREFERRED_PORT = 8730;
 
 export let actualPort: number | null = null;
 export let actualHttpsPort: number | null = null;
+/** The port of the page that hands the certificate over, when it runs. */
+export let actualCaPort: number | null = null;
 export let serverInstance: http.Server | null = null;
 export let httpsServerInstance: https.Server | null = null;
+let caServerInstance: http.Server | null = null;
 
 let serverGeneration = 0;
 let startingServer: Promise<void> | null = null;
@@ -204,6 +208,7 @@ async function initializeServer(generation: number): Promise<void> {
 
   let srv: http.Server | null = null;
   let httpsSrv: https.Server | null = null;
+  let caSrv: http.Server | null = null;
   let published = false;
   try {
     srv = http.createServer(async (req, res) => {
@@ -285,6 +290,26 @@ async function initializeServer(generation: number): Promise<void> {
 
     if (generation !== serverGeneration) return;
 
+    // The page that hands the certificate over runs on plain HTTP, so the
+    // phone can fetch the authority before it trusts anything.
+    if (httpsPort !== null && getLocalCaDer() !== null) {
+      caSrv = http.createServer(createCaDownloadListener(getLocalCaDer, httpsPort));
+      try {
+        const caPort = await listenOnPreferredOrRandom(caSrv, httpsPort + 1, "0.0.0.0", true);
+        caServerInstance = caSrv;
+        actualCaPort = caPort;
+        caSrv.on("error", handleRuntimeError);
+      } catch (caErr) {
+        // The certificate page is a convenience: the server goes on without it.
+        const detail = caErr instanceof Error ? caErr.message : String(caErr);
+        console.warn(`[ableton-rc-surface] the certificate page could not start: ${detail}`);
+        await closeServer(caSrv);
+        caSrv = null;
+      }
+    }
+
+    if (generation !== serverGeneration) return;
+
     // The LAN runtime watches the machine while the server runs. It needs
     // the certificate in place before it publishes an address.
     await startLanRuntime();
@@ -302,7 +327,10 @@ async function initializeServer(generation: number): Promise<void> {
     // that completed after Stop. Stop awaits this cleanup before a new Start.
     if (!published) {
       stopAllWsClients();
-      await Promise.all([closeServer(srv), closeServer(httpsSrv)]);
+      await Promise.all([closeServer(srv), closeServer(httpsSrv), closeServer(caSrv)]);
+      // The page is gone with its socket: it must not be announced.
+      if (caServerInstance === caSrv) caServerInstance = null;
+      if (caSrv) actualCaPort = null;
     }
   }
 
@@ -323,6 +351,9 @@ async function initializeServer(generation: number): Promise<void> {
         console.warn(`[ableton-rc-surface]   LAN phone unavailable: HTTPS did not start (${ip})`);
       }
     }
+    if (actualCaPort && primaryIp) {
+      console.log(`[ableton-rc-surface]   Certificate page: http://${primaryIp}:${actualCaPort}/ca`);
+    }
   }
 }
 
@@ -333,21 +364,24 @@ export async function stopServer(): Promise<void> {
   const starting = startingServer;
   const srv = serverInstance;
   const httpsSrv = httpsServerInstance;
+  const caSrv = caServerInstance;
   stopLanRuntime();
   boundHttpsServer = null;
-  if (!srv && !httpsSrv && !starting) return;
+  if (!srv && !httpsSrv && !caSrv && !starting) return;
   // Everything that rides on the server (the OSC transport) is released
   // before the sockets close.
   announceLifecycle("stopped");
   serverInstance = null;
   httpsServerInstance = null;
+  caServerInstance = null;
   actualPort = null;
   actualHttpsPort = null;
+  actualCaPort = null;
 
   stopAllWsClients();
 
   const stopping = Promise.all([
-    closeServer(srv), closeServer(httpsSrv),
+    closeServer(srv), closeServer(httpsSrv), closeServer(caSrv),
     // The Start caller still receives initialization errors. Stop only waits
     // for the failed/cancelled attempt to release its resources.
     starting?.catch(() => {}),

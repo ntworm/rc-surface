@@ -1093,7 +1093,7 @@ directly from the phone.
 
 ## 9.5 Config Mode (CFG)
 
-Tap CFG, then a control (or right-click on desktop). All eight LFO slots expose
+Tap CFG in the header, then tap a control. Holding a performance control does not enter CFG; desktop right-click is available only after CFG is enabled. All eight LFO slots expose
 the same waveform/mode/timing controls; Square adds swing and ratchet. Both XY
 panels expose Static/Physics; friction, bounce and speed appear only in Physics.
 Switching to Static preserves those settings for later use. Pads retain A/B/C/D,
@@ -1117,8 +1117,9 @@ Each pad now exposes settings for its effective mode, including Global inheritan
 Fine gives small movements more precision; Fast reaches larger changes sooner.
 These levels control the mapped signal, not MIDI note velocity. MIDI trigger threshold
 and velocity remain in MAP. Changing a pad mode safely releases its old state.
-Per-pad settings save with the performance profile and snapshots. Second right-click
-on the same control closes CFG; right-click elsewhere switches the editor.
+Per-pad settings save with the performance profile and snapshots. With CFG enabled,
+right-clicking the same control closes its editor; right-click elsewhere switches
+the editor. CFG stays enabled until its header button is switched off.
 Live waveform changes, including Square, keep a toggle active without another tap;
 a mode-D burst keeps its original end time. Visual fill uses transforms and avoids
 rewriting unchanged labels/trails; actual device smoothness needs physical testing.

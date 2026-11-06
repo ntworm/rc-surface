@@ -1880,10 +1880,11 @@ export const commands: Record<string, CommandSpec> = {
       const httpsPort = serverState.actualHttpsPort;
       const { primaryIp, otherIps, network } = getPublishedLan();
       const localeModule = await import("../server/locale.js");
-      const { phoneUrl, adminUrl } = buildServerAccessUrls({
+      const { phoneUrl, adminUrl, certUrl } = buildServerAccessUrls({
         isRunning,
         httpPort: port,
         httpsPort,
+        caPort: serverState.actualCaPort,
         primaryIp,
         controllerToken: ctrlToken,
         adminToken: admToken,
@@ -1904,6 +1905,7 @@ export const commands: Record<string, CommandSpec> = {
         otherIps,
         phoneUrl,
         adminUrl,
+        certUrl,
         statusText,
         cpuUsage,
         controllerToken: ctrlToken,

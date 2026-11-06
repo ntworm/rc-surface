@@ -700,6 +700,23 @@
     'panel.net.port': { en: 'Port {port}', 'pt-BR': 'Porta {port}' },
     'panel.net.computerNetworks': { en: 'Networks on this computer', 'pt-BR': 'Redes deste computador' },
     'panel.net.diagnosis': { en: 'Diagnosis', 'pt-BR': 'Diagnóstico' },
+    'panel.net.certTitle': { en: 'Certificate', 'pt-BR': 'Certificado' },
+    'panel.net.certStatus': {
+      en: 'Install once on each phone and computer to stop the browser warning',
+      'pt-BR': 'Instale uma vez em cada celular e computador e o aviso do navegador some',
+    },
+    'panel.net.certStep1': {
+      en: '1. Read the QR with the phone, or open the address on the computer, and download the certificate',
+      'pt-BR': '1. Leia o QR com o celular, ou abra o endereço no computador, e baixe o certificado',
+    },
+    'panel.net.certStep2': {
+      en: '2. Install it as a trusted CA certificate (the page shows how on Android, iPhone, Windows and Mac)',
+      'pt-BR': '2. Instale como certificado de CA confiável (a página mostra como no Android, iPhone, Windows e Mac)',
+    },
+    'panel.net.certStep3': {
+      en: '3. Reopen the browser and RC Surface: no warning',
+      'pt-BR': '3. Reabra o navegador e o RC Surface: sem aviso',
+    },
     'panel.net.automatic': { en: 'Automatic', 'pt-BR': 'Automático' },
     'panel.net.action.find': { en: 'FIND SETUP', 'pt-BR': 'ACHAR CONFIGURAÇÃO' },
     'panel.net.action.stop': { en: 'STOP SEARCH', 'pt-BR': 'PARAR BUSCA' },

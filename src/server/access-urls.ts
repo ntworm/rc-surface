@@ -9,6 +9,8 @@ export interface ServerAccessUrlOptions {
   locale?: string;
   httpPort: number | null;
   httpsPort: number | null;
+  /** The port of the page that hands the certificate over, when it runs. */
+  caPort?: number | null;
   primaryIp: string;
   controllerToken: string;
   adminToken: string;
@@ -17,6 +19,8 @@ export interface ServerAccessUrlOptions {
 export interface ServerAccessUrls {
   phoneUrl: string | null;
   adminUrl: string | null;
+  /** The page where the phone gets the certificate of this computer. */
+  certUrl: string | null;
 }
 
 export function buildServerAccessUrls(options: ServerAccessUrlOptions): ServerAccessUrls {
@@ -39,5 +43,14 @@ export function buildServerAccessUrls(options: ServerAccessUrlOptions): ServerAc
     adminUrl: isRunning && httpPort !== null
       ? `http://127.0.0.1:${httpPort}/static/admin/?token=${adminToken}${lang}`
       : null,
+    certUrl: certificateUrl(options),
   };
+}
+
+/** The page where the phone gets the certificate of this computer. */
+function certificateUrl(options: ServerAccessUrlOptions): string | null {
+  const { isRunning, caPort, primaryIp } = options;
+  if (!isRunning || caPort === null || caPort === undefined) return null;
+  if (primaryIp === "") return null;
+  return `http://${primaryIp}:${caPort}/ca`;
 }

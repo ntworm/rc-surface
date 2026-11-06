@@ -595,7 +595,7 @@ pelo celular.
 
 ## 9.5 Modo Config (CFG)
 
-Toque em CFG e no controle (ou clique direito no desktop). Os oito LFOs oferecem
+Toque em CFG no cabeçalho e depois no controle. Segurar um controle durante a performance não entra em CFG; o clique direito no desktop só configura depois de ativar CFG. Os oito LFOs oferecem
 os mesmos ajustes de onda/modo/ritmo; Square acrescenta swing e ratchet.
 Os dois XY oferecem Estático/Física; atrito, ricochete e velocidade aparecem só
 em Física. Trocar para Estático preserva esses ajustes para depois. Pads mantêm
@@ -621,7 +621,7 @@ Fina dá precisão a movimentos pequenos; Rápida alcança mudanças maiores ant
 Esses níveis controlam o sinal mapeado, não a velocity da nota MIDI. Threshold e
 velocity de Trigger Note continuam no MAP. Trocar o modo solta o estado anterior
 com segurança. Ajustes individuais entram no perfil de performance e snapshots.
-Segundo clique direito no mesmo controle fecha o CFG; em outro, troca o editor.
+Com CFG ativado, segundo clique direito no mesmo controle fecha seu editor; em outro, troca o editor. CFG permanece ligado até desligar pelo botão do cabeçalho.
 Trocar onda, inclusive Square, mantém o toggle ativo sem novo toque; burst do modo
 D conserva o fim original. Preenchimento usa transformações e evita reescrever
 rótulos/rastros sem mudança; fluidez no dispositivo ainda exige teste físico.
@@ -1182,7 +1182,7 @@ o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 
 ## Performance 2.0: configurações individuais e banco de poses
 
-Clique direito novamente no mesmo controle fecha seu CFG. Clique direito em outro controle troca diretamente para sua configuração. Arrasto oferece Muito curto (60px), Curto (100px), Médio (150px) e Longo (300px); Nível ao tocar oferece Zero, Baixo (25%), Médio (50%) e Máximo. Curvas de resposta A/B/C e C Lembrar último / Fixo continuam individuais. Esses valores controlam o nível enviado ao destino, não a velocidade das notas MIDI.
+Ative CFG pelo botão do cabeçalho antes de configurar um controle. Segurar um controle durante a performance não abre CFG. Com CFG ligado, clique direito novamente no mesmo controle fecha seu editor; em outro controle, troca diretamente para sua configuração. Arrasto oferece Muito curto (60px), Curto (100px), Médio (150px) e Longo (300px); Nível ao tocar oferece Zero, Baixo (25%), Médio (50%) e Máximo. Curvas de resposta A/B/C e C Lembrar último / Fixo continuam individuais. Esses valores controlam o nível enviado ao destino, não a velocidade das notas MIDI.
 
 No modo D, cada toggle tem **Duração do burst** e ataque próprios, independentes da subdivisão da onda (período de cada ciclo). A duração pode seguir o ajuste compartilhado, usar valor musical fixo em SYNC ou milissegundos em FREE. A seção recolhida mostra a duração selecionada. O modo D herdado de Global apresenta os mesmos ajustes. Pins persistem em projetos, presets e snapshots; abrir CFG nunca dispara controles.
 

@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-function load() {
-  const context = {};
+function load(document) {
+  const context = document ? { document } : {};
   vm.runInNewContext(fs.readFileSync(new URL('./network-address.js', import.meta.url), 'utf8'), context);
   vm.runInNewContext(fs.readFileSync(new URL('./network-tab.js', import.meta.url), 'utf8'), context);
   return context.RcSurfaceNetworkTab;
@@ -138,4 +138,56 @@ test('a failed reading keeps the last info and keeps polling', () => {
   failing.setVisible(true);
   assert.equal(state.infos.length, 0);
   assert.equal(armed().length, 1);
+});
+
+// The certificate of this computer: the section shows the page where the
+// phone gets it, and goes away when there is no such page.
+function elementStub(id) {
+  const classes = new Set();
+  return {
+    id, textContent: '', dataset: {}, classes,
+    classList: {
+      toggle: (name, on) => { if (on) classes.add(name); else classes.delete(name); },
+      add: name => classes.add(name),
+      remove: name => classes.delete(name),
+      contains: name => classes.has(name),
+    },
+  };
+}
+
+function domRig() {
+  const elements = new Map();
+  for (const id of ['net-cert', 'net-cert-qr', 'net-cert-url']) elements.set(id, elementStub(id));
+  const document = {
+    getElementById: id => elements.get(id) ?? null,
+    createElement: tag => elementStub(tag),
+  };
+  return { document, elements };
+}
+
+test('the certificate section is there with a page to open, and gone without one', () => {
+  const { document, elements } = domRig();
+  const drawn = [];
+  const tab = load(document);
+  tab.init({
+    send: () => {},
+    translate: key => key,
+    ensureQr: (frame, url) => drawn.push(url),
+    clearQr: () => drawn.push(null),
+    bindCopy: () => {},
+    startServer: () => {},
+    refreshServer: () => {},
+  });
+
+  const page = 'http://192.168.1.5:8732/ca';
+  tab.setServerInfo({ isRunning: true, httpsPort: 8731, certUrl: page });
+  assert.equal(elements.get('net-cert').classes.has('hidden'), false, 'the section is there');
+  assert.equal(elements.get('net-cert-url').textContent, page, 'the page is written down');
+  assert.deepEqual(drawn, [page], 'and it is in the code');
+
+  drawn.length = 0;
+  tab.setServerInfo({ isRunning: true, httpsPort: 8731, certUrl: null });
+  assert.equal(elements.get('net-cert').classes.has('hidden'), true, 'the section is gone');
+  assert.equal(elements.get('net-cert-url').textContent, '', 'and it leaves no address behind');
+  assert.deepEqual(drawn, [null], 'and the code is taken away');
 });

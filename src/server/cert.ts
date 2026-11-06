@@ -7,10 +7,18 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { generateKeyPairSync } from "node:crypto";
 import selfsigned from "selfsigned";
 import { getExtensionContext } from "../context.js";
 import { stripWslDrivePrefix } from "../util/helpers.js";
 import { getNetworkSnapshot, type LanSnapshot } from "./lan-candidates.js";
+import {
+  isIssuedByCa,
+  isPermittedServerIp,
+  issueServerCertificate,
+  loadOrCreateLocalCa,
+  type LocalCa,
+} from "./local-ca.js";
 
 export let useHttps = false;
 export let httpsOptions: { key: Buffer; cert: Buffer } | null = null;
@@ -18,6 +26,15 @@ export let httpsOptions: { key: Buffer; cert: Buffer } | null = null;
 type CertificateOptions = { key: Buffer; cert: Buffer };
 
 let certificateListener: ((options: CertificateOptions) => void) | null = null;
+
+/** The authority of this computer, when it has one. */
+let localCa: LocalCa | null = null;
+
+/** The certificate of the authority, as the phone installs it, or null when
+ *  this computer has no authority to hand over. */
+export function getLocalCaDer(): Buffer | null {
+  return localCa ? localCa.der : null;
+}
 
 /** Registers the listener that is told about every new certificate, so a
  *  running server can take the new one without a restart. */
@@ -211,6 +228,9 @@ export async function loadCerts(): Promise<void> {
   const lanIpText = lanIps.join(", ") || "none";
 
   if (!storageDir) {
+    // Without a place to keep it there is no authority: the certificate of
+    // the server signs itself, as it always did.
+    localCa = null;
     console.warn("[ableton-rc-surface] storageDirectory unavailable, generating ephemeral HTTPS certs (will not persist)");
     await generateAndApplyEphemeral(lanIps);
     return;
@@ -221,17 +241,20 @@ export async function loadCerts(): Promise<void> {
   const keyPath = path.join(certDir, "ableton-rc-server.key");
   const certPath = path.join(certDir, "ableton-rc-server.crt");
 
+  localCa = await loadAuthority(certDir);
+
   let persisted: CertificateOptions | null = null;
   try {
     const [key, cert] = await Promise.all([
       fs.readFile(keyPath),
       fs.readFile(certPath),
     ]);
-    if (certCoversRequiredAltNames(cert, lanIps)) {
+    const issuedHere = issuedByAuthority(cert, localCa);
+    if (certCoversRequiredAltNames(cert, lanIps) && issuedHere) {
       persisted = { key, cert };
     } else {
       console.log(
-        `[ableton-rc-surface] persisted HTTPS cert missing LAN SAN (${lanIpText}); regenerating`,
+        `[ableton-rc-surface] persisted HTTPS cert does not fit the authority (${lanIpText}); regenerating`,
       );
     }
   } catch {
@@ -250,7 +273,7 @@ export async function loadCerts(): Promise<void> {
     // that trusted the certificate on one address keeps trusting it when
     // the machine moves to another network.
     const previous = await previousSanAddresses(certPath);
-    const options = await generateCertificate(mergeCertAddresses(previous, lanIps));
+    const options = await generateCertificate(mergeCertAddresses(previous, lanIps), lanIps);
     await fs.mkdir(certDir, { recursive: true });
     await Promise.all([
       fs.writeFile(keyPath, options.key, { mode: 0o600 }),
@@ -296,7 +319,7 @@ async function coverAddresses(addresses: readonly string[]): Promise<boolean> {
   if (addresses.every(address => certificateCovers(address))) return true;
   try {
     const previous = sanAddresses(httpsOptions.cert).filter(address => address !== "127.0.0.1");
-    const options = await generateCertificate(mergeCertAddresses(previous, [...addresses]));
+    const options = await generateCertificate(mergeCertAddresses(previous, [...addresses]), addresses);
     await persistCertificate(options);
     httpsOptions = options;
     useHttps = true;
@@ -341,8 +364,49 @@ async function previousSanAddresses(certPath: string): Promise<string[]> {
   }
 }
 
+/** The authority of this computer, or null when it cannot be made: the
+ *  server then signs its own certificate, as it always did. */
+async function loadAuthority(certDir: string): Promise<LocalCa | null> {
+  try {
+    return await loadOrCreateLocalCa(certDir);
+  } catch (err) {
+    console.warn(
+      `[ableton-rc-surface] the local certificate authority could not be made: ${describeError(err)}`,
+    );
+    return null;
+  }
+}
+
+/** True when the certificate on disk is one the authority signed. Without
+ *  an authority there is nothing to compare it with. */
+function issuedByAuthority(cert: Buffer, ca: LocalCa | null): boolean {
+  if (ca === null) return true;
+  return isIssuedByCa(cert.toString("utf8"), ca.certPem);
+}
+
+/**
+ * One certificate for the given addresses: signed by the authority when it
+ * may sign for every required address, and by itself when it may not. A
+ * public address, chosen by hand, is beyond what the authority signs.
+ */
+async function generateCertificate(
+  addresses: readonly string[],
+  required: readonly string[],
+): Promise<CertificateOptions> {
+  const ca = localCa;
+  if (ca && required.every(address => isPermittedServerIp(address))) {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const keyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const certPem = await issueServerCertificate(ca, keyPem, addresses);
+    if (certPem) {
+      return { key: Buffer.from(keyPem, "utf8"), cert: Buffer.from(certPem, "utf8") };
+    }
+  }
+  return selfSignedCertificate(addresses);
+}
+
 /** One self-signed certificate for the given addresses. */
-async function generateCertificate(addresses: readonly string[]): Promise<CertificateOptions> {
+async function selfSignedCertificate(addresses: readonly string[]): Promise<CertificateOptions> {
   const altNames = buildSubjectAltNames([...addresses]);
   const pems = await selfsigned.generate(
     [{ name: "commonName", value: "ableton-rc-surface.local" }],
@@ -376,7 +440,7 @@ async function persistCertificate(options: CertificateOptions): Promise<void> {
 
 async function generateAndApplyEphemeral(addresses: readonly string[]): Promise<void> {
   try {
-    httpsOptions = await generateCertificate(addresses);
+    httpsOptions = await selfSignedCertificate(addresses);
     useHttps = true;
   } catch (err) {
     console.error(`[ableton-rc-surface] ephemeral selfsigned generation failed: ${describeError(err)}; falling back to HTTP`);

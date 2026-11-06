@@ -57,6 +57,7 @@
     if (!toastContainer) {
       toastContainer = document.createElement('div');
       toastContainer.id = 'toast-container';
+      toastContainer.setAttribute('role', 'status');
       toastContainer.style.position = 'fixed';
       toastContainer.style.top = '70px';
       toastContainer.style.left = '50%';

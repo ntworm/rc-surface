@@ -63,6 +63,7 @@ for (const denyStorage of [false, true]) test(`panel address choice lives on the
     await route.fulfill({ body: html.replace('</head>', globals + '</head>'), contentType: 'text/html' });
   });
   await page.goto('/static/panel/index.html');
+  await page.locator('[data-tab="network"]').click();
   const select = page.locator('#network-address');
   const lumikit = candidates[1];
   await select.selectOption(lumikit.id);
@@ -73,6 +74,7 @@ for (const denyStorage of [false, true]) test(`panel address choice lives on the
   await expect(page.locator('#link-admin')).toHaveAttribute('href', adminUrl);
   expect(new URL(page.url()).hostname).toBe('localhost');
   await page.reload();
+  await page.locator('[data-tab="network"]').click();
   await expect(select).toHaveValue(lumikit.id);
   await select.selectOption('auto');
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', url('192.168.64.1'));

@@ -77,6 +77,7 @@ function stateHarness(extra = {}) {
     http: { createServer }, https: { createServer }, process: { env: {} },
     useHttps: true, httpsOptions: {},
     loadCerts: async () => {}, regenerateTokens() {},
+    getLocalCaDer: () => null,
     handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {},
     onCertificateChange(fn) { listener.current = fn; },
     getPublishedLan: () => ({ primaryIp: '192.168.100.200', otherIps: ['192.168.0.10'] }),

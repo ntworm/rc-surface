@@ -12,13 +12,11 @@
       for(const button of document.querySelectorAll?.('.xy-aut-config') || []) button.setAttribute('aria-expanded',String(button.dataset.autConfig===name));
     }
     function perform(action) {
-      const status=document.getElementById('aut-message');
-      try {action();if(status) status.textContent='';} catch(error) {
+      try {action();} catch(error) {
         const key=error.message==='clock'?'aut.clock':error.message==='empty'?'aut.empty':'aut.connection';
         const text=tr(key,{ 'aut.clock':'SYNC needs Live playback and a fresh clock',
           'aut.empty':'Record an XY loop first','aut.connection':'Connect as controller to use AUT' }[key]);
         root.showToast?.(text,'warning');
-        if(status) status.textContent=text;
       }
     }
     const mode=root.RcConfigMode.create({buttonId:'btn-aut-mode',menuId:'automation-config-menu',

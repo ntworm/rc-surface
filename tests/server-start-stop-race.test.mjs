@@ -26,6 +26,7 @@ function harness({ tls = false, manualListen = false, manualClose = false } = {}
     useHttps: tls, httpsOptions: tls ? {} : null,
     loadCerts() { const gate = deferred(); certs.push(gate); return gate.promise; },
     regenerateTokens() { rotations++; },
+    getLocalCaDer: () => null,
     handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {},
     onCertificateChange() {},
     getPublishedLan: () => ({ primaryIp: '', otherIps: [] }),

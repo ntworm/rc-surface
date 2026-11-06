@@ -486,12 +486,15 @@
       const page = named.closest(CFG_PAGES_SELECTOR);
       if (!page || (opts.accept && !opts.accept(named.getAttribute("data-name")))) return;
       ev.preventDefault();
+      // A touch hold also fires contextmenu. Only the explicit header CFG
+      // button may enter configuration; suppress the native menu in PERF.
+      if (modeClass === 'config-mode' && !state.on) return;
       if (typeof ev.stopPropagation === "function") ev.stopPropagation();
       if (state.openFor === named.getAttribute("data-name")) {
         close();
         return;
       }
-      state.contextMenuOpen = true;
+      state.contextMenuOpen = modeClass !== 'config-mode';
       open(named.getAttribute("data-name"), rectFor(named));
     }
 

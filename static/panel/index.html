@@ -127,38 +127,7 @@
   <!-- Grouped control categories (click to expand) -->
   <div class="ctrl-groups" id="ctrl-groups"></div>
 
-  <!-- Network summary (migrated from former Interfaces tab) -->
-  <div class="section-title" style="margin-top:16px" data-i18n="panel.network">Network</div>
-  <div class="iface-primary" style="margin-bottom:8px">
-    <label id="network-address-field" class="network-address-field hidden">
-      <span data-i18n="panel.networkAddress">Network address</span>
-      <select id="network-address" aria-label="Network address" data-i18n-aria-label="panel.networkAddress"></select>
-    </label>
-    <div id="network-reason" class="network-reason hidden"></div>
-    <div class="ip" id="iface-primary-ip">—</div>
-    <div class="url" id="iface-primary-url" data-i18n="panel.notRunning">Server not running</div>
-    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn sm" id="copy-primary" data-i18n="panel.copyUrl">Copy URL</button>
-    </div>
-  </div>
-  <!-- Connection Mode — A1 followup: ids ref'd by updateServerUI()
-       were dropped along with the Interfaces tab. Restoring them in a
-       compact rows block keeps the JS unchanged and the panel stable. -->
-  <div class="section-title" style="margin-top:10px" data-i18n="panel.connectionMode">Connection Mode</div>
-  <div class="conn-mode" id="conn-mode">
-    <div class="conn-mode-row">
-      <span class="conn-mode-label" data-i18n="panel.protocol">Protocol</span>
-      <span class="conn-mode-val" id="mode-proto">HTTP</span>
-    </div>
-    <div class="conn-mode-row">
-      <span class="conn-mode-label" data-i18n="panel.port">Port</span>
-      <span class="conn-mode-val" id="mode-port">—</span>
-    </div>
-    <div class="conn-mode-row">
-      <span class="conn-mode-label" data-i18n="panel.cert">Cert</span>
-      <span class="conn-mode-val" id="mode-cert">n/a</span>
-    </div>
-  </div>
+
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -227,6 +196,39 @@
 <!-- TAB 3: Network                                              -->
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div class="tab-content" id="tab-network">
+  <!-- Network connection settings -->
+  <div class="section-title" style="margin-top:16px" data-i18n="panel.network">Network</div>
+  <div class="iface-primary" style="margin-bottom:8px">
+    <label id="network-address-field" class="network-address-field hidden">
+      <span data-i18n="panel.networkAddress">Network address</span>
+      <select id="network-address" aria-label="Network address" data-i18n-aria-label="panel.networkAddress"></select>
+    </label>
+    <div id="network-reason" class="network-reason hidden"></div>
+    <div class="ip" id="iface-primary-ip">—</div>
+    <div class="url" id="iface-primary-url" data-i18n="panel.notRunning">Server not running</div>
+    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn sm" id="copy-primary" data-i18n="panel.copyUrl">Copy URL</button>
+    </div>
+  </div>
+  <!-- Connection Mode — A1 followup: ids ref'd by updateServerUI()
+       were dropped along with the Interfaces tab. Restoring them in a
+       compact rows block keeps the JS unchanged and the panel stable. -->
+  <div class="section-title" style="margin-top:10px" data-i18n="panel.connectionMode">Connection Mode</div>
+  <div class="conn-mode" id="conn-mode">
+    <div class="conn-mode-row">
+      <span class="conn-mode-label" data-i18n="panel.protocol">Protocol</span>
+      <span class="conn-mode-val" id="mode-proto">HTTP</span>
+    </div>
+    <div class="conn-mode-row">
+      <span class="conn-mode-label" data-i18n="panel.port">Port</span>
+      <span class="conn-mode-val" id="mode-port">—</span>
+    </div>
+    <div class="conn-mode-row">
+      <span class="conn-mode-label" data-i18n="panel.cert">Cert</span>
+      <span class="conn-mode-val" id="mode-cert">n/a</span>
+    </div>
+  </div>
+
   <div class="net-top">
     <div class="net-now" id="net-now">
       <div>
@@ -249,6 +251,22 @@
 
   <div class="section-title" data-i18n="panel.net.diagnosis">Diagnosis</div>
   <div class="net-diag" id="net-diag"></div>
+
+  <div class="net-cert" id="net-cert">
+    <div class="section-title" data-i18n="panel.net.certTitle">Certificate</div>
+    <div class="net-cert-body">
+      <div class="net-qr"><div class="frame" id="net-cert-qr"></div></div>
+      <div class="net-cert-text">
+        <div class="net-cert-status" data-i18n="panel.net.certStatus">Install once on each phone and computer to stop the browser warning</div>
+        <div class="net-cert-url" id="net-cert-url"></div>
+        <div class="net-cert-steps">
+          <div data-i18n="panel.net.certStep1">1. Read the QR with the phone, or open the address on the computer, and download the certificate</div>
+          <div data-i18n="panel.net.certStep2">2. Install it as a trusted CA certificate (the page shows how on Android, iPhone, Windows and Mac)</div>
+          <div data-i18n="panel.net.certStep3">3. Reopen the browser and RC Surface: no warning</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->

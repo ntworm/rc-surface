@@ -72,27 +72,30 @@ test('USE changes the QR in both places and survives a reload', async ({ page })
   await expect(page.locator('#net-qr')).toHaveAttribute('data-qr-url', phoneUrl(lumikit.ip));
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(lumikit.ip), { timeout: 7000 });
   await page.reload();
+  await networkTab(page).click();
   await expect(page.locator('#network-address')).toHaveValue(lumikit.id);
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(lumikit.ip));
 });
 
-test('the Main selector changes the QR in both places and goes back to Automatic', async ({ page }) => {
+test('the Network selector changes the QR in both places and goes back to Automatic', async ({ page }) => {
   const fixture = await open(page, info());
+  await expect(page.locator('#tab-main #network-address, #tab-main #conn-mode')).toHaveCount(0);
+  await networkTab(page).click();
   const select = page.locator('#network-address');
   await expect(select).toBeVisible();
   await select.selectOption(lumikit.id);
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(lumikit.ip));
   await networkTab(page).click();
   await expect(page.locator('#net-qr')).toHaveAttribute('data-qr-url', phoneUrl(lumikit.ip));
-  await page.locator('[data-tab="main"]').click();
   await select.selectOption('auto');
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(wired.ip));
   expect(fixture.sent.filter(cmd => cmd === 'setNetworkChoice')).toHaveLength(2);
 });
 
-test('the Main selector warns about a public address before it is picked', async ({ page }) => {
+test('the Network selector warns about a public address before it is picked', async ({ page }) => {
   const publicRow = row('25.1.1.1', { public: true, level: 8, reasons: ['public'] });
   await open(page, info({}, { candidates: [wired, publicRow] }));
+  await networkTab(page).click();
   await expect(page.locator('#network-address option')).toHaveCount(3);
   const labels = await page.locator('#network-address option').allTextContents();
   expect(labels.filter(label => label.includes('Public address'))).toEqual(['25.1.1.1 · Ethernet · Public address: the QR carries the control password.']);
@@ -148,10 +151,25 @@ test('a stopped server asks for Start and sends no network command', async ({ pa
   expect(fixture.sent.filter(cmd => NETWORK_COMMANDS.includes(cmd))).toEqual([]);
 });
 
-test('no network on Main is not the stopped-server notice', async ({ page }) => {
+test('no network is reported on Network without a stopped-server notice on Main', async ({ page }) => {
   await open(page, info({ primaryIp: '', phoneUrl: null, otherIps: [] }, { candidates: [] }));
+  await networkTab(page).click();
   await expect(page.locator('#network-reason')).toContainText('No adapter');
   await expect(page.locator('#qr-placeholder')).not.toContainText('Start the server');
+});
+
+test('Network offers the certificate QR for the phone while Main keeps quick access', async ({ page }, testInfo) => {
+  const certUrl = `http://${wired.ip}:8732/ca`;
+  await open(page, info({ certUrl }));
+  await expect(page.locator('#tab-main #network-address, #tab-main #conn-mode')).toHaveCount(0);
+  await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(wired.ip));
+  await networkTab(page).click();
+  await expect(page.locator('#tab-network #network-address')).toBeVisible();
+  await expect(page.locator('#tab-network #conn-mode')).toBeVisible();
+  await expect(page.locator('#net-cert')).toBeVisible();
+  await expect(page.locator('#net-cert-qr')).toHaveAttribute('data-qr-url', certUrl);
+  await expect(page.locator('#net-cert-url')).toHaveText(certUrl);
+  await page.locator('#net-cert').screenshot({ path: testInfo.outputPath('certificate-qr.png') });
 });
 
 test('the search keeps the Main QR and shows the candidate QR in the tab', async ({ page }) => {
