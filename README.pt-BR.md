@@ -7,8 +7,6 @@
 
 **English:** [README.md](README.md) · [landing page](https://ntworm.github.io/rc-surface/)
 
-> **A 2.1.0 é um pré-lançamento para testes.** Ela traz a página REC nova, a aba Rede no painel e as correções de conexão no Mac. Gravar e reproduzir ainda precisam de uma conferência no Live no macOS. [Baixar a 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) · [estável 2.0.0](https://github.com/ntworm/rc-surface/releases/tag/v2.0.0)
-
 [**:globe_with_meridians: Página em português**](https://ntworm.github.io/rc-surface/pt-br.html) — mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
 
 O **RC Surface** é uma extensão para o Ableton Live 12, com código-fonte disponível, que transforma o navegador do celular ou tablet na sua rede local em um controlador de performance de baixa latência, mixer, modulador multissensorial e estação de gravação.
@@ -54,7 +52,7 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 ## Início rápido
 
 1. **Requisitos:** Ableton Live 12.4.5+ Suite (Beta) com suporte ao SDK de Extensions, navegador mobile moderno na mesma rede Wi-Fi/LAN confiável e **AbletonOSC** (portas `11000` / `11001`) para `REC`, `Launch Clip`, `TRN` e sincronia de beat; o AbletonOSC é opcional para controle básico.
-2. **Download:** baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou no [pré-lançamento 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) e confira com o `SHA256SUMS.txt`.
+2. **Download:** baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou no [versão 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) e confira com o `SHA256SUMS.txt`.
 3. **Instalação:** dê dois cliques no `RC-Surface-2.1.0.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 4. **Conexão:** abra o painel do RC Surface no Live, escaneie o QR code com o celular e aceite o certificado HTTPS local autoassinado uma única vez. Se o celular não abrir a página, use a aba **Rede** do painel: ela mostra o endereço que o QR usa e tem **ACHAR CONFIGURAÇÃO**.
 5. **Performance e Mapeamento:** use as 7 abas para tocar ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.

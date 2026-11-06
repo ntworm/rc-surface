@@ -1120,7 +1120,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <p class="lede" data-i18n="lp.surface.002">Qualquer aparelho com navegador vira um controlador de performance para o Ableton Live. O seu computador serve a superfície na rede local e o celular só precisa abrir um link.</p>
           <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.</p>
           <div class="acts" style="margin-top:20px">
-            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Baixar a 2.1.0 (pré-lançamento)</a>
+            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Baixar a 2.1.0</a>
             <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0" data-i18n="lp.surface.stable">Estável 2.0.0</a>
             <a href="https://github.com/ntworm/rc-surface" data-i18n="lp.surface.005">Código e licença</a>
           </div>
@@ -1133,16 +1133,32 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="new">
     <div class="n">1.1</div>
     <div class="c">
-      <h2 data-i18n-html="lp.new.title">Novo na 2.1.0 <span class="tail">— pré-lançamento, para testes</span></h2>
+      <h2 data-i18n-html="lp.new.title">Novo na 2.1.0</h2>
       <p class="tnote" data-i18n="lp.new.why">Uma página REC nova, uma aba Rede no painel e as correções de uma sessão num Mac.</p>
       <div class="cards c2">
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-play"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.recTitle">REC em três vistas</h4>
           <p class="lead" data-i18n="lp.new.recBody">Gravar, Arrangement e Clip dividem uma barra de captura. As tracks aparecem como linhas nativas com ARM, SOLO, MUTE e fader de volume, e os grupos abrem no celular sem mudar o Set. Escolha um trecho entre dois markers e acompanhe um take em foco.</p></span></div>
 
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-target"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.cfgTitle">CFG explícito</h4>
+          <p class="lead" data-i18n="lp.new.cfgBody">Segurar um pad ou qualquer controle não abre mais o painel CFG. O CFG abre só tocando em CFG no topo, do mesmo jeito que AUT é tocado para gravar automação nos pads XY.</p></span></div>
+
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.netTitle">A aba Rede</h4>
           <p class="lead" data-i18n="lp.new.netBody">O painel mostra qual endereço o QR usa e por quê, deixa fixar um com USAR e tem ACHAR CONFIGURAÇÃO para quando o celular não abre. Ao trocar de rede, o servidor em execução emite um certificado novo, sem reiniciar.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-menu"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.netMainTitle">Detalhes de rede em um lugar só</h4>
+          <p class="lead" data-i18n="lp.new.netMainBody">Os detalhes de rede saíram da página Main do painel do Live e existem só na aba Rede.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.certTitle">Um certificado só para instalar</h4>
+          <p class="lead" data-i18n="lp.new.certBody">Uma autoridade certificadora local deste computador assina o certificado do servidor e o entrega em uma página simples na porta HTTPS + 1. A aba Rede tem uma seção Certificate com QR, então o celular e o computador instalam uma vez e o navegador para de avisar.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-bolt"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.autTitle">AUT avisa uma vez só</h4>
+          <p class="lead" data-i18n="lp.new.autBody">Os avisos de AUT aparecem só no toast amarelo, nunca duas vezes.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.macTitle">Correções no Mac</h4>
@@ -1152,7 +1168,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4 data-i18n="lp.new.compatTitle">O que você montou na 2.0 continua</h4>
           <p class="lead" data-i18n="lp.new.compatBody">Mapeamentos, presets e projetos da 2.0 continuam funcionando. Instale a 2.1.0 e recarregue o navegador; não é preciso zerar dados.</p></span></div>
       </div>
-      <p class="tnote" data-i18n-html="lp.new.note">Este é um pré-lançamento: gravar e reproduzir ainda precisam de uma conferência no Live no macOS. A versão estável é a <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0">2.0.0</a>. Todas as mudanças estão nas <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">notas da versão</a>.</p>
+      <p class="tnote" data-i18n-html="lp.new.note">Gravar e reproduzir ainda precisam de uma conferência no Live no macOS. Todas as mudanças estão nas <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">notas da versão</a>.</p>
     </div>
   </div>
 
@@ -2023,7 +2039,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
 <figure class="surface-sheet" id="surface-map-rec" data-surface-plan="rec" role="region" aria-labelledby="surface-label-rec">
 <div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement / CLIP</span><span data-i18n="lp.map.006">Sem escala</span><span data-i18n="lp.map.007">Proj. planta</span></div>
-<p class="fig-note" data-i18n="lp.rec.versionNotice">Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A candidata que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa candidata; o Guia de Uso descreve por completo.</p>
+<p class="fig-note" data-i18n="lp.rec.versionNotice">Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A versão que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa versão; o Guia de Uso descreve por completo.</p>
 <input class="rec-view-input" type="radio" name="rec-view-mode" id="rec-view-arrangement" value="arrangement" checked>
 <input class="rec-view-input" type="radio" name="rec-view-mode" id="rec-view-clip" value="clip">
 <div class="rec-view-switcher">
@@ -3681,7 +3697,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.006">Instale a extensão</h4>
-            <p data-i18n-html="lp.install.007">Dê dois cliques no <code>.ablx</code> baixado do pré-lançamento 2.1.0 para instalar no Live.</p>
+            <p data-i18n-html="lp.install.007">Dê dois cliques no <code>.ablx</code> baixado da versão 2.1.0 para instalar no Live.</p>
           </div>
         </div>
 

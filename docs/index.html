@@ -1120,7 +1120,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <p class="lede" data-i18n="lp.surface.002">Any device with a browser becomes a performance controller for Ableton Live. Your machine serves the surface on the local network and the phone just opens a link.</p>
           <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network, nothing installed on the phone.</p>
           <div class="acts" style="margin-top:20px">
-            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Download 2.1.0 (pre-release)</a>
+            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Download 2.1.0</a>
             <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0" data-i18n="lp.surface.stable">Stable 2.0.0</a>
             <a href="https://github.com/ntworm/rc-surface" data-i18n="lp.surface.005">Source &amp; licence</a>
           </div>
@@ -1133,16 +1133,32 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="new">
     <div class="n">1.1</div>
     <div class="c">
-      <h2 data-i18n-html="lp.new.title">New in 2.1.0 <span class="tail">— pre-release, for testing</span></h2>
+      <h2 data-i18n-html="lp.new.title">New in 2.1.0</h2>
       <p class="tnote" data-i18n="lp.new.why">A new REC page, a Network tab in the panel, and the fixes from a session on a Mac.</p>
       <div class="cards c2">
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-play"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.recTitle">REC in three views</h4>
           <p class="lead" data-i18n="lp.new.recBody">Record, Arrangement and Clip share one capture bar. Tracks appear as native rows with ARM, SOLO, MUTE and a volume fader, and groups open on the phone without changing the Set. Pick a range between two markers and follow a focused take.</p></span></div>
 
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-target"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.cfgTitle">CFG is explicit</h4>
+          <p class="lead" data-i18n="lp.new.cfgBody">Holding a pad or any control no longer opens the CFG panel. CFG opens only by tapping CFG at the top, the same way AUT is tapped to write automation in the XY pads.</p></span></div>
+
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.netTitle">The Network tab</h4>
           <p class="lead" data-i18n="lp.new.netBody">The panel shows which address the QR uses and why, lets you pin one with USE, and has FIND SETUP for when the phone does not open. Moving to another network issues a certificate on the running server, with no restart.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-menu"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.netMainTitle">Network details in one place</h4>
+          <p class="lead" data-i18n="lp.new.netMainBody">The network details left the Main page of the Live panel and live only in the Network tab.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.certTitle">One certificate to install</h4>
+          <p class="lead" data-i18n="lp.new.certBody">A local certificate authority of this computer signs the server certificate and hands it over on a plain page at the HTTPS port + 1. The Network tab has a Certificate section with a QR, so the phone and the computer install it once and the browser stops warning.</p></span></div>
+
+        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-bolt"/></svg></span><span class="bd">
+          <h4 data-i18n="lp.new.autTitle">AUT warns once</h4>
+          <p class="lead" data-i18n="lp.new.autBody">AUT warnings show only in the yellow toast, never twice.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.macTitle">Mac fixes</h4>
@@ -1152,7 +1168,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <h4 data-i18n="lp.new.compatTitle">Your 2.0 setup stays</h4>
           <p class="lead" data-i18n="lp.new.compatBody">Mappings, presets and projects from 2.0 keep working. Install 2.1.0 and reload the browser; no data reset is required.</p></span></div>
       </div>
-      <p class="tnote" data-i18n-html="lp.new.note">This is a pre-release: recording and playback still need a check in Live on macOS. The stable version is <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0">2.0.0</a>. All the changes are in the <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">release notes</a>.</p>
+      <p class="tnote" data-i18n-html="lp.new.note">Recording and playback still need a check in Live on macOS. All the changes are in the <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">release notes</a>.</p>
     </div>
   </div>
 
@@ -2023,7 +2039,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
 <figure class="surface-sheet" id="surface-map-rec" data-surface-plan="rec" role="region" aria-labelledby="surface-label-rec">
 <div class="bar"><span data-i18n="lp.rec.figure">Fig. 7</span><span class="grow" data-i18n="lp.rec.title">REC — Arrangement / CLIP</span><span data-i18n="lp.map.006">Scale none</span><span data-i18n="lp.map.007">Proj. plan</span></div>
-<p class="fig-note" data-i18n="lp.rec.versionNotice">This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The candidate you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that candidate; the User Guide describes it in full.</p>
+<p class="fig-note" data-i18n="lp.rec.versionNotice">This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The release you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that release; the User Guide describes it in full.</p>
 <input class="rec-view-input" type="radio" name="rec-view-mode" id="rec-view-arrangement" value="arrangement" checked>
 <input class="rec-view-input" type="radio" name="rec-view-mode" id="rec-view-clip" value="clip">
 <div class="rec-view-switcher">
@@ -3681,7 +3697,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.006">Install the extension</h4>
-            <p data-i18n-html="lp.install.007">Double-click the <code>.ablx</code> from the 2.1.0 pre-release to request installation in Live.</p>
+            <p data-i18n-html="lp.install.007">Double-click the <code>.ablx</code> from the 2.1.0 release to request installation in Live.</p>
           </div>
         </div>
 

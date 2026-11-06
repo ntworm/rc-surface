@@ -64,12 +64,12 @@
       'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.",
     },
     'lp.surface.004': {
-      en: "Download 2.1.0 (pre-release)",
-      'pt-BR': "Baixar a 2.1.0 (pré-lançamento)",
+      en: "Download 2.1.0",
+      'pt-BR': "Baixar a 2.1.0",
     },
     'lp.new.title': {
-      en: "New in 2.1.0 <span class=\"tail\">— pre-release, for testing</span>",
-      'pt-BR': "Novo na 2.1.0 <span class=\"tail\">— pré-lançamento, para testes</span>",
+      en: "New in 2.1.0",
+      'pt-BR': "Novo na 2.1.0",
     },
     'lp.new.why': {
       en: "A new REC page, a Network tab in the panel, and the fixes from a session on a Mac.",
@@ -107,9 +107,41 @@
       en: "Mappings, presets and projects from 2.0 keep working. Install 2.1.0 and reload the browser; no data reset is required.",
       'pt-BR': "Mapeamentos, presets e projetos da 2.0 continuam funcionando. Instale a 2.1.0 e recarregue o navegador; não é preciso zerar dados.",
     },
+    'lp.new.cfgTitle': {
+      en: "CFG is explicit",
+      'pt-BR': "CFG explícito",
+    },
+    'lp.new.cfgBody': {
+      en: "Holding a pad or any control no longer opens the CFG panel. CFG opens only by tapping CFG at the top, the same way AUT is tapped to write automation in the XY pads.",
+      'pt-BR': "Segurar um pad ou qualquer controle não abre mais o painel CFG. O CFG abre só tocando em CFG no topo, do mesmo jeito que AUT é tocado para gravar automação nos pads XY.",
+    },
+    'lp.new.netMainTitle': {
+      en: "Network details in one place",
+      'pt-BR': "Detalhes de rede em um lugar só",
+    },
+    'lp.new.netMainBody': {
+      en: "The network details left the Main page of the Live panel and live only in the Network tab.",
+      'pt-BR': "Os detalhes de rede saíram da página Main do painel do Live e existem só na aba Rede.",
+    },
+    'lp.new.certTitle': {
+      en: "One certificate to install",
+      'pt-BR': "Um certificado só para instalar",
+    },
+    'lp.new.certBody': {
+      en: "A local certificate authority of this computer signs the server certificate and hands it over on a plain page at the HTTPS port + 1. The Network tab has a Certificate section with a QR, so the phone and the computer install it once and the browser stops warning.",
+      'pt-BR': "Uma autoridade certificadora local deste computador assina o certificado do servidor e o entrega em uma página simples na porta HTTPS + 1. A aba Rede tem uma seção Certificate com QR, então o celular e o computador instalam uma vez e o navegador para de avisar.",
+    },
+    'lp.new.autTitle': {
+      en: "AUT warns once",
+      'pt-BR': "AUT avisa uma vez só",
+    },
+    'lp.new.autBody': {
+      en: "AUT warnings show only in the yellow toast, never twice.",
+      'pt-BR': "Os avisos de AUT aparecem só no toast amarelo, nunca duas vezes.",
+    },
     'lp.new.note': {
-      en: "This is a pre-release: recording and playback still need a check in Live on macOS. The stable version is <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.0.0\">2.0.0</a>. All the changes are in the <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
-      'pt-BR': "Este é um pré-lançamento: gravar e reproduzir ainda precisam de uma conferência no Live no macOS. A versão estável é a <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.0.0\">2.0.0</a>. Todas as mudanças estão nas <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">notas da versão</a>.",
+      en: "Recording and playback still need a check in Live on macOS. All the changes are in the <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
+      'pt-BR': "Gravar e reproduzir ainda precisam de uma conferência no Live no macOS. Todas as mudanças estão nas <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">notas da versão</a>.",
     },
     'lp.surface.stable': {
       en: "Stable 2.0.0",
@@ -265,8 +297,8 @@
       'pt-BR': 'Instale a extensão',
     },
     'lp.install.007': {
-      en: "Double-click the <code>.ablx</code> from the 2.1.0 pre-release to request installation in Live.",
-      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado do pré-lançamento 2.1.0 para instalar no Live.",
+      en: "Double-click the <code>.ablx</code> from the 2.1.0 release to request installation in Live.",
+      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado da versão 2.1.0 para instalar no Live.",
     },
     'lp.install.009': {
       en: 'Open the panel',
@@ -1760,8 +1792,8 @@
       'pt-BR': "REC — Arrangement / CLIP",
     },
     'lp.rec.versionNotice': {
-      en: "This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The candidate you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that candidate; the User Guide describes it in full.",
-      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A candidata que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa candidata; o Guia de Uso descreve por completo.",
+      en: "This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The release you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that release; the User Guide describes it in full.",
+      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A versão que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa versão; o Guia de Uso descreve por completo.",
     },
     'lp.rec.figure': {
       en: "Fig. 7",
