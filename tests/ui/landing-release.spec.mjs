@@ -69,7 +69,7 @@ test('operator landing fits mobile widths in both languages with local scrollabl
       }));
       expect(bounds, locale + ' ' + width + ' ' + JSON.stringify(bounds)).toMatchObject({ width, viewport: width, overflowing: [] });
     }
-    await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText(locale === 'en' ? 'Published releases' : 'Versões publicadas');
+    await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText(locale === 'en' ? 'Download 2.1.0 (pre-release)' : 'Baixar a 2.1.0 (pré-lançamento)');
     if (locale === 'pt-BR') {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.screenshot({ path: '.agent-context/runtime/release-landing-pt-390.png' });
@@ -85,10 +85,10 @@ test('the Portuguese landing URL opens in Portuguese for a browser that last cho
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/landing/pt-br.html');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
-  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Versões publicadas');
+  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Baixar a 2.1.0 (pré-lançamento)');
   await expect(page.locator('[data-i18n-html="lp.map.018"] code').nth(1)).toHaveText('XY 2');
   await page.locator('[data-set-locale="en"]').click();
-  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Published releases');
+  await expect(page.locator('a[data-i18n-html="lp.surface.004"]')).toHaveText('Download 2.1.0 (pre-release)');
   expect(errors).toEqual([]);
 });
 
