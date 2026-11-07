@@ -8,13 +8,13 @@ Ele não coleta, transmite nem armazena dados pessoais além da própria máquin
 | Dado | Onde | Por quanto tempo |
 |------|------|------------------|
 | Certificado TLS autoassinado + chave privada | `storageDirectory/certs/` do Ableton | Até o usuário apagar o armazenamento ou o certificado expirar ou ser gerado de novo |
-| Mapeamentos de controle | Armazenamento do Ableton | Persistem entre sessões |
-| Presets de mapeamento | Armazenamento do Ableton | Até serem apagados |
+| Mapeamentos de controle | `surface-v2/` do Ableton | Persistem entre sessões |
+| Presets e projetos de mapeamento | `surface-v2/` do Ableton | Até serem apagados |
 | Preferências do celular | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |
 | Ajustes da análise de áudio | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |
 
 
-2.0 isola mappings, presets e projetos em `storageDirectory/surface-v2/` com schema 2. Não importa nem apaga dados 1.x. Configurações/loops XY e capturas de poses são dados locais; nenhum frame de câmera vira mídia enviada. PALM/FACE são medidas numéricas de uma mão, não identificação facial.
+Mapeamentos, presets e projetos ficam em `storageDirectory/surface-v2/` com schema 2. Os dados do schema 1 não são importados nem apagados. Configurações/loops XY e capturas de poses são dados locais; nenhum frame de câmera vira mídia enviada. PALM/FACE são medidas numéricas de uma mão, não identificação facial.
 
 ## Dados de rede
 
@@ -52,10 +52,8 @@ dispersão e energia de graves/médios/agudos. Nenhum áudio bruto é transmitid
 ## Runtime de terceiros
 
 O MediaPipe Hands vem junto com a extensão e é servido pela conexão local. O
-modelo de rastreio de mãos roda no navegador do celular. Este projeto não envia
-quadros de câmera para o Google.
+modelo de rastreio de mãos roda no navegador do celular, e este projeto não
+envia quadros de câmera para o Google.
 
 Numa rede totalmente offline, os controles principais — toque, movimento,
-áudio, mapeamento, mixer e rastreio de mãos por câmera — continuam funcionando,
-porque o runtime e os arquivos de modelo do MediaPipe vêm junto com a extensão
-e são servidos localmente.
+áudio, mapeamento, mixer e rastreio de mãos por câmera — continuam funcionando.

@@ -17,14 +17,14 @@ How should it work once it's built? What does the user press / move / see?
 
 What do you use today as a workaround? (Existing mobile controller, TouchOSC template, mouse mapping, etc.)
 
-## Is it tiny, or does it deserve its own release?
+## Release size
 
-- Small: can ship in a patch (v0.4.X).
+- Small: can ship in a patch release.
 - Medium: a future minor version.
 - Big: needs a roadmap discussion before it touches the codebase.
 
 I think this is: ___
 
-## Out of scope?
+## Out of scope
 
 Anything you explicitly do NOT want (to avoid scope creep)?

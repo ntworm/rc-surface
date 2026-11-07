@@ -19,7 +19,7 @@ A clear, one-paragraph description of what is broken.
 
 ## Environment
 
-- Ableton Live version: (e.g. 12.2.5 — required 12+)
+- Ableton Live version: (e.g. 12.4.5 — required 12.4.5+ Suite (Beta))
 - OS: (Windows / macOS / Linux — also include build if Linux)
 - Phone OS + browser: (e.g. iOS 18 + Safari 18, Android 14 + Chrome 130)
 - Extension version: (RC-Surface-X.Y.Z.ablx)
@@ -27,11 +27,11 @@ A clear, one-paragraph description of what is broken.
 
 ## Console output
 
-If a JavaScript exception or Ableton extension log message is visible, paste it here. Open the Live Extensions log (`View → Show Extension Log`) and the browser DevTools console on the phone. For sensor or audio issues, a 10-second screen recording showing the panel value vs phone movement or input is invaluable.
+If a JavaScript exception or Ableton extension log message is visible, paste it here. Open the Live Extensions log (`View → Show Extension Log`) and the browser DevTools console on the phone.
 
 ## Screenshots / screen recordings
 
-Attach if relevant. For sensor issues, a 10-second screen recording showing the panel value vs phone movement is invaluable.
+Attach if relevant. For sensor or audio issues, add a 10-second screen recording that shows the panel value next to the phone movement or input.
 
 ## What I've tried
 

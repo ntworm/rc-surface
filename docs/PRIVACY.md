@@ -14,7 +14,7 @@ It does not collect, transmit, or store personal data beyond the user's own mach
 | Audio analysis settings | Phone browser storage | Until browser data is cleared |
 
 
-2.0 isolates mappings, presets and projects in `storageDirectory/surface-v2/` with schema 2. It neither imports nor deletes 1.x data. XY settings/loops and learned-pose captures are local data; camera frames are not uploaded media. PALM/FACE are numeric measurements of one hand, not facial identification.
+Mappings, presets and projects live in `storageDirectory/surface-v2/` with schema 2. Data in schema 1 is neither imported nor deleted. XY settings/loops and learned-pose captures are local data; camera frames are not uploaded media. PALM/FACE are numeric measurements of one hand, not facial identification.
 
 ## Network Data
 
@@ -47,12 +47,11 @@ Only numeric measurements cross WebSocket: RMS, envelope, gate, attack,
 transient, kick, snare, brightness, centroid, rolloff95, flux, flatness,
 spread and low/mid/high band energy. No raw audio is transmitted.
 
-## Third-Party Runtime
+## Third-party runtime
 
 MediaPipe Hands is bundled with the extension and served over the local
-connection. The hand-tracking model runs in the phone browser. Camera frames
-are not sent to Google by this project.
+connection. The hand-tracking model runs in the phone browser, and camera
+frames are not sent to Google by this project.
 
 On a fully offline network, core touch, motion, audio, mapping, mixer, and
-camera hand-tracking controls continue to work because the MediaPipe runtime
-and model files are bundled with the extension and served locally.
+camera hand-tracking controls continue to work.

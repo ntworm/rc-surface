@@ -1,6 +1,6 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
 | Version | Supported |
 |---------|-----------|
@@ -8,7 +8,7 @@
 | 1.x | historical; no 2.0 data compatibility |
 | 0.7.x and earlier | no |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
 Do not report security problems in a public channel.
 Use GitHub's private **Report a vulnerability** channel for this repository.
@@ -44,7 +44,7 @@ URLs, and active browser sessions as credentials. A party that obtains one of
 those tokens receives its associated role until the server restarts. Rescan
 the new QR after restarting; old pages become read-only.
 
-## HTTPS And Certificates
+## HTTPS and certificates
 
 - Phone, panel, and admin browser clients should use HTTPS/WSS.
 - Camera and microphone require a Secure Context on the phone.
@@ -132,7 +132,7 @@ To undo **only this rule**, first unload the Receiver, then run as administrator
 Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 ```
 
-## Network Exposure
+## Network exposure
 
 - Do not run the bridge on public, guest, or untrusted WiFi.
 - Prefer same-room/studio LAN use.
@@ -141,7 +141,7 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
   router port forwarding. Those deployments are outside the v2.0 threat model.
 - Stop and start the server to invalidate all issued session tokens.
 
-## Command Safety
+## Command safety
 
 Commands are JSON messages handled by project code. Read operations are
 available to viewers; Live and mapping writes require a controller or admin;

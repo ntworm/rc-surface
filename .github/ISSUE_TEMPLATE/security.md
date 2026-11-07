@@ -15,8 +15,7 @@ One or two sentences.
 ## Affected component
 
 - Extension version (`RC-Surface-X.Y.Z.ablx`)
-- File path or `src/*` / `static/*` location if known
-- `src/extension.ts`, `static/phone-v3/app.js`, etc.
+- File path or `src/*` / `static/*` location if known (`src/extension.ts`, `static/phone-v3/app.js`)
 
 ## Reproduction
 

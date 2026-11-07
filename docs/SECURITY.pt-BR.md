@@ -69,9 +69,10 @@ OFF no Receiver; habilite apenas nos destinos desejados. Vários Receivers
 habilitados recebem intencionalmente o mesmo barramento local. Ambos são
 patchers comuns, sem objetos de rede, scripts externos ou externals compilados.
 
-Isso elimina a entrada MIDI de rede sem autenticação, mas não autentica outros
-patchers locais. Carregue apenas devices confiáveis. Os comandos do celular
-continuam exigindo papel/token no WSS. O MIDI v2 não exige nova regra de firewall.
+O Receiver v2 não abre listener MIDI de rede sem autenticação e não autentica
+outros patchers locais. Carregue apenas devices confiáveis. Os comandos do
+celular continuam exigindo papel/token no WSS. O MIDI v2 não exige nova regra
+de firewall.
 
 Troque **ambos** os devices e todas as instâncias antigas do Receiver nos Sets.
 Atualizar só a extensão ou copiar um arquivo para a biblioteca não substitui

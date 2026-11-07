@@ -3,73 +3,70 @@
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
 [![v2.1.0](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
-[![stars](https://img.shields.io/github/stars/ntworm/rc-surface.svg?style=social)](https://github.com/ntworm/rc-surface/stargazers)
 
 **Português:** [README.pt-BR.md](README.pt-BR.md) · [página em português](https://ntworm.github.io/rc-surface/pt-br.html)
 
-[**:globe_with_meridians: Live landing page**](https://ntworm.github.io/rc-surface/) — interactive surface map, install walkthrough, and workflow reference.
+[Live landing page](https://ntworm.github.io/rc-surface/) — interactive surface map, install walkthrough and workflow reference.
 
-**RC Surface** is a source-available Ableton Live 12 extension. A phone or tablet browser on your local network runs it as a performance controller, mixer, multi-sensor modulator and recording station.
+RC Surface is an extension for Ableton Live 12 that serves a control surface in the browser of a phone or tablet. It does the work of a hardware controller — pads, knobs, faders, XY pads, mixer, transport and recording — and takes the phone's motion sensors, microphone and camera as control sources. The extension runs inside Live on the official Extensions SDK. It serves the surface over local HTTPS/WSS, and the phone client runs in plain browser JavaScript.
 
-The host runs inside Ableton Live on the official Extensions SDK; the phone client runs in plain browser JavaScript over local HTTPS/WSS with zero app install.
+## Requirements
 
-## New in 2.1.0
+- Ableton Live 12.4.5+ Suite (Beta) with the official Extensions SDK.
+- A phone or tablet on the same trusted Wi-Fi/LAN: iOS 15.4+ Safari or Chromium on Android, held in landscape.
+- **AbletonOSC** (UDP `11000` / `11001`), optional: core parameter bindings and sensors work without it; `REC`, `Launch Clip`, `TRN`, `AUT` in `SYNC` and Deep Sync need it.
 
-- **REC.** Three views (Record, Arrangement, Clip) share one capture bar. Tracks are listed with **ARM / SOLO / MUTE** and a volume fader; groups expand on the phone without changing the Set. A take range can be set between two markers; the REC header shows the destinations and **CLICK**.
-- **Network tab.** The QR code uses the address that reaches the network, ranked per address: default route first, then a gateway on the same subnet; hotspots, virtual adapters and VPNs last. The tab shows the reason for the choice, **USE** pins an address and **FIND SETUP** lists each address with its own QR code. A network change issues a new certificate without restarting the server. The Main tab of the panel shows the QR code and the connected clients; addresses and certificate are in the Network tab.
-- **Local certificate.** A certificate authority of this computer signs the server certificate for localhost and private network addresses. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1; with the certificate installed, the browser opens the pages without a warning. A public address selected with **USE** keeps a self-signed certificate. The authority is a trust root valid for 10 years; remove it from a device to revoke trust.
-- **CFG.** Tap **CFG** in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings. The CFG button is the only way into these settings.
-- **AUT.** AUT warnings appear once, in the yellow toast.
-- **macOS.** The AbletonOSC link starts with the server; it does not start on activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.
-- **Fixes.** A resumed phone keeps its client card; a malformed path returns 400; the Network selector keeps a pending choice.
-- **Compatibility.** 2.0 mappings, presets and projects work unchanged; reload the browser after installing. A network choice stored in the browser by the 2.0.1 preview is not migrated. Recording and playback have not yet been verified in Live on macOS.
+## Quick start
 
-See the [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) for the files and the full notes.
+1. **Download.** `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus the optional `RC-Audio-Sender.amxd`) from the [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Verify the files with `SHA256SUMS.txt`.
+2. **Install.** Double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if it is open), then enable **RC Surface** under *Options → Preferences → Extensions*.
+3. **Connect.** Open the RC Surface panel in Live and scan the QR code with the phone. Install the certificate authority of this computer once, from the plain page at the HTTPS port + 1; the **Certificate** section of the **Network** tab links that page. If the phone does not open the page, open the **Network** tab: it shows the address the QR code uses and has **FIND SETUP**.
+4. **Control.** Use the seven surface tabs to control Live. Tap **MAP** in the header to bind parameters, trigger MIDI notes or launch clips.
 
-## Overview
+> **Storage:** RC Surface stores projects, presets and mappings in `storageDirectory/surface-v2/` (schema 2). See [docs/INSTALL.md](docs/INSTALL.md).
 
-The mobile interface is organized into **seven pages** plus **four contextual header modes**:
+## Pages
 
-| Surface | Role |
+| Page | What it does |
 | :--- | :--- |
-| **`PERF`** | 12 velocity/pressure pads (modes A/B/C/D), two Static/Physics XY pads, 8 synced LFO/Square toggles (`T1`–`T8`), and 4 snapshot slots. |
+| **`PERF`** | 12 velocity/pressure pads (modes A/B/C/D), two Static/Physics XY pads, 8 synced LFO/Square toggles (`T1`–`T8`) and 4 snapshot slots. |
 | **`MIX`** | 8 mappable rotary knobs (`270°` arc) and 8 mappable full-height faders. |
 | **`SNP`** | 16 snapshot slots that recall surface control states. |
 | **`SNS`** | Phone motion (accelerometer/gyroscope) and 3D orientation sensors with posture calibration. |
-| **`AUD`** | Real-time microphone analysis with 12 spectral/band-onset descriptors and ITU-R BS.1770 K-weighted loudness. |
-| **`VID`** | Local single-hand camera tracking (bundled MediaPipe Hands) with continuous `X / Y / Z / PALM / FACE` inputs and up to 15 learned poses (`G1`–`G15`). |
-| **`REC`** | Recording station with three local views — **RECORD / ARRANGEMENT / CLIP**, with **Record** as the default — sharing one fixed capture bar (**REC / STOP**, **PRE-ROLL**, **PASSES**, **START / END**, **CLICK**) and one fixed mode bar. Record shows the native track rows and a compact marker list, and only the track list scrolls; it reads no clips, takes or waveforms. Arrangement adds the marker timeline with local marker selection, the native Arrangement clips on the same timeline and take inspection; Clip captures an empty Session scene. |
-| **`MAP` · `TRN` · `AUT` · `CFG`** | Header overlays for on-phone mapping (**Bind**, **Trigger Note**, **Launch Clip**), transport/locators (`TRN`), XY gesture loops (`AUT`), and per-control configuration (`CFG`). |
+| **`AUD`** | Real-time microphone analysis with 12 spectral/band-onset descriptors. |
+| **`VID`** | Local single-hand camera tracking (bundled MediaPipe Hands) with continuous `X / Y / Z / PALM / FACE` inputs and up to 15 learned poses (`G1`–`G15`). `RC-Midi-Receiver.amxd` passes upstream MIDI through byte-for-byte (`midiin → midiout`). |
+| **`REC`** | Recording station with three local views — **RECORD / ARRANGEMENT / CLIP**, with **Record** as the default — sharing one fixed capture bar (**REC / STOP**, **PRE-ROLL**, **PASSES**, **START / END**, **CLICK**) and one fixed mode bar. Record shows the native track rows and a compact marker list; only the track list scrolls, and this view reads no clips, takes or waveforms. Arrangement adds the marker timeline, the native Arrangement clips and take inspection. Clip captures an empty Session scene. |
+| **`MAP`** | Header overlay for on-phone mapping: bind a touch or sensor source to a Live parameter (**Bind**), trigger quantized MIDI notes through `RC-Midi-Receiver.amxd` (**Trigger Note**) or fire Session clips and clip-advance rules (**Launch Clip**). The response-curve and Burst handles need a `0.6 s` hold. |
+| **`TRN`** | Header overlay for transport and locators. |
+| **`AUT`** | Header overlay for XY gesture loops: record and loop movement on `XY 1` and `XY 2` after a `3–2–1` countdown, synced to Live (`1–5 bars`) or free (`1–30 seconds`). |
+| **`CFG`** | Config Mode (CFG): customize individual pads (modes A/B/C/D and Mode D burst timing), `T1`–`T8` modulators and the independent Static/Physics XY behavior (friction, bounce, speed, trails). |
 
 ## Performance 2.0
 
-- **Recording (`REC`):** one global page with three local views — **RECORD / ARRANGEMENT / CLIP** — where **Record** is the default, sharing one fixed capture bar and one fixed mode bar. **Record** shows the capture bar (**REC / STOP**, **PRE-ROLL** `OFF / 1 / 2 / 4` bars, **PASSES** `1 / 2 / 3 / ∞`, **START / END**, **CLICK**) with the native track rows and a compact marker list; on a landscape phone only the track list scrolls, and this view reads no clips, takes or waveforms. **Arrangement** is the editor with the scaled bar/beat marker timeline, native Arrangement clips at their real intervals, `ZOOM` and take focus; **Clip** captures an empty Session scene across all armed tracks (`1 / 2 / 4 / 8 / 16` bars, launch quantization, and `BACK TO ARR`). Marker selection is local: it defines the range that **REC** captures and never seeks Live. Markers are prepared in Live and appear in the catalog; the phone creates none. Live tracks appear as native rows with per-row **ARM / SOLO / MUTE** and a horizontal volume fader, plus **ARM ALL** and a local group expansion; arming a group row arms its armable descendants. In **Arrangement**, a track row offers **TAKES** and the Arrangement clip you choose opens an exclusive focus on that exact clip, where **GOOD / REVIEW / NO MARK** rename the take clip you chose; there is no global take panel. A waveform preview is an explicit stopped-state action on a visible Arrangement audio clip. Listening, comping and promoting stay in Live; see [User Guide](docs/USER-GUIDE.md#16-rec-arrangement--clip).
-- **XY Gesture Loops (`AUT`):** record and loop movements independently on `XY 1` and `XY 2` after a `3–2–1` countdown, synced to Live (`1–5 bars`) or free (`1–30 seconds`).
-- **On-Phone Mapping (`MAP`):** bind any touch or sensor source to Live parameters (**Bind**), trigger quantized MIDI notes via `RC-Midi-Receiver.amxd` (**Trigger Note**), or fire Session clips and clip-advance rules (**Launch Clip**). Touch response-curve and Burst handles require a `0.6 s` hold so scrolling never alters a value.
-- **Config Mode (CFG):** customize individual pads (modes A/B/C/D and Mode D burst timing), `T1`–`T8` modulators, and independent Static/Physics XY behavior (friction, bounce, speed, trails).
-- **LFO waveform preview:** inspect the active modulator shape (sine, triangle, ramp up, ramp down, square pulse with swing/ratchet) and rate ceiling in the SYNC modal before sending to Live.
-- **Expanded Vision (`VID`) & MIDI Thru:** train up to 15 custom hand poses (`3–6` captures per pose, `RETAKE / KEEP` conflict review, configurable tracking-loss hold/release) and map normalized `PALM` and `FACE` orientation. `RC-Midi-Receiver.amxd` passes upstream MIDI through byte-for-byte (`midiin → midiout`).
-- **K-weighted loudness:** monitor momentary, short-term, and integrated loudness alongside 12 spectral and band-isolated attack descriptors on `AUD`.
+- **LFO waveform preview:** inspect the active modulator shape (sine, triangle, ramp up, ramp down, square pulse with swing/ratchet) and the rate ceiling in the SYNC modal before sending to Live.
 - **Desktop keyboard control:** nudge any continuous control (knob, fader, XY pad, toggle, square) from the keyboard when the client has focus.
+- **K-weighted loudness:** monitor momentary, short-term and integrated loudness on `AUD`, with ITU-R BS.1770 weighting.
 
-## Quick Start
+## What is new in 2.1.0
 
-1. **Requirements:** Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support, a modern mobile browser on the same trusted Wi-Fi/LAN, and **AbletonOSC** (ports `11000` / `11001`) for `REC`, `Launch Clip`, `TRN`, and beat sync; AbletonOSC is optional for basic control.
-2. **Download:** grab `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus optional `RC-Audio-Sender.amxd`) from the supplied kit or matching [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) and verify with `SHA256SUMS.txt`.
-3. **Install:** double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if already open), then enable **RC Surface** under *Options → Preferences → Extensions*.
-4. **Connect:** open the RC Surface panel in Live and scan the QR code with your phone. A local certificate authority of this computer signs the server certificate for the private addresses of your network; install it once from the plain page at the HTTPS port + 1, which the **Network** tab of the panel links as **Certificate**. If the phone does not open the page, use the **Network** tab in the panel: it shows the address the QR uses and has **FIND SETUP**.
-5. **Play & Map:** use the 7 surface tabs to control Live, or tap **MAP** in the header to bind parameters, trigger MIDI notes, or launch clips.
+- **REC.** Three views (Record, Arrangement, Clip) share one capture bar; tracks are listed with **ARM / SOLO / MUTE** and a volume fader.
+- **Network tab.** The QR code uses the address that reaches the network. The tab shows the reason for the choice, **USE** pins an address and **FIND SETUP** lists each address with its own QR code.
+- **Local certificate.** A certificate authority of this computer signs the server certificate for localhost and private network addresses. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1.
+- **CFG.** Tap **CFG** in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings.
+- **AUT.** AUT warnings appear once, in the yellow toast.
+- **macOS.** The AbletonOSC link starts with the server. Live's playhead listener runs only while a **Launch Clip** mapping needs it.
+- **Fixes.** A resumed phone keeps its client card; a malformed path returns 400; the Network selector keeps a pending choice.
+- **Compatibility.** 2.0 mappings, presets and projects work unchanged; reload the browser after installing. Recording and playback have not yet been verified in Live on macOS.
 
-> **Storage:** RC Surface stores projects, presets, and mappings in `storageDirectory/surface-v2/` (schema 2). Configure it from a fresh state; existing 1.x files are left untouched. See [`docs/INSTALL.md`](docs/INSTALL.md) for full setup details.
+See the [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) for the files and the full notes.
 
 ## Documentation
 
-- [User Guide](docs/USER-GUIDE.md) — surface tabs, gestures, mapping modes, snapshots, calibration, and Stage mode.
-- [Installation Guide](docs/INSTALL.md) — certificates, LAN setup, companion Max for Live devices, and troubleshooting.
+- [User Guide](docs/USER-GUIDE.md) — surface tabs, gestures, mapping modes, snapshots, calibration and Stage mode.
+- [Installation Guide](docs/INSTALL.md) — certificates, LAN setup, companion Max for Live devices and troubleshooting.
 - [Customization & Control Catalog](docs/CUSTOMIZATION.md) — complete control name catalog (`pad-*`, `knob-*`, `fader-*`, `xy-*`, `toggle-*`, `sensor.*`) and extension points.
 - [Compatibility](docs/COMPATIBILITY.md) · [Contracts](docs/CONTRACTS.md) · [FAQ](docs/FAQ.md)
 - [Security Policy](docs/SECURITY.md) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md)
-- [Internal Documentation Index](internal/README.md) · [Tester Guide](internal/TESTER-GUIDE.md)
 
 ## Development
 
@@ -84,19 +81,17 @@ npm run ci
 npm run build:prod-ablx
 ```
 
-## Security & Limitations
+## Security
 
 > [!WARNING]
-> **Security Notice**: RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require rotating session tokens, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes/URLs. See [SECURITY.md](docs/SECURITY.md) for the full threat model.
+> **Security notice:** RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require rotating session tokens, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes or URLs. See [docs/SECURITY.md](docs/SECURITY.md) for the full threat model.
 
-- **Certificate authority:** the local CA is a trust root installed on the phone or the computer, valid for 10 years and only for private addresses; remove it from the device to revoke the trust.
-- **Local Processing:** camera frames and microphone audio are analyzed locally in the phone browser; raw media never leaves the device.
-- **AbletonOSC Scope:** core parameter bindings and sensors work standalone via the Extensions SDK; `REC`, `Launch Clip`, `AUT` in `SYNC`, Deep Sync, and locator transport require AbletonOSC.
-- **Max for Live Devices:** `Trigger Note` requires `RC-Midi-Receiver.amxd` on the target MIDI track. Replace any legacy v1 receiver instances in older Sets so no unauthenticated UDP port remains open.
+- **Local processing.** Camera frames and microphone audio are analyzed locally in the phone browser; raw media never leaves the device.
+- **Max for Live devices.** `Trigger Note` requires `RC-Midi-Receiver.amxd` on the target MIDI track. Replace legacy v1 receiver instances in older Sets so no unauthenticated UDP port stays open.
 
 ## License
 
-PolyForm Noncommercial 1.0.0 — free for noncommercial use, redistribution, and modification; commercial sale of this software or modified versions is not permitted. See [LICENSE](LICENSE) for the full text and Required Notice.
+PolyForm Noncommercial 1.0.0 — free for noncommercial use, redistribution and modification; commercial sale of this software or modified versions is not permitted. See [LICENSE](LICENSE) for the full text and the Required Notice.
 © Gabriel Worm · <https://github.com/ntworm/rc-surface>.
 
 Ableton and Live are trademarks of Ableton AG. RC Surface is an independent project, not affiliated with, endorsed by, or sponsored by Ableton AG.

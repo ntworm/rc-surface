@@ -1,12 +1,12 @@
 # Contributing to RC Surface
 
-Thanks for considering contributing. This project is released under the
-PolyForm Noncommercial 1.0.0 license and welcomes issues, bug reports, and
-feature requests. New contributions are accepted only by direct invitation
-from the maintainer; please open an issue to discuss any changes before
-sending a pull request, and do not assume unsolicited PRs will be merged.
+This project is released under the PolyForm Noncommercial 1.0.0 license and
+accepts issues, bug reports and feature requests. New contributions are
+accepted only by direct invitation from the maintainer: open an issue to
+discuss a change before sending a pull request, and do not assume that
+unsolicited pull requests will be merged.
 
-## Getting started
+## Local setup
 
 Requires **Node.js >=24.16.0 <25** (see `package.json`; `.nvmrc` and
 `.node-version` pin the development baseline).
@@ -60,9 +60,8 @@ static/
   admin/     admin dashboard
 ```
 
-There is no standalone MIX client, no standalone MIX protocol, and no Mix
-QR in the current architecture. The MIX tab is integrated into the phone
-client.
+The MIX tab is integrated into the phone client: there is no separate MIX
+client, MIX protocol or Mix QR code.
 
 ## Tests
 
@@ -110,7 +109,7 @@ experimental audio benchmark evidence is maintained separately.
 Use `npm run build:prod-ablx` to generate the versioned `.ablx` and `npm run
 package:tester` to generate the tester kit.
 
-## Before submitting a PR
+## Pull request checklist
 
 1. Run the full release gate locally.
 2. Add or update tests for behavior changes.
@@ -142,7 +141,7 @@ Please include:
 ## Feature requests
 
 Open an issue with the `enhancement` label once the repository is public.
-Describe the use case, not just the proposed implementation.
+Describe the use case instead of the proposed implementation.
 
 ## Trademarks
 
