@@ -128,8 +128,8 @@
       'pt-BR': "Um certificado só para instalar",
     },
     'lp.new.certBody': {
-      en: "A local certificate authority of this computer signs the server certificate and hands it over on a plain page at the HTTPS port + 1. The Network tab has a Certificate section with a QR, so the phone and the computer install it once and the browser stops warning.",
-      'pt-BR': "Uma autoridade certificadora local deste computador assina o certificado do servidor e o entrega em uma página simples na porta HTTPS + 1. A aba Rede tem uma seção Certificate com QR, então o celular e o computador instalam uma vez e o navegador para de avisar.",
+      en: "A local certificate authority of this computer signs the server certificate for localhost and the private addresses of the network, and hands it over on a plain page at the HTTPS port + 1. The Network tab has a Certificate section with a QR, so the phone and the computer install it once and the browser stops warning. A public address pinned with USE keeps a self-signed certificate.",
+      'pt-BR': "Uma autoridade certificadora local deste computador assina o certificado do servidor para localhost e para os endereços privados da rede, e o entrega em uma página simples na porta HTTPS + 1. A aba Rede tem uma seção Certificado com QR, então o celular e o computador instalam uma vez e o navegador para de avisar. Um endereço público fixado com USAR continua com um certificado autoassinado.",
     },
     'lp.new.autTitle': {
       en: "AUT warns once",
@@ -313,8 +313,8 @@
       'pt-BR': 'Conecte o celular',
     },
     'lp.install.012': {
-      en: "Scan the QR code, accept the self-signed certificate once, and hold the phone in landscape.",
-      'pt-BR': "Escaneie o QR code, aceite o certificado autoassinado uma vez e segure o celular na horizontal.",
+      en: "Scan the QR code, install the certificate authority of this computer once from the plain page at the HTTPS port + 1, and hold the phone in landscape.",
+      'pt-BR': "Escaneie o QR code, instale uma vez a autoridade certificadora deste computador pela página simples na porta HTTPS + 1 e segure o celular na horizontal.",
     },
     'lp.install.015': {
       en: 'Arm the sensors',

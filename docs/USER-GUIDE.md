@@ -10,7 +10,7 @@ soundcheck, and live performance. Read this once before playing a set.
 
 ---
 
-### Realtime control in the current candidate
+### Realtime control in this release
 
 MAP no longer slows parameter control: XY, MIX and sensor values use a separate
 control stream, with the first frame sent immediately and subsequent traffic
@@ -173,9 +173,9 @@ It is a preview, not confirmation of Live delivery; a display may miss fast puls
 Changing to/from Square safely stops the old algorithm before the next touch.
 
 2.0.0 uses performance payload schema 2 and fresh browser performance keys.
-Overrides and snapshots created by the first 2.0.0 candidate are not imported;
+Overrides and snapshots created by the first 2.0.0 preview are not imported;
 that avoids restoring the forced mode A and the retired Stutter waveform.
-Existing files remain untouched; configure this candidate afresh.
+Existing files remain untouched; configure this release afresh.
 
 ## 5. PERF UTIL shortcuts
 
@@ -366,11 +366,11 @@ device. Audio Sender input is a separate opt-in. Do not automate or MIDI-map
 `RC MIDI Packet v2`: the API requires an automatable parameter, and while SDK
 Notes is ON such automation can play notes.
 
-This candidate also passes upstream MIDI byte-for-byte through **midiin →
+This release also passes upstream MIDI byte-for-byte through **midiin →
 midiout**, separately from SDK/Audio Sender gates and their Panic/flush path.
 Keyboard channels, Note-Off, velocity and controllers keep their original bytes.
-Replace the already loaded Receiver instance with the candidate
-`RC-Midi-Receiver.amxd`; updating the extension does not replace devices in a Set.
+Replace the already loaded Receiver instance with the `RC-Midi-Receiver.amxd`
+from this release; updating the extension does not replace devices in a Set.
 Check the keyboard and generated notes in Live before performing.
 
 Multiple controls can trigger notes on the same MIDI track. Different
@@ -1020,7 +1020,7 @@ Release mode waits only for that grace; indefinite mode has no global deadline.
 The badge distinguishes current tracking, last-known hold/countdown and release.
 Camera OFF and disconnect always stop owned notes. A stalled host/Live cannot
 guarantee a real-time deadline; it evaluates the original deadline upon resuming.
-Reload the client after installing this candidate so new tracking metadata is used.
+Reload the client after installing this release so new tracking metadata is used.
 
 ### Learned static poses
 
@@ -1170,7 +1170,7 @@ For deeper setup issues (certificates, network, installation) see
 
 ## Performance 2.0: individual settings and learned-pose bank
 
-Right-click the same control again to close its CFG. Right-click another control to switch directly to its settings. Drag travel offers Very short (60px), Short (100px), Medium (150px) and Long (300px); Touch level offers Zero, Low (25%), Medium (50%) and Maximum. A/B/C response curves and C Remember last / Fixed remain individual. These values control the mapped output level, not MIDI note velocity.
+Open CFG with the header button before you configure a control. Holding a control during a performance no longer opens CFG. With CFG on, right-click the same control again to close its editor; right-click another control to switch directly to its settings. Drag travel offers Very short (60px), Short (100px), Medium (150px) and Long (300px); Touch level offers Zero, Low (25%), Medium (50%) and Maximum. A/B/C response curves and C Remember last / Fixed remain individual. These values control the mapped output level, not MIDI note velocity.
 
 In mode D, each toggle has its own **Burst length** and attack, independent of the waveform's subdivision (the period of each cycle). Length may follow the shared setting, use a pinned musical value in SYNC, or milliseconds in FREE. The collapsed Burst length section shows the selected duration. Global mode D exposes the same settings. Pins persist in projects, presets and snapshots; opening CFG never triggers a control.
 

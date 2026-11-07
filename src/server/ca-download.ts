@@ -63,7 +63,7 @@ const PORTUGUESE = {
     },
   ],
   limit:
-    'Este certificado só vale para localhost e endereços de rede local (192.168, 10 e 172.16 a 172.31). Ele não serve para nenhum site da internet.',
+    'Este certificado só vale para localhost e endereços privados da rede. Ele não serve para nenhum site da internet.',
   test: 'Abrir o RC Surface para testar',
 };
 
@@ -112,7 +112,7 @@ const ENGLISH: typeof PORTUGUESE = {
     },
   ],
   limit:
-    'This certificate only covers localhost and local network addresses (192.168, 10 and 172.16 to 172.31). It cannot vouch for any site on the internet.',
+    'This certificate only covers localhost and private network addresses. It cannot vouch for any site on the internet.',
   test: 'Open RC Surface to test',
 };
 

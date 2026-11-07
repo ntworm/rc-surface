@@ -17,6 +17,10 @@ The host runs inside Ableton Live on the official Extensions SDK; the phone clie
 
 - **REC in three views.** Record, Arrangement and Clip share one capture bar. Tracks appear as native rows with **ARM / SOLO / MUTE** and a volume fader; groups open on the phone without changing the Set. Pick a range between two markers, follow a focused take, and find the destinations and **CLICK** in the REC header.
 - **The Network tab.** The QR uses the address that reaches your network, judged per address: the route out first, then a gateway on the same subnet, with hotspots, virtual adapters and VPNs last. The Network tab in the panel says why, lets you pin an address with **USE** and has **FIND SETUP** for when the phone does not open. Moving to another network issues a certificate on the running server; nothing needs a restart.
+- **CFG is explicit.** CFG opens only by tapping **CFG** at the top; holding a pad or any control no longer opens it.
+- **Network details in one place.** The network details left the Main page of the Live panel and live only in the **Network** tab.
+- **One certificate to install.** A local certificate authority of this computer signs the server certificate for the private addresses of the network. The **Certificate** section of the **Network** tab links the install page at the HTTPS port + 1, where the phone and the computer install it once.
+- **AUT warns once.** AUT warnings show only in the yellow toast, never twice.
 - **Mac fixes.** The AbletonOSC link starts with the server instead of at activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it, which removes most of the log traffic. A phone tab in the background keeps its connection, running modulators come back after a reconnect, and the camera pauses and says so while the page is hidden.
 - **Reliability.** A resumed phone keeps its client card, a malformed path gets a 400 instead of a server error, and the Network selector holds a pending choice instead of jumping back.
 - **Compatibility.** Mappings, presets and projects from 2.0 keep working: install 2.1.0 and reload the browser. A network choice made in the 2.0.1 preview lived in the browser and is not carried over.
@@ -54,7 +58,7 @@ The mobile interface is organized into **seven pages** plus **four contextual he
 1. **Requirements:** Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK support, a modern mobile browser on the same trusted Wi-Fi/LAN, and **AbletonOSC** (ports `11000` / `11001`) for `REC`, `Launch Clip`, `TRN`, and beat sync; AbletonOSC is optional for basic control.
 2. **Download:** grab `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus optional `RC-Audio-Sender.amxd`) from the supplied kit or matching [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) and verify with `SHA256SUMS.txt`.
 3. **Install:** double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if already open), then enable **RC Surface** under *Options → Preferences → Extensions*.
-4. **Connect:** open the RC Surface panel in Live, scan the QR code with your phone, and accept the local self-signed HTTPS certificate once. If the phone does not open the page, use the **Network** tab in the panel: it shows the address the QR uses and has **FIND SETUP**.
+4. **Connect:** open the RC Surface panel in Live and scan the QR code with your phone. A local certificate authority of this computer signs the server certificate for the private addresses of your network; install it once from the plain page at the HTTPS port + 1, which the **Network** tab of the panel links as **Certificate**. If the phone does not open the page, use the **Network** tab in the panel: it shows the address the QR uses and has **FIND SETUP**.
 5. **Play & Map:** use the 7 surface tabs to perform, or tap **MAP** in the header to bind parameters, trigger MIDI notes, or launch clips.
 
 > **Upgrading from 1.x:** RC Surface `2.0.0` stores projects, presets, and mappings in `storageDirectory/surface-v2/` (schema 2). Configure 2.0 from a fresh state; existing 1.x files are left untouched. See [`docs/INSTALL.md`](docs/INSTALL.md) for full setup details.
@@ -86,6 +90,7 @@ npm run build:prod-ablx
 > [!WARNING]
 > **Security Notice**: RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require rotating session tokens, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes/URLs. See [SECURITY.md](docs/SECURITY.md) for the full threat model.
 
+- **Certificate authority:** the local CA is a trust root installed on the phone or the computer, valid for 10 years and only for private addresses; remove it from the device to revoke the trust.
 - **Local Processing:** camera frames and microphone audio are analyzed locally in the phone browser; raw media never leaves the device.
 - **AbletonOSC Scope:** core parameter bindings and sensors work standalone via the Extensions SDK; `REC`, `Launch Clip`, `AUT` in `SYNC`, Deep Sync, and locator transport require AbletonOSC.
 - **Max for Live Devices:** `Trigger Note` requires `RC-Midi-Receiver.amxd` on the target MIDI track. Replace any legacy v1 receiver instances in older Sets so no unauthenticated UDP port remains open.

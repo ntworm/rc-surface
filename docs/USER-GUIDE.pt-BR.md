@@ -10,7 +10,7 @@ montagem, passagem de som e apresentação. Leia uma vez antes de tocar um set.
 
 ---
 
-### Controle em tempo real na versão candidata atual
+### Controle em tempo real nesta versão
 
 O MAP não reduz mais a frequência do controle: XY, MIX e sensores usam um fluxo
 separado, com primeiro envio imediato e tráfego seguinte agrupado com espaçamento
@@ -165,9 +165,9 @@ prévia, sem confirmação de entrega ao Live; a tela pode perder pulsos rápido
 Trocar de/para Square interrompe o algoritmo anterior antes do próximo toque.
 
 2.0.0 usa schema 2 no payload de performance e chaves novas de navegador.
-Overrides e snapshots do primeiro candidato 2.0.0 não são importados, evitando
+Overrides e snapshots da primeira prévia 2.0.0 não são importados, evitando
 restaurar o modo A fixado e a onda Stutter retirada. Arquivos existentes ficam
-intactos; configure este candidato do zero.
+intactos; configure esta versão do zero.
 
 ## 5. Atalhos PERF UTIL
 
@@ -357,10 +357,10 @@ uma habilitação separada. Não automatize nem mapeie por MIDI `RC MIDI Packet 
 a API exige um parâmetro automatizável e, com SDK Notes ON, essa automação pode
 tocar notas.
 
-Este candidato também passa MIDI upstream byte a byte por **midiin → midiout**,
+Esta versão também passa MIDI upstream byte a byte por **midiin → midiout**,
 separado dos gates SDK/Audio Sender e do caminho Panic/flush dessas notas.
 Canais, Note-Off, velocity e controllers do teclado conservam os bytes originais.
-Substitua a instância já aberta pelo `RC-Midi-Receiver.amxd` deste candidato;
+Substitua a instância já aberta pelo `RC-Midi-Receiver.amxd` desta versão;
 atualizar a extensão não troca devices dentro do Set. Teste teclado e notas
 geradas no Live antes da performance.
 
@@ -1027,7 +1027,7 @@ Soltar na perda espera somente grace; manter sem limite não tem teto global.
 Badge distingue tracking atual, última pose/hold com contagem e release.
 Camera OFF e desconexão sempre encerram notas próprias. Host/Live travado não
 garante deadline em tempo real; ao retomar, compara o prazo original.
-Recarregue o cliente após instalar este candidato para usar metadados novos.
+Recarregue o cliente após instalar esta versão para usar metadados novos.
 
 **⚙ acompanha a aba:** PERF abre Deep Sync; VID abre reconhecimento/perda de
 tracking; AUD reutiliza entrada/análise; SNS mostra capacidades e ações explícitas
