@@ -84,7 +84,7 @@ test('REC plan draws a scaled timeline with end gutters, complete controls and t
     for(const key of ['timeline','range','preRoll','tracks','transport','clip'])assert.match(rec,new RegExp('data-i18n="lp.rec.'+key+'Flow"'));
   }
   assert.match(catalog['lp.rec.preRollFlow'].en,/read-only native count-in/);
-  assert.match(catalog['lp.rec.transportFlow'].en,/only still-owned state/);
+  assert.match(catalog['lp.rec.transportFlow'].en,/restores Punch In only when/);
   assert.match(catalog['lp.rec.tracksFlow'].en,/exactly the visible armed set|exact armed set|verifies exactly the visible armed set/);
 });
 

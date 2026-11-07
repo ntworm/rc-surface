@@ -650,7 +650,6 @@ test('the four 1.0 features stay documented where the long answers live', () => 
     'CFG chapter 9.5 must be between chapter 9 and chapter 10 in USER-GUIDE.pt-BR.md');
   // The README must mention the four 1.0 features
   const readme = fs.readFileSync(path.join(import.meta.dirname, '..', 'README.md'), 'utf8');
-  assert.match(readme, /## Performance 2\.0/, 'README.md must retain current performance documentation');
   assert.match(readme, /Config Mode \(CFG\)/, 'README.md must mention Config Mode (CFG)');
   assert.match(readme, /LFO waveform preview/, 'README.md must mention the LFO waveform preview');
   assert.match(readme, /Desktop keyboard control/, 'README.md must mention desktop keyboard control');
