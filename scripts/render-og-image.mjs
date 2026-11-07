@@ -90,7 +90,7 @@ try {
     .replaceAll('{{SCREEN_DATA_URI}}', `data:image/png;base64,${screen.toString('base64')}`);
   const card = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
   await card.setContent(html, { waitUntil: 'load' });
-  await card.evaluate(() => document.fonts.ready);
+  await card.evaluate(() => globalThis.document.fonts.ready);
   const png = await card.screenshot({ animations: 'disabled', caret: 'hide' });
   await fs.writeFile(
     output,
