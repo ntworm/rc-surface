@@ -56,12 +56,40 @@
       'pt-BR': '<span class="rc">RC</span> Surface',
     },
     'lp.surface.002': {
-      en: "Any device with a browser can control Ableton Live. Your machine serves the surface on the local network and the phone opens a link.",
-      'pt-BR': "Qualquer aparelho com navegador pode controlar o Ableton Live. O seu computador serve a superfície na rede local e o celular abre um link.",
+      en: "A control surface for Ableton Live that runs in the browser of a phone or tablet. It does the stage work of a hardware controller — pads, knobs, faders, XY pads, mixer, transport and recording — with no extra hardware, and it uses the phone's motion sensors, microphone and camera as control sources.",
+      'pt-BR': "Uma superfície de controle para o Ableton Live que roda no navegador do celular ou tablet. Faz no palco o trabalho de um controlador físico — pads, knobs, faders, XY, mixer, transporte e gravação — sem hardware extra, e usa os sensores de movimento, o microfone e a câmera do celular como fontes de controle.",
+    },
+    'lp.surface.how': {
+      en: "The extension runs inside Live on the official Extensions SDK and serves the surface over HTTPS on the local network. The phone scans the QR code in the Live panel and opens the page; nothing is installed on the phone.",
+      'pt-BR': "A extensão roda dentro do Live, no Extensions SDK oficial, e serve a superfície por HTTPS na rede local. O celular lê o QR do painel do Live e abre a página; nada é instalado no celular.",
+    },
+    'lp.surface.perf': {
+      en: "12 pads, two XY pads, 8 LFO/Square modulators and 4 snapshots.",
+      'pt-BR': "12 pads, dois XY, 8 moduladores LFO/Square e 4 snapshots.",
+    },
+    'lp.surface.mix': {
+      en: "8 knobs and 8 faders.",
+      'pt-BR': "8 knobs e 8 faders.",
+    },
+    'lp.surface.snp': {
+      en: "16 snapshots of the surface state.",
+      'pt-BR': "16 snapshots do estado da superfície.",
+    },
+    'lp.surface.sensors': {
+      en: "Phone motion, microphone analysis and camera hand tracking. Each source can move a Live parameter, play a MIDI note on a MIDI track or launch a Session clip — a learned hand pose, for example, can start a clip.",
+      'pt-BR': "Movimento do celular, análise do microfone e rastreio da mão pela câmera. Cada fonte pode mover um parâmetro do Live, tocar uma nota MIDI numa track MIDI ou lançar um clip da Session — uma pose de mão aprendida, por exemplo, pode disparar um clip.",
+    },
+    'lp.surface.rec': {
+      en: "Arm tracks, record takes and set a range between two markers.",
+      'pt-BR': "Armar tracks, gravar takes e definir um intervalo entre dois markers.",
+    },
+    'lp.surface.map': {
+      en: "Assigns any control or sensor, from the phone, to one of three targets: <b>Bind</b> (a Live parameter), <b>Trigger Note</b> (a MIDI note on a MIDI track, through RC-Midi-Receiver.amxd) or <b>Launch Clip</b> (a Session clip, through AbletonOSC).",
+      'pt-BR': "Liga qualquer controle ou sensor, pelo celular, a um de três destinos: <b>Bind</b> (um parâmetro do Live), <b>Trigger Note</b> (uma nota MIDI numa track MIDI, pelo RC-Midi-Receiver.amxd) ou <b>Launch Clip</b> (um clip da Session, pelo AbletonOSC).",
     },
     'lp.surface.003': {
-      en: "Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network, nothing installed on the phone.",
-      'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.",
+      en: "Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network.",
+      'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local.",
     },
     'lp.surface.004': {
       en: "Download 2.1.0",
@@ -142,10 +170,6 @@
     'lp.new.note': {
       en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
       'pt-BR': "Gravar e reproduzir ainda não foram verificados no Live no macOS. Lista completa: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">notas da versão</a>.",
-    },
-    'lp.surface.stable': {
-      en: "Stable 2.0.0",
-      'pt-BR': "Estável 2.0.0",
     },
     'lp.surface.005': {
       en: 'Source & licence',

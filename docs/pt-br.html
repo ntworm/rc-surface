@@ -614,6 +614,10 @@ h1 .rc{background:var(--amber);color:var(--black)}
 .lede{font-size:17px;line-height:26px;color:var(--ink);max-width:52ch}
 .lede + .lede{margin-top:10px;color:var(--ink2)}
 .lede b{font-weight:normal;color:var(--amber)}
+.hero-tabs{margin-top:22px;max-width:96ch}
+@media (min-width:701px){dl.split2.hero-tabs{grid-template-columns:minmax(0,160px) minmax(0,1fr)}}
+.hero-tabs dd b{color:var(--ink)}
+.hero-tabs + .lede{margin-top:22px}
 
 table.spec{border-collapse:collapse;width:100%;font-size:11px;line-height:16px}
 table.spec th{
@@ -1117,11 +1121,19 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="hero">
         <div>
           <h1 data-i18n-html="lp.surface.001"><span class="rc">RC</span> Surface</h1>
-          <p class="lede" data-i18n="lp.surface.002">Qualquer aparelho com navegador pode controlar o Ableton Live. O seu computador serve a superfície na rede local e o celular abre um link.</p>
-          <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local, nada instalado no celular.</p>
+          <p class="lede" data-i18n="lp.surface.002">Uma superfície de controle para o Ableton Live que roda no navegador do celular ou tablet. Faz no palco o trabalho de um controlador físico — pads, knobs, faders, XY, mixer, transporte e gravação — sem hardware extra, e usa os sensores de movimento, o microfone e a câmera do celular como fontes de controle.</p>
+          <p class="lede" data-i18n="lp.surface.how">A extensão roda dentro do Live, no Extensions SDK oficial, e serve a superfície por HTTPS na rede local. O celular lê o QR do painel do Live e abre a página; nada é instalado no celular.</p>
+          <dl class="split2 tight hero-tabs">
+            <dt>PERF</dt><dd data-i18n="lp.surface.perf">12 pads, dois XY, 8 moduladores LFO/Square e 4 snapshots.</dd>
+            <dt>MIX</dt><dd data-i18n="lp.surface.mix">8 knobs e 8 faders.</dd>
+            <dt>SNP</dt><dd data-i18n="lp.surface.snp">16 snapshots do estado da superfície.</dd>
+            <dt>SNS · AUD · VID</dt><dd data-i18n="lp.surface.sensors">Movimento do celular, análise do microfone e rastreio da mão pela câmera. Cada fonte pode mover um parâmetro do Live, tocar uma nota MIDI numa track MIDI ou lançar um clip da Session — uma pose de mão aprendida, por exemplo, pode disparar um clip.</dd>
+            <dt>REC</dt><dd data-i18n="lp.surface.rec">Armar tracks, gravar takes e definir um intervalo entre dois markers.</dd>
+            <dt>MAP</dt><dd data-i18n-html="lp.surface.map">Liga qualquer controle ou sensor, pelo celular, a um de três destinos: <b>Bind</b> (um parâmetro do Live), <b>Trigger Note</b> (uma nota MIDI numa track MIDI, pelo RC-Midi-Receiver.amxd) ou <b>Launch Clip</b> (um clip da Session, pelo AbletonOSC).</dd>
+          </dl>
+          <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local.</p>
           <div class="acts" style="margin-top:20px">
             <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Baixar a 2.1.0</a>
-            <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.0.0" data-i18n="lp.surface.stable">Estável 2.0.0</a>
             <a href="https://github.com/ntworm/rc-surface" data-i18n="lp.surface.005">Código e licença</a>
           </div>
         </div>
