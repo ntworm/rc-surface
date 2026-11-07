@@ -60,7 +60,7 @@ test('the structured data describes the product and repeats only the FAQ the pag
     assert.equal(app.softwareVersion, JSON.parse(read('package.json')).version);
     assert.ok(app.featureList.length >= 8);
     const faq = graph.find((node) => node['@type'] === 'FAQPage');
-    assert.equal(faq.mainEntity.length, 6, `${rel}: the sheet asks six questions`);
+    assert.equal(faq.mainEntity.length, 5, `${rel}: the sheet asks five questions`);
     const body = html.slice(html.indexOf('id="faq"'), html.indexOf('id="docs"'));
     for (const question of faq.mainEntity) {
       assert.ok(body.includes(question.name.replace(/&/g, '&amp;')), `${rel}: "${question.name}" is not on the page`);
