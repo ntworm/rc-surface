@@ -419,6 +419,6 @@ Capturas: `landing-1440.png` e `landing-390.png`. Os scripts ignorados não viaj
 3. Preservar as alterações preexistentes dos três documentos nativos. Não tocar o checkout principal ou material alheio. Usar SOLO enquanto a instrução de não usar subagentes continuar vigente.
 4. Ao implementar uma frente escolhida, criar regressão do cenário, corrigir a camada responsável, verificar efeitos adjacentes e atualizar este inventário com evidência nova.
 5. Gates: Node >=24.16 <25; `ABLETON_RC_DEV_SYNC=0`; `npm test`, `npm run lint`, `npm run ci` conforme risco. Para qualquer commit de produto, seguir a exigência local de test e depois lint antes de commitar. Nenhuma autorização implícita para instalar, operar Live, mergear, publicar ou enviar remoto.
-6. Native Track: ler [plano](../docs/superpowers/plans/2026-09-06-native-track-audio.md), [spec](../docs/superpowers/specs/2026-09-06-native-track-audio-design.md) e [validação](NATIVE-AUDIO-VALIDATION.md). Gate A continua fechado e adiado pelo proprietário.
+6. Native Track: ler o plano e a spec (fora do repositório público) e [validação](NATIVE-AUDIO-VALIDATION.md). Gate A continua fechado e adiado pelo proprietário.
 
 **Entrega desta rodada:** documento de frentes + status/handoff atualizados. Nenhum bug corrigido, nenhum código de produção removido/refatorado, nenhuma release publicada e nenhum teste auditivo contado como medição de latência.

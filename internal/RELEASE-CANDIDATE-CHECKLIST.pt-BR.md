@@ -271,7 +271,7 @@ manifesto continua1.0.0; use o nome/hash acima para distinguir o pacote.
   **PENDING_OWNER_DEFERRED**, fora da ABLX. Nada de atraso zero ou “Track pronto”.
   Instalação real, Safari/telefone, sessão longa e firewall/macOS não foram
   operados nesta revisão; a checklist histórica mantém os limites de campo.
-- Plano mestre: [revisão final](../docs/superpowers/plans/2026-09-07-product-final-review.md).
+- Plano mestre: revisão final (plano fora do repositório público).
   A implementação/revisão local está encerrada; não reiniciar a auditoria
   inteira para continuar. Publicação depende da aceitação do responsável.
 
