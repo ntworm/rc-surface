@@ -72,8 +72,8 @@
       'pt-BR': "Novo na 2.1.0",
     },
     'lp.new.why': {
-      en: "REC page with three views, Network tab in the panel, local certificate, explicit CFG, and fixes from testing on macOS.",
-      'pt-BR': "Página REC com três vistas, aba Rede no painel, certificado local, CFG explícito e correções dos testes no macOS.",
+      en: "REC page with three views, Network tab in the panel, local certificate, CFG mode and macOS fixes.",
+      'pt-BR': "Página REC com três vistas, aba Rede no painel, certificado local, modo CFG e correções no macOS.",
     },
     'lp.new.recTitle': {
       en: "REC: three views",
@@ -108,36 +108,36 @@
       'pt-BR': "Mapeamentos, presets e projetos da 2.0 funcionam sem mudança. Recarregue o navegador depois de instalar a 2.1.0.",
     },
     'lp.new.cfgTitle': {
-      en: "CFG",
-      'pt-BR': "CFG",
+      en: "CFG mode",
+      'pt-BR': "Modo CFG",
     },
     'lp.new.cfgBody': {
-      en: "The CFG panel opens only from the CFG button. Holding a pad or another control no longer opens it.",
-      'pt-BR': "O painel CFG abre só pelo botão CFG. Segurar um pad ou outro controle não abre mais o painel.",
+      en: "Tap CFG in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings. The CFG button is the only way into these settings.",
+      'pt-BR': "Toque em CFG no topo para entrar no modo de configuração e depois toque num pad, knob, fader ou XY para editar as opções dele. O botão CFG é o único caminho para essas opções.",
     },
     'lp.new.netMainTitle': {
       en: "Main tab",
       'pt-BR': "Aba Main",
     },
     'lp.new.netMainBody': {
-      en: "Network details were removed from the Main tab of the Live panel; they are shown only in the Network tab.",
-      'pt-BR': "Os detalhes de rede saíram da aba Main do painel do Live; aparecem só na aba Rede.",
+      en: "Shows the QR code and the connected clients. Addresses and the certificate are in the Network tab.",
+      'pt-BR': "Mostra o QR e os clientes conectados. Endereços e certificado ficam na aba Rede.",
     },
     'lp.new.certTitle': {
       en: "Local certificate",
       'pt-BR': "Certificado local",
     },
     'lp.new.certBody': {
-      en: "A certificate authority of this computer signs the server certificate for localhost and private network addresses. The Certificate section of the Network tab shows a QR code for an install page on the HTTPS port + 1; once installed on a device, the browser no longer warns.",
-      'pt-BR': "Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede. A seção Certificado da aba Rede mostra um QR para uma página de instalação na porta HTTPS + 1; com o certificado instalado num aparelho, o navegador deixa de avisar.",
+      en: "A certificate authority of this computer signs the server certificate for localhost and private network addresses. The Certificate section of the Network tab shows a QR code for an install page on the HTTPS port + 1; with the certificate installed, the browser opens the pages without a warning.",
+      'pt-BR': "Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede. A seção Certificado da aba Rede mostra um QR para uma página de instalação na porta HTTPS + 1; com o certificado instalado, o navegador abre as páginas sem aviso.",
     },
     'lp.new.autTitle': {
-      en: "AUT warnings",
-      'pt-BR': "Avisos de AUT",
+      en: "AUT",
+      'pt-BR': "AUT",
     },
     'lp.new.autBody': {
-      en: "AUT warnings appear once, in the yellow toast.",
-      'pt-BR': "Os avisos de AUT aparecem uma vez, no toast amarelo.",
+      en: "Tap AUT to write automation with the XY pads. Its warnings appear in the yellow toast at the top of the page.",
+      'pt-BR': "Toque em AUT para gravar automação com os XY. Os avisos dele aparecem no toast amarelo no topo da página.",
     },
     'lp.new.note': {
       en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
