@@ -1,31 +1,35 @@
-# RC Surface — Guia do usuário
+# RC Surface: guia do usuário
 
-Tudo o que quem toca precisa para operar o controlador no celular durante
-montagem, passagem de som e apresentação. Leia uma vez antes de tocar um set.
+Este guia descreve o controlador do celular durante a montagem, a passagem de
+som e a apresentação.
 
 > **Escopo**: o cliente do celular (`/phone-v3/`) é a superfície principal. O
-> painel do Ableton e o painel administrativo estão cobertos à parte, no
+> painel do Ableton e o painel administrativo estão cobertos em
 > [`CUSTOMIZATION.pt-BR.md`](./CUSTOMIZATION.pt-BR.md).
-> O RC Surface 2.0 suporta um controlador por vez: opere a performance pelo celular ou desktop, nunca ambos simultaneamente.
+> O RC Surface suporta um controlador por vez: opere a performance pelo celular ou desktop, nunca ambos simultaneamente.
 
 ---
 
-### Controle em tempo real nesta versão
+## Controle em tempo real
 
-O MAP não reduz a frequência do controle: XY, MIX e sensores usam um fluxo
-separado, com primeiro envio imediato e tráfego seguinte agrupado com espaçamento
-mínimo de 8 ms. Esse é um limite de despacho, não uma promessa de latência total.
-Posições contínuas novas substituem as ainda não enviadas; pressões e solturas
-dos pads mantêm a ordem. Use **Smooth = 0** para não acrescentar rampa ao mapeamento.
-Smooth explícito, envelopes musicais e perda segura de sinal continuam válidos.
-Main/Master agora abre como **Main → device → parâmetro**, igual às tracks;
-Tempo continua acessível diretamente.
+XY, MIX e os valores dos sensores usam um fluxo de controle separado. O
+primeiro quadro é enviado na hora, e o tráfego seguinte é agrupado com um
+espaçamento mínimo de 8 ms. Esse é um limite de despacho, não uma promessa de
+latência ponta a ponta. Posições contínuas mais novas substituem as que ainda
+não foram enviadas, e as bordas dos pads mantêm a ordem.
 
-Recarregue a página após atualizar a extensão. Hosts antigos continuam funcionando
-pelo caminho legado de snapshots, mas não recebem o novo comportamento rápido.
-A latência física no Live ainda depende do benchmark gravado que ficou pendente.
+**Smooth = 0** não acrescenta rampa ao mapeamento. Valores de Smooth
+explícitos, envelopes musicais e o comportamento de perda segura continuam
+valendo. Os destinos Main e Master abrem como **Main → device → parâmetro**,
+como as outras tracks. O Tempo continua direto.
 
-## 1. A tela do celular de relance
+O armazenamento do host fica isolado em `surface-v2`, e o payload de
+performance usa o schema 2. A latência física no Live não tem benchmark
+registrado.
+
+Recarregue a página do celular depois de atualizar a extensão.
+
+## 1. A tela do celular
 
 A interface do celular é uma página só, com sete abas. Troque pelos botões da
 faixa de cima:
@@ -40,10 +44,18 @@ faixa de cima:
 | VID | Câmera, rastreio de mãos e poses estáticas aprendidas |
 | REC | Estação de gravação: três visões locais (Gravar, Arrangement, Clip) sobre uma barra de captura compartilhada e uma barra de modo fixa |
 
-A faixa de cima também tem o modos **MAP / AUT / CFG**, perto do indicador de BPM, e mais
-**SYNC**, **TELA CHEIA** e **CALIBRAR** contextual em SNS/AUD/VID. Veja
-[§ 7 Controles da barra superior](#7-controles-da-barra-superior) e
-[§ 8 Modo MAP](#8-modo-map--mapeamento-pelo-celular).
+A faixa de cima também tem os modos **MAP / AUT / CFG**, perto do indicador de
+BPM, e mais **SYNC**, **TELA CHEIA** e **CALIBRAR** contextual em SNS, AUD e
+VID. Veja [§ 7 Controles da barra superior](#7-controles-da-barra-superior) e
+[§ 8 Modo MAP](#8-modo-map).
+
+O ícone de engrenagem na barra de cima abre os ajustes da aba atual. PERF abre
+o Deep Sync. VID abre os ajustes de reconhecimento e de perda de tracking. AUD
+reutiliza os controles de entrada e de análise. SNS mostra as capacidades dos
+sensores, com ações explícitas de habilitar e calibrar. MIX e SNP não têm
+engrenagem no cabeçalho. Abrir os ajustes nunca inicia uma câmera, um microfone
+ou um pedido de permissão de sensor. Os controles rápidos de CONF e REC e o
+**CALIBRAR** contextual continuam disponíveis.
 
 ---
 
@@ -63,21 +75,17 @@ escolhe uma vez e todos os controles seguem a mesma regra.
 ### Modo A — Momentâneo (padrão)
 
 - O toque manda um valor diferente de zero; soltar manda zero.
-- Arraste **na vertical** para escalar o valor de `0` (ponto de soltura) até
-  `1` (150 px acima do início do toque). É a mesma faixa que knobs, faders,
-  LFOs e squares usam.
-- Melhor para: hits de percussão, one-shots, efeitos momentâneos.
+- Arraste **na vertical** para escalar o valor de `0` no ponto de soltura até
+  `1` no topo da faixa de arrasto.
 
 ### Modo B — Hold
 
 - O toque trava o controle **ligado**; soltar sem arrastar volta a
   desligá-lo. Qualquer movimento, vertical ou horizontal, mantém segurado até
   você arrastar o valor de volta a zero de propósito.
-- Para squares especificamente (veja [§ 4](#4-square-pulse)): um toque
+- Para squares especificamente (veja [§ 4](#4-pulso-square)): um toque
   desliga; soltar com amplitude abaixo de `0.02` também desliga. Arrastar a
   velocidade na horizontal mantém o square ligado enquanto há amplitude.
-- Melhor para: LFOs travados que seguem modulando depois de soltar, varreduras
-  de square sustentadas, pads que você quer deixar soando.
 
 ### Modo C — Toggle
 
@@ -86,41 +94,35 @@ escolhe uma vez e todos os controles seguem a mesma regra.
   arrasto é ignorado pelo estado do toggle.
 - Ao ligar por toque, o valor volta para o último que você usou neste modo. Se
   você nunca definiu um, o padrão é `1`.
-- Melhor para: pads que devem ficar pressionados (comportamento de pedal de
-  sustain), LFOs que precisam manter o ajuste entre um toggle e outro.
 
 ### Modo D — Burst
 
 - O toque dispara um envelope de uma vez só, com pico em `1`.
 - Arraste **na vertical enquanto segura** para modular o pico entre `0.15` e
   `1`.
-- Melhor para: stabs, ghost notes, percussão que precisa de cauda, risers.
 
-**A página inteira faz burst, não só os pads.** O modo D é uma forma, e todo
-controle que ele alcança segue essa forma: o valor de um pad sobe e desce, e um
-LFO ou square abre a profundidade no attack e fecha no release. Em `FREE` o
-envelope são 520 ms fixos com 70 ms de attack, igual em todos eles. Passe o
-header para `SYNC` e a duração passa a vir do andamento do Live, escolhida em
-**Ajustes de Deep Sync → Config de burst (pad modo D)**:
+O modo D vale para todo controle que ele alcança, não só para os pads. O
+valor de um pad sobe e desce, e um LFO ou square abre a profundidade no
+attack e fecha no release. Em `FREE` o envelope é fixo de 520 ms com 70 ms de
+attack, igual em todos eles. Em `SYNC` a duração vem do andamento do Live, e
+**Ajustes de Deep Sync → Config de burst (pad modo D)** escolhe qual:
 
 | Controle | O que faz |
 | --- | --- |
 | Duração (subdivisão) | De um compasso até 1/16. A 120 BPM, `1 beat` dá 500 ms. |
 | Attack | Arraste o pico ao longo do envelope desenhado. No celular, pressione e segure o pico por cerca de 0,6 s antes; rolar sobre o envelope curto nunca o altera. |
 
-Abaixo do desenho o painel escreve no que o ajuste atual realmente dá — a
-subdivisão, o andamento pelo qual ela é multiplicada, a fonte de clock por trás
-desse andamento, e os milissegundos que saem disso. É essa linha que se lê
-quando uma duração não está se comportando: andamento desatualizado, fonte de clock
-diferente e o `FREE` atropelando a grade parecem a mesma coisa até ela dizer
-qual é. Com o `SYNC` desligado a grade de duração fica apagada, porque nada do
-que ela oferece chega no burst.
+Abaixo do desenho o painel escreve o ajuste resolvido: a subdivisão, o
+andamento pelo qual ela é multiplicada, a fonte de clock por trás desse
+andamento, e os milissegundos resultantes. Leia essa linha quando uma duração
+não se comporta. Um andamento desatualizado, uma fonte de clock diferente e o
+`FREE` sobrepondo a grade parecem a mesma coisa até a linha dizer qual é. Com o
+`SYNC` desligado, a grade de duração fica apagada, porque nada do que ela
+oferece chega no burst.
 
-Um burst é de uma vez só, então estar fora da grade se ouve na hora — é este o
-ajuste que põe o stab **no** beat, e não perto dele. A seção vale só com o
-`SYNC` ligado; o `FREE` ignora os dois controles e mantém o envelope fixo. Se o
-Live ainda não informou um andamento, a duração usa 120 BPM em vez de
-ficar muda.
+Com `SYNC` a duração segue a grade, então o stab começa na posição da grade.
+No `FREE` o burst mantém o envelope fixo e ignora os dois controles. Se o Live
+ainda não informou um andamento, a duração usa 120 BPM em vez de ficar muda.
 
 ---
 
@@ -128,20 +130,20 @@ ficar muda.
 
 Os oito slots (`toggle-1`..`toggle-8`) usam o mesmo componente e começam em
 **Global** para onda, modo e tempo. No CFG, escolha **Sine, Triangle, Ramp Up,
-Ramp Down ou Square**, em qualquer combinação. Um título TOGGLES centralizado
+Ramp Down ou Square**. Um título TOGGLES centralizado
 agrupa T1–T4 acima de T5–T8. Cada slot mostra um rótulo curto da onda e seu modo
 efetivo A/B/C/D.
 
 As cores de ativação seguem os pads: A azul, B âmbar, C verde e D rosa.
 A onda não introduz uma segunda paleta. Arraste horizontalmente para velocidade
-e verticalmente para amplitude; esses valores saíram do CFG. A para ao soltar,
+e verticalmente para profundidade; esses dois valores não estão no CFG. A para ao soltar,
 B mantém um ajuste arrastado, C alterna e D executa um burst. Duração/ataque do
 burst e snapshots continuam disponíveis.
 
 O CFG fica compacto: onda, modo, tempo e seletor de subdivisão em SYNC. Só
 oferece ritmos válidos para o BPM e a onda atuais; Square também considera
-ratchet e swing. Pins antigos fora do teto mostram o ritmo efetivamente limitado.
-FREE oculta a subdivisão. Abra **Avançado** para fase e swing/ratchet da Square.
+ratchet e swing. Um pin que o BPM atual não suporta mostra o ritmo efetivamente
+limitado. FREE oculta a subdivisão. Abra **Avançado** para fase e swing/ratchet da Square.
 O corpo do menu rola dentro dos limites da tela.
 
 Salvar e carregar projeto/preset/snapshot preserva a herança Global; isso não
@@ -156,17 +158,12 @@ fidelidade física medida no Live.
 
 Square alterna entre **0 e a amplitude escolhida**: com 50% de amplitude,
 alterna 0%/50%. Ela inclui swing e ratchet (1–4); não existe onda nem controle
-Stutter separado. O pulso não grava nem repete áudio; o efeito musical depende do destino
+Stutter separado. O pulso não amostra nem repete áudio; o efeito musical depende do destino
 mapeado. Qualquer T1–T8 pode usar Square.
 
 O indicador local acompanha o gate real, com uma régua fina de valor. É uma
 prévia, sem confirmação de entrega ao Live; a tela pode perder pulsos rápidos.
 Trocar de/para Square interrompe o algoritmo anterior antes do próximo toque.
-
-2.0.0 usa schema 2 no payload de performance e chaves novas de navegador.
-Overrides e snapshots da primeira prévia 2.0.0 não são importados, evitando
-restaurar o modo A fixado e a onda Stutter retirada. Arquivos existentes ficam
-intactos; configure esta versão do zero.
 
 ## 5. Atalhos PERF UTIL
 
@@ -187,15 +184,15 @@ set sem sair da superfície de performance.
 XY1 e XY2 têm controles idênticos. Abra CFG no painel desejado e escolha
 Estático ou Física. Estático fica onde você solta. Física continua em movimento
 e ricocheteia; atrito (0,002–0,05), ricochete (0–0,95) e velocidade (0,1–4×)
-são independentes em cada painel. Ambos começam Estáticos; qualquer combinação
-é possível. Velocidade escala o movimento livre; atrito controla a desaceleração.
+são independentes em cada painel. Ambos começam Estáticos. Velocidade escala o
+movimento livre; atrito controla a desaceleração.
 Trocar para Estático interrompe o movimento residual. Consultar CFG não emite valor.
 
 Cada eixo é mapeado separadamente como `xy-1.x/y` ou `xy-2.x/y`. Setters de
-posição e OFF interrompem o movimento; OFF centraliza os dois. Configuração
-segue nos novos projetos, presets e snapshots de performance. `xy-N.friction`,
-`.bounce` e `.speed` também são setters numéricos locais; os mappings para
-destinos do Live continuam sendo os eixos X/Y.
+posição e OFF interrompem o movimento; OFF centraliza os dois. A configuração
+é guardada com o perfil de performance, os presets e os snapshots.
+`xy-N.friction`, `.bounce` e `.speed` também são setters numéricos locais; os
+mappings para destinos do Live continuam sendo os eixos X/Y.
 
 ---
 
@@ -210,7 +207,7 @@ Alterna o clock de BPM entre **SYNC** (travado no Live) e **FREE** (interno).
 - **SYNC** (ciano): as taxas de LFO e square ficam quantizadas ao BPM do Live,
   o burst do pad modo D tira a duração da grade (veja
   [§ 2](#2-modos-de-pad-a--b--c--d)), e uma transição de snapshot em Sync faz o
-  mesmo (veja [§ 10](#10-aba-snp--snapshots-e-morph)). O header mostra o BPM
+  mesmo (veja [§ 10](#10-aba-snp)). O header mostra o BPM
   atual (`120.0 BPM`, e assim por diante).
 - **FREE** (âmbar): o celular roda o próprio clock. Use quando o Live não está
   rodando, ou quando você quer andamento interno independente dele.
@@ -259,15 +256,15 @@ Alterna o **modo tela cheia**:
   então um leitor de tela anuncia no seu idioma. Aperte o mesmo ícone de novo —
   ou saia da tela cheia pelo navegador ou pelo sistema — para sair do modo.
 
-Use o modo tela cheia tocando: dá a maior superfície possível para os
-controles. Outros aplicativos ainda podem interromper a tela cheia.
+O modo tela cheia deixa mais espaço para os controles. Outros aplicativos
+ainda podem interromper a tela cheia.
 
-> **Limitação conhecida — 12/07/2026:** ligar o sensor de áudio ou a câmera com
+> **Limitação conhecida:** ligar o sensor de áudio ou a câmera com
 > o modo tela cheia pode fazer o Chrome sair da tela cheia. No Samsung
 > S25F testado, a tela cheia pode não voltar a ficar disponível até a aba do
 > controlador ser fechada e aberta de novo. Quando der, ligue áudio e câmera
 > antes de entrar no modo tela cheia. Quando a tela cheia cai desse jeito, o
-> modo agora sai junto, em vez de deixar o ícone de recolher ATIVO numa
+> modo sai junto, em vez de deixar o ícone de recolher ATIVO numa
 > página que já não está em tela cheia.
 
 ### Cabeçalho contextual e ajustes do TRN
@@ -281,23 +278,25 @@ status continuam visíveis, inclusive no modo tela cheia e em telas estreitas
 na horizontal.
 
 **TRN** abre o Transporte Lite. A primeira linha tem **PLAY**, **STOP**,
-**PREV** e **NEXT**; a segunda tem **CLICK**, **QUANTIZAÇÃO GLOBAL** e
-**REFRESH**, sempre visíveis, sem botão de ajustes. Uma linha abaixo só aparece
-quando algo pede atenção (sem AbletonOSC, mudança não confirmada, visualizador):
-**QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera a
-`clip_trigger_quantization` do Set (um clip com quantização própria mantém a
-dele), e **METRÔNOMO** liga ou desliga o click do Live. É o mesmo metrônomo do
-**CLICK** do REC; uma mudança feita no TRN, no REC ou no Live aparece nos dois
-em cerca de um segundo. Abrir o TRN lê o valor atual do Live mesmo sem nenhum
-mapping de Launch Clip. **CLICK** nunca fica bloqueado: muda na preparação, no
-pré-roll, durante o REC e no playback. Visualizador só lê, nada é repetido depois
-de reconectar, e sem AbletonOSC o valor aparece como desconhecido. Som, ritmo e contagem do
-metrônomo não são expostos às extensões: ajuste no Live ou use o **PRE-ROLL** do
-REC para contar antes de gravar.
+**PREV** e **NEXT**. A segunda tem **CLICK**, **QUANTIZAÇÃO GLOBAL** e
+**REFRESH**, sempre visíveis e sem botão de ajustes. Uma linha abaixo aparece
+só quando algo pede atenção (sem AbletonOSC, uma mudança não confirmada, um
+visualizador).
+
+**QUANTIZAÇÃO GLOBAL** mostra o valor confirmado pelo Live e altera o
+`clip_trigger_quantization` do Set. Um clip com quantização própria mantém a
+dele. **METRÔNOMO** liga ou desliga o click do Live. É o mesmo metrônomo do
+**CLICK** do REC, e uma mudança feita no TRN, no REC ou no Live aparece nos
+dois em cerca de um segundo. Abrir o TRN lê o valor atual do Live mesmo sem
+nenhum mapping de Launch Clip. **CLICK** nunca fica bloqueado. O visualizador
+só lê. Nada é repetido depois de reconectar, e sem AbletonOSC o valor aparece
+como desconhecido. O som, o ritmo e a contagem do metrônomo não são expostos
+às extensões: ajuste no Live ou use o **PRÉ-ROLL** do REC para contar antes de
+gravar.
 
 ---
 
-## 8. Modo MAP — mapeamento pelo celular
+## 8. Modo MAP
 
 Toque **MAP**, perto do indicador de BPM, para entrar no modo de mapeamento
 pelo celular. Isso não abre outra página no navegador; ele sobrepõe um fluxo de
@@ -356,7 +355,7 @@ uma habilitação separada. Não automatize nem mapeie por MIDI `RC MIDI Packet 
 a API exige um parâmetro automatizável e, com SDK Notes ON, essa automação pode
 tocar notas.
 
-Esta versão também passa MIDI upstream byte a byte por **midiin → midiout**,
+A extensão também passa MIDI upstream byte a byte por **midiin → midiout**,
 separado dos gates SDK/Audio Sender e do caminho Panic/flush dessas notas.
 Canais, Note-Off, velocity e controllers do teclado conservam os bytes originais.
 Substitua a instância já aberta pelo `RC-Midi-Receiver.amxd` desta versão;
@@ -380,12 +379,12 @@ Ao mapear um controle para disparar notas em uma track MIDI com o dispositivo `R
 - **Gate:**
   - `pulse` (Curta): Dura pela fração musical escolhida. Notas sincronizadas novas usam **1/4 de compasso** por padrão; opções: 1/16, 1/8, 1/4, 1/2, 1, 2 ou 4 compassos. Também é possível escolher milissegundos livres (20–2000 ms). Mapeamentos antigos preservam seus milissegundos.
   - `hold` (Enquanto Pressionado): Sustenta a nota enquanto o gesto ou controle estiver sendo segurado.
-  - *Restrição:* `hold` é incompatível com tempo sincronizado (`beat` ou `bar`). Ao escolher tempo sincronizado, o gate é automaticamente forçado para `pulse`.
+  - `hold` é incompatível com tempo sincronizado (`beat` ou `bar`). Ao escolher tempo sincronizado, o gate é automaticamente forçado para `pulse`.
 - **Organização do editor:** Destino aparece uma vez, seguido de Nota (nota, oitava, número MIDI e velocity fixo) e Disparo (quando tocar e por quanto tempo). Sair de Agora para Próx. Tempo ou Compasso abre Musical, 1/4 de compasso automaticamente, inclusive após Enquanto Pressionado. Escolha ms explicitamente para duração livre; presets antigos em milissegundos permanecem intactos ao abrir.
 - **Duração musical:** Disponível com Curta em Agora, Próx. Tempo e Compasso. Clique diretamente na fração, sem lista ou estimativa em ms. Agora começa imediatamente e usa o BPM/compasso conectado do Live para desligar a nota, inclusive com o transporte parado. Metadados musicais desconhecidos ou desconectados bloqueiam a nota com feedback; ms continua disponível. Enquanto Pressionado segue a soltura real do gesto, sem duração fixa.
 - **Avançado:** Recolhido por padrão; contém limiar de disparo e comportamento real de perda de sinal. Bind e Trigger Note são escolhidos na entrada, sem repetir o seletor de modo aqui. Presets ficam recolhidos; Bind, Trigger Note, Desfazer o bind, Limpar o controle e Limpar todos os mapeamentos ficam logo abaixo do título do controle e acessíveis durante a rolagem. Vários mapeamentos formam um bloco identificado, com tipo Bind/Trigger Note e destino em cada linha selecionável. Só feedback de nota com conteúdo aparece.
 - **Bind:** Botões diretos de Contínuo/Alternar e Linear/Exp/Log/S precedem o gráfico interativo ocupando a largura disponível. Saída mínima/máxima, Drive, Compressão e Suavização são os faders principais. Os três pontos do gráfico seguem a saída efetiva após Drive e Compressão; saída mínima/máxima continuam sendo os limites usados para escalar essa resposta. Arrastar um ponto considera essas configurações, e uma resposta saturada ou plana mantém os valores limitados. Entrada mínima/máxima, escala do alvo, retomada, perda de sinal, valor inativo e neutro ficam em Avançado. Alças menores conservam área de interação maior e reset por duplo clique. No celular, os três pontos do gráfico só editam depois de pressionar e segurar um deles por cerca de 0,6 s: ele ganha um anel, então arraste e solte. Toque rápido, rolagem ou toque no fundo nunca alteram valor; cancelar (gesto do sistema, sair do painel, trocar de aba ou perder a conexão) restaura o valor que o ponto tinha ao ser selecionado. O mouse continua arrastando direto e o duplo clique continua resetando.
-- **Ciclo Seguro e Cancelamento:** Notas Próx. Tempo/Compasso ainda não enviadas são canceladas ao parar o transporte, mudar fórmula, saltar em seek/loop, detectar OSC desatualizado (>1000 ms), remover bind ou perder conexão. Uma nota Próx. Tempo/Compasso que já está soando é desligada ao parar o transporte, perder o relógio, remover bind ou perder conexão; depois de seek, salto de loop ou mudança de fórmula, ela termina no próprio Note-Off. Notas Agora não dependem do transporte: Curta termina no próprio Note-Off e Enquanto Pressionado quando o gesto ou controle é solto; remover bind ou perder conexão as desliga antes. Eventos mais de 20 ms atrasados são descartados. Na mesma track, uma nota nova aposenta o timer e envia o OFF anterior antes de seu ON, recebendo a duração integral. O limite é 64 tracks ativas.
+- **Ciclo Seguro e Cancelamento:** Notas Próx. Tempo/Compasso ainda não enviadas são canceladas ao parar o transporte, mudar fórmula, saltar em seek/loop, detectar OSC desatualizado (>1000 ms), remover bind ou perder conexão. Uma nota Próx. Tempo/Compasso que já está soando é desligada ao parar o transporte, perder o relógio, remover bind ou perder conexão; depois de seek, salto de loop ou mudança de fórmula, ela termina no próprio Note-Off. Notas Agora não dependem do transporte: Curta termina no próprio Note-Off e Enquanto Pressionado quando o gesto ou controle é solto; remover bind ou perder conexão as desliga antes. Eventos mais de 20 ms atrasados são descartados. O agendamento opera por lane de track, com política de latest-wins e um limite de 64 lanes ativas. Na mesma track, uma nota nova aposenta o timer e envia o OFF anterior antes de seu ON, recebendo a duração integral.
 
 ### Launch Clip (`clip_launch`)
 
@@ -534,8 +533,8 @@ O canvas de curva mostra a forma de resposta atual e um ponto em movimento com
 a entrada e a saída ao vivo do controle escolhido no modo contínuo.
 As entradas do celular chegam no motor de mapeamento num único domínio
 normalizado `0..1`. Centroide, Dispersão e Rolloff mostram Hz na AUD, mas
-mapeiam nesse mesmo domínio `0..1`. Pitch, nota detectada e BPM do áudio
-foram removidos; não são fontes atuais. A escala do destino converte esse
+mapeiam nesse mesmo domínio `0..1`. Pitch, nota detectada e BPM do áudio não
+são fornecidos. A escala do destino converte esse
 domínio comum na faixa real do parâmetro
 do Live, e limita no momento da escrita.
 
@@ -559,7 +558,7 @@ toque volta a se comportar normalmente.
 
 ---
 
-## 9. Aba MIX — knobs e faders
+## 9. Aba MIX
 
 A aba MIX tem oito knobs (`knob-1`..`knob-8`) e oito faders
 (`fader-1`..`fader-8`).
@@ -573,7 +572,6 @@ do knob volta a 50%; o reset dos faders é descrito abaixo.
 ### Knobs
 
 - **Arraste na vertical** para definir o valor (`0..1`).
-- Faixa de arrasto de 150 px, igual a todo o resto.
 
 ### Faders
 
@@ -584,7 +582,9 @@ do knob volta a 50%; o reset dos faders é descrito abaixo.
 - Visual: um cursor sobre uma trilha, com a trilha preenchida de baixo até o
   valor atual. Um fader ligado a um parâmetro bipolar, como o pan, preenche a
   partir do centro — o meio é o repouso dele, não meio curso.
-- Faixa de arrasto de 150 px.
+
+Os dois painéis usam a faixa vertical de arrasto da
+[§ 13](#13-referencia-rapida).
 
 Na aba MIX você liga volume, pan, sends, EQ e macros do
 Live. Toque **MAP**, depois toque num knob ou fader, para fazer o bind direto
@@ -626,15 +626,13 @@ D conserva o fim original. Preenchimento usa transformações e evita reescrever
 rótulos/rastros sem mudança; fluidez no dispositivo ainda exige teste físico.
 
 Overrides do navegador usam `ableton-rc:v3:control_config`. Ajustes de LFO/XY
-também são guardados na preferência de performance dos projetos e presets novos.
+também passam pela preferência de performance do host, nos perfis de projeto e
+nos presets nomeados.
 A configuração salva preserva a herança Global; carregar não transforma o modo
 global em override por slot. Snapshot inclui configurações e valores atuais. Isso não salva o Set do Live.
-Overrides de knob/fader continuam locais ao celular. Chaves e formatos de
-performance anteriores não são carregados.
+Overrides de knob/fader continuam locais ao celular.
 
----
-
-## 10. Aba SNP — snapshots e morph
+## 10. Aba SNP
 
 A aba SNP captura o **estado de todos os controles de performance** num
 instante, e deixa você interpolar entre os snapshots capturados.
@@ -666,9 +664,8 @@ par **Free / Sync** acima dele decide o que o slider significa:
 - **Sync** — o slider escolhe uma duração musical, e a leitura mostra `4 tempos`
   ou `1/4 tempo` em vez de um número de segundos:
 
-  | | | | | | | | | |
-  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
   | 16 tempos | 8 tempos | 4 tempos | 2 tempos | 1 tempo | 1/2 tempo | 1/4 tempo | 1/8 tempo | 1/16 tempo |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
   A duração é lida do andamento do Live no início da transição, então mudar o
   andamento move todas as transições seguintes sem tocar no slider. A 120 BPM,
@@ -689,7 +686,6 @@ duração cai para 120 BPM em vez de travar.
   sem Transition Time. O pad tem quatro cantos, cada um ligado a um snapshot.
   Arraste o ponto dentro do pad para misturar os quatro contínua e instantaneamente;
   o bloco de tempo de morph (slider Free/Sync) fica desabilitado no modo Vetor.
-  Útil para interpolar ao vivo e sem rampa temporal entre quatro configurações de macro.
 
 Os parâmetros mapeados no Live acompanham o morph durante a transição. Se um
 LFO, square, knob ou fader está mapeado no Live, o valor mapeado se move ao
@@ -697,7 +693,7 @@ longo da transição, em vez de esperar o morph terminar.
 
 ---
 
-## 11. Aba SNS — sensores
+## 11. Aba SNS
 
 Leituras ao vivo dos sensores do celular. Não há controles aqui — são os
 valores sendo transmitidos para o Live, para você conferir que funcionam e
@@ -718,8 +714,8 @@ segundos. Valores antigos são descartados e deixam de ser mapeados.
 
 Movimento e orientação são rastreados de forma independente: uma API negada
 não afeta a outra. Os sensores começam automaticamente quando o navegador
-permite. Se o acesso precisar de um toque, abra **SNS**, toque no **⚙** da
-barra de cima e depois em **Ativar sensores**. Você pode repetir depois de uma
+permite. Se o acesso precisar de um toque, abra **SNS**, toque no ícone de
+engrenagem da barra de cima e depois em **Ativar sensores**. Você pode repetir depois de uma
 recusa ou de um erro. Câmera e microfone exigem permissões próprias.
 
 ### MOVIMENTO
@@ -758,7 +754,7 @@ sensor.
 
 ---
 
-## 12. Abas AUD e VID — áudio e visão
+## 12. Abas AUD e VID
 
 Entradas do microfone e da câmera do celular. Elas exigem que o navegador peça
 permissão na primeira vez em que você liga.
@@ -779,7 +775,7 @@ A captura pede ao navegador que desligue o cancelamento de eco, a supressão de
 ruído e o controle automático de ganho, para não remodelar a dinâmica e o espectro.
 Navegador, driver e entrada escolhida ainda podem reamostrar ou processar áudio;
 não é garantia de captura bit-perfect. Use os controles agrupados dos
-detectores abaixo; os antigos controles de pitch/clareza foram removidos.
+detectores abaixo. Não há controle de pitch nem de clareza.
 
 Uma vez ligada:
 
@@ -787,7 +783,6 @@ Uma vez ligada:
 - `sensor.audio.envelope` — envelope de amplitude de curto prazo
 - `sensor.audio.gate` — `1` enquanto o RMS da entrada passa do limiar interno (com histerese)
 - `sensor.audio.attack` — força do pico após um ataque, `0..1`; sem reconhecer nota
-
 
 ### Escolher a entrada de áudio do navegador
 
@@ -798,9 +793,9 @@ salva apenas neste navegador. Trocar uma entrada habilitada libera os valores
 antigos e reinicia a captura. Uma entrada explícita removida ou negada exibe
 aviso, sem trocar silenciosamente para outro microfone. Escolha uma entrada
 disponível e habilite novamente. Recarregar nunca liga a captura sozinho.
-Isso não é o modo Track do Ableton: a análise/controle nativo continua
-experimental e não entra na interface desta versão. Áudio não é enviado;
-somente descritores/valores numéricos de controle trafegam pela rede local.
+O modo Track do Ableton não faz parte desta interface, e a análise e o controle
+nativos são experimentais. Nenhum áudio é enviado; somente os descritores
+numéricos e os valores de controle trafegam pela rede local.
 
 O cartão ÁUDIO mostra um histórico ao vivo de 2,5 s: ciano é RMS bruto e
 verde é o envelope. A barra mostra o controle RMS suavizado/escalado.
@@ -811,13 +806,12 @@ descartados ao carregar; bindings válidos são preservados. BPM/SYNC do Live co
 
 ### Detectores de áudio integrados
 
-Doze cartões expõem fontes normalizadas `0..1` para mapeamento imediato:
+Doze cartões expõem as fontes de mapeamento normalizadas `0..1`:
 
 - `sensor.audio.transient` — quanta energia do quadro inteiro é nova.
 - `sensor.audio.kick` — uma subida que aconteceu entre 35 e 100 Hz.
 - `sensor.audio.snare` — uma subida que aconteceu entre 1,5 e 8 kHz.
 - `sensor.audio.brightness` — centroide espectral do escuro ao brilhante, normalizado em escala logarítmica.
-
 - `sensor.audio.centroid` — centro espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 20000.
 - `sensor.audio.flux` — mudança de forma espectral (metade da distância L1 entre magnitudes normalizadas); mudar apenas o ganho não aumenta o fluxo.
 - `sensor.audio.flatness` — média geométrica/aritmética da potência: tonal perto de 0, ruidoso perto de 1.
@@ -851,7 +845,15 @@ resolução em frequência — na janela estreita, um corpo de caixa perto de 20
 também move o Kick, porque bins de 46–94 Hz não distinguem os dois. Aumente a
 JANELA e eles se separam.
 
-Para modular de forma reativa, entre no MAP, selecione um cartão e vincule um parâmetro do synth. Comece com uma faixa de saída pequena e Smooth em zero. **Captura contínua** usa AudioWorklet independente da atualização da tela: janelas contíguas do tamanho escolhido em JANELA, 1024 amostras a 44,1/48 kHz por padrão. Os pulsos têm ataque imediato e o release que você definir. A janela padrão equivale a cerca de 21 ms a 48 kHz, e não à latência medida do microfone até o Live. Navegador, rede e escritas no Live também contribuem; confira o alinhamento usando sua entrada e seu synth reais.
+Para modular de forma reativa, entre no MAP, selecione um cartão e vincule um
+parâmetro do synth. Comece com uma faixa de saída pequena e Smooth em zero.
+
+**Captura contínua** usa AudioWorklet independente da atualização da tela:
+janelas contíguas do tamanho escolhido em JANELA, 1024 amostras a 44,1/48 kHz
+por padrão. Os pulsos têm ataque imediato e o release que você definir. A janela
+padrão equivale a cerca de 21 ms a 48 kHz, e não à latência medida do microfone
+até o Live. Navegador, rede e escritas no Live também contribuem; confira o
+alinhamento usando sua entrada e seu synth reais.
 
 **Captura compatível** significa que o worklet não estava disponível ou falhou. A análise continua por um analisador curto lido na atualização da tela; ataques muito curtos entre quadros podem escapar. Não considere esse fallback igualmente reativo. Se o Live demorar, o mapeamento mantém só o valor pendente mais recente por parâmetro; não garante alinhamento amostra a amostra nem preserva todos os ataques durante travamentos do navegador, rede ou host.
 
@@ -1000,41 +1002,41 @@ poses aprendidas continuam mapeáveis. Contagem de dedos, landmarks individuais
 e cor do quadro inteiro continuam internos. Amostras PALM/FACE ausentes ou
 inválidas informam perda e seguem o Safe loss de cada destino.
 
-A ausência da mão preserva a pose aprendida ativa como **LAST KNOWN**. Um
+A ausência da mão preserva a pose aprendida ativa como **ÚLTIMO ESTADO**. Um
 candidato ainda não confirmado expira depois de `unknownGraceMs` (140 ms por
 padrão); após uma ausência longa, precisa cumprir o hold completo para seu
 primeiro ON. Eixos e detectores básicos informam perda imediatamente. G1–G15
 informam perda somente após essa tolerância; cada mapping aplica Safe loss.
-VID → ⚙ oferece três políticas para gates de notas G1–G15: **Manter sem limite**,
-**Manter com prazo** e **Soltar na perda**. Projetos novos usam **10 s**;
-o campo aceita 0,1–30 s, passo 0,1 s. Projetos antigos conservam comportamento
-herdado até escolha explícita. Safe loss por alvo pode soltar antes; hold do alvo
-não ultrapassa o prazo VID. Contínuos, detectores básicos, clips, toggles e
-pulsos com duração musical conservam comportamento existente. Somente nova pose
-aceita renova validade; mão presente ou activeName antigo não restauram saída.
-Retorno confirmado antes do prazo sustenta a nota existente sem outro Note-On;
-após expirar, nova ativação exige confirmação normal da pose.
-Landmarks incompletos contam como ausência. Um erro explícito de inferência
-libera a pose ativa e continua visível. Os exemplos salvos permanecem; TEST
-continua musicalmente silencioso. Um clip lançado e sua continuação armada
-seguem tocando. Camera OFF, Panic, desvincular e desconectar liberam notas
-sustentadas e agendadas.
-O watchdog do host avança sem novos frames. Prazo conta desde a última pose
-qualificada recebida pelo host; grace do reconhecimento consome essa janela.
-Soltar na perda espera somente grace; manter sem limite não tem teto global.
-Badge distingue tracking atual, última pose/hold com contagem e release.
-Camera OFF e desconexão sempre encerram notas próprias. Host/Live travado não
-garante deadline em tempo real; ao retomar, compara o prazo original.
-Recarregue o cliente após instalar esta versão para usar metadados novos.
+O ícone de engrenagem da aba VID oferece três políticas para os gates de notas
+das poses G1–G15: **Manter sem limite**, **Manter com prazo** e **Soltar na
+perda**. Um projeto novo usa **10 s** de prazo, que você edita de 0,1–30 s em
+passos de 0,1 s. O modo de cada projeto é herdado até você escolher um
+explicitamente. O Safe loss de um destino pode soltar antes, e o hold dele não
+ultrapassa o prazo VID escolhido. Os controles contínuos, os detectores
+nativos, os clips, os toggles e os pulsos com duração musical mantêm o
+comportamento. Só uma pose nova aceita renova a validade: a presença da mão ou
+o último `activeName` conhecido, sozinhos, não restauram a saída. Um retorno
+qualificado antes do prazo sustenta a nota existente sem outro Note-On. Depois
+do prazo, a confirmação normal da pose é exigida para começar de novo.
 
-**⚙ acompanha a aba:** PERF abre Deep Sync; VID abre reconhecimento/perda de
-tracking; AUD reutiliza entrada/análise; SNS mostra capacidades e ações explícitas
-de habilitar/calibrar. MIX/SNP não mostram engrenagem. Abrir ajustes não inicia
-câmera, microfone ou pedido de permissões. CONF/REC e CALIBRATE permanecem.
+Landmarks incompletos contam como ausência. Um erro explícito de inferência
+libera a pose ativa e continua visível. Os exemplos salvos permanecem intactos, e
+o TESTE continua musicalmente silencioso. Um clip lançado e sua continuação
+armada seguem tocando. Camera OFF, Panic, desvincular e desconectar encerram
+as notas sustentadas e as agendadas.
+
+O watchdog do host avança sem novos quadros de inferência. O prazo é medido
+desde o último recebimento qualificado no host, e o grace do reconhecimento
+consome essa janela. O modo Soltar na perda espera apenas esse grace, e o modo
+Manter sem limite não tem prazo global. O badge distingue o tracking atual, o
+hold ou a contagem do último estado conhecido, e a liberação. Um host ou um Live
+travado não garante um prazo em tempo real, e ele avalia o prazo original
+quando retoma.
 
 ### Poses estáticas aprendidas
 
-Cada slot aprendido guarda uma forma de mão estática; o banco começa com três slots e aceita até quinze:
+Cada slot aprendido guarda uma forma de mão estática. O banco inicial tem três
+slots:
 
 1. Segure a forma de mão desejada e toque **CAPTURAR POSE** três vezes,
    variando um pouco a dobra dos dedos ou o ângulo da palma entre os exemplos.
@@ -1063,9 +1065,9 @@ falha nesse limite. Ambiguidade e dedos em formato oposto ainda podem rejeitar
 uma pose próxima. Use o benchmark de sessões rotuladas para comparar acertos,
 falso ON/min e latência p95 antes de concluir o efeito das tomadas extras.
 
-As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Após esta atualização, poses salvas na versão 8 mostram **RECAPTURA NECESSÁRIA**. Capture essas poses novamente: o save antigo guarda descritores sem as dimensões originais do quadro, portanto não permite uma conversão segura. Eixos diretos e detectores básicos mantêm sua geometria atual.
+As proporções da câmera são corrigidas nas poses aprendidas, inclusive ao alternar entre quadros horizontais e verticais. Uma pose salva no formato da versão 8 mostra **RECAPTURA NECESSÁRIA** e não é usada no reconhecimento. Capture essas poses de novo: os saves antigos guardam os descritores sem as dimensões originais do quadro, portanto não permitem uma conversão segura. Os eixos diretos e os detectores nativos mantêm a geometria deles.
 
-Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada isolada pode mostrar um aviso. **RETAKE** remove exatamente essa tomada, mesmo se foi capturada primeiro. Quando dedos claramente opostos deixam um banco de três a seis capturas sem maioria, o aviso geral informa que as capturas discordam; RETAKE remove a mais recente como ponto de partida para revisão. **KEEP** conserva todos os exemplos e dispensa o aviso atual; nova captura ou recarga revisa o banco novamente. Os avisos são orientações e não alteram thresholds, ranking nem tempos de hold/release. O comportamento com câmera ainda precisa de aceite com mão real.
+Tomadas muito diferentes ampliam a tolerância da pose. Após três capturas, uma tomada isolada pode mostrar um aviso. **REFAZER** remove exatamente essa tomada, mesmo se foi capturada primeiro. Quando os dedos claramente opostos deixam um banco de três a seis capturas sem maioria, o aviso geral informa que as capturas discordam, e **REFAZER** remove a mais recente como ponto de partida para a revisão. **MANTER** conserva todos os exemplos e dispensa o aviso atual; uma nova captura ou uma recarga revisa o banco de novo. Os avisos são orientações e não alteram thresholds, ranking nem tempos de hold/release. O comportamento com câmera ainda precisa de aceite com mão real.
 
 O preset de reconhecimento **Equilibrado** é o ajuste normal de performance.
 **Precisão** rejeita mais variação; **Flexível** aceita mais. O preset **Performance**
@@ -1074,8 +1076,8 @@ a variação natural de poses expressivas (como o gesto Rock) e agilizando o rea
 sem falsos disparos com mão aberta ou punho fechado. Um slot aprendido é momentâneo
 (`0` ou `1`), sobrevive a recarregar a página, e só rearma depois que a pose é desfeita
 (com estados de FSM `ready` → `candidate` → `held` → `releasing`).
-Toque em **TEST** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
-Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TEST do treinamento só verifica reconhecimento e continua sem enviar MIDI.
+Toque em **TESTE** para verificar o reconhecimento da pose silenciosamente na câmera sem disparar notas MIDI.
+Para ouvir os disparos musicais reais, mapeie o gesto aprendido em MAP e faça a pose diante da câmera. O TESTE do treinamento só verifica o reconhecimento e continua sem enviar MIDI.
 O reconhecimento compara contradições fortes da forma dos dedos antes de
 aceitar ou manter uma pose. Com três exemplos, exige concordância dos três;
 com quatro a seis, pelo menos três exemplos claros e a maioria estrita do banco
@@ -1091,11 +1093,11 @@ Pelo menos duas tomadas claras e maioria estrita dos estados claros do polegar
 devem concordar; uma vista extra incerta não apaga essa identidade. Abrir o
 polegar aprendido recolhido, ou recolher o aprendido aberto, rejeita entrada
 e libera HOLD. Evidência incerta dos dedos não começa nem completa novo disparo;
-incerteza breve sozinha não redispara uma pose sustentada. TEST mostra DEDOS
+incerteza breve sozinha não redispara uma pose sustentada. O TESTE mostra DEDOS
 INCERTOS ou DEDOS DIFERENTES. Ajuste o ângulo ou repare capturas conflitantes;
 polegar oculto numa vista de perfil não é evidência confiável. Pequenas dobras
 dentro do mesmo estado mantêm tolerância aprendida. Capturas v9 são preservadas,
-inclusive bancos conflitantes; repare esses bancos deliberadamente. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura; a versão 8 exige recapturar. TEST usa a mesma compatibilidade do reconhecimento ao vivo.
+inclusive bancos conflitantes; repare esses bancos deliberadamente. Frames sem mão preservam uma pose ativa; candidatos não confirmados expiram após a tolerância. Saves da versão 9 com 42/47 coordenadas carregam sem recaptura, e a versão 8 exige recaptura. O TESTE usa a mesma verificação de compatibilidade do reconhecimento ao vivo.
 O aviso de recaptura permanece após salvar, reiniciar a câmera e restaurar o projeto, até uma nova captura bem-sucedida ou um CLR explícito dessa pose.
 A dobra das articulações também fornece evidência local para cada dedo,
 inclusive o polegar: maioria de pelo menos duas capturas claras pode distinguir
@@ -1104,7 +1106,6 @@ projeção da ponta. Dobras intermediárias mantêm tolerância aprendida. Junta
 colapsadas e palma de perfil não fornecem ângulos confiáveis. São usadas as
 coordenadas salvas, sem mudar formato do banco ou tempos de hold/release; isso
 não recupera um dedo oculto quando os landmarks da câmera mostram outra forma.
-Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez de serem tratadas como utilizáveis.
 
 ---
 
@@ -1113,8 +1114,8 @@ Poses salvas no antigo formato espacial mostram **RECAPTURA NECESSÁRIA** em vez
 ### Faixa vertical por controle
 
 Todo controle vertical do app usa uma faixa de arrasto de **150 px**, de `0` a
-`1`. Isso é de propósito: com todos os controles na mesma escala física, a
-memória muscular vale para a superfície inteira.
+`1`. A mesma escala física em todos os controles faz o mesmo gesto produzir a
+mesma mudança relativa em qualquer lugar.
 
 ### Resumo dos modos
 
@@ -1148,7 +1149,7 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 ---
 
-## 14. Colinha de gestos
+## 14. Gestos
 
 - **Toque** — pressão momentânea (padrão do modo A).
 - **Toque longo** — igual ao toque; não tem ação separada.
@@ -1177,16 +1178,40 @@ Para problemas mais complexos de instalação (certificados, rede, instalação)
 o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) e o
 [`FAQ.pt-BR.md`](./FAQ.pt-BR.md).
 
+## Configurações de performance e banco de poses
 
-## Performance 2.0: configurações individuais e banco de poses
+Abra o CFG com o botão do cabeçalho, como descrito na
+[§ 9.5](#95-modo-config-cfg). O curso do arrasto oferece Muito curto (60px),
+Curto (100px), Médio (150px) e Longo (300px). O nível ao tocar oferece Zero,
+Baixo (25%), Médio (50%) e Máximo. As curvas de resposta A/B/C e o C Lembrar
+último / Fixo continuam individuais.
 
-Ative CFG pelo botão do cabeçalho antes de configurar um controle. Segurar um controle durante a performance não abre CFG. Com CFG ligado, clique direito novamente no mesmo controle fecha seu editor; em outro controle, troca diretamente para sua configuração. Arrasto oferece Muito curto (60px), Curto (100px), Médio (150px) e Longo (300px); Nível ao tocar oferece Zero, Baixo (25%), Médio (50%) e Máximo. Curvas de resposta A/B/C e C Lembrar último / Fixo continuam individuais. Esses valores controlam o nível enviado ao destino, não a velocidade das notas MIDI.
+No modo D, cada toggle tem **Duração do burst** e ataque próprios,
+independentes da subdivisão da onda, que é o período de cada ciclo. A duração
+pode seguir o ajuste compartilhado, usar um valor musical fixo em SYNC ou usar
+milissegundos em FREE. A seção recolhida de Duração do burst mostra a duração
+selecionada. O modo D herdado de Global expõe os mesmos ajustes. Os pins
+persistem nos projetos, nos presets e nos snapshots, e abrir o CFG nunca
+dispara um controle.
 
-No modo D, cada toggle tem **Duração do burst** e ataque próprios, independentes da subdivisão da onda (período de cada ciclo). A duração pode seguir o ajuste compartilhado, usar valor musical fixo em SYNC ou milissegundos em FREE. A seção recolhida mostra a duração selecionada. O modo D herdado de Global apresenta os mesmos ajustes. Pins persistem em projetos, presets e snapshots; abrir CFG nunca dispara controles.
+O **+ ADICIONAR POSE**, ao lado do seletor REC de reconhecimento, acrescenta as
+identidades numeradas até G15, e fica cinza nos quinze cards. O banco tem uma
+barra de rolagem escura e cards compactos. A captura, o reconhecimento e o CLR
+mantêm o espaço normal de ações e de resumo, e os avisos de tomada visíveis ou
+o diagnóstico do TESTE acrescentam apenas o espaço de que precisam. O **CLR**
+remove os exemplos e mantém o card. O pequeno **×** abaixo de G1/G2/etc. remove
+aquele card e seus exemplos, cancela a captura e o teste dele, e libera
+explicitamente a saída sustentada, inclusive no Manter sem limite. Os outros IDs
+e os destinos nunca mudam de posição. O mapping do ID removido continua
+disponível no MAP, e o Adicionar reutiliza o primeiro ID numerado livre, com
+pose vazia e esse mapping. Limpe os alvos dele no MAP para descartar também o
+destino. Remover todos os cards e restaurar um banco esparso são aceitos. Os
+slots `sensor.vision.gesture.1` até `.15` seguem as mesmas regras de
+qualificação, de MIDI e de perda de tracking. O classificador, as guardas do
+polegar e os tempos de captura e de reconhecimento funcionam como está descrito
+na § 12. O aceite físico da câmera continua necessário.
 
-VID inicia com três poses aprendidas. **+ ADICIONAR POSE**, ao lado do seletor REC de reconhecimento, acrescenta IDs até G15 e fica cinza aos quinze cards. O banco tem rolagem escura e cards compactos: captura, reconhecimento e CLR mantêm a área normal de ações/status; avisos de exemplos ou diagnóstico do TEST acrescentam apenas o espaço necessário. **CLR** apaga exemplos preservando o card. O pequeno **×** abaixo de G1/G2/etc. remove aquele card e seus exemplos, cancela sua captura/teste e solta explicitamente sua saída ativa, inclusive Manter sem limite. Outros IDs e destinos nunca mudam de posição. O mapping do ID removido continua disponível no MAP; Adicionar reutiliza o primeiro ID livre, com pose vazia e esse mapping existente. Limpe seus alvos no MAP caso também queira descartar o destino. É possível remover todos os cards e restaurar um banco com IDs intercalados. Cada pose continua exigindo três exemplos e aceita até seis. Slots `sensor.vision.gesture.1` até `.15` seguem as mesmas regras de qualificação, MIDI e perda de tracking. Classificador, guardas de polegar e tempos de captura/reconhecimento não foram reajustados. Aceite físico da câmera continua necessário.
-
-## 16. REC: Arrangement / CLIP
+## 16. REC
 
 O REC lista as tracks do Live como linhas nativas, na ordem em que o Live as
 informa. Cada linha traz seus próprios botões **ARM**, **SOLO** e **MUTE** e um
@@ -1219,12 +1244,11 @@ Armar exige uma observação fresca de transporte parado via AbletonOSC. Armar
 com o transporte rodando começaria a gravar aquela track no Live, então um
 estado de transporte desconhecido ou vencido bloqueia o pedido.
 
-O **CLICK** liga e desliga o metrônomo do Live, e continua valendo durante
-montagem, pré-roll, REC e playback. A chave é independente do resto da barra e
-fica disponível sempre que o estado observado é recente e conhecido. A API
-atual da extensão não expõe o nível do metrônomo, então não há controle de
-nível ao lado do **CLICK**: ajuste o nível real no Live, nunca outro valor por
-procuração.
+O **CLICK** liga e desliga o metrônomo do Live, e continua funcionando durante
+a montagem, o pré-roll, o REC e a reprodução. A chave é independente do resto
+da barra, e fica disponível sempre que o estado observado é recente e
+conhecido. A API atual da extensão não expõe o nível do metrônomo, então não
+há controle de nível ao lado do **CLICK**: ajuste o nível real no Live.
 
 O REC precisa do AbletonOSC para o transporte e o estado de gravação; a API da
 extensão sozinha não comanda isso. As linhas nativas, a expansão de grupo e a
@@ -1240,7 +1264,7 @@ segue essa posse. Nomes, ARM MULTI/EXCLUSIVE e SOLO/MUTE são compartilhados.
 
 **GRAVAR** mostra a barra de captura compartilhada — **REC** e **STOP** — junto
 com a configuração da captura (**PRÉ-ROLL** **OFF / 1 / 2 / 4**,
-**OFF** por padrão; **PASSES** **1 / 2 / 3 / ∞**, uma passagem por padrão;
+**OFF** por padrão; **PASSAGENS** **1 / 2 / 3 / ∞**, uma passagem por padrão;
 **INÍCIO** e **FIM**), as linhas nativas de track e a lista compacta de
 marcadores. No celular deitado, só a lista de tracks rola na vertical; as
 faixas acima dela ficam no lugar. Esta visão não lê clips, nem take lanes, nem
@@ -1292,10 +1316,10 @@ catálogo — depois abra **REC** com o playback parado:
    ordem estável nos empates e nomes completos. Compasso temporariamente atrasado
    mantém o último display confirmado com indicador pontilhado, sem autorizar REC.
    REC confirma o conjunto inteiro antes de abrir a captura.
-3. A barra de captura traz **REC**, **STOP**, **PRÉ-ROLL** e **PASSES**.
+3. A barra de captura traz **REC**, **STOP**, **PRÉ-ROLL** e **PASSAGENS**.
    **PRÉ-ROLL** alterna **OFF / 1 / 2 / 4** compassos, com **OFF**
-   como padrão, e **PASSES** alterna **1 / 2 / 3 / ∞**, em que ∞ são
-   passagens ilimitadas até você apertar **STOP**. **PASSES** fica disponível
+   como padrão, e **PASSAGENS** alterna **1 / 2 / 3 / ∞**, em que ∞ são
+   passagens ilimitadas até você apertar **STOP**. **PASSAGENS** fica disponível
    quando o fim é limitado — **Próximo marcador** ou um marcador explícito —,
    e o padrão é uma passagem. Uma contagem fora desses valores é normalizada
    para **1**, e a página avisa.
@@ -1304,7 +1328,7 @@ catálogo — depois abra **REC** com o playback parado:
    fim definido. Início ou fim ausente, ambíguo ou inválido, ou um fim em
    **Próximo marcador** sem marcador seguinte, bloqueiam REC e dizem o motivo;
    nunca mudam silenciosamente para gravação sem fim definido. Coloque o fim
-   depois da ressonância desejada dos pratos/instrumentos.
+   depois do decaimento desejado.
 4. Aperte **REC**. Com **PRÉ-ROLL OFF** a captura abre direto no início
    selecionado. As outras opções tocam os compassos anteriores com click até
    o Punch In nativo abrir a captura no início selecionado.
@@ -1334,10 +1358,11 @@ Gravação livre — uma captura **Até STOP** — desliga o Arrangement Loop.
 Gravação limitada confirma o trecho
 e o Punch Out nativo antes de começar. Uma passagem deixa Loop desligado;
 repetição finita desliga Loop na última passagem observada e confirma STOP após
-o limite nativo de captura. Pré-roll só antes da primeira passagem. O plano
-aceito roda no computador; reconectar o celular nunca repete REC. Posição
-ausente/ambígua não confirma conclusão. Perda de OSC ou troca de Set aposenta
-o plano; a gravação pode continuar, então confira o Live e use STOP.
+o limite nativo de captura. O pré-roll roda só antes da primeira passagem.
+Estes planos rodam no computador depois do aceite, e reconectar o celular nunca
+repete um REC. Posição ausente ou ambígua não confirma a conclusão. A perda do
+link OSC ou do Set aposenta o plano, e a gravação pode continuar, então confira
+o Live e use o STOP.
 STOP preserva início fixo, trecho, quantidade e ARM para outro REC. Enquanto a
 captura é propriedade da tentativa, o trecho fica congelado: marcadores criados
 depois não mudam o trecho já em captura. O Live
@@ -1477,7 +1502,7 @@ começa sem take escolhido.
   manualmente no Live (**Save Set**); a conferência ao salvar e reabrir depende
   de aceite humano.
 
-### CLIP: gravar uma cena vazia da Session
+### Cena vazia da Session
 
 1. Arme as entradas nas linhas de track compartilhadas. Abra a visão **CLIP** e
    selecione explicitamente uma linha de cena. Toda faixa armada precisa ter
@@ -1534,11 +1559,11 @@ de gravação na Session. Gravação nativa de áudio/MIDI, duração,
 quantização e limites de captura ainda exigem aceite no seu Live; a prova
 automatizada usa mocks SDK/OSC.
 
-## AUT: loops de movimento dos XY
+## Loops do AUT
 
 SYNC oferece cinco botões de compassos (1–5 compassos). FREE usa um slider de
-1–30 segundos em passos de um segundo. Os padrões continuam 2 compassos e
-10 segundos; loops salvos de 10 ou 20 segundos mantêm sua duração.
+1–30 segundos em passos de um segundo. Os padrões são 2 compassos e 10 segundos,
+e um loop salvo de 10 ou 20 segundos mantém sua duração.
 
 **AUT**, ao lado de MAP/CFG, seleciona gravação de automação para XY1 ou XY2. Com AUT ligado, os dois XY ficam destacados e mantêm 100% de suas dimensões sem encolher nem exibir barras individuais. Para abrir os ajustes de um XY, use toque longo (segurar 600ms sem mover) no celular ou clique direito no desktop. Isso nunca inicia captura, playback nem altera o loop. O estado LOOP/REC/contagem permanece dentro do próprio XY.
 
@@ -1553,4 +1578,14 @@ ativada, o indicador branco fica contínuo.
 
 Segure e mova um XY durante a reprodução para sobrepor seu movimento manual. Ao soltar, ele volta à fase atual do loop, sem reiniciar nem regravar. A física pode fornecer o movimento capturado; durante reprodução, o loop controla ambos os eixos e substitui a inércia. Buffers/configurações dos dois XY são independentes; apenas uma captura/contagem ocorre de cada vez. Falha ao substituir preserva o loop completo anterior. Apagar pede confirmação.
 
-Pontos completos e configurações persistem em projetos, presets, snapshots e armazenamento local. Estados de reprodução/contagem/gravação nunca persistem: recarregar, reconectar, substituir a sessão, perder papel de controlador ou ocultar a página para AUT; use Reproduzir explicitamente depois. Parar segue Safe loss de cada mapping e solta gates de Trigger Note. Esta função repete dados dos controles XY do RC Surface; não escreve automação nativa no Arrangement. Pads/toggles ainda não são gravados por AUT nesta versão. O gravador limitado mira 30 amostras/segundo, até 1.024 pares de coordenadas por XY. Intervalo de captura acima de 250ms cancela a tentativa. Fluidez real no navegador e saída no Live continuam exigindo aceite no dispositivo.
+Os pontos completos e as configurações persistem nos projetos, nos presets,
+nos snapshots e no armazenamento local. O estado de reprodução, de contagem e
+de gravação nunca persiste. Recarregar, reconectar, substituir a sessão, perder
+o papel de controlador ou ocultar a página para o AUT; use Reproduzir
+explicitamente depois. O Parar segue a política de Safe loss de cada mapping e
+libera os gates de Trigger Note. Esta função repete os dados dos controles XY
+do RC Surface, e não escreve as lanes de automação nativas do Arrangement. Os
+pads e os toggles não são gravados pelo AUT nesta versão. O gravador limitado
+mira 30 amostras por segundo, com no máximo 1.024 pares de coordenadas por XY.
+Uma lacuna de captura acima de 250ms aborta a tentativa. A fluidez real no
+navegador e a saída no Live ainda exigem aceite no dispositivo.
