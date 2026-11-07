@@ -84,8 +84,8 @@
       'pt-BR': "Liga um controle ou um sensor a um de três destinos: <b>Bind</b> (um parâmetro do Live), <b>Trigger Note</b> (uma nota MIDI) ou <b>Launch Clip</b> (um clip da Session).",
     },
     'lp.surface.003': {
-      en: "Live 12.4.5+ Suite (Beta) - Safari on iOS 15.4+ or Chromium on Android, held in landscape - same local network - nothing is installed on the phone.",
-      'pt-BR': "Live 12.4.5+ Suite (Beta) - Safari no iOS 15.4+ ou Chromium no Android, usado na horizontal - mesma rede local - nada é instalado no celular.",
+      en: "Live 12.4.5+ Suite (Beta) · Safari on iOS 15.4+ or Chromium on Android, held in landscape · same local network · nothing is installed on the phone.",
+      'pt-BR': "Live 12.4.5+ Suite (Beta) · Safari no iOS 15.4+ ou Chromium no Android, usado na horizontal · mesma rede local · nada é instalado no celular.",
     },
     'lp.surface.004': {
       en: "Download 2.1.0",
@@ -297,8 +297,8 @@
       'pt-BR': 'Abra o painel',
     },
     'lp.install.010': {
-      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken; the link drawn in <a href=\"#chain\">2.0</a>.",
-      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada; o elo desenhado em <a href=\"#chain\">2.0</a>.",
+      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken; the link drawn in <a href=\"#chain\">Signal chain</a>.",
+      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada; o elo desenhado em <a href=\"#chain\">Cadeia de sinal</a>.",
     },
     'lp.install.011': {
       en: 'Connect the phone',
@@ -329,8 +329,8 @@
       'pt-BR': 'Opcional: Deep Sync',
     },
     'lp.install.020': {
-      en: "Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock; see <a href=\"#clock\">2.1</a>.",
-      'pt-BR': "Instale o AbletonOSC como Control Surface com UDP <code>11000</code> e <code>11001</code> livres, e segure <code>SYNC</code> para escolher o clock; veja <a href=\"#clock\">2.1</a>.",
+      en: "Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock; see <a href=\"#clock\">Clock source</a>.",
+      'pt-BR': "Instale o AbletonOSC como Control Surface com UDP <code>11000</code> e <code>11001</code> livres, e segure <code>SYNC</code> para escolher o clock; veja <a href=\"#clock\">Fonte de clock</a>.",
     },
     'lp.trouble.001': {
       en: 'Troubleshooting',
@@ -442,8 +442,8 @@
     },
 
     'lp.map.165': {
-      en: "What each family does, from touch to Live, is in <a href=\"#controls\">4.0</a>.",
-      'pt-BR': "O que cada família faz, do toque ao Live, está em <a href=\"#controls\">4.0</a>.",
+      en: "What each family does, from touch to Live, is in <a href=\"#controls\">Controls</a>.",
+      'pt-BR': "O que cada família faz, do toque ao Live, está em <a href=\"#controls\">Controles</a>.",
     },
     'lp.map.001': {
       en: "Surface map",
@@ -582,16 +582,16 @@
       'pt-BR': "Bloco de sync",
     },
     'lp.map.027': {
-      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, STAGE locks surface to current page.",
-      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">Clock source</a>), ⚙ settings, STAGE locks surface to current page.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">Fonte de clock</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
     },
     'lp.map.syncStd': {
-      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, STAGE locks surface to current page.",
-      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">Clock source</a>), ⚙ settings, STAGE locks surface to current page.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">Fonte de clock</a>), ⚙ ajustes, STAGE trava a superfície na página atual.",
     },
     'lp.map.syncCal': {
-      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.",
-      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">2.1</a>), ⚙ ajustes, CALIBRATE define referência neutra (postura no SNS, nível no AUD, iluminação no VID), STAGE trava a superfície.",
+      en: "SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href=\"#clock\">Clock source</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.",
+      'pt-BR': "SYNC alterna SYNC/FREE (segurar para Deep Sync Settings, <a href=\"#clock\">Fonte de clock</a>), ⚙ ajustes, CALIBRATE define referência neutra (postura no SNS, nível no AUD, iluminação no VID), STAGE trava a superfície.",
     },
     'lp.map.029': {
       en: 'Fig. 2',
@@ -1019,8 +1019,8 @@
       'pt-BR': "Ajustes por controle: pads, oito slots toggle, Estático/Física nos dois XY. Só PERF e MIX.",
     },
     'lp.controls.059': {
-      en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">2.1</a>.",
-      'pt-BR': "Alterna <b>SYNC</b> / <b>FREE</b>. Segure para abrir os Ajustes de Deep Sync, <a href=\"#clock\">2.1</a>.",
+      en: "Toggles <b>SYNC</b> / <b>FREE</b>. Long-press for Deep Sync Settings, <a href=\"#clock\">Clock source</a>.",
+      'pt-BR': "Alterna <b>SYNC</b> / <b>FREE</b>. Segure para abrir os Ajustes de Deep Sync, <a href=\"#clock\">Fonte de clock</a>.",
     },
     'lp.controls.062': {
       en: "Sets the neutral reference for the page: posture on SNS, level on AUD, lighting on VID.",
@@ -1339,8 +1339,8 @@
       'pt-BR': "Política de privacidade",
     },
     'lp.chain.021': {
-      en: "2.1 · Clock source",
-      'pt-BR': "2.1 · Fonte de clock",
+      en: "Clock source",
+      'pt-BR': "Fonte de clock",
     },
     'lp.install.021': {
       en: "Your browser does not support the video tag.",

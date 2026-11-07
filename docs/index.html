@@ -280,13 +280,8 @@ pre{font-family:var(--mono);white-space:pre}
 .nav .end{color:var(--ink3);padding:9px 0 9px 13px;font-size:11px;line-height:28px;letter-spacing:.1em;white-space:nowrap}
 
 /* ================= section rail ================= */
-.sec{display:grid;grid-template-columns:76px minmax(0,1fr);border-top:1px solid var(--dark)}
+.sec{display:grid;grid-template-columns:minmax(0,1fr);border-top:1px solid var(--dark)}
 .sec:first-of-type{border-top:0}
-.sec > .n{
-  padding:44px 12px 32px 0;
-  color:var(--amber);font-size:20px;line-height:24px;letter-spacing:.04em;
-  font-variant-numeric:tabular-nums;
-}
 .sec > .c{padding:44px 0 52px;min-width:0}
 h2{
   font-size:22px;line-height:28px;font-weight:normal;
@@ -1018,7 +1013,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   .sheet{padding:0 14px}
   .sec{grid-template-columns:minmax(0,1fr)}
-  .sec > .n{padding:30px 0 0}
   .sec > .c{padding:10px 0 38px}
   dl.split2{grid-template-columns:minmax(0,1fr)}
   dl.split2 dt{padding-bottom:0;border-bottom:0}
@@ -1108,13 +1102,12 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 1.0 WHAT IT IS / HOW TO GET IT ===================== -->
   <div class="sec" id="surface">
-    <div class="n">1.0</div>
     <div class="c">
       <div class="hero">
         <div>
           <h1 data-i18n-html="lp.surface.001"><span class="rc">RC</span> Surface</h1>
           <p class="lede" data-i18n="lp.surface.002">Extension for Ableton Live 12 that serves a control surface to the browser of a phone or tablet: pads, knobs, faders, XY pads, mixer, transport and track recording. Each control can move a Live parameter, play a MIDI note or launch a Session clip. The phone motion sensors, microphone and camera can be mapped the same way.</p>
-          <p class="lede" data-i18n="lp.surface.003">Live 12.4.5+ Suite (Beta) - Safari on iOS 15.4+ or Chromium on Android, held in landscape - same local network - nothing is installed on the phone.</p>
+          <p class="lede" data-i18n="lp.surface.003">Live 12.4.5+ Suite (Beta) · Safari on iOS 15.4+ or Chromium on Android, held in landscape · same local network · nothing is installed on the phone.</p>
           <dl class="split2 tight hero-tabs">
             <dt>PERF</dt><dd data-i18n="lp.surface.perf">Performance page: pads, XY pads and LFO/Square modulators.</dd>
             <dt>MIX</dt><dd data-i18n="lp.surface.mix">Mixer page: eight knobs and eight faders.</dd>
@@ -1134,7 +1127,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 1.1 NEW IN 2.1.0 ===================== -->
   <div class="sec" id="new">
-    <div class="n">1.1</div>
     <div class="c">
       <h2 data-i18n-html="lp.new.title">New in 2.1.0</h2>
       <div class="cards c2">
@@ -1164,7 +1156,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 2.0 SIGNAL CHAIN ===================== -->
   <div class="sec" id="chain">
-    <div class="n">2.0</div>
     <div class="c">
       <h2 data-i18n-html="lp.chain.001">Signal chain</h2>
       <div class="duo">
@@ -1193,7 +1184,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           </div>
         </div>
         <div id="clock">
-          <h3 data-i18n-html="lp.chain.021">2.1 · Clock source</h3>
+          <h3 data-i18n-html="lp.chain.021">Clock source</h3>
           <div class="scroll" tabindex="0">
           <table class="data">
             <thead><tr><th data-i18n="lp.chain.008">Mode</th><th data-i18n="lp.chain.009">Needs</th><th data-i18n="lp.chain.010">What it provides</th></tr></thead>
@@ -1212,7 +1203,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 3.0 SURFACE MAP ===================== -->
   <div class="sec" id="map">
-    <div class="n">3.0</div>
     <div class="c">
       <h2 data-i18n-html="lp.map.001">Surface map</h2>
       <fieldset class="surface-viewer" data-surface-viewer>
@@ -1468,7 +1458,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">6</td><td data-i18n="lp.map.perfUtilTitle">PERF UTIL</td><td class="c2">6</td><td data-i18n="lp.map.perfUtilFlow">CAP arms capture; CAP+1–4 saves; 1–4 recalls; OFF stops morph, pads, LFOs and Squares and centers XY, without touching MIX, sensors, audio, vision or transport.</td></tr>
               <tr><td class="c1">7</td><td data-i18n="lp.map.autTitle">AUT · XY gesture loops</td><td class="c2">2</td><td data-i18n="lp.map.autFlow">AUT selects XY1/XY2; their separate AUT buttons open settings without recording. SYNC captures 1–5 bars from Live’s fresh playing clock; FREE captures 1–30 seconds in steps of one second. Play/Stop are explicit; manual touch overrides a playing loop until release. Saved points never auto-play after reconnect. This loops control data, not native Arrangement automation.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">8</td><td data-i18n="lp.map.025">BPM, transport (PREV/PLAY/NEXT), TRN, MAP, AUT, CFG. AUT is a header mode on PERF.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.027">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.027">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1587,7 +1577,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">2</td><td>Knobs</td><td class="c2">8</td><td data-i18n-html="lp.map.039"><code>knob-1..8</code>, four across by two down. Relative vertical drag.</td></tr>
               <tr><td class="c1">3</td><td>Faders</td><td class="c2">8</td><td data-i18n-html="lp.map.041"><code>fader-1..8</code>, one row. The thumb moves exactly as far as the finger.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.liveMix">BPM, transport (PREV/PLAY/NEXT), TRN, MAP, CFG. No AUT on MIX.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1675,7 +1665,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">3</td><td data-i18n="lp.map.058">Performance controls</td><td class="c2">3</td><td data-i18n-html="lp.map.059"><code data-i18n="lp.fig.013">CAPTURE</code>, <code data-i18n="lp.fig.014">CLEAR SLOTS</code>, transition 0.1–5.0 s or synced, and Grid/Vector.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.060">Vector morph pad</td><td class="c2">1</td><td data-i18n="lp.map.061">Blends slots 1 TL, 2 TR, 3 BL and 4 BR at once, weighted by the point.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n="lp.map.liveSnp">BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG on SNP.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1767,7 +1757,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">4</td><td data-i18n="lp.map.080">Local view</td><td class="c2">2</td><td data-i18n="lp.map.081">Shows or hides the two banks on this phone only; the sensors keep running.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.082">Axis key</td><td class="c2" data-i18n="lp.map.162">3 ax</td><td data-i18n="lp.map.083">Shows which phone axis each channel name refers to.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n="lp.map.liveSensor">BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1910,7 +1900,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">6</td><td data-i18n="lp.map.106">Analysis window</td><td class="c2">1</td><td data-i18n-html="lp.map.107">WINDOW x1/x2/x4 trades spectral detail for response time.</td></tr>
               <tr><td class="c1">7</td><td data-i18n="lp.audio.detectors">Built-in audio detectors</td><td class="c2">12</td><td data-i18n="lp.audio.detector-note">Twelve 0..1 mapping sources: sensor.audio.transient, sensor.audio.kick, sensor.audio.snare, sensor.audio.brightness, sensor.audio.centroid, sensor.audio.flux, sensor.audio.flatness, sensor.audio.spread, sensor.audio.rolloff, sensor.audio.low, sensor.audio.mid, sensor.audio.high.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n="lp.map.liveSensor">BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2021,7 +2011,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">5</td><td data-i18n="lp.map.128">Direct MAP / CLUTCH</td><td class="c2">2</td><td data-i18n="lp.map.129">MAP X/Y/Z, PALM and FACE are continuous mapping inputs. CLUTCH X/Y/Z is relative and freezes when the pinch opens.</td></tr>
               <tr><td class="c1">6</td><td data-i18n="lp.map.130">Palm mapping inputs</td><td class="c2">2</td><td data-i18n="lp.map.131">PALM size and signed FACE are shown raw; MAP uses normalized 0–1 values. FACE is palm/back orientation, not facial tracking. Missing/invalid samples follow Safe loss.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">6</td><td data-i18n="lp.map.liveSensor">BPM, transport (PREV/PLAY/NEXT), TRN, MAP. No AUT or CFG.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">4</td><td data-i18n-html="lp.map.syncCal">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, CALIBRATE sets neutral reference (posture on SNS, level on AUD, lighting on VID), STAGE locks surface.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2438,7 +2428,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 <tr><td class="c1">6</td><td data-i18n="lp.rec.tracks">Track rows / volume fader / ARM MULTI</td><td class="c2">4</td><td data-i18n="lp.rec.tracksFlow">ARM MULTI keeps inputs cumulative. EXCLUSIVE disarms others only when you press a track ARM. REC verifies exactly the visible armed set; STOP keeps armed inputs intact. A group row keeps its own fader, and arming it arms the armable descendants inside it.</td></tr>
 <tr><td class="c1">7</td><td data-i18n="lp.rec.clip">CLIP / Session scene</td><td class="c2">1–16 bars</td><td data-i18n="lp.rec.clipFlow">CLIP replaces the timeline with a paged Session grid on the same shared track rows. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC shows queued, recording or playing; STOP stops only the tracks REC started, keeps ARM and the global transport, and stays pending until Live confirms the stop. BACK TO ARR explicitly returns once every Session clip is idle, without Pause/Play. No existing-clip overdub or take/comp browser.</td></tr>
 <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">5</td><td data-i18n="lp.map.liveRec">BPM, transport (PREV/PLAY/NEXT), TRN only. Entering REC closes MAP; no AUT or CFG.</td></tr>
-<tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+<tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
 </tbody></table></div></figure>
 
       <figure class="surface-sheet" id="surface-map-map" data-surface-plan="map" role="region" aria-labelledby="surface-label-map">
@@ -2543,7 +2533,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">6</td><td data-i18n="lp.map.152">Hierarchy</td><td class="c2" data-i18n="lp.map.163">3 levels</td><td data-i18n="lp.map.153">Track → Device → Parameter, plus Song/Main/Master and Return groups.</td></tr>
               <tr><td class="c1">7</td><td data-i18n="lp.map.154">Live selection shortcut</td><td class="c2">1</td><td data-i18n="lp.map.155">Uses Live's selected track and device as a filter; it picks no parameter for you.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">7</td><td data-i18n="lp.map.liveMap">BPM, transport, TRN, active MAP overlay, CFG over current page.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2710,7 +2700,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">3</td><td data-i18n="lp.map.trnRow3">Searchable locators</td><td class="c2">1</td><td data-i18n="lp.map.trnRow3Flow">List of Arrangement cue points with search filter. Tapping a locator jumps Live’s transport to it, and playback keeps running.</td></tr>
               <tr><td class="c1">4</td><td data-i18n="lp.map.trnRow4">Status and sync badge</td><td class="c2">1</td><td data-i18n="lp.map.trnRow4Flow">Badge shows SYNCED, SDK or FREE timing. Notice line appears only when AbletonOSC is missing, a change is unconfirmed, or in viewer mode.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">8</td><td data-i18n="lp.map.liveTrn">BPM, transport, active TRN overlay, MAP, AUT, CFG.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2930,7 +2920,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">4</td><td data-i18n="lp.map.autRow4">Duration and timing</td><td class="c2">2</td><td data-i18n="lp.map.autRow4Flow">SYNC offers 1–5 bars (default 2 bars); FREE offers 1–30 seconds in 1 s steps (default 10 s). Changing length or timing mode discards that XY's recording.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.autRow5">Playback, takeover &amp; safety</td><td class="c2">4</td><td data-i18n="lp.map.autRow5Flow">Record/replace, Play, Stop, and Clear (with confirmation). Manual touch overrides loop until release; white target square indicates takeover point. Does not write Live automation.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">8</td><td data-i18n="lp.map.liveAut">BPM, transport, TRN, MAP, active AUT mode, CFG.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
@@ -3161,14 +3151,14 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
               <tr><td class="c1">4</td><td data-i18n="lp.map.cfgRow4">XY Static &amp; Physics</td><td class="c2">2</td><td data-i18n="lp.map.cfgRow4Flow">Toggle between Static and Physics per XY pad. Physics settings: friction (0.002–0.05), bounce (0–0.95), speed (0.1–4×). Reset removes override.</td></tr>
               <tr><td class="c1">5</td><td data-i18n="lp.map.cfgRow5">Hold to edit points</td><td class="c2">2</td><td data-i18n="lp.map.cfgRow5Flow">MAP response curve points and Burst envelope points edit only after holding for ~0.6 s: indicator ring appears, drag to move, release to set. Quick taps and scrolls never shift points. Double tap resets.</td></tr>
               <tr><td class="c1">8</td><td data-i18n="lp.map.024">Live panel</td><td class="c2">8</td><td data-i18n="lp.map.liveCfg">BPM, transport, TRN, MAP, AUT, active CFG mode.</td></tr>
-              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">2.1</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
+              <tr><td class="c1">9</td><td data-i18n="lp.map.026">Sync block</td><td class="c2">3</td><td data-i18n-html="lp.map.syncStd">SYNC toggles SYNC/FREE (hold for Deep Sync Settings, <a href="#clock">Clock source</a>), ⚙ settings, STAGE locks surface to current page.</td></tr>
             </tbody>
           </table>
         </div>
       </figure>
         </div>
       </fieldset>
-      <p class="tnote" data-i18n-html="lp.map.165">What each family does, from touch to Live, is in <a href="#controls">4.0</a>.</p>
+      <p class="tnote" data-i18n-html="lp.map.165">What each family does, from touch to Live, is in <a href="#controls">Controls</a>.</p>
       <noscript>
         <style>
           .surface-tabs{display:none}
@@ -3182,7 +3172,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 4.0 CONTROL INVENTORY ===================== -->
   <div class="sec" id="controls">
-    <div class="n">4.0</div>
     <div class="c">
       <h2 data-i18n-html="lp.controls.001">Controls</h2>
 
@@ -3621,7 +3610,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 5.0 SCENARIOS ===================== -->
   <div class="sec" id="scenarios">
-    <div class="n">5.0</div>
     <div class="c">
       <h2 data-i18n-html="lp.scenarios.001">Situations</h2>
       <div class="stories">
@@ -3666,7 +3654,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 6.0 INSTALL ===================== -->
   <div class="sec" id="install">
-    <div class="n">6.0</div>
     <div class="c">
       <h2 data-i18n-html="lp.install.001">Installation</h2>
 
@@ -3695,7 +3682,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.009">Open the panel</h4>
-            <p data-i18n-html="lp.install.010">In Live, open <span class="path">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken; the link drawn in <a href="#chain">2.0</a>.</p>
+            <p data-i18n-html="lp.install.010">In Live, open <span class="path">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken; the link drawn in <a href="#chain">Signal chain</a>.</p>
           </div>
         </div>
 
@@ -3727,7 +3714,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <div class="sn"></div>
           <div class="sc">
             <h4 data-i18n="lp.install.019">Optional: Deep Sync</h4>
-            <p data-i18n-html="lp.install.020">Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock; see <a href="#clock">2.1</a>.</p>
+            <p data-i18n-html="lp.install.020">Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock; see <a href="#clock">Clock source</a>.</p>
           </div>
         </div>
 
@@ -3737,7 +3724,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <!-- ===================== 7.0 WHEN IT DOES NOT WORK ===================== -->
   <div class="sec" id="trouble">
-    <div class="n">7.0</div>
     <div class="c">
       <h2 data-i18n="lp.trouble.001">Troubleshooting</h2>
       <div class="cards c2">
@@ -3787,7 +3773,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </div>
 
   <div class="sec" id="docs">
-    <div class="n">8.0</div>
     <div class="c">
       <h2 data-i18n="lp.docs.001">Reference documents</h2>
       <div class="docs">

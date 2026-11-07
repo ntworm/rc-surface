@@ -224,34 +224,40 @@ test('control viewer uses six faithful behavioral illustrations', () => {
   assert.match(mapping, /data-role="transform-desk"/);
 });
 
-test('the section numbering the sheet cross-references stays intact', () => {
-  // Every section renders a visible ordinal eyebrow, and the prose refers to
-  // sections by that number. The two halves have to move together: a reference
-  // to 2.1 is only meaningful while a heading claims 2.1. Assert both, because
-  // deleting one half leaves the other pointing at nothing on the page.
-  const eyebrows = landing.match(/<div class="n">\d+\.\d+<\/div>/g) || [];
-  assert.equal(eyebrows.length, 9, 'expected nine numbered sections');
-  assert.deepEqual(
-    eyebrows.map((tag) => tag.replace(/\D*(\d+\.\d+)\D*/, '$1')),
-    ['1.0', '1.1', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'],
-  );
-  assert.match(landing, /<h3[^>]*>2\.1 · Clock source<\/h3>/);
+test('cross references link to sections by name', () => {
+  // The sheet does not number its sections any more, so the name in the
+  // heading is the only thing that identifies one. The two halves have to
+  // move together: a heading that keeps a number claims the page does not
+  // make, and a reference that shows one points at nothing on the page.
+  assert.doesNotMatch(landing, /<div class="n">\d+\.\d+<\/div>/,
+    'the numbered eyebrows are gone');
+  assert.doesNotMatch(landing, /<h[234][^>]*>\s*\d+\.\d+/,
+    'no heading keeps a number prefix');
+  assert.doesNotMatch(landing, /<h[234][^>]*>\s*\d+\.\d+\s*·/,
+    'no heading keeps a number and its separator');
 
-  // Each cross-reference names a number and links to the section carrying it.
-  for (const [anchor, shown] of [
-    ['clock', '2.1'],
-    ['chain', '2.0'],
-    ['controls', '4.0'],
-  ]) {
-    assert.match(landing, new RegExp(`<a href="#${anchor}">${shown}</a>`));
-    assert.match(landing, new RegExp(`id="${anchor}"`));
+  // Each cross-reference names the section it links to.
+  for (const anchor of ['clock', 'chain', 'controls']) {
+    assert.match(landing, new RegExp(`id="${anchor}"`), `#${anchor} must exist`);
+    const link = landing.match(new RegExp(`<a href="#${anchor}">([^<]*)</a>`));
+    assert.ok(link, `#${anchor} must be linked from the text`);
+    assert.doesNotMatch(link[1], /\d/, `#${anchor} must be named, not numbered`);
   }
-  // No reference may point at a number no heading or eyebrow claims.
-  const referenced = [...landing.matchAll(/<a href="#[a-z-]+">(\d+\.\d+)<\/a>/g)]
-    .map((m) => m[1]);
-  const declared = new Set([...eyebrows.map((t) => t.replace(/\D*(\d+\.\d+)\D*/, '$1')), '2.1']);
-  for (const ref of referenced) {
-    assert.ok(declared.has(ref), `reference to undeclared section ${ref}`);
+
+  // No link to a section of this page shows a number any more.
+  for (const m of landing.matchAll(/<a href="#([a-z-]+)">([^<]*)<\/a>/g)) {
+    assert.doesNotMatch(m[2], /\d/, `the link to #${m[1]} shows a number`);
+  }
+
+  // The Portuguese catalog carries the same names, or the sheet links to a
+  // number the Portuguese page no longer prints.
+  const catalog = loadSiteCatalog();
+  for (const entry of Object.values(catalog)) {
+    for (const locale of ['en', 'pt-BR']) {
+      for (const m of String(entry[locale]).matchAll(/<a href="#([a-z-]+)">([^<]*)<\/a>/g)) {
+        assert.doesNotMatch(m[2], /\d/, `#${m[1]} shows a number in [${locale}]`);
+      }
+    }
   }
 });
 
