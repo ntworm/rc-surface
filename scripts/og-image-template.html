@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- Copyright © 2026 Gabriel Worm -->
+<!-- SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 -->
+<!-- The social card: the real PERF page on a phone of its true proportion
+     (844 x 390), rendered by scripts/render-og-image.mjs. -->
+<html lang="en"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Departure Mono";src:url("{{FONT_DATA_URI}}") format("opentype")}
+*{box-sizing:border-box;margin:0}
+body{width:1200px;height:630px;background:#141414;color:#c0c0c0;font-family:"Departure Mono",monospace;position:relative;overflow:hidden}
+.top,.foot{position:absolute;left:56px;right:56px;display:flex;justify-content:space-between;font-size:14px;letter-spacing:.08em;color:#8e8e8e}
+.top{top:40px;padding-bottom:14px;border-bottom:1px solid #333}
+.foot{bottom:36px;padding-top:14px;border-top:1px solid #333}
+.top b{color:#ffa133;font-weight:400}
+.foot b{color:#ffa133;font-weight:400}
+.left{position:absolute;left:56px;top:112px;width:360px}
+.kick{font-size:13px;letter-spacing:.14em;color:#6c6c58;margin-bottom:18px}
+h1{font-weight:400;font-size:38px;line-height:1.08;color:#ececec;letter-spacing:-.01em}
+h1 span{color:#ffa133}
+.lede{margin-top:18px;font-size:15px;line-height:1.5;color:#9a9a9a}
+.spec{margin-top:22px;border-top:1px solid #333}
+.spec div{display:grid;grid-template-columns:118px 1fr;padding:9px 0;border-bottom:1px solid #2a2a2a;font-size:13px;letter-spacing:.04em}
+.spec dt{color:#6c6c58}.spec dd{color:#c0c0c0;margin:0}
+.phone{position:absolute;left:448px;top:150px;width:700px;height:338px;border-radius:44px;background:#050505;border:1px solid #3a3a3a;box-shadow:0 0 0 7px #1c1c1c, 0 0 0 8px #333}
+.screen{position:absolute;left:18px;top:13px;width:664px;height:307px;border-radius:30px;overflow:hidden;background:#000}
+.screen img{width:100%;height:100%;display:block}
+.notch{position:absolute;left:5px;top:139px;width:6px;height:60px;border-radius:3px;background:#1a1a1a}
+.cap{position:absolute;left:448px;top:510px;font-size:12px;letter-spacing:.14em;color:#6c6c58}
+.cap b{color:#c0c0c0;font-weight:400}
+</style></head><body>
+<div class="top"><span><b>RC SURFACE</b> · v{{VERSION}}</span><span>SOURCE-AVAILABLE · ABLETON LIVE EXTENSION</span></div>
+<div class="left">
+  <div class="kick">PHONE → ABLETON LIVE</div>
+  <h1>Your phone,<br><span>a controller</span><br><span>for Live.</span></h1>
+  <p class="lede">Pads, faders, XY and LFOs in the browser, on your own network.</p>
+  <dl class="spec">
+    <div><dt>REQUIRES</dt><dd>Live 12.4.5+ Suite</dd></div>
+    <div><dt>NETWORK</dt><dd>LAN only · no account</dd></div>
+  </dl>
+</div>
+<div class="phone"><div class="notch"></div><div class="screen"><img src="{{SCREEN_DATA_URI}}" alt=""></div></div>
+<div class="cap"><b>PERF</b> · THE REAL PAGE ON A PHONE, 844 × 390</div>
+<div class="foot"><span><b>ntworm.github.io/rc-surface</b></span><span>INDEPENDENT · NOT AFFILIATED WITH ABLETON AG</span></div>
+</body></html>

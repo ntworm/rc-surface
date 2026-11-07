@@ -6,7 +6,8 @@ import path from 'node:path';
 import test from 'node:test';
 
 const root = path.resolve(import.meta.dirname, '..');
-const generatorPath = path.join(import.meta.dirname, 'generate-og-image.py');
+const generatorPath = path.join(import.meta.dirname, 'render-og-image.mjs');
+const templatePath = path.join(import.meta.dirname, 'og-image-template.html');
 const fontPath = path.join(import.meta.dirname, 'assets', 'fonts', 'DepartureMono-Regular.otf');
 const imagePath = path.join(root, 'docs', 'og-image.png');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -33,14 +34,17 @@ function pngTextEntries(buffer) {
   return entries;
 }
 
-test('social-card generator is package-version-driven and keeps its build-only font', () => {
-  assert.ok(fs.existsSync(generatorPath), 'scripts/generate-og-image.py must be committed');
-  assert.ok(fs.existsSync(fontPath), 'the generator OTF must live outside static/');
-
+test('social-card renderer is package-version-driven and keeps its build-only font', () => {
+  assert.ok(fs.existsSync(generatorPath), 'scripts/render-og-image.mjs must be committed');
+  assert.ok(fs.existsSync(templatePath), 'scripts/og-image-template.html must be committed');
+  assert.ok(fs.existsSync(fontPath), 'the card font must live outside static/');
   const source = fs.readFileSync(generatorPath, 'utf8');
   assert.match(source, /package\.json/);
-  assert.match(source, /json\.load/);
-  assert.doesNotMatch(source, /v0\.\d+\.\d+/);
+  assert.match(source, /JSON\.parse/);
+  assert.doesNotMatch(source, /v\d+\.\d+\.\d+/);
+  const template = fs.readFileSync(templatePath, 'utf8');
+  assert.match(template, /\{\{VERSION\}\}/);
+  assert.doesNotMatch(template, /v\d+\.\d+\.\d+/);
 });
 
 test('committed social card matches package metadata and Open Graph dimensions', () => {
@@ -49,15 +53,15 @@ test('committed social card matches package metadata and Open Graph dimensions',
   assert.equal(image.readUInt32BE(16), 1200);
   assert.equal(image.readUInt32BE(20), 630);
   assert.equal(pngTextEntries(image).get('Release'), `v${packageJson.version}`);
-  assert.equal(pngTextEntries(image).get('SurfacePages'),'PERF,MIX,SNP,SNS,AUD,VID,REC');
-  assert.equal(pngTextEntries(image).get('Toggles'),'T1,T2,T3,T4,T5,T6,T7,T8');
-  assert.equal(pngTextEntries(image).get('XYHeaderMode'),'AUT');
+  assert.equal(pngTextEntries(image).get('Screen'), 'PERF 844x390');
 });
 
-test('social-card plan generator draws all seven tabs and eight labeled toggles with AUT on both XY',()=>{
-  const source=fs.readFileSync(generatorPath,'utf8');
-  assert.match(source,/tabs = \["PERF", "MIX", "SNP", "SNS", "AUD", "VID", "REC"\]/);
-  assert.match(source,/rows_per_column = 4/);assert.match(source,/for column in range\(2\):\s*for row in range\(rows_per_column\)/);
-  assert.match(source,/label = f"T\{row \* 2 \+ column \+ 1\}"/);
-  assert.match(source,/draw\.text\(\(xy_x \+ 5, y0 \+ 5\), "AUT"/);
+test('social card shows the real PERF page on a phone of its true proportion', () => {
+  const source = fs.readFileSync(generatorPath, 'utf8');
+  assert.match(source, /viewport: \{ width: 844, height: 390 \}/);
+  const template = fs.readFileSync(templatePath, 'utf8');
+  // The screen keeps the 844:390 proportion of the capture.
+  const screen = /\.screen\{[^}]*width:(\d+)px;height:(\d+)px/.exec(template);
+  assert.ok(screen, 'the template must size the phone screen');
+  assert.ok(Math.abs(Number(screen[1]) / Number(screen[2]) - 844 / 390) < 0.01);
 });

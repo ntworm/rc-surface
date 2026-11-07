@@ -48,11 +48,12 @@ test('landing and social card use RC Surface branding and trademark notice', asy
   const root = join(import.meta.dirname, '..');
   const html = await readFile(join(root, 'docs/index.html'), 'utf8');
   const catalog = await readFile(join(root, 'docs/site-i18n.js'), 'utf8');
-  const generator = await readFile(join(root, 'scripts/generate-og-image.py'), 'utf8');
+  const generator = await readFile(join(root, 'scripts/og-image-template.html'), 'utf8');
   assert.match(html, /Ableton and Live are trademarks of Ableton AG/);
   assert.match(catalog, /Ableton e Live são marcas comerciais da Ableton AG/);
   assert.doesNotMatch(catalog, /Ableton <b>RC Surface/);
-  assert.doesNotMatch(generator, /draw\.text\([^\n]*"ABLETON"/);
+  // The card never brands itself with the Ableton name.
+  assert.doesNotMatch(generator, /<b>ABLETON/i);
 });
 
 test('mac launcher preserves nested data, counts skips and propagates copy failures', async (t) => {
