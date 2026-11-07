@@ -132,8 +132,8 @@
       'pt-BR': "AUT",
     },
     'lp.new.autBody': {
-      en: "Tap AUT to write automation with the XY pads.",
-      'pt-BR': "Toque em AUT para gravar automação com os XY.",
+      en: "Tap AUT to record and loop XY pad gestures.",
+      'pt-BR': "Toque em AUT para gravar e repetir gestos nos pads XY.",
     },
     'lp.new.note': {
       en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
@@ -1796,15 +1796,15 @@
       'pt-BR': "Seletor GRAVAR / ARRANGEMENT / CLIP · CLICK",
     },
     'lp.rec.destFlow': {
-      en: "One fixed mode bar switches the three local views, with Record as the default. The capture bar (REC / STOP / CLICK) is shared by all three and keeps the same place in every view. CLICK is shared with TRN: it switches Live’s metronome whenever the observed state is fresh, during setup, pre-roll, REC and playback.",
-      'pt-BR': "Uma barra de modo fixa troca as três visões locais, com Gravar como padrão. A barra de captura (REC / STOP / CLICK) é compartilhada pelas três e fica no mesmo lugar em cada visão. CLICK é compartilhado com TRN: liga e desliga o metrônomo do Live sempre que o estado observado está fresco, na montagem, no pré-roll, durante o REC e no playback.",
+      en: "One fixed mode bar switches the three local views, with Record as the default. The capture bar (REC / STOP / CLICK) is shared by all three and keeps the same place in every view. CLICK is shared with TRN: during setup, pre-roll, REC and playback it switches Live’s metronome, following the metronome state Live last reported.",
+      'pt-BR': "Uma barra de modo fixa troca as três visões locais, com Gravar como padrão. A barra de captura (REC / STOP / CLICK) é compartilhada pelas três e fica no mesmo lugar em cada visão. CLICK é compartilhado com TRN: na montagem, no pré-roll, durante o REC e no playback, liga e desliga o metrônomo do Live, seguindo o estado do metrônomo que o Live informou por último.",
     },
     'lp.rec.range': {
       en: "START / END markers",
       'pt-BR': "Marcadores START / END",
     },
     'lp.rec.rangeFlow': {
-      en: "Choose a START marker; the END is the Next marker, an explicit marker, or Until STOP for an open-ended capture. Live confirms the region before REC, and the range stays frozen while the capture is owned.",
+      en: "Choose a START marker; the END is the Next marker, an explicit marker, or Until STOP for an open-ended capture. Live confirms the region before REC, and the range stays frozen while the capture is running.",
       'pt-BR': "Escolha um marcador START; o FIM é o próximo marcador, um marcador explícito ou Até STOP para gravação sem fim definido. O Live confirma a região antes do REC, e o trecho fica congelado enquanto a captura está em andamento.",
     },
     'lp.rec.preRoll': {
@@ -1836,16 +1836,16 @@
       'pt-BR': "REC / STOP / CLICK · VOLTAR AO ARR",
     },
     'lp.rec.transportFlow': {
-      en: "STOP has priority during preparation and pre-roll. REC temporarily sets Punch In OFF for direct starts or ON for pre-roll and restores only still-owned state. BACK TO ARR appears when Session overrode Arrangement, and returns explicitly once every Session clip is idle.",
-      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC ajusta Punch In temporariamente para OFF no início direto ou ON no pré-roll e restaura só o estado ainda próprio. VOLTAR AO ARR aparece quando a Session sobrepôs o Arrangement e retorna explicitamente quando todos os clips da Session estão ociosos.",
+      en: "STOP has priority during preparation and pre-roll. REC turns Punch In OFF for a direct start and ON for a pre-roll, and restores Punch In only when it still holds the value REC wrote. BACK TO ARR appears when Session overrode Arrangement, and returns explicitly once every Session clip is idle.",
+      'pt-BR': "STOP tem prioridade na preparação e no pré-roll. REC coloca o Punch In em OFF no início direto e em ON no pré-roll, e restaura o Punch In só quando ele ainda tem o valor que o REC escreveu. VOLTAR AO ARR aparece quando a Session sobrepôs o Arrangement e retorna explicitamente quando todos os clips da Session estão ociosos.",
     },
     'lp.rec.clip': {
       en: 'CLIP / Session scene',
       'pt-BR': 'CLIP / cena da Session',
     },
     'lp.rec.clipFlow': {
-      en: "CLIP replaces the timeline with a paged Session grid on the same shared track rows. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC observes queued/recording/playing; STOP affects only still-owned targets, keeps ARM/global transport and may remain pending until fresh stop confirmation releases it. BACK TO ARR explicitly returns after all Session clips are idle, without Pause/Play. No existing-clip overdub or take/comp browser.",
-      'pt-BR': "CLIP substitui a timeline por uma grade de Session paginada, nas mesmas linhas de track compartilhadas. Escolha a cena alvo; LENGTH (1/2/4/8/16 compassos) e QUANTIZE (Global/None/1 bar/1 beat) ajustados no próprio painel. REC observa fila/gravação/playback; STOP afeta apenas alvos que ainda possui, mantém ARM/transporte global e pode ficar pendente até confirmação fresca liberar a tentativa. BACK TO ARR retorna explicitamente após Session inteira ociosa, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.",
+      en: "CLIP replaces the timeline with a paged Session grid on the same shared track rows. Choose target scene; LENGTH (1/2/4/8/16 bars) and QUANTIZE (Global/None/1 bar/1 beat) set in the panel. REC shows queued, recording or playing; STOP stops only the tracks REC started, keeps ARM and the global transport, and stays pending until Live confirms the stop. BACK TO ARR explicitly returns once every Session clip is idle, without Pause/Play. No existing-clip overdub or take/comp browser.",
+      'pt-BR': "CLIP substitui a timeline por uma grade de Session paginada, nas mesmas linhas de track compartilhadas. Escolha a cena alvo; LENGTH (1/2/4/8/16 compassos) e QUANTIZE (Global/None/1 bar/1 beat) ajustados no próprio painel. REC mostra fila, gravação ou playback; STOP para apenas as tracks que o REC iniciou, mantém ARM e o transporte global e fica pendente até o Live confirmar a parada. BACK TO ARR retorna explicitamente quando todos os clips da Session estão ociosos, sem Pause/Play. Sem overdub de clip existente nem navegador de takes/comp.",
     },
     'lp.rec.start': {
       en: "START",
@@ -1890,16 +1890,16 @@
       'pt-BR': "CLICK, Quantização, REFRESH",
     },
     'lp.map.trnRow2Flow': {
-      en: "CLICK shared with REC and never locked; Global Quantization read from Live Set on open and writes clip_trigger_quantization; REFRESH resyncs transport state.",
-      'pt-BR': "CLICK compartilhado com REC e nunca travado; Quantização global lida do Set do Live ao abrir e escreve clip_trigger_quantization; REFRESH ressincroniza o estado de transporte.",
+      en: "CLICK shared with REC and never locked; the Global Quantization is read from the Live Set when the overlay opens and written back to it; REFRESH resyncs the transport state.",
+      'pt-BR': "CLICK compartilhado com REC e nunca travado; a Quantização global é lida do Set do Live quando a sobreposição abre e gravada de volta nele; REFRESH ressincroniza o estado do transporte.",
     },
     'lp.map.trnRow3': {
       en: "Searchable locators",
       'pt-BR': "Localizadores com busca",
     },
     'lp.map.trnRow3Flow': {
-      en: "List of Arrangement cue points with search filter. Tapping any locator executes transportJumpToLocator with native playback.",
-      'pt-BR': "Lista de marcadores do Arrangement com filtro de busca. Tocar em qualquer localizador executa transportJumpToLocator com playback nativo.",
+      en: "List of Arrangement cue points with search filter. Tapping a locator jumps Live’s transport to it, and playback keeps running.",
+      'pt-BR': "Lista de marcadores do Arrangement com filtro de busca. Tocar em um localizador leva o transporte do Live até ele, e o playback continua.",
     },
     'lp.map.trnRow4': {
       en: "Status and sync badge",
