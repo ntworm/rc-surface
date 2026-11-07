@@ -56,40 +56,36 @@
       'pt-BR': '<span class="rc">RC</span> Surface',
     },
     'lp.surface.002': {
-      en: "A control surface for Ableton Live that runs in the browser of a phone or tablet. It does the stage work of a hardware controller — pads, knobs, faders, XY pads, mixer, transport and recording — with no extra hardware, and it uses the phone's motion sensors, microphone and camera as control sources.",
-      'pt-BR': "Uma superfície de controle para o Ableton Live que roda no navegador do celular ou tablet. Faz no palco o trabalho de um controlador físico — pads, knobs, faders, XY, mixer, transporte e gravação — sem hardware extra, e usa os sensores de movimento, o microfone e a câmera do celular como fontes de controle.",
-    },
-    'lp.surface.how': {
-      en: "The extension runs inside Live on the official Extensions SDK and serves the surface over HTTPS on the local network. The phone scans the QR code in the Live panel and opens the page; nothing is installed on the phone.",
-      'pt-BR': "A extensão roda dentro do Live, no Extensions SDK oficial, e serve a superfície por HTTPS na rede local. O celular lê o QR do painel do Live e abre a página; nada é instalado no celular.",
+      en: "Extension for Ableton Live 12 that serves a control surface to the browser of a phone or tablet: pads, knobs, faders, XY pads, mixer, transport and track recording. Each control can move a Live parameter, play a MIDI note or launch a Session clip. The phone motion sensors, microphone and camera can be mapped the same way.",
+      'pt-BR': "Extensão para o Ableton Live 12 que serve uma superfície de controle no navegador de um celular ou tablet: pads, knobs, faders, XY pads, mixer, transporte e gravação de tracks. Cada controle pode mover um parâmetro do Live, tocar uma nota MIDI ou lançar um clip da Session. Os sensores de movimento, o microfone e a câmera do celular podem ser mapeados do mesmo jeito.",
     },
     'lp.surface.perf': {
-      en: "12 pads, two XY pads, 8 LFO/Square modulators and 4 snapshots.",
-      'pt-BR': "12 pads, dois XY, 8 moduladores LFO/Square e 4 snapshots.",
+      en: "Performance page: pads, XY pads and LFO/Square modulators.",
+      'pt-BR': "Página de performance: pads, XY e moduladores LFO/Square.",
     },
     'lp.surface.mix': {
-      en: "8 knobs and 8 faders.",
-      'pt-BR': "8 knobs e 8 faders.",
+      en: "Mixer page: eight knobs and eight faders.",
+      'pt-BR': "Página do mixer: oito knobs e oito faders.",
     },
     'lp.surface.snp': {
-      en: "16 snapshots of the surface state.",
-      'pt-BR': "16 snapshots do estado da superfície.",
+      en: "Snapshot page: stores the state of the surface and recalls it.",
+      'pt-BR': "Página de snapshots: guarda o estado da superfície e o recupera.",
     },
     'lp.surface.sensors': {
-      en: "Phone motion, microphone analysis and camera hand tracking. Each source can move a Live parameter, play a MIDI note on a MIDI track or launch a Session clip — a learned hand pose, for example, can start a clip.",
-      'pt-BR': "Movimento do celular, análise do microfone e rastreio da mão pela câmera. Cada fonte pode mover um parâmetro do Live, tocar uma nota MIDI numa track MIDI ou lançar um clip da Session — uma pose de mão aprendida, por exemplo, pode disparar um clip.",
+      en: "Sensor pages: phone motion, microphone analysis and camera hand tracking.",
+      'pt-BR': "Páginas de sensores: movimento do celular, análise do microfone e rastreio da mão pela câmera.",
     },
     'lp.surface.rec': {
-      en: "Arm tracks, record takes and set a range between two markers.",
-      'pt-BR': "Armar tracks, gravar takes e definir um intervalo entre dois markers.",
+      en: "Recording page: arms tracks, records takes and sets a range between two markers.",
+      'pt-BR': "Página de gravação: arma tracks, grava takes e define um intervalo entre dois markers.",
     },
     'lp.surface.map': {
-      en: "Assigns any control or sensor, from the phone, to one of three targets: <b>Bind</b> (a Live parameter), <b>Trigger Note</b> (a MIDI note on a MIDI track, through RC-Midi-Receiver.amxd) or <b>Launch Clip</b> (a Session clip, through AbletonOSC).",
-      'pt-BR': "Liga qualquer controle ou sensor, pelo celular, a um de três destinos: <b>Bind</b> (um parâmetro do Live), <b>Trigger Note</b> (uma nota MIDI numa track MIDI, pelo RC-Midi-Receiver.amxd) ou <b>Launch Clip</b> (um clip da Session, pelo AbletonOSC).",
+      en: "Assigns a control or a sensor to one of three targets: <b>Bind</b> (a Live parameter), <b>Trigger Note</b> (a MIDI note) or <b>Launch Clip</b> (a Session clip).",
+      'pt-BR': "Liga um controle ou um sensor a um de três destinos: <b>Bind</b> (um parâmetro do Live), <b>Trigger Note</b> (uma nota MIDI) ou <b>Launch Clip</b> (um clip da Session).",
     },
     'lp.surface.003': {
-      en: "Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network.",
-      'pt-BR': "Live 12.4.5+ Suite · iOS 15.4+ Safari ou Chromium no Android · usado na <b>horizontal</b> · rede local.",
+      en: "Live 12.4.5+ Suite (Beta) - Safari on iOS 15.4+ or Chromium on Android, held in landscape - same local network - nothing is installed on the phone.",
+      'pt-BR': "Live 12.4.5+ Suite (Beta) - Safari no iOS 15.4+ ou Chromium no Android, usado na horizontal - mesma rede local - nada é instalado no celular.",
     },
     'lp.surface.004': {
       en: "Download 2.1.0",
@@ -99,73 +95,45 @@
       en: "New in 2.1.0",
       'pt-BR': "Novo na 2.1.0",
     },
-    'lp.new.why': {
-      en: "REC page with three views, Network tab in the panel, local certificate, CFG mode and macOS fixes.",
-      'pt-BR': "Página REC com três vistas, aba Rede no painel, certificado local, modo CFG e correções no macOS.",
-    },
     'lp.new.recTitle': {
       en: "REC: three views",
       'pt-BR': "REC: três vistas",
     },
     'lp.new.recBody': {
-      en: "Record, Arrangement and Clip share one capture bar. Tracks are listed with ARM, SOLO, MUTE and a volume fader; groups expand on the phone without changing the Set. A take range can be set between two markers.",
-      'pt-BR': "Gravar, Arrangement e Clip dividem uma barra de captura. As tracks aparecem com ARM, SOLO, MUTE e fader de volume; os grupos abrem no celular sem mudar o Set. O trecho do take pode ser definido entre dois markers.",
+      en: "The REC page has three views: Record, Arrangement and Clip.",
+      'pt-BR': "A página REC tem três vistas: Record, Arrangement e Clip.",
     },
     'lp.new.netTitle': {
       en: "Network tab",
       'pt-BR': "Aba Rede",
     },
     'lp.new.netBody': {
-      en: "Shows which address the QR code uses and why. USE pins an address; FIND SETUP lists each address with its own QR code. A network change issues a new certificate without restarting the server.",
-      'pt-BR': "Mostra qual endereço o QR usa e por quê. USAR fixa um endereço; ACHAR CONFIGURAÇÃO lista cada endereço com o próprio QR. Uma troca de rede emite um certificado novo sem reiniciar o servidor.",
-    },
-    'lp.new.macTitle': {
-      en: "macOS fixes",
-      'pt-BR': "Correções no macOS",
-    },
-    'lp.new.macBody': {
-      en: "The AbletonOSC link starts with the server. The playhead listener runs only while a Launch Clip mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.",
-      'pt-BR': "O link do AbletonOSC liga junto com o servidor. O listener da posição só roda enquanto um mapeamento de Launch Clip precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.",
-    },
-    'lp.new.compatTitle': {
-      en: "Compatibility",
-      'pt-BR': "Compatibilidade",
-    },
-    'lp.new.compatBody': {
-      en: "Mappings, presets and projects from 2.0 work unchanged. Reload the browser after installing 2.1.0.",
-      'pt-BR': "Mapeamentos, presets e projetos da 2.0 funcionam sem mudança. Recarregue o navegador depois de instalar a 2.1.0.",
+      en: "The Network tab shows the address the QR code uses; USE pins one and FIND SETUP lists each with its own QR code.",
+      'pt-BR': "A aba Rede mostra o endereço que o QR usa; USAR fixa um e ACHAR CONFIGURAÇÃO lista cada um com o próprio QR.",
     },
     'lp.new.cfgTitle': {
       en: "CFG mode",
       'pt-BR': "Modo CFG",
     },
     'lp.new.cfgBody': {
-      en: "Tap CFG in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings. The CFG button is the only way into these settings.",
-      'pt-BR': "Toque em CFG no topo para entrar no modo de configuração e depois toque num pad, knob, fader ou XY para editar as opções dele. O botão CFG é o único caminho para essas opções.",
-    },
-    'lp.new.netMainTitle': {
-      en: "Main tab",
-      'pt-BR': "Aba Main",
-    },
-    'lp.new.netMainBody': {
-      en: "Shows the QR code and the connected clients. Addresses and the certificate are in the Network tab.",
-      'pt-BR': "Mostra o QR e os clientes conectados. Endereços e certificado ficam na aba Rede.",
+      en: "Tap CFG in the header, then tap a pad, knob, fader or XY pad to edit its settings.",
+      'pt-BR': "Toque em CFG no topo e depois toque num pad, knob, fader ou XY para editar as opções dele.",
     },
     'lp.new.certTitle': {
       en: "Local certificate",
       'pt-BR': "Certificado local",
     },
     'lp.new.certBody': {
-      en: "A certificate authority of this computer signs the server certificate for localhost and private network addresses. The Certificate section of the Network tab shows a QR code for an install page on the HTTPS port + 1; with the certificate installed, the browser opens the pages without a warning.",
-      'pt-BR': "Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede. A seção Certificado da aba Rede mostra um QR para uma página de instalação na porta HTTPS + 1; com o certificado instalado, o navegador abre as páginas sem aviso.",
+      en: "A certificate authority of this computer signs the server certificate for localhost and private network addresses.",
+      'pt-BR': "Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede.",
     },
     'lp.new.autTitle': {
       en: "AUT",
       'pt-BR': "AUT",
     },
     'lp.new.autBody': {
-      en: "Tap AUT to write automation with the XY pads. Its warnings appear in the yellow toast at the top of the page.",
-      'pt-BR': "Toque em AUT para gravar automação com os XY. Os avisos dele aparecem no toast amarelo no topo da página.",
+      en: "Tap AUT to write automation with the XY pads.",
+      'pt-BR': "Toque em AUT para gravar automação com os XY.",
     },
     'lp.new.note': {
       en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
@@ -180,8 +148,8 @@
 
 
     'lp.chain.001': {
-      en: "Signal chain <span class=\"tail\">— SDK control, optional OSC clock</span>",
-      'pt-BR': "Cadeia de sinal <span class=\"tail\">— controle pelo SDK, clock OSC opcional</span>",
+      en: "Signal chain",
+      'pt-BR': "Cadeia de sinal",
     },
     'lp.chain.003': {
       en: "       HOP 1  ▼  HTTPS · SELF-SIGNED · WSS  ",
@@ -240,8 +208,8 @@
       'pt-BR': "Cenário A · dois performers",
     },
     'lp.scenarios.031': {
-      en: "Scenario B · arrangement change",
-      'pt-BR': "Cenário B · mudança de arranjo",
+      en: "Scenario B · knob and fader",
+      'pt-BR': "Cenário B · knob e fader",
     },
     'lp.scenarios.032': {
       en: "Scenario C · pinch clutch",
@@ -256,57 +224,57 @@
       'pt-BR': "Cenário E · entrada acústica",
     },
     'lp.scenarios.001': {
-      en: "Situations <span class=\"tail\">— and the mapping</span>",
-      'pt-BR': "Situações <span class=\"tail\">— e o mapeamento</span>",
+      en: "Situations",
+      'pt-BR': "Situações",
     },
     'lp.scenarios.003': {
-      en: 'A second pair of hands over one Live set',
-      'pt-BR': 'Um segundo par de mãos sobre o mesmo set',
+      en: 'XY pad -> return effects',
+      'pt-BR': 'XY pad -> efeitos de return',
     },
     'lp.scenarios.004': {
-      en: "A colleague opens the phone and shapes the return effects while the soloist keeps playing.",
-      'pt-BR': "Um colega abre o celular e molda os efeitos de return enquanto o solista continua tocando.",
+      en: "A colleague opens the phone and moves the return effects while the soloist keeps playing.",
+      'pt-BR': "Um colega abre o celular e move os efeitos de return enquanto o solista continua tocando.",
     },
     'lp.scenarios.012': {
-      en: 'Four corners for four sections',
-      'pt-BR': 'Quatro cantos para quatro partes',
+      en: 'Knob -> Auto Filter cutoff, fader -> reverb return',
+      'pt-BR': 'Knob -> Auto Filter cutoff, fader -> reverb return',
     },
     'lp.scenarios.013': {
-      en: "Intro, verse, chorus and outro in SNP slots 1–4, dragged between corners in Vector XY.",
-      'pt-BR': "Intro, verso, refrão e outro nos slots 1–4 do SNP, arrastados entre os cantos no Vetor XY.",
+      en: "A knob opens the Auto Filter and a fader moves the reverb return.",
+      'pt-BR': "Um knob abre o Auto Filter e um fader move o return de reverb.",
     },
     'lp.scenarios.017': {
-      en: "Move a filter with a hand pinch",
-      'pt-BR': "Mover um filtro com a pinça da mão",
+      en: "Pinch -> Auto Filter cutoff",
+      'pt-BR': "Pinça -> Auto Filter cutoff",
     },
     'lp.scenarios.018': {
-      en: "Standing, no table. Pinch with the palm to the camera, move the hand, open the fingers.",
-      'pt-BR': "Em pé, sem mesa. Faça a pinça com a palma virada para a câmera, mova a mão e abra os dedos.",
+      en: "Standing, with no table: pinch the palm towards the camera, move the hand and open the fingers.",
+      'pt-BR': "Em pé, sem mesa: faça a pinça com a palma virada para a câmera, mova a mão e abra os dedos.",
     },
     'lp.scenarios.021': {
-      en: 'The body supplies the modulation',
-      'pt-BR': 'O corpo é que modula',
+      en: 'Rotation rate -> Echo feedback',
+      'pt-BR': 'Taxa de rotação -> feedback do Echo',
     },
     'lp.scenarios.022': {
-      en: "A phone strapped to a guitar: the turn during a swell becomes a rotation-rate gesture.",
-      'pt-BR': "Um celular preso à guitarra: o giro durante um swell vira um gesto de taxa de rotação.",
+      en: "A phone strapped to a guitar turns the swell into a rotation-rate gesture.",
+      'pt-BR': "Um celular preso à guitarra transforma o swell num gesto de taxa de rotação.",
     },
     'lp.scenarios.023': {
       en: 'Echo feedback',
       'pt-BR': 'feedback do Echo',
     },
     'lp.scenarios.025': {
-      en: 'Volume opens the filter',
-      'pt-BR': 'O volume abre o filtro',
+      en: 'Audio envelope -> Saturator Drive',
+      'pt-BR': 'Envelope de áudio -> Saturator Drive',
     },
     'lp.scenarios.026': {
-      en: "A phone near the microphone: louder phrases open the filter, silence closes it.",
-      'pt-BR': "Um celular perto do microfone: frases mais altas abrem o filtro, o silêncio fecha.",
+      en: "A phone near the microphone: the envelope follows the loudness of the phrases.",
+      'pt-BR': "Um celular perto do microfone: o envelope segue o volume das frases.",
     },
 
     'lp.install.001': {
-      en: "Installation <span class=\"tail\">— to a mapped parameter</span>",
-      'pt-BR': "Instalação <span class=\"tail\">— até um parâmetro mapeado</span>",
+      en: "Installation",
+      'pt-BR': "Instalação",
     },
     'lp.install.003': {
       en: 'Clip 1',
@@ -365,10 +333,6 @@
       'pt-BR': "Instale o AbletonOSC como Control Surface com UDP <code>11000</code> e <code>11001</code> livres, e segure <code>SYNC</code> para escolher o clock — veja <a href=\"#clock\">2.1</a>.",
     },
     'lp.trouble.001': {
-      en: 'When it does not work',
-      'pt-BR': 'Quando não funciona',
-    },
-    'lp.trouble.003': {
       en: 'Troubleshooting',
       'pt-BR': 'Solução de problemas',
     },
@@ -448,14 +412,6 @@
       en: 'Processed inside the phone\'s browser. Never uploaded.',
       'pt-BR': 'Processados dentro do navegador do celular. Nunca são enviados.',
     },
-    'lp.trouble.041': {
-      en: 'How mature is it?',
-      'pt-BR': 'Qual o estágio do projeto?',
-    },
-    'lp.trouble.042': {
-      en: 'The REC page has compact views, the panel has a Network tab, and the Mac connection issues are fixed. Profiles from 2.0 remain compatible.',
-      'pt-BR': 'A página REC tem vistas compactas, o painel tem a aba Rede e as falhas de conexão no Mac foram corrigidas. Perfis da 2.0 continuam compatíveis.',
-    },
     'lp.docs.001': {
       en: 'Reference documents',
       'pt-BR': 'Documentos de referência',
@@ -490,12 +446,12 @@
       'pt-BR': "O que cada família faz, do toque ao Live, está em <a href=\"#controls\">4.0</a>.",
     },
     'lp.map.001': {
-      en: "Surface map <span class=\"tail\">— figs. 1 to 11</span>",
-      'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 11</span>",
+      en: "Surface map",
+      'pt-BR': "Mapa da superfície",
     },
     'lp.map.figScope': {
-      en: "Every plan figure on this sheet is drawn for the 2.0.0 layout. They are schematics — not screenshots. The REC page changed in 2.1.0 (see 1.1); the User Guide describes it in full.",
-      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout da 2.0.0. São esquemas — não capturas de tela. A página REC mudou na 2.1.0 (veja 1.1); o Guia de Uso descreve por completo.",
+      en: "The plan figures are schematics drawn for the 2.0.0 layout, not screenshots.",
+      'pt-BR': "As figuras de planta são esquemas desenhados para o layout da 2.0.0, não capturas de tela.",
     },
     'lp.map.004': {
       en: 'Fig. 1',
@@ -899,8 +855,8 @@
     },
 
     'lp.controls.001': {
-      en: "Controls <span class=\"tail\">— from touch to Live</span>",
-      'pt-BR': "Controles <span class=\"tail\">— do toque ao Live</span>",
+      en: "Controls",
+      'pt-BR': "Controles",
     },
     'lp.controls.003': {
       en: 'Control inventory <span class="tail">— 18 rows</span>',
@@ -1531,8 +1487,8 @@
       'pt-BR': "FILTRAR ALVOS...",
     },
     'lp.fig.100': {
-      en: "PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE",
-      'pt-BR': "PLANTA — DESENHADA PARA ESTA FOLHA — NÃO É CAPTURA DE TELA — FORA DE ESCALA",
+      en: "PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE",
+      'pt-BR': "PLANTA — NÃO É CAPTURA DE TELA — FORA DE ESCALA",
     },
     'lp.fig.102': {
       en: "PERFORMANCE CONTROLS",

@@ -165,14 +165,6 @@
       "@type": "Answer",
       "text": "Processed inside the phone's browser. Never uploaded."
      }
-    },
-    {
-     "@type": "Question",
-     "name": "How mature is it?",
-     "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "The REC page has compact views, the panel has a Network tab, and the Mac connection issues are fixed. Profiles from 2.0 remain compatible."
-     }
     }
    ]
   }
@@ -1121,17 +1113,16 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
       <div class="hero">
         <div>
           <h1 data-i18n-html="lp.surface.001"><span class="rc">RC</span> Surface</h1>
-          <p class="lede" data-i18n="lp.surface.002">A control surface for Ableton Live that runs in the browser of a phone or tablet. It does the stage work of a hardware controller — pads, knobs, faders, XY pads, mixer, transport and recording — with no extra hardware, and it uses the phone's motion sensors, microphone and camera as control sources.</p>
-          <p class="lede" data-i18n="lp.surface.how">The extension runs inside Live on the official Extensions SDK and serves the surface over HTTPS on the local network. The phone scans the QR code in the Live panel and opens the page; nothing is installed on the phone.</p>
+          <p class="lede" data-i18n="lp.surface.002">Extension for Ableton Live 12 that serves a control surface to the browser of a phone or tablet: pads, knobs, faders, XY pads, mixer, transport and track recording. Each control can move a Live parameter, play a MIDI note or launch a Session clip. The phone motion sensors, microphone and camera can be mapped the same way.</p>
+          <p class="lede" data-i18n="lp.surface.003">Live 12.4.5+ Suite (Beta) - Safari on iOS 15.4+ or Chromium on Android, held in landscape - same local network - nothing is installed on the phone.</p>
           <dl class="split2 tight hero-tabs">
-            <dt>PERF</dt><dd data-i18n="lp.surface.perf">12 pads, two XY pads, 8 LFO/Square modulators and 4 snapshots.</dd>
-            <dt>MIX</dt><dd data-i18n="lp.surface.mix">8 knobs and 8 faders.</dd>
-            <dt>SNP</dt><dd data-i18n="lp.surface.snp">16 snapshots of the surface state.</dd>
-            <dt>SNS · AUD · VID</dt><dd data-i18n="lp.surface.sensors">Phone motion, microphone analysis and camera hand tracking. Each source can move a Live parameter, play a MIDI note on a MIDI track or launch a Session clip — a learned hand pose, for example, can start a clip.</dd>
-            <dt>REC</dt><dd data-i18n="lp.surface.rec">Arm tracks, record takes and set a range between two markers.</dd>
-            <dt>MAP</dt><dd data-i18n-html="lp.surface.map">Assigns any control or sensor, from the phone, to one of three targets: <b>Bind</b> (a Live parameter), <b>Trigger Note</b> (a MIDI note on a MIDI track, through RC-Midi-Receiver.amxd) or <b>Launch Clip</b> (a Session clip, through AbletonOSC).</dd>
+            <dt>PERF</dt><dd data-i18n="lp.surface.perf">Performance page: pads, XY pads and LFO/Square modulators.</dd>
+            <dt>MIX</dt><dd data-i18n="lp.surface.mix">Mixer page: eight knobs and eight faders.</dd>
+            <dt>SNP</dt><dd data-i18n="lp.surface.snp">Snapshot page: stores the state of the surface and recalls it.</dd>
+            <dt>SNS · AUD · VID</dt><dd data-i18n="lp.surface.sensors">Sensor pages: phone motion, microphone analysis and camera hand tracking.</dd>
+            <dt>REC</dt><dd data-i18n="lp.surface.rec">Recording page: arms tracks, records takes and sets a range between two markers.</dd>
+            <dt>MAP</dt><dd data-i18n-html="lp.surface.map">Assigns a control or a sensor to one of three targets: <b>Bind</b> (a Live parameter), <b>Trigger Note</b> (a MIDI note) or <b>Launch Clip</b> (a Session clip).</dd>
           </dl>
-          <p class="lede" data-i18n-html="lp.surface.003">Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network.</p>
           <div class="acts" style="margin-top:20px">
             <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0" data-i18n-html="lp.surface.004">Download 2.1.0</a>
             <a href="https://github.com/ntworm/rc-surface" data-i18n="lp.surface.005">Source &amp; licence</a>
@@ -1146,39 +1137,26 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <div class="n">1.1</div>
     <div class="c">
       <h2 data-i18n-html="lp.new.title">New in 2.1.0</h2>
-      <p class="tnote" data-i18n="lp.new.why">REC page with three views, Network tab in the panel, local certificate, CFG mode and macOS fixes.</p>
       <div class="cards c2">
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-play"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.recTitle">REC: three views</h4>
-          <p class="lead" data-i18n="lp.new.recBody">Record, Arrangement and Clip share one capture bar. Tracks are listed with ARM, SOLO, MUTE and a volume fader; groups expand on the phone without changing the Set. A take range can be set between two markers.</p></span></div>
+          <p class="lead" data-i18n="lp.new.recBody">The REC page has three views: Record, Arrangement and Clip.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-target"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.cfgTitle">CFG mode</h4>
-          <p class="lead" data-i18n="lp.new.cfgBody">Tap CFG in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings. The CFG button is the only way into these settings.</p></span></div>
+          <p class="lead" data-i18n="lp.new.cfgBody">Tap CFG in the header, then tap a pad, knob, fader or XY pad to edit its settings.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.netTitle">Network tab</h4>
-          <p class="lead" data-i18n="lp.new.netBody">Shows which address the QR code uses and why. USE pins an address; FIND SETUP lists each address with its own QR code. A network change issues a new certificate without restarting the server.</p></span></div>
-
-        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-menu"/></svg></span><span class="bd">
-          <h4 data-i18n="lp.new.netMainTitle">Main tab</h4>
-          <p class="lead" data-i18n="lp.new.netMainBody">Shows the QR code and the connected clients. Addresses and the certificate are in the Network tab.</p></span></div>
+          <p class="lead" data-i18n="lp.new.netBody">The Network tab shows the address the QR code uses; USE pins one and FIND SETUP lists each with its own QR code.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.certTitle">Local certificate</h4>
-          <p class="lead" data-i18n="lp.new.certBody">A certificate authority of this computer signs the server certificate for localhost and private network addresses. The Certificate section of the Network tab shows a QR code for an install page on the HTTPS port + 1; with the certificate installed, the browser opens the pages without a warning.</p></span></div>
+          <p class="lead" data-i18n="lp.new.certBody">A certificate authority of this computer signs the server certificate for localhost and private network addresses.</p></span></div>
 
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-bolt"/></svg></span><span class="bd">
           <h4 data-i18n="lp.new.autTitle">AUT</h4>
-          <p class="lead" data-i18n="lp.new.autBody">Tap AUT to write automation with the XY pads. Its warnings appear in the yellow toast at the top of the page.</p></span></div>
-
-        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-gear"/></svg></span><span class="bd">
-          <h4 data-i18n="lp.new.macTitle">macOS fixes</h4>
-          <p class="lead" data-i18n="lp.new.macBody">The AbletonOSC link starts with the server. The playhead listener runs only while a Launch Clip mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.</p></span></div>
-
-        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-badge"/></svg></span><span class="bd">
-          <h4 data-i18n="lp.new.compatTitle">Compatibility</h4>
-          <p class="lead" data-i18n="lp.new.compatBody">Mappings, presets and projects from 2.0 work unchanged. Reload the browser after installing 2.1.0.</p></span></div>
+          <p class="lead" data-i18n="lp.new.autBody">Tap AUT to write automation with the XY pads.</p></span></div>
       </div>
       <p class="tnote" data-i18n-html="lp.new.note">Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href="https://github.com/ntworm/rc-surface/releases/tag/v2.1.0">release notes</a>.</p>
     </div>
@@ -1188,7 +1166,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="chain">
     <div class="n">2.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.chain.001">Signal chain <span class="tail">— SDK control, optional OSC clock</span></h2>
+      <h2 data-i18n-html="lp.chain.001">Signal chain</h2>
       <div class="duo">
         <div>
           <div class="well">
@@ -1236,7 +1214,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="map">
     <div class="n">3.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.map.001">Surface map <span class="tail">— figs. 1 to 11</span></h2>
+      <h2 data-i18n-html="lp.map.001">Surface map</h2>
       <fieldset class="surface-viewer" data-surface-viewer>
         <legend class="visually-hidden" data-i18n="lp.a11y.001">Choose a surface page plan</legend>
         <input class="surface-tab-input" type="radio" name="surface-plan" id="surface-select-perf" value="perf" aria-controls="surface-map-perf" checked>
@@ -1263,7 +1241,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
           <label class="surface-tab-map" id="surface-label-aut" for="surface-select-aut">AUT</label>
           <label class="surface-tab-map" id="surface-label-cfg" for="surface-select-cfg">CFG</label>
         </div>
-        <p class="fig-note" data-i18n="lp.map.figScope">Every plan figure on this sheet is drawn for the 2.0.0 layout. They are schematics — not screenshots. The REC page changed in 2.1.0 (see 1.1); the User Guide describes it in full.</p>
+        <p class="fig-note" data-i18n="lp.map.figScope">The plan figures are schematics drawn for the 2.0.0 layout, not screenshots.</p>
         <div class="surface-deck" id="page-plans">
       <figure class="surface-sheet" id="surface-map-perf" data-surface-plan="perf" role="region" aria-labelledby="surface-label-perf">
         <div class="bar">
@@ -1475,7 +1453,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <text x="1032" y="326" fill="#c0c0c0">4</text>
     <text x="1032" y="344" fill="#6c6c58">EMPTY</text>
   </g>
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -1598,7 +1576,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g data-mix-fader="7"><rect x="892" y="145" width="62" height="220" class="diagram-cell"/><rect x="919" y="164" width="8" height="154" fill="#0d0d0d"/><path d="M906 175h5 M906 209h5 M906 243h5 M906 277h5 M906 311h5" stroke="#494949"/><rect x="920" y="225.7" width="6" height="92.3" fill="#ffd343"/><rect x="910" y="218.7" width="26" height="14" fill="#303030" stroke="#888888"/><line x1="914" y1="225.7" x2="932" y2="225.7" stroke="#ffd343"/><text x="923" y="338" text-anchor="middle" class="diagram-value">0.65</text><text x="923" y="355" text-anchor="middle" class="diagram-meta">fader-7</text></g>
   <g data-mix-knob="8"><rect x="328" y="261" width="82" height="104" class="diagram-cell"/><g transform="translate(369 302)" style="--dial-color:#5ac8fa"><circle r="23" class="dial-face"/><path d="M -19.09 19.09 A 27 27 0 1 1 19.09 19.09" class="dial-track"/><path d="M -19.09 19.09 A 27 27 0 1 1 19.09 19.09" class="dial-value" pathLength="100" stroke-dasharray="36 100"/><line x1="-6.95" y1="-8.96" x2="-12.91" y2="-16.64" class="dial-pointer"/></g><text x="369" y="341" text-anchor="middle" class="diagram-value">0.36</text><text x="369" y="357" text-anchor="middle" class="diagram-meta">knob-8</text></g>
   <g data-mix-fader="8"><rect x="961" y="145" width="62" height="220" class="diagram-cell"/><rect x="988" y="164" width="8" height="154" fill="#0d0d0d"/><path d="M975 175h5 M975 209h5 M975 243h5 M975 277h5 M975 311h5" stroke="#494949"/><rect x="989" y="281.1" width="6" height="36.9" fill="#ffd343"/><rect x="979" y="274.1" width="26" height="14" fill="#303030" stroke="#888888"/><line x1="983" y1="281.1" x2="1001" y2="281.1" stroke="#ffd343"/><text x="992" y="338" text-anchor="middle" class="diagram-value">0.26</text><text x="992" y="355" text-anchor="middle" class="diagram-meta">fader-8</text></g>
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -1685,7 +1663,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="12" fill="#c0c0c0"><text x="786" y="164" data-i18n="lp.fig.105">1 TL</text><text x="1026" y="164" data-i18n="lp.fig.106">2 TR</text><text x="786" y="351" data-i18n="lp.fig.107">3 BL</text><text x="1026" y="351" data-i18n="lp.fig.108">4 BR</text></g>
   <g stroke="#bf5af2" stroke-width="1"><line x1="820" y1="185" x2="928" y2="278"/><line x1="1015" y1="185" x2="928" y2="278"/><line x1="820" y1="325" x2="928" y2="278"/><line x1="1015" y1="325" x2="928" y2="278"/></g><circle cx="928" cy="278" r="9" fill="#bf5af2" stroke="#ffffff"/>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -1776,7 +1754,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <rect x="398" y="137" width="14" height="13" fill="#ffa133"/><text x="402" y="148" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414">5</text>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -1917,7 +1895,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <g data-descriptor="mid"><rect x="728" y="487" width="332" height="24" class="diagram-cell"/><text x="736" y="501" class="diagram-label">MID</text><text x="1050" y="501" text-anchor="end" fill="#5ac8fa" font-size="12">0.18</text><rect x="736" y="506" width="314" height="3" fill="#303030"/><rect x="736" y="506" width="56.5" height="3" fill="#5ac8fa"/></g>
     <g data-descriptor="high"><rect x="728" y="513" width="332" height="24" class="diagram-cell"/><text x="736" y="527" class="diagram-label">HIGH</text><text x="1050" y="527" text-anchor="end" fill="#2184a8" font-size="12">0.09</text><rect x="736" y="532" width="314" height="3" fill="#303030"/><rect x="736" y="532" width="28.3" height="3" fill="#2184a8"/></g>
   </g>
-  <text x="20" y="594" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="594" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -2029,7 +2007,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <g fill="#ffa133"><rect x="54" y="114" width="14" height="13"/><rect x="439" y="114" width="14" height="13"/><rect x="439" y="146" width="14" height="13"/><rect x="439" y="273" width="14" height="13"/><rect x="439" y="317" width="14" height="13"/><rect x="54" y="356" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="58" y="125">2</text><text x="443" y="125">2</text><text x="443" y="157">3</text><text x="443" y="284">4</text><text x="443" y="328">5</text><text x="58" y="367">6</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -2253,7 +2231,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <rect x="986" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
   <text x="997" y="369" font-size="10" fill="#c0c0c0">MUTE</text>
 </g>
-<text x="20" y="436" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+<text x="20" y="436" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
 </div>
 
@@ -2447,7 +2425,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <rect x="986" y="348" width="74" height="33" fill="#141414" stroke="#666666" data-rec-track-action="mute"/>
   <text x="997" y="369" font-size="10" fill="#c0c0c0">MUTE</text>
 </g>
-<text x="20" y="436" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+<text x="20" y="436" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
 </div>
 
@@ -2550,7 +2528,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
 
   <g fill="#ffa133"><rect x="254" y="109" width="14" height="13"/><rect x="679" y="85" width="14" height="13"/><rect x="684" y="141" width="14" height="13"/><rect x="684" y="174" width="14" height="13"/><rect x="1054" y="200" width="14" height="13"/><rect x="914" y="174" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="258" y="120">2</text><text x="683" y="96">3</text><text x="688" y="152">4</text><text x="688" y="185">5</text><text x="1058" y="211">6</text><text x="918" y="185">7</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -2720,7 +2698,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
     <text x="708" y="105">4</text>
   </g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -2939,7 +2917,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <g fill="#ffa133"><rect x="425" y="83" width="14" height="13"/><rect x="411" y="222" width="14" height="13"/><rect x="684" y="141" width="14" height="13"/><rect x="684" y="250" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="429" y="94">2</text><text x="415" y="233">3</text><text x="688" y="152">4</text><text x="688" y="261">5</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -3170,7 +3148,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   </g>
   <g fill="#ffa133"><rect x="140" y="83" width="14" height="13"/><rect x="750" y="79" width="14" height="13"/><rect x="411" y="226" width="14" height="13"/><rect x="126" y="304" width="14" height="13"/></g><g font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#141414"><text x="144" y="94">2</text><text x="754" y="90">3</text><text x="415" y="237">4</text><text x="130" y="315">5</text></g>
 
-  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — DRAWN FOR THIS SHEET — NOT A SCREENSHOT — NOT TO SCALE</text>
+  <text x="20" y="436" font-family="&quot;Departure Mono&quot;,ui-monospace,monospace" font-size="11" fill="#6c6c58" data-i18n="lp.fig.100">PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE</text>
 </svg>
         </div>
         <div class="scroll" tabindex="0" style="margin-top:16px">
@@ -3206,7 +3184,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="controls">
     <div class="n">4.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.controls.001">Controls <span class="tail">— from touch to Live</span></h2>
+      <h2 data-i18n-html="lp.controls.001">Controls</h2>
 
       <fieldset class="control-viewer" data-control-viewer>
         <legend class="visually-hidden" data-i18n="lp.a11y.002">Choose a control family</legend>
@@ -3645,40 +3623,40 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="scenarios">
     <div class="n">5.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.scenarios.001">Situations <span class="tail">— and the mapping</span></h2>
+      <h2 data-i18n-html="lp.scenarios.001">Situations</h2>
       <div class="stories">
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.030">Scenario A · two performers</div>
-          <h3 data-i18n="lp.scenarios.003">A second pair of hands over one Live set</h3>
-          <p data-i18n="lp.scenarios.004">A colleague opens the phone and shapes the return effects while the soloist keeps playing.</p>
+          <h3 data-i18n="lp.scenarios.003">XY pad -&gt; return effects</h3>
+          <p data-i18n="lp.scenarios.004">A colleague opens the phone and moves the return effects while the soloist keeps playing.</p>
           <div class="mapline"><span class="pair"><code>xy-1.x</code><span class="to"><span>&rarr;</span><span>distortion Dry/Wet</span></span></span><span class="pair"><code>xy-1.y</code><span class="to"><span>&rarr;</span><span>reverb send</span></span></span></div>
         </article>
 
         <article class="story">
-          <div class="sid" data-i18n="lp.scenarios.031">Scenario B · arrangement change</div>
-          <h3 data-i18n="lp.scenarios.012">Four corners for four sections</h3>
-          <p data-i18n="lp.scenarios.013">Intro, verse, chorus and outro in SNP slots 1–4, dragged between corners in Vector XY.</p>
+          <div class="sid" data-i18n="lp.scenarios.031">Scenario B · knob and fader</div>
+          <h3 data-i18n="lp.scenarios.012">Knob -&gt; Auto Filter cutoff, fader -&gt; reverb return</h3>
+          <p data-i18n="lp.scenarios.013">A knob opens the Auto Filter and a fader moves the reverb return.</p>
           <div class="mapline"><span class="pair"><code>knob-1</code><span class="to"><span>&rarr;</span><span>Auto Filter cutoff</span></span></span><span class="pair"><code>fader-1</code><span class="to"><span>&rarr;</span><span>reverb return</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.032">Scenario C · pinch clutch</div>
-          <h3 data-i18n="lp.scenarios.017">Move a filter with a hand pinch</h3>
-          <p data-i18n="lp.scenarios.018">Standing, no table. Pinch with the palm to the camera, move the hand, open the fingers.</p>
+          <h3 data-i18n="lp.scenarios.017">Pinch -&gt; Auto Filter cutoff</h3>
+          <p data-i18n="lp.scenarios.018">Standing, with no table: pinch the palm towards the camera, move the hand and open the fingers.</p>
           <div class="mapline"><span class="pair"><code>sensor.vision.pinch_z</code><span class="to"><span>&rarr;</span><span>Auto Filter cutoff</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.033">Scenario D · instrument motion</div>
-          <h3 data-i18n="lp.scenarios.021">The body supplies the modulation</h3>
-          <p data-i18n="lp.scenarios.022">A phone strapped to a guitar: the turn during a swell becomes a rotation-rate gesture.</p>
+          <h3 data-i18n="lp.scenarios.021">Rotation rate -&gt; Echo feedback</h3>
+          <p data-i18n="lp.scenarios.022">A phone strapped to a guitar turns the swell into a rotation-rate gesture.</p>
           <div class="mapline"><span class="pair"><code>sensor.motion.gx</code><span class="to"><span>&rarr;</span><span data-i18n="lp.scenarios.023">Echo feedback</span></span></span></div>
         </article>
 
         <article class="story">
           <div class="sid" data-i18n="lp.scenarios.034">Scenario E · acoustic input</div>
-          <h3 data-i18n="lp.scenarios.025">Volume opens the filter</h3>
-          <p data-i18n="lp.scenarios.026">A phone near the microphone: louder phrases open the filter, silence closes it.</p>
+          <h3 data-i18n="lp.scenarios.025">Audio envelope -&gt; Saturator Drive</h3>
+          <p data-i18n="lp.scenarios.026">A phone near the microphone: the envelope follows the loudness of the phrases.</p>
           <div class="mapline"><span class="pair"><code>sensor.audio.envelope</code><span class="to"><span>&rarr;</span><span>Saturator Drive</span></span></span></div>
         </article>
 
@@ -3690,7 +3668,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="install">
     <div class="n">6.0</div>
     <div class="c">
-      <h2 data-i18n-html="lp.install.001">Installation <span class="tail">— to a mapped parameter</span></h2>
+      <h2 data-i18n-html="lp.install.001">Installation</h2>
 
         <div class="vid">
           <div class="bar">
@@ -3761,8 +3739,7 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
   <div class="sec" id="trouble">
     <div class="n">7.0</div>
     <div class="c">
-      <h2 data-i18n="lp.trouble.001">When it does not work</h2>
-      <h3 data-i18n="lp.trouble.003">Troubleshooting</h3>
+      <h2 data-i18n="lp.trouble.001">Troubleshooting</h2>
       <div class="cards c2">
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-net"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.004">Phone cannot find the host</h4>
@@ -3805,10 +3782,6 @@ ul.req li::before{content:"\2014";color:var(--clay);flex:0 0 auto}
         <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-eye"/></svg></span><span class="bd">
           <h4 data-i18n="lp.trouble.032">Camera and microphone?</h4>
           <p class="lead" data-i18n="lp.trouble.033">Processed inside the phone's browser. Never uploaded.</p></span></div>
-
-        <div class="card"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#g-cert"/></svg></span><span class="bd">
-          <h4 data-i18n="lp.trouble.041">How mature is it?</h4>
-          <p class="lead" data-i18n-html="lp.trouble.042">The REC page has compact views, the panel has a Network tab, and the Mac connection issues are fixed. Profiles from 2.0 remain compatible.</p></span></div>
       </div>
     </div>
   </div>
