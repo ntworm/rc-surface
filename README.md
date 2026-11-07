@@ -9,7 +9,7 @@
 
 [**:globe_with_meridians: Live landing page**](https://ntworm.github.io/rc-surface/) — interactive surface map, install walkthrough, and workflow reference.
 
-**RC Surface** is a source-available Ableton Live 12 extension that turns any phone or tablet browser on your local network into a low-latency performance controller, mixer, multi-sensor modulator, and recording station.
+**RC Surface** is a source-available Ableton Live 12 extension. A phone or tablet browser on your local network runs it as a performance controller, mixer, multi-sensor modulator and recording station.
 
 The host runs inside Ableton Live on the official Extensions SDK; the phone client runs in plain browser JavaScript over local HTTPS/WSS with zero app install.
 
@@ -20,9 +20,9 @@ The host runs inside Ableton Live on the official Extensions SDK; the phone clie
 - **Local certificate.** A certificate authority of this computer signs the server certificate for localhost and private network addresses. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1; with the certificate installed, the browser opens the pages without a warning. A public address selected with **USE** keeps a self-signed certificate. The authority is a trust root valid for 10 years; remove it from a device to revoke trust.
 - **CFG.** Tap **CFG** in the header to enter configuration mode, then tap a pad, knob, fader or XY pad to edit its settings. The CFG button is the only way into these settings.
 - **AUT.** AUT warnings appear once, in the yellow toast.
-- **macOS.** The AbletonOSC link starts with the server, not at activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.
+- **macOS.** The AbletonOSC link starts with the server; it does not start on activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.
 - **Fixes.** A resumed phone keeps its client card; a malformed path returns 400; the Network selector keeps a pending choice.
-- **Compatibility.** 2.0 mappings, presets and projects work unchanged; reload the browser after installing. A network choice made in the 2.0.1 preview was stored in the browser and is not migrated. Recording and playback have not yet been verified in Live on macOS.
+- **Compatibility.** 2.0 mappings, presets and projects work unchanged; reload the browser after installing. A network choice stored in the browser by the 2.0.1 preview is not migrated. Recording and playback have not yet been verified in Live on macOS.
 
 See the [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) for the files and the full notes.
 
@@ -32,9 +32,9 @@ The mobile interface is organized into **seven pages** plus **four contextual he
 
 | Surface | Role |
 | :--- | :--- |
-| **`PERF`** | 12 velocity/pressure pads (modes A/B/C/D), two Static/Physics XY pads, 8 synced LFO/Square toggles (`T1`–`T8`), and 4 quick snapshot slots. |
+| **`PERF`** | 12 velocity/pressure pads (modes A/B/C/D), two Static/Physics XY pads, 8 synced LFO/Square toggles (`T1`–`T8`), and 4 snapshot slots. |
 | **`MIX`** | 8 mappable rotary knobs (`270°` arc) and 8 mappable full-height faders. |
-| **`SNP`** | 16 snapshot slots for instant recall of surface control states. |
+| **`SNP`** | 16 snapshot slots that recall surface control states. |
 | **`SNS`** | Phone motion (accelerometer/gyroscope) and 3D orientation sensors with posture calibration. |
 | **`AUD`** | Real-time microphone analysis with 12 spectral/band-onset descriptors and ITU-R BS.1770 K-weighted loudness. |
 | **`VID`** | Local single-hand camera tracking (bundled MediaPipe Hands) with continuous `X / Y / Z / PALM / FACE` inputs and up to 15 learned poses (`G1`–`G15`). |
@@ -58,9 +58,9 @@ The mobile interface is organized into **seven pages** plus **four contextual he
 2. **Download:** grab `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus optional `RC-Audio-Sender.amxd`) from the supplied kit or matching [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) and verify with `SHA256SUMS.txt`.
 3. **Install:** double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if already open), then enable **RC Surface** under *Options → Preferences → Extensions*.
 4. **Connect:** open the RC Surface panel in Live and scan the QR code with your phone. A local certificate authority of this computer signs the server certificate for the private addresses of your network; install it once from the plain page at the HTTPS port + 1, which the **Network** tab of the panel links as **Certificate**. If the phone does not open the page, use the **Network** tab in the panel: it shows the address the QR uses and has **FIND SETUP**.
-5. **Play & Map:** use the 7 surface tabs to perform, or tap **MAP** in the header to bind parameters, trigger MIDI notes, or launch clips.
+5. **Play & Map:** use the 7 surface tabs to control Live, or tap **MAP** in the header to bind parameters, trigger MIDI notes, or launch clips.
 
-> **Upgrading from 1.x:** RC Surface `2.0.0` stores projects, presets, and mappings in `storageDirectory/surface-v2/` (schema 2). Configure 2.0 from a fresh state; existing 1.x files are left untouched. See [`docs/INSTALL.md`](docs/INSTALL.md) for full setup details.
+> **Storage:** RC Surface stores projects, presets, and mappings in `storageDirectory/surface-v2/` (schema 2). Configure it from a fresh state; existing 1.x files are left untouched. See [`docs/INSTALL.md`](docs/INSTALL.md) for full setup details.
 
 ## Documentation
 

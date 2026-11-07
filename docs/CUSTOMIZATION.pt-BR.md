@@ -1,6 +1,6 @@
 # Guia de customização
 
-Este guia explica onde mexer no RC Surface sem duplicar código antigo.
+Este guia explica onde mexer no RC Surface.
 Foi escrito para mantenedores e contribuidores.
 
 Leia antes:
@@ -157,7 +157,7 @@ O canvas de curva é uma prévia visual local da resposta do mapeamento. Se a
 implementação de curva do backend mudar, atualize tanto os testes do backend
 quanto a matemática da prévia no celular.
 
-Modos de mapeamento removidos ou não suportados são descartados na leitura e rejeitados na criação.
+Modos de mapeamento não suportados são descartados na leitura e rejeitados na criação.
 
 ## Camada de entrada segura
 
@@ -211,7 +211,7 @@ preservados, mas ficam desconectados.
 
 ## Visão
 
-A visão é de uma mão só, por decisão de projeto.
+A visão usa uma mão só.
 
 Arquivos:
 
@@ -245,7 +245,7 @@ Diagnósticos de visão em tempo de execução:
 
 Controles públicos de visão: `x/y/z`, `palm`, `face`, os quatro detectores opcionais, `rotateVal`, Pinch Clutch `pinch_x/y/z` e `sensor.vision.gesture.1` até `.15`. PALM é tamanho aparente; FACE é orientação palma/dorso, normalizada de −1–1 para 0–1 no wire. `active`, dedos e RGB não entram no picker. Valores ausentes/não finitos devem emitir `lost:true`, nunca uma nova amostra neutra. Reutilize Safe loss e o mapeador de parâmetros/notas/clips. O aviso de consistência é orientativo e não modifica o reconhecimento.
 
-Não reintroduza nomes de duas mãos vindos de planos antigos, a não ser que o
+Use somente nomes de controle de uma mão, a não ser que o
 usuário peça uma migração nova.
 
 ## Áudio
@@ -257,10 +257,10 @@ Arquivos:
 - `static/phone-v3/audio-descriptors.js` — DSP puro de transiente/kick/snare/brilho: subidas por banda comparadas à energia recente da própria banda, joelho suave para sensibilidade, release exponencial e curva de resposta. `normalizeSettings` é o único clamp de todo ajuste de detector.
 - `static/phone-v3/audio-spectral-descriptors.js` — oito medidas espectrais definidas.
 - `static/shared/audio-descriptor-catalog.js` — IDs, grupos, três tons por família e escalas de leitura em Hz compartilhados. Preserve a ordem do catálogo e contraste das marcas >=3:1 contra #0e0e0e. Curvas e amostras dos descritores são contínuas; os botões nomeados da legenda identificam sem depender só da cor.
-- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — os doze cartões agrupados, o controle único de visão do gráfico e históricos limitados selecionáveis. As visões normalizadas se ajustam à curva visível mais alta e publicam esse teto em `#audio-timeline[data-scale]`; a amplitude mantém escala própria para RMS/envelope, sem o antigo limiar do Gate no gráfico.
+- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — os doze cartões agrupados, o controle único de visão do gráfico e históricos limitados selecionáveis. As visões normalizadas se ajustam à curva visível mais alta e publicam esse teto em `#audio-timeline[data-scale]`; a amplitude mantém escala própria para RMS/envelope, e o gráfico não mostra o limiar do Gate.
 - `static/phone-v3/audio-descriptor-stream.js` — janelas contíguas de amostras e buffers FFT reutilizados.
 - `static/phone-v3/audio-descriptor-worklet.js` — captura contínua com uma mensagem de descritores pendente, confirmada pelo consumidor.
-- `static/phone-v3/style.css` — knobs planos com arco organizados por grupo (rolagem horizontal de grupos em telas baixas) e barra separada de JANELA. Regras dos controles aposentados foram excluídas; não reserve linhas vazias no grid.
+- `static/phone-v3/style.css` — knobs planos com arco organizados por grupo (rolagem horizontal de grupos em telas baixas) e barra separada de JANELA. Os controles aposentados não têm regras; não reserve linhas vazias no grid.
 - `static/phone-v3/audio-detector-timing.js` — subdivisões em semínimas para RELEASE/SUAVE: 1/128..1/1, retas/tercinas/pontuadas, ordenadas por duração. Escolhas `*Beats` e tempos FREE `*Ms` ficam independentes; app.js resolve milissegundos fracionários quando BPM do Live/SYNC muda pelo caminho de configurações do worklet. RELEASE no DSP aceita 1,25..360000 ms (1/128 T a 1000 BPM até 1/1 D a 1 BPM); a interface FREE continua 10..500 ms e SUAVE 0..200 ms. Só rótulos arredondam. Mudanças de BPM preservam knobs ativos. Bandas continuam RMS linear, sem ponderação de loudness.
 - `static/phone-v3/audio-processor.test.mjs`, `audio-analysis-controls.test.mjs`
 - `static/phone-v3/app.js`
@@ -270,7 +270,7 @@ Arquivos:
 
 Transient mede um ataque novo; Kick e Snare o ponderam pela energia espectral
 grave e da faixa superior. São heurísticas, não classificação de instrumentos.
-Brilho preserva o centroide logarítmico por potência (100–12000 Hz); o novo
+Brilho preserva o centroide logarítmico por potência (100–12000 Hz); o
 Centroide usa magnitude na faixa completa. São relacionados, com escalas
 distintas. Fórmulas e unidades estão no
 [Guia](./USER-GUIDE.pt-BR.md#detectores-de-áudio-integrados).
@@ -281,7 +281,7 @@ O pacote legado `controls` aceita lotes completos de descritores, tanto no forma
 legado (4) quanto no atual (12).
 O `control_frame` negociado compartilha uma cadência limitada entre controles e
 áudio; `app.js` publica o conjunto de descritores atomicamente nesse fluxo.
-Snapshots novos usam `controlsRealtime:true` e nunca atuam no Live. Preserve o
+Snapshots usam `controlsRealtime:true` e nunca atuam no Live. Preserve o
 leitor legado; negocie `hello.controlStreamVersion=1` antes de trocar o caminho.
 Amplie zero/reset, catálogo, limites e despacho de mapeamento juntos.
 O caminho rápido dos descritores independe da análise de amplitude e do
@@ -297,7 +297,7 @@ DSP não é um resultado de ponta a ponta.
 
 `audio-analysis-controls.js` mantém `HystereticGate`, `OnsetGate` e
 `VelocityWindow` para as fontes atuais de amplitude. Não há análise de nota,
-clareza tonal ou BPM do áudio. Preferências aposentadas não são carregadas.
+clareza tonal ou BPM do áudio. As preferências do navegador não são carregadas.
 Os descritores e seu tempo musical são configurados pelos módulos próprios.
 
 ### Escutar uma track
@@ -398,7 +398,7 @@ Atualize a documentação quando o comportamento público mudar:
 - Novos controles ou sensores: `docs/CUSTOMIZATION.md`, `README.md`.
 
 > Ao mexer nesses arquivos, atualize também a versão em português ao lado
-> (`docs/*.pt-BR.md`). Uma tradução desatualizada é pior do que nenhuma.
+> (`docs/*.pt-BR.md`).
 
 ## Diagnóstico local de poses
 

@@ -14,9 +14,9 @@ no README.
 
 Esta versão 2.1.0 é distribuída como [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Antes de usá-la numa apresentação, confira Start/Close e o QR no painel nativo do Live; depois grave e reproduza um take numa cópia do Set no Mac de destino. O CI automatizado não substitui esse aceite.
 
-Ela substitui a prévia 2.0.1. O REC ganha três vistas locais (Gravar, Arrangement, Clip) sobre uma barra de captura única, linhas nativas das tracks com grupos e intervalos entre markers; os destinos e o CLICK passam para o cabeçalho do REC. No Mac, o link do AbletonOSC agora liga junto com o servidor, uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
+Ela substitui a prévia 2.0.1. O REC ganha três vistas locais (Gravar, Arrangement, Clip) sobre uma barra de captura única, linhas nativas das tracks com grupos e intervalos entre markers; os destinos e o CLICK passam para o cabeçalho do REC. No Mac, o link do AbletonOSC liga junto com o servidor, uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
 
-Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR agora usa o endereço que alcança a sua rede: primeiro o que tem saída, depois o que tem gateway, e por último adaptadores virtuais e VPNs. A aba **Rede** do painel mostra o motivo, deixa fixar um endereço e tem **ACHAR CONFIGURAÇÃO** para quando o celular não abre; **Endereço de rede**, na aba Principal, oferece a mesma escolha, e o servidor guarda essa escolha. Depois de trocar de rede não é preciso reiniciar nada: o painel prepara um certificado para o endereço novo e o celular pede para aceitar o aviso uma vez. A escolha feita numa prévia anterior da 2.0.1 ficava no navegador e não é aproveitada.
+Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR usa o endereço que alcança a sua rede: primeiro o que tem saída, depois o que tem gateway, e por último adaptadores virtuais e VPNs. A aba **Rede** do painel mostra o motivo, deixa fixar um endereço e tem **ACHAR CONFIGURAÇÃO** para quando o celular não abre; **Endereço de rede**, na aba Principal, oferece a mesma escolha, e o servidor guarda essa escolha. Depois de trocar de rede não é preciso reiniciar nada: o painel prepara um certificado para o endereço novo e o celular pede para aceitar o aviso uma vez. A escolha feita numa prévia anterior da 2.0.1 ficava no navegador e não é aproveitada.
 
 Instale o AbletonOSC em Remote Scripts dentro da User Library configurada, em vez de dentro do aplicativo Live. Isso preserva a instalação nas atualizações. REC e SYNC precisam do AbletonOSC.
 
@@ -143,7 +143,7 @@ administração como credenciais.
 ### Iniciar automaticamente com o Live
 
 No rodapé do painel existe a chave **Iniciar automaticamente com o Live**. Ela
-vem ligada, que é como toda instalação se comportava antes de ela existir.
+vem ligada por padrão.
 
 Desligue quando outra extensão RC dividir a máquina e você quiser escolher qual
 delas fica com as portas na sessão, em vez de deixar as duas disputarem no
@@ -183,9 +183,8 @@ abaixo).
 
 ### O que você vê
 
-Um controlador feito só para a horizontal. O ideal é segurar o celular deitado,
-com os dois polegares na tela; na vertical aparece um aviso pedindo para girar
-o aparelho.
+O controlador é usado na horizontal, com os dois polegares na tela; na vertical
+aparece um aviso pedindo para girar o aparelho.
 
 Os sensores começam automaticamente quando o navegador permite. Se o acesso
 precisar de um toque, abra **SNS**, toque no **⚙** da barra de cima e depois
@@ -230,7 +229,7 @@ não só com o medidor. Repita com Transient, Snare e Brightness. Kick/snare sã
 heurísticas espectrais; a latência do microfone, da rede e do Live ainda exige
 teste físico.
 
-O Follow Detected Note e a análise tonal dele foram removidos. Modos de
+O Follow Detected Note e a análise tonal dele não estão disponíveis. Modos de
 mapeamento não suportados são descartados ao carregar; vínculos válidos permanecem. Os doze
 descritores analisam a entrada selecionada no navegador (microfone, interface
 ou loopback quando disponível). O Max Audio Sender não alimenta esses controles.

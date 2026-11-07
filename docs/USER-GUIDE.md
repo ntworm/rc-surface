@@ -1,7 +1,7 @@
 # RC Surface — User Guide
 
-Everything a performer needs to operate the phone controller during setup,
-soundcheck, and live performance. Read this once before playing a set.
+This guide describes how to operate the phone controller during setup,
+soundcheck and live performance. Read it once before playing a set.
 
 > **Scope**: the phone client (`/phone-v3/`) is the main surface. The
 > Ableton panel and admin dashboard are covered separately in
@@ -10,17 +10,17 @@ soundcheck, and live performance. Read this once before playing a set.
 
 ---
 
-### Realtime control in this release
+### Realtime control
 
-MAP no longer slows parameter control: XY, MIX and sensor values use a separate
+MAP does not slow parameter control: XY, MIX and sensor values use a separate
 control stream, with the first frame sent immediately and subsequent traffic
 coalesced at an 8 ms minimum spacing. This is a dispatch limit, not a promised
 end-to-end latency. Newer continuous positions replace unsent ones; pad edges
 retain order. Use **Smooth = 0** for no added mapping ramp. Explicit Smooth,
-musical envelopes and safe-loss behavior still apply. Main/Master targets now
+musical envelopes and safe-loss behavior still apply. Main/Master targets
 expand as **Main → device → parameter**, like other tracks; Tempo stays direct.
 
-Reload the phone page after updating the extension. The legacy snapshot wire fallback is not a migration of 1.x projects or settings.
+Reload the phone page after updating the extension. The legacy snapshot wire fallback does not migrate 1.x projects or settings.
 Version 2.0 uses isolated `surface-v2` host storage and schema 2.
 Physical latency in Live still needs the pending recorded benchmark.
 
@@ -64,7 +64,7 @@ The pad mode selector sits in the middle column of the PERF tab:
 
 The selected mode applies to **all 12 pads** (`pad-1`..`pad-12`),
 **all eight LFO slots** (`toggle-1`..`toggle-8`, `T1`..`T8`).
-The mode is shared: pick once, every control plays by the same rule.
+The mode is shared: pick one mode and every control uses it.
 
 ### Mode A — Momentary (default)
 
@@ -124,8 +124,8 @@ when a length is not behaving: a stale tempo, a different clock source and
 While `SYNC` is off the length grid dims, because nothing it offers reaches the
 burst.
 
-A burst is a one-shot, so being off the grid is audible immediately —
-this is the setting that puts a stab on the beat rather than near it.
+A burst is a one-shot, so being off the grid is audible immediately. In `SYNC`
+the length follows the grid, so the stab starts on the grid position.
 The section applies only while `SYNC` is on; `FREE` ignores both controls
 and keeps the fixed envelope. If Live has not reported a tempo yet, the
 length falls back to 120 BPM rather than going silent.
@@ -136,9 +136,9 @@ length falls back to 120 BPM rather than going silent.
 
 All eight slots (`toggle-1`..`toggle-8`) share the same component and start in
 **Global** for waveform, mode and timing. CFG offers **Sine, Triangle, Ramp Up,
-Ramp Down and Square**. Any combination is possible. There is one centred
-TOGGLES heading, with T1–T4 above T5–T8. Each slot shows a short waveform label
-and its effective A/B/C/D mode.
+Ramp Down and Square**.
+There is one centred TOGGLES heading, with T1–T4 above T5–T8. Each slot shows
+a short waveform label and its effective A/B/C/D mode.
 
 The active mode colours match the pads: A blue, B amber, C green, D pink.
 Waveforms do not introduce a second colour system. Drag horizontally for speed
@@ -162,20 +162,19 @@ physical fidelity guarantees for Live.
 
 ## 4. Square pulse
 
-Square now alternates between **0 and the chosen depth**: at 50% depth it
-alternates 0%/50%, rather than the former centred Square's 25%/75%.
-It includes the former Stutter's swing and ratchet (1–4), so Stutter is no
-longer a separate waveform or control. The pulse does not sample or repeat audio;
+Square alternates between **0 and the chosen depth**: at 50% depth it
+alternates 0%/50%. Square includes swing and ratchet (1–4); there is no
+separate Stutter waveform or control. The pulse does not sample or repeat audio;
 its musical effect depends on the mapped destination. Any of T1–T8 can use it.
 
 The local pulse indicator follows the actual gate, with a thin value rail.
 It is a preview, not confirmation of Live delivery; a display may miss fast pulses.
 Changing to/from Square safely stops the old algorithm before the next touch.
 
-2.0.0 uses performance payload schema 2 and fresh browser performance keys.
-Overrides and snapshots created by the first 2.0.0 preview are not imported;
-that avoids restoring the forced mode A and the retired Stutter waveform.
-Existing files remain untouched; configure this release afresh.
+This release uses performance payload schema 2 and fresh browser performance
+keys. Overrides and snapshots created by the first 2.0.0 preview are not
+imported, so the forced mode A and the retired Stutter waveform are not
+restored. Existing files remain untouched; configure this release afresh.
 
 ## 5. PERF UTIL shortcuts
 
@@ -196,8 +195,8 @@ set without leaving the performance surface.
 XY1 and XY2 have identical controls. Open CFG on either pad and select Static
 or Physics. Static stays where you release it. Physics coasts and rebounds;
 friction (0.002–0.05), bounce (0–0.95) and speed (0.1–4×) are independent
-for each pad. Both start Static; any combination is possible. Speed scales
-free motion, while friction controls decay. Switching to Static stops residual
+for each pad. Both start Static. Speed scales free motion, while friction
+controls decay. Switching to Static stops residual
 motion immediately. CFG inspection emits no control value.
 
 Each axis maps separately as `xy-1.x/y` or `xy-2.x/y`. Position setters and OFF
@@ -268,16 +267,17 @@ Toggles **Fullscreen Mode**:
   reader announces it in your language. Press the same icon again — or leave
   fullscreen from the browser or the system — to end the mode.
 
-Use Fullscreen Mode when performing: it gives the controls the largest
-possible surface. Other apps can still interrupt fullscreen.
+Use Fullscreen Mode when performing: the section title, the hint line and the
+XY readout disappear, which leaves more room for the controls. Other apps can
+still interrupt fullscreen.
 
 > **Known limitation — 2026-07-12:** enabling the audio sensor or camera
 > while Fullscreen Mode is fullscreen can make Chrome exit fullscreen. On the
 > tested Samsung S25F, fullscreen may not become available again until the
 > controller tab is closed and reopened. Enable audio/camera before entering
-> Fullscreen Mode when possible. When fullscreen ends this way, the mode now
-> ends with it instead of leaving the RETRACT icon active on a page that is no
-> longer fullscreen.
+> Fullscreen Mode when possible. When fullscreen ends this way, the mode ends
+> with it, and the RETRACT icon does not stay active on a page that is not
+> fullscreen.
 
 ### Contextual header and TRN settings
 
@@ -366,7 +366,7 @@ device. Audio Sender input is a separate opt-in. Do not automate or MIDI-map
 `RC MIDI Packet v2`: the API requires an automatable parameter, and while SDK
 Notes is ON such automation can play notes.
 
-This release also passes upstream MIDI byte-for-byte through **midiin →
+The extension also passes upstream MIDI byte-for-byte through **midiin →
 midiout**, separately from SDK/Audio Sender gates and their Panic/flush path.
 Keyboard channels, Note-Off, velocity and controllers keep their original bytes.
 Replace the already loaded Receiver instance with the `RC-Midi-Receiver.amxd`
@@ -692,7 +692,6 @@ length falls back to 120 BPM rather than stalling.
   without Transition Time. The pad has four corners, each tied to a snapshot.
   Drag the dot inside the pad to blend the four snapshots continuously and
   instantly; the Transition Time block (Free/Sync slider) is disabled in Vector mode.
-  Useful for live continuous exploration between four macro configurations.
 
 Mapped Live parameters follow the morph while the transition is running.
 For example, if an LFO, Square, knob, or fader is mapped to Live, the
@@ -709,7 +708,7 @@ map them elsewhere.
 
 ### Sensor status
 
-Each panel header shows the current sensor state, honest per API:
+Each panel header shows the sensor state reported by the browser API:
 
 - `ready` — real finite readings are arriving and can be mapped.
 - `waiting` / `no-readings` — the page is waiting for the first
@@ -783,7 +782,7 @@ Capture requests echo cancellation, noise suppression and automatic gain off,
 so voice processing does not intentionally reshape the dynamics or spectrum.
 The actual browser, driver and selected input can still resample or process
 audio; this is not a guarantee of bit-perfect capture. Use the grouped detector
-controls below, not the retired pitch/clarity controls.
+controls below. There is no pitch or clarity control.
 
 Once enabled:
 
@@ -802,15 +801,16 @@ browser. Changing an enabled input releases old values and restarts capture.
 An unplugged or denied explicit input displays an error and never falls back
 silently to another microphone. Select an available input and enable again.
 Reload never auto-enables capture. This is not Ableton Track mode: native
-analysis/control remains experimental and is not included in the release UI.
+analysis/control is experimental and is not part of this UI.
 No audio is uploaded; only numeric descriptors/control values are sent.
 
 The AUDIO card shows a live 2.5-second timeline: cyan is raw RMS and green
 is the envelope. The bar shows the smoothed/scaled RMS control value.
-All twelve descriptors below are public mapping sources. Follow Detected Note,
-its tonal analysis, old controls and diagnostic lab have been removed after
-unreliable musical results. Unsupported stored mapping modes are discarded
-on load; supported bindings are preserved. Live tempo/SYNC remains available.
+All twelve descriptors below are public mapping sources. There is no Follow
+Detected Note, tonal analysis, old controls or diagnostic lab: they
+have been removed after unreliable musical results. Unsupported stored mapping
+modes are discarded on load; supported bindings are preserved. Live tempo/SYNC
+remains available.
 
 ### Built-in audio detectors
 
@@ -834,16 +834,16 @@ The eight new measures use bin centers from 20 Hz to min(20 kHz, Nyquist), exclu
 
 **Detector controls:** knobs use the same radial body and rectangular pointer as MIX, with their group's accent for focus and dragging. Drag vertically, use the focused range's arrow keys, or double-click to restore the default. In All, the strip wraps by content on desktop; on short screens swipe it horizontally to reach every knob and WINDOW. The graph takes the remaining height, without a reserved row for retired controls.
 
-**Layout and graph:** all twelve cards are on screen at once, grouped as Attacks, Tone, Texture and Bands. One control above the graph chooses what the 2.5-second history draws: Amplitude, one group, or All, which draws every descriptor together. Tap a colored legend name to hide or show that curve. The normalized graph scales to the loudest curve currently shown and prints the ceiling it used, for example `0–0.28`, so a quiet descriptor is readable without pretending it is loud. The curve scrolls at screen rate whatever WINDOW is set to: between two analysis frames the last reading is held out to the right edge, for at most 120 ms, so a wide window looks continuous without inventing values it never measured. Hz cards still map in 0..1; the graph never mixes Hz and amplitude on one axis. On a short phone screen the card column scrolls instead of hiding a group.
+**Layout and graph:** all twelve cards are on screen at once, grouped as Attacks, Tone, Texture and Bands. One control above the graph chooses what the 2.5-second history draws: Amplitude, one group, or All, which draws every descriptor together. Tap a colored legend name to hide or show that curve. The normalized graph scales to the loudest curve currently shown and prints the ceiling it used, for example `0–0.28`, so a quiet descriptor stays readable. The curve scrolls at screen rate whatever WINDOW is set to: between two analysis frames the last reading is held out to the right edge, for at most 120 ms, so a wide window looks continuous without inventing values it never measured. Hz cards still map in 0..1; the graph never mixes Hz and amplitude on one axis. On a short phone screen the card column scrolls instead of hiding a group.
 
 **Timbre window:** the eight new descriptors use a Hann window twice the attack size, overlapping by 50%. At 48 kHz this is 1024 samples (21.3 ms of signal), updated every 512 samples. Values stay zero during the first complete-window warmup. Attack delivery does not wait an extra window. Buffers are reused; there is no smoothing queue or timer per descriptor. Bands have window-energy normalization and no automatic gain.
 
 **How an attack is decided.** Transient measures the frame's rising energy
 against the energy that frame has been carrying for the last ~300 ms, through a
-soft knee, so a loud hit does not simply pin at `1.000` and dynamics survive.
-Kick and Snare then ask a second question: how much of that new energy landed
-in their band compared with the share that band normally holds. A band that
-merely carries its usual share of the change does not fire. Band content is
+soft knee, so a loud hit does not pin at `1.000` and differences in level are
+preserved. Kick and Snare then compare the new energy with the share that band
+normally holds. A band that merely carries its usual share of the change does
+not fire. Band content is
 read from a Hann-windowed spectrum of the same length as the attack window,
 because a loud low tone's leakage would otherwise fake an attack in an empty
 band, and a band sitting more than 30 dB below the frame is treated as masked.
@@ -896,9 +896,8 @@ Bands are **K-weighted loudness (ITU-R BS.1770-4)** with a 400 ms momentary inte
 `x1` is not offered below 512 samples: 256 would send more than the 120
 messages per second the control path accepts.
 
-SENS and RELEASE are shared by Transient, Kick and Snare on purpose — they are
-one instrument's response, and a per-detector version of every knob would be a
-wall of controls for a surface you play with your hands.
+SENS and RELEASE are shared by Transient, Kick and Snare: they set one response
+for all three detectors, and there is no per-detector copy of these knobs.
 
 ### Attack level
 
@@ -954,7 +953,7 @@ extension is installed.
 
 On a phone or tablet the preview is the live camera image, without the hand
 drawn over it, and hand tracking runs in a background worker where the browser
-supports it (a Web Worker with `OffscreenCanvas`), so inference no longer holds
+supports it (a Web Worker with `OffscreenCanvas`), so inference does not hold
 up the rest of the interface while the camera is on. On a computer with a mouse
 the preview shows the analysed frame with the tracked hand drawn on top, and
 tracking runs on the page. The Live panel's **MediaPipe Latency** reads
@@ -1052,15 +1051,15 @@ Ambiguity and opposing finger shapes can still reject an otherwise close pose.
 Use the labeled-session benchmark to compare correct entries, false ON/min
 and entry latency p95 before drawing conclusions about extra takes.
 
-Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. After this update, version 8 pose saves show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
+Camera proportions are corrected for learned poses, including rotation between landscape and portrait frames. Pose saves in the version 8 format show **RECAPTURE REQUIRED**. Capture those poses again: old saves contain descriptors without the original frame dimensions, so they cannot be converted safely. Direct axes and built-in detectors keep their existing geometry.
 
 Very different takes widen a pose’s tolerance. After three captures, an isolated take may show an inline warning. **RETAKE** removes that exact take, even when it was captured first. If clear finger disagreements leave no majority among three to six captures, the general warning says the captures disagree; RETAKE then removes the latest capture as a review starting point. **KEEP** retains every example and dismisses the current warning; another capture or a reload reviews the bank again. Warnings are advisory and do not change recognition thresholds, ranking or hold/release timing. Camera behavior still needs real-hand acceptance.
 
 The **Balanced** recognition preset is the normal performance setting.
 **Precision** rejects more variation; **Flexible** accepts more. The **Performance**
-preset is specifically tuned for live gesture-chord performance, permitting the
-natural variation of expressive poses (such as the Rock sign) while enabling fast
-physical rearming without false triggering on open hand or fist. A learned slot
+preset is for live gesture-chord performance: it allows more variation in a pose
+(such as the Rock sign), rearms quickly, and does not trigger on an open hand or
+a fist. A learned slot
 is momentary (`0` or `1`), persists across page reloads, and rearms only after
 the pose is released (transitioning through FSM states `ready` → `candidate` → `held` → `releasing`).
 Tap **TEST** to verify pose recognition silently on camera without firing MIDI notes.
@@ -1094,7 +1093,8 @@ changing the bank format or hold/release times; it cannot recover a hidden
 finger when the camera landmarks describe a different shape.
 Missing-hand frames preserve an active pose; unconfirmed candidates expire after grace. Camera-corrected version 9 saves with 42/47 coordinates load without recapture; version 8 requires recapture. TEST uses the same compatibility check as live recognition.
 The recapture warning survives local saves, camera restarts and project restores until a successful new capture or an explicit CLR for that pose.
-Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of being treated as usable.
+Poses saved in the version 8 spatial format show **RECAPTURE REQUIRED** and are
+not used for recognition.
 
 ---
 
@@ -1103,8 +1103,8 @@ Poses saved by the retired spatial format show **RECAPTURE REQUIRED** instead of
 ### Per-control vertical range
 
 Every vertical control in the app uses a **150 px** drag range from
-`0` to `1`. This is intentional: mixing all the controls at the same
-physical scale keeps your muscle memory honest across the surface.
+`0` to `1`. This is intentional: the same physical scale on every control means
+the same gesture produces the same relative change everywhere.
 
 ### Mode summary
 
@@ -1170,11 +1170,11 @@ For deeper setup issues (certificates, network, installation) see
 
 ## Performance 2.0: individual settings and learned-pose bank
 
-Open CFG with the header button before you configure a control. Holding a control during a performance no longer opens CFG. With CFG on, right-click the same control again to close its editor; right-click another control to switch directly to its settings. Drag travel offers Very short (60px), Short (100px), Medium (150px) and Long (300px); Touch level offers Zero, Low (25%), Medium (50%) and Maximum. A/B/C response curves and C Remember last / Fixed remain individual. These values control the mapped output level, not MIDI note velocity.
+Open CFG with the header button before you configure a control. Holding a control during a performance does not open CFG. With CFG on, right-click the same control again to close its editor; right-click another control to switch directly to its settings. Drag travel offers Very short (60px), Short (100px), Medium (150px) and Long (300px); Touch level offers Zero, Low (25%), Medium (50%) and Maximum. A/B/C response curves and C Remember last / Fixed remain individual. These values control the mapped output level, not MIDI note velocity.
 
 In mode D, each toggle has its own **Burst length** and attack, independent of the waveform's subdivision (the period of each cycle). Length may follow the shared setting, use a pinned musical value in SYNC, or milliseconds in FREE. The collapsed Burst length section shows the selected duration. Global mode D exposes the same settings. Pins persist in projects, presets and snapshots; opening CFG never triggers a control.
 
-VID starts with three learned poses. **+ ADD POSE**, beside the REC recognition selector, adds numbered identities up to G15 and turns grey at fifteen cards. The bank has a dark scrollbar and compact cards: capture, recognition and CLR retain the normal action/summary footprint; visible take warnings or TEST diagnostics add only the space they need. **CLR** removes examples while retaining the card. The small **×** below G1/G2/etc. removes that card and its examples, cancels its capture/test, and explicitly releases its held output, including Hold indefinitely. Other IDs and destinations never shift. The removed ID's mapping remains available in MAP; Add reuses the first free numbered ID with an empty pose and that existing mapping. Clear its targets in MAP if you also want to discard the destination. Removing every card and restoring a sparse bank are supported. Each pose still needs three examples and accepts up to six. Slots `sensor.vision.gesture.1` through `.15` share the same qualification, MIDI and tracking-loss rules. The classifier, thumb checks and capture/recognition timing have not been retuned. Physical camera acceptance remains necessary.
+VID starts with three learned poses. **+ ADD POSE**, beside the REC recognition selector, adds numbered identities up to G15 and turns grey at fifteen cards. The bank has a dark scrollbar and compact cards: capture, recognition and CLR retain the normal action/summary footprint; visible take warnings or TEST diagnostics add only the space they need. **CLR** removes examples while retaining the card. The small **×** below G1/G2/etc. removes that card and its examples, cancels its capture/test, and explicitly releases its held output, including Hold indefinitely. Other IDs and destinations never shift. The removed ID's mapping remains available in MAP; Add reuses the first free numbered ID with an empty pose and that existing mapping. Clear its targets in MAP if you also want to discard the destination. Removing every card and restoring a sparse bank are supported. Each pose still needs three examples and accepts up to six. Slots `sensor.vision.gesture.1` through `.15` share the same qualification, MIDI and tracking-loss rules. The classifier, thumb checks and capture/recognition timing work as described in § 12. Physical camera acceptance remains necessary.
 
 ## 16. REC: Arrangement / CLIP
 
@@ -1384,8 +1384,8 @@ and mobile touch still require acceptance on your Live setup.
 ### Native Arrangement clips and waveform preview
 
 Arrangement clips are drawn on the same timeline as the markers, at the
-intervals Live actually reports, so a clip always sits where it belongs. Clip
-names, lane names and start/end positions come from Live, never from a guess.
+intervals Live actually reports. Clip names, lane names and start/end positions
+come from Live, never from a guess.
 
 - **Bounded metadata:** clip details are read per track, in pages of up to 64
   clips. **Load** (or **Refresh**) reads the track you are looking at, **More**
@@ -1401,8 +1401,8 @@ names, lane names and start/end positions come from Live, never from a guess.
 - **Waveform preview:** a waveform is an explicit action on a visible
   Arrangement audio clip, and only while the transport is stopped. The
   extension renders the selected interval before effects into its own
-  temporary storage and shows the peaks that come back; nothing is invented
-  and no original sample file is read. The visible interval is capped at 128
+  temporary storage and shows the peaks that come back; the preview does not
+  read the original sample file. The visible interval is capped at 128
   beats, so a long clip needs a narrower range. Nothing is rendered in the
   background: there is no preview during playback or recording, and no poll
   starts one.

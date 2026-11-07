@@ -13,9 +13,9 @@ If you only want the short version: see the [Quick start](../README.md#quick-sta
 
 Version 2.1.0 is distributed as a [pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Before using it for a performance, check Start/Close and the QR in the native Live panel, then record and replay a take in a copy of your Set on the target Mac. Automated CI does not replace that acceptance.
 
-It replaces the 2.0.1 preview. REC gains three local views (Record, Arrangement, Clip) over one capture bar, native track rows with groups, and marker ranges; the destinations and CLICK move into the REC header. On a Mac the AbletonOSC link now starts with the server, a phone tab left in the background keeps its connection, running modulators come back after a reconnect and the camera pauses while the page is hidden.
+It replaces the 2.0.1 preview. REC gains three local views (Record, Arrangement, Clip) over one capture bar, native track rows with groups, and marker ranges; the destinations and CLICK move into the REC header. On a Mac the AbletonOSC link starts with the server, a phone tab left in the background keeps its connection, running modulators come back after a reconnect and the camera pauses while the page is hidden.
 
-Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel now includes all its scripts and font, so Start and the automatic-start preference work offline. The QR now uses the address that reaches your network: the one with a route out first, then one with a gateway, and virtual adapters and VPNs last. The **Network** tab in the panel shows why, lets you pin an address and has **FIND SETUP** for when the phone does not open; **Network address** on the Main tab offers the same choice and the server remembers it. After changing networks there is nothing to restart: the panel prepares a certificate for the new address and the phone asks you to accept it once. A choice made in an earlier 2.0.1 preview lived in the browser and is not carried over.
+Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel includes all its scripts and font, so Start and the automatic-start preference work offline. The QR uses the address that reaches your network: the one with a route out first, then one with a gateway, and virtual adapters and VPNs last. The **Network** tab in the panel shows why, lets you pin an address and has **FIND SETUP** for when the phone does not open; **Network address** on the Main tab offers the same choice and the server remembers it. After changing networks there is nothing to restart: the panel prepares a certificate for the new address and the phone asks you to accept it once. A choice made in an earlier 2.0.1 preview lived in the browser and is not carried over.
 
 Install AbletonOSC in Remote Scripts inside the configured User Library, rather than inside the Live application. This survives Live updates. REC and SYNC require AbletonOSC.
 
@@ -141,7 +141,7 @@ token, so treat the QR code and copied controller/admin URLs as credentials.
 ### Start automatically with Live
 
 At the bottom of the panel there is a **Start automatically with Live** switch.
-It is on by default, which is what every install did before it existed.
+It is on by default.
 
 Turn it off when another RC extension shares the machine and you want to choose
 which one takes the ports for a session rather than have them race at load.
@@ -183,9 +183,8 @@ below).
 
 ### What you see
 
-A landscape-only controller. The phone is best held with both thumbs
-on the screen in landscape orientation; a portrait overlay will show
-otherwise.
+The controller works in landscape orientation. Hold the phone with both thumbs
+on the screen; in portrait, an overlay appears.
 
 Sensors start automatically when your browser allows it. If sensor access
 needs a tap, open **SNS**, tap the **⚙** gear in the top bar, then tap
@@ -229,7 +228,7 @@ and silence. Compare the sound with the actual Live parameter, not only the
 meter. Repeat with Transient, Snare, and Brightness. Kick/snare are spectral
 heuristics; microphone, network, and Live latency still require a physical test.
 
-Follow Detected Note and its tonal analysis were removed. Unsupported mapping
+Follow Detected Note and its tonal analysis are not available. Unsupported mapping
 modes are discarded on load; supported bindings remain. The twelve descriptors
 analyze the selected browser audio input (microphone, interface or loopback
 where available). The optional Max Audio Sender does not feed these controls.

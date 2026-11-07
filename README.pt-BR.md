@@ -9,7 +9,7 @@
 
 [**:globe_with_meridians: Página em português**](https://ntworm.github.io/rc-surface/pt-br.html) — mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
 
-O **RC Surface** é uma extensão para o Ableton Live 12, com código-fonte disponível, que transforma o navegador do celular ou tablet na sua rede local em um controlador de performance de baixa latência, mixer, modulador multissensorial e estação de gravação.
+O **RC Surface** é uma extensão para o Ableton Live 12, com código-fonte disponível. O navegador do celular ou tablet na sua rede local roda o RC Surface como controlador de performance, mixer, modulador multissensorial e estação de gravação.
 
 O host roda dentro do Ableton Live sobre o SDK oficial de Extensions; o cliente mobile roda em JavaScript puro no navegador via HTTPS/WSS local, sem instalar nenhum app no celular.
 
@@ -20,9 +20,9 @@ O host roda dentro do Ableton Live sobre o SDK oficial de Extensions; o cliente 
 - **Certificado local.** Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede. A seção **Certificado** da aba **Rede** leva a uma página de instalação na porta HTTPS + 1; com o certificado instalado, o navegador abre as páginas sem aviso. Um endereço público escolhido com **USAR** mantém um certificado autoassinado. A autoridade é uma raiz de confiança válida por 10 anos; remova-a do aparelho para revogar a confiança.
 - **CFG.** Toque em **CFG** no topo para entrar no modo de configuração e depois toque num pad, knob, fader ou XY para editar as opções dele. O botão CFG é o único caminho para essas opções.
 - **AUT.** Os avisos de AUT aparecem uma vez, no toast amarelo.
-- **macOS.** O link do AbletonOSC liga junto com o servidor, não na ativação. O listener da posição do Live só roda enquanto um mapeamento de **Launch Clip** precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
+- **macOS.** O link do AbletonOSC liga junto com o servidor; ele não liga na ativação. O listener da posição do Live só roda enquanto um mapeamento de **Launch Clip** precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
 - **Correções.** O celular que retoma a sessão mantém a sua ficha; um caminho malformado recebe 400; o seletor de rede mantém uma escolha pendente.
-- **Compatibilidade.** Mapeamentos, presets e projetos da 2.0 funcionam sem mudança; recarregue o navegador depois de instalar. A escolha de rede feita na prévia 2.0.1 ficava no navegador e não é migrada. Gravar e reproduzir ainda não foram verificados no Live no macOS.
+- **Compatibilidade.** Mapeamentos, presets e projetos da 2.0 funcionam sem mudança; recarregue o navegador depois de instalar. A escolha de rede salva no navegador pela prévia 2.0.1 não é migrada. Gravar e reproduzir ainda não foram verificados no Live no macOS.
 
 ## Visão geral
 
@@ -30,9 +30,9 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 
 | Superfície | Função |
 | :--- | :--- |
-| **`PERF`** | 12 pads de performance (modos A/B/C/D), dois XY pads (Estático ou Física), 8 toggles de LFO/Square sincronizados (`T1`–`T8`) e 4 slots rápidos de snapshot. |
+| **`PERF`** | 12 pads de performance (modos A/B/C/D), dois XY pads (Estático ou Física), 8 toggles de LFO/Square sincronizados (`T1`–`T8`) e 4 slots de snapshot. |
 | **`MIX`** | 8 knobs rotativos mapeáveis (arco de `270°`) e 8 faders mapeáveis de altura completa. |
-| **`SNP`** | 16 slots de snapshot para salvar e chamar estados completos da superfície instantaneamente. |
+| **`SNP`** | 16 slots de snapshot para salvar e chamar estados completos da superfície. |
 | **`SNS`** | Sensores de movimento (acelerômetro/giroscópio) e orientação 3D do celular com calibração de postura. |
 | **`AUD`** | Análise de microfone em tempo real com 12 descritores espectrais/ataques por banda e loudness ITU-R BS.1770 ponderado K. |
 | **`VID`** | Rastreamento local de mão pela câmera (MediaPipe Hands embutido) com entradas contínuas `X / Y / Z / PALM / FACE` e até 15 poses aprendidas (`G1`–`G15`). |
@@ -56,9 +56,9 @@ A interface mobile é dividida em **sete páginas** e **quatro modos contextuais
 2. **Download:** baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) no kit recebido ou no [versão 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) e confira com o `SHA256SUMS.txt`.
 3. **Instalação:** dê dois cliques no `RC-Surface-2.1.0.ablx` para instalar no Live (reinicie o Live se já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 4. **Conexão:** abra o painel do RC Surface no Live e escaneie o QR code com o celular. Uma autoridade certificadora local deste computador assina o certificado do servidor para os endereços privados da sua rede; instale-a uma única vez pela página simples na porta HTTPS + 1, que a seção **Certificado** da aba **Rede** do painel indica. Se o celular não abrir a página, use a aba **Rede** do painel: ela mostra o endereço que o QR usa e tem **ACHAR CONFIGURAÇÃO**.
-5. **Performance e Mapeamento:** use as 7 abas para tocar ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.
+5. **Performance e Mapeamento:** use as 7 abas para controlar o Live, ou toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.
 
-> **Atualizando da versão 1.x:** o RC Surface `2.0.0` salva projetos, presets e mapeamentos em `storageDirectory/surface-v2/` (schema 2). Configure a versão 2.0 do zero; arquivos 1.x existentes permanecem intactos. Veja [`docs/INSTALL.pt-BR.md`](docs/INSTALL.pt-BR.md) para detalhes.
+> **Armazenamento:** o RC Surface salva projetos, presets e mapeamentos em `storageDirectory/surface-v2/` (schema 2). Configure a superfície do zero; arquivos 1.x existentes permanecem intactos. Veja [`docs/INSTALL.pt-BR.md`](docs/INSTALL.pt-BR.md) para detalhes.
 
 ## Documentação
 
@@ -84,7 +84,7 @@ npm run build:prod-ablx
 ## Segurança e limitações
 
 > [!WARNING]
-> **Aviso de segurança**: o RC Surface executa um servidor HTTPS/WebSocket na sua rede local. Ações de controlador e administração exigem tokens de sessão rotativos, mas o sistema foi projetado exclusivamente para redes domésticas ou de estúdio confiáveis. Não exponha portas na internet pública nem compartilhe QR codes/URLs de sessão. Veja [SECURITY.pt-BR.md](docs/SECURITY.pt-BR.md) para o modelo completo de ameaças.
+> **Aviso de segurança**: o RC Surface executa um servidor HTTPS/WebSocket na sua rede local. Ações de controlador e administração exigem tokens de sessão rotativos, mas o sistema é projetado exclusivamente para redes domésticas ou de estúdio confiáveis. Não exponha portas na internet pública nem compartilhe QR codes/URLs de sessão. Veja [SECURITY.pt-BR.md](docs/SECURITY.pt-BR.md) para o modelo completo de ameaças.
 
 - **Autoridade certificadora:** a CA local é uma raiz de confiança instalada no celular ou no computador, válida por 10 anos e só para endereços privados; remova-a do aparelho para revogar a confiança.
 - **Processamento local:** os quadros da câmera e o áudio do microfone são processados localmente no navegador do celular; mídia bruta nunca sai do aparelho.

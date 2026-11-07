@@ -51,8 +51,8 @@ build as public-release validated.
 In RC Surface 2.0, gestures and audio share a realtime path: first frame
 immediate, subsequent batches spaced by at least 8 ms. MAP's visual snapshots
 cannot delay those commands. Smooth 0 adds no mapping ramp. This is not a measured
-end-to-end latency; older hosts use the legacy snapshot path. The client is designed for
-low-latency local Wi-Fi. Actual latency depends on the host, phone,
+end-to-end latency; older hosts use the legacy snapshot path. The client expects
+a local Wi-Fi network. Actual latency depends on the host, phone,
 browser, router, and network congestion. Use 5 GHz Wi-Fi for the most
 consistent results, and test the exact setup before a show.
 
@@ -116,7 +116,7 @@ choose the action that matches the source:
   advance a clip list, or stop a track via AbletonOSC, with optional
   *After it starts* continuation rules and editable Set global quantization.
 
-Follow Detected Note was removed. Unsupported mapping modes are discarded on
+Follow Detected Note is not available. Unsupported mapping modes are discarded on
 load; supported bindings, including fixed Trigger Note, are retained.
 
 Use Receiver v2 (**SDK / LOCAL MAX — NO UDP**) and replace old Set instances;
@@ -135,12 +135,11 @@ states.
 
 ### Does the phone vibrate when I hit a pad?
 
-No. Haptics/vibration are retired in v1.0.0 to keep the UI
-predictable across iOS and Android.
+No. The phone does not vibrate when you hit a pad.
 
 ### Can it turn what I play into MIDI notes?
 
-No. **Follow Detected Note** and its tonal analysis were removed after repeated
+No. **Follow Detected Note** and its tonal analysis are not available: repeated
 musical tests did not produce reliable results. Fixed **Trigger Note** mappings
 remain; they do not estimate the note being played.
 
@@ -227,7 +226,7 @@ outside the v2.0 threat model. The full threat model is in `docs/SECURITY.md`.
 No. The project is source-available under the PolyForm Noncommercial 1.0.0
 license, and has no Pro version or
 locked features. The Gumroad page is **pay what you want** (suggested R$25 in
-Brazilian reais, minimum R$0). R$0 is the default so cost is never a barrier. See
+Brazilian reais, minimum R$0). The default price is R$0. See
 [`FUNDING.md`](../FUNDING.md) for details. Only trust links published in
 this repository's README and release notes.
 

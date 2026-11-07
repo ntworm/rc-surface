@@ -56,8 +56,8 @@
       'pt-BR': '<span class="rc">RC</span> Surface',
     },
     'lp.surface.002': {
-      en: "Any device with a browser becomes a performance controller for Ableton Live. Your machine serves the surface on the local network and the phone just opens a link.",
-      'pt-BR': "Qualquer aparelho com navegador vira um controlador de performance para o Ableton Live. O seu computador serve a superfície na rede local e o celular só precisa abrir um link.",
+      en: "Any device with a browser can control Ableton Live. Your machine serves the surface on the local network and the phone opens a link.",
+      'pt-BR': "Qualquer aparelho com navegador pode controlar o Ableton Live. O seu computador serve a superfície na rede local e o celular abre um link.",
     },
     'lp.surface.003': {
       en: "Live 12.4.5+ Suite · iOS 15.4+ Safari or Chromium on Android · held in <b>landscape</b> · local network, nothing installed on the phone.",
@@ -184,8 +184,8 @@
       'pt-BR': 'Precisa de',
     },
     'lp.chain.010': {
-      en: 'What you get',
-      'pt-BR': 'O que você ganha',
+      en: 'What it provides',
+      'pt-BR': 'O que ele oferece',
     },
     'lp.chain.013': {
       en: "Beat-accurate: metronome, subdivisions, swing, phase.",
@@ -232,8 +232,8 @@
       'pt-BR': "Cenário E · entrada acústica",
     },
     'lp.scenarios.001': {
-      en: "Situations that make sense <span class=\"tail\">— and the mapping</span>",
-      'pt-BR': "Situações que fazem sentido <span class=\"tail\">— e o mapeamento</span>",
+      en: "Situations <span class=\"tail\">— and the mapping</span>",
+      'pt-BR': "Situações <span class=\"tail\">— e o mapeamento</span>",
     },
     'lp.scenarios.003': {
       en: 'A second pair of hands over one Live set',
@@ -252,8 +252,8 @@
       'pt-BR': "Intro, verso, refrão e outro nos slots 1–4 do SNP, arrastados entre os cantos no Vetor XY.",
     },
     'lp.scenarios.017': {
-      en: 'Push a filter in the air',
-      'pt-BR': 'Empurrar um filtro no ar',
+      en: "Move a filter with a hand pinch",
+      'pt-BR': "Mover um filtro com a pinça da mão",
     },
     'lp.scenarios.018': {
       en: "Standing, no table. Pinch with the palm to the camera, move the hand, open the fingers.",
@@ -272,8 +272,8 @@
       'pt-BR': 'feedback do Echo',
     },
     'lp.scenarios.025': {
-      en: 'Volume opens the effect',
-      'pt-BR': 'O volume abre o efeito',
+      en: 'Volume opens the filter',
+      'pt-BR': 'O volume abre o filtro',
     },
     'lp.scenarios.026': {
       en: "A phone near the microphone: louder phrases open the filter, silence closes it.",
@@ -429,8 +429,8 @@
       'pt-BR': 'Qual o estágio do projeto?',
     },
     'lp.trouble.042': {
-      en: 'v2.1.0 adds compact REC views, the Network tab and the Mac connection fixes. Existing 2.0 profiles remain compatible.',
-      'pt-BR': 'v2.1.0 traz as vistas compactas do REC, a aba Rede e as correções de conexão no Mac. Perfis 2.0 continuam compatíveis.',
+      en: 'The REC page has compact views, the panel has a Network tab, and the Mac connection issues are fixed. Profiles from 2.0 remain compatible.',
+      'pt-BR': 'A página REC tem vistas compactas, o painel tem a aba Rede e as falhas de conexão no Mac foram corrigidas. Perfis da 2.0 continuam compatíveis.',
     },
     'lp.docs.001': {
       en: 'Reference documents',
@@ -470,8 +470,8 @@
       'pt-BR': "Mapa da superfície <span class=\"tail\">— figs. 1 a 11</span>",
     },
     'lp.map.figScope': {
-      en: "Every plan figure on this sheet is drawn for the 2.0.0 layout. They are schematics — not screenshots. The REC page changed in 2.1.0 (see 1.1); the User Guide describes it as it is now.",
-      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout da 2.0.0. São esquemas — não capturas de tela. A página REC mudou na 2.1.0 (veja 1.1); o Guia de Uso descreve como ela é agora.",
+      en: "Every plan figure on this sheet is drawn for the 2.0.0 layout. They are schematics — not screenshots. The REC page changed in 2.1.0 (see 1.1); the User Guide describes it in full.",
+      'pt-BR': "Cada figura de planta desta folha foi desenhada para o layout da 2.0.0. São esquemas — não capturas de tela. A página REC mudou na 2.1.0 (veja 1.1); o Guia de Uso descreve por completo.",
     },
     'lp.map.004': {
       en: 'Fig. 1',
@@ -698,8 +698,8 @@
       'pt-BR': 'Legenda dos eixos',
     },
     'lp.map.083': {
-      en: "Ties the channel names to the physical phone, so tilting it becomes a readable gesture.",
-      'pt-BR': "Liga os nomes dos canais ao celular físico, então inclinar vira um gesto legível.",
+      en: "Shows which phone axis each channel name refers to.",
+      'pt-BR': "Mostra a que eixo do celular cada nome de canal se refere.",
     },
     'lp.map.089': {
       en: 'Fig. 5',
@@ -1147,8 +1147,8 @@
       'pt-BR': "Cada XY escolhe Estático ou Física, com atrito, ricochete e velocidade próprios. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.",
     },
     'lp.controls.092': {
-      en: 'The touch point is never the value',
-      'pt-BR': 'O ponto do toque nunca é o valor',
+      en: 'The touch point is never the value — the control starts from its current value',
+      'pt-BR': 'O ponto do toque nunca é o valor — o controle parte do valor atual',
     },
     'lp.controls.093': {
       en: 'value',
@@ -1239,8 +1239,8 @@
       'pt-BR': 'Visão: mão, poses, clutch',
     },
     'lp.controls.117': {
-      en: "Hand X/Y/Z, PALM size and FACE palm orientation map continuously. A held pinch engages the clutch; release freezes its axes. G1–G15 and the four built-in detectors provide intentional outputs. Missing/invalid samples follow Safe loss.",
-      'pt-BR': "X/Y/Z da mão, tamanho PALM e orientação da palma FACE são mapeáveis continuamente. Pinch mantido engata o clutch; soltar congela os eixos. G1–G15 e os quatro detectores oferecem saídas intencionais. Amostras ausentes/inválidas seguem Safe loss.",
+      en: "Hand X/Y/Z, PALM size and FACE palm orientation map continuously. A held pinch engages the clutch; release freezes its axes. G1–G15 and the four built-in detectors provide outputs. Missing/invalid samples follow Safe loss.",
+      'pt-BR': "X/Y/Z da mão, tamanho PALM e orientação da palma FACE são mapeáveis continuamente. Pinch mantido engata o clutch; soltar congela os eixos. G1–G15 e os quatro detectores nativos fornecem saídas. Amostras ausentes/inválidas seguem Safe loss.",
     },
     'lp.controls.118': {
       en: 'the two tips touch',
@@ -1279,8 +1279,8 @@
       'pt-BR': 'o valor fica onde estava',
     },
     'lp.controls.127': {
-      en: 'PINCH AGAIN, ANY TIME, ANYWHERE — IT RESUMES FROM THE SAVED VALUE',
-      'pt-BR': 'REPITA A PINÇA, QUANDO E ONDE QUISER — ELE RETOMA DO VALOR GUARDADO',
+      en: 'PINCH AGAIN — THE CLUTCH RESUMES FROM THE SAVED VALUE',
+      'pt-BR': 'REPITA A PINÇA — O CLUTCH RETOMA DO VALOR GUARDADO',
     },
     'lp.controls.128': {
       en: 'CONTACT = gap between landmark 4 and landmark 8, divided by palm size',
@@ -1627,8 +1627,8 @@
       'pt-BR': "VELOCIDADE CONFIGURÁVEL",
     },
     'lp.fig.131': {
-      en: "STORE A STATE · RETURN OVER TIME · BLEND BETWEEN FOUR STATES",
-      'pt-BR': "GUARDA UM ESTADO · VOLTA AO LONGO DO TEMPO · MISTURA QUATRO ESTADOS",
+      en: "STORE A STATE · RECALL RETURNS TO IT OVER THE SET TIME · BLEND BETWEEN FOUR STATES",
+      'pt-BR': "GUARDA UM ESTADO · RECALL VOLTA ATÉ ELE NO TEMPO DEFINIDO · MISTURA QUATRO ESTADOS",
     },
     'lp.fig.132': {
       en: "CAPTURE / RECALL",
@@ -1655,12 +1655,12 @@
       'pt-BR': "SAÍDA MISTURADA",
     },
     'lp.fig.138': {
-      en: "MOTION SETS A REFERENCE · AUDIO TURNS SOUND INTO STABLE CONTROL",
-      'pt-BR': "MOVIMENTO DEFINE UMA REFERÊNCIA · ÁUDIO VIRA CONTROLE ESTÁVEL",
+      en: "MOTION SETS A REFERENCE · AUDIO MAPS SOUND TO CONTROL VALUES",
+      'pt-BR': "MOVIMENTO DEFINE UMA REFERÊNCIA · ÁUDIO MAPEIA O SOM PARA VALORES DE CONTROLE",
     },
     'lp.fig.140': {
-      en: "PINCH CLUTCH — A LOOP YOU CAN LEAVE AND COME BACK TO",
-      'pt-BR': "PINCH CLUTCH — UM CICLO QUE VOCÊ PODE LARGAR E RETOMAR",
+      en: "PINCH CLUTCH — YOU CAN RELEASE THE PINCH AND RESUME FROM THE SAVED VALUE",
+      'pt-BR': "PINCH CLUTCH — VOCÊ PODE SOLTAR A PINÇA E RETOMAR DO VALOR GUARDADO",
     },
     'lp.fig.141': {
       en: "1 · ENGAGE",
@@ -1691,8 +1691,8 @@
       'pt-BR': "DOMÍNIO MEDIDO DO SENSOR",
     },
     'lp.fig.148': {
-      en: "TRANSFORM DESK",
-      'pt-BR': "MESA DE TRANSFORMAÇÃO",
+      en: "TRANSFORM",
+      'pt-BR': "TRANSFORMAÇÃO",
     },
     'lp.fig.149': {
       en: "NORMALIZE",
@@ -1792,8 +1792,8 @@
       'pt-BR': "REC — Arrangement / CLIP",
     },
     'lp.rec.versionNotice': {
-      en: "This drawing is the 2.0.0 release schematic: two views, round level dials and the STAGE button. The release you are running has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes that release; the User Guide describes it in full.",
-      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A versão que você está usando tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve essa versão; o Guia de Uso descreve por completo.",
+      en: "This drawing is the 2.0.0 schematic: two views, round level dials and the STAGE button. The current REC page has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes each part; the User Guide describes it in full.",
+      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A página REC atual tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve cada parte; o Guia de Uso descreve por completo.",
     },
     'lp.rec.figure': {
       en: "Fig. 7",

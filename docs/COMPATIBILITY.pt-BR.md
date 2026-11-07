@@ -32,9 +32,9 @@ Versão `2.1.0`. Requisitos e evidências do produto; registros 1.0 não são ga
 
 ## Evidência atual e limites
 
-A instalação histórica da 2.0.0 foi relatada como funcionando sem erro ou bug observado. Esse relato não certifica a 2.1.0 no Mac de destino. Os checks da 2.1.0 são automatizados; latência real, captura de áudio, WebView e preservação de takes precisam ser conferidos na configuração do usuário.
+Uma instalação da 2.0.0 foi relatada como funcionando; nenhum erro ou bug foi observado. Esse relato não certifica a 2.1.0 no Mac de destino. Os checks da 2.1.0 são automatizados; latência real, captura de áudio, WebView e preservação de takes precisam ser conferidos na configuração do usuário.
 
-Regressões automatizadas usam mocks e navegadores isolados; não equivalem a hardware. A preparação final deve registrar commit/hash do pacote, seus gates atuais e revisão visual EN/PT. A versão continua 2.1.0; este documento não declara publicação. Os registros históricos 1.0 e “Receiver v2” descrevem outros ciclos, não o aceite da versão do produto 2.0.
+Regressões automatizadas usam mocks e navegadores isolados; não equivalem a hardware. A preparação final deve registrar commit/hash do pacote, seus gates atuais e revisão visual EN/PT. A versão é 2.1.0; este documento não declara publicação. Os registros 1.0 e o nome “Receiver v2” descrevem outros ciclos de release; não são o aceite da versão do produto 2.0.
 
 Dados 1.x não migram: mappings/presets/projetos 2.0 usam `surface-v2` e schema 2. Um Set existente não ganha garantia de preservação de takes a partir dessa separação.
 

@@ -32,9 +32,9 @@ Release `2.1.0`. Product requirements and evidence; 1.0 records are not new 2.0 
 
 ## Current evidence and limits
 
-Historical 2.0.0 installation was reported working without an observed error or bug. That report does not certify 2.1.0 on the target Mac. The 2.1.0 checks are automated; real latency, audio capture, WebView behavior and take preservation must be checked in the user's setup.
+A 2.0.0 installation was reported as working; no error or bug was observed. That report does not certify 2.1.0 on the target Mac. The 2.1.0 checks are automated; real latency, audio capture, WebView behavior and take preservation must be checked in the user's setup.
 
-Automated regressions use mocks and isolated browsers; they are not hardware evidence. Final preparation must record the package commit/hash, current gates and EN/PT visual review. Version remains 2.1.0; this document does not declare publication. Historical 1.0 records and “Receiver v2” describe other cycles, not product-version 2.0 acceptance.
+Automated regressions use mocks and isolated browsers; they are not hardware evidence. Final preparation must record the package commit/hash, current gates and EN/PT visual review. The version is 2.1.0; this document does not declare publication. The 1.0 records and the “Receiver v2” name describe other release cycles; they are not product-version 2.0 acceptance.
 
 1.x data does not migrate: 2.0 mappings/presets/projects use `surface-v2` and schema 2. This separation does not guarantee take preservation in an existing Set.
 

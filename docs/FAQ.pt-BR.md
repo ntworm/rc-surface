@@ -52,8 +52,8 @@ No RC Surface 2.0, gestos e áudio dividem um caminho em tempo real: o
 primeiro envio é imediato e os lotes seguintes saem com pelo menos 8 ms de
 intervalo. Os snapshots visuais do MAP não atrasam esses comandos. Smooth 0 não
 acrescenta rampa nenhuma ao mapeamento. Isso não é
-latência total medida; hosts antigos usam o caminho legado. O cliente foi feito
-para Wi-Fi local de baixa latência. A latência real depende da máquina, do
+latência total medida; hosts antigos usam o caminho legado. O cliente espera
+uma rede Wi-Fi local. A latência real depende da máquina, do
 celular, do navegador, do roteador e do congestionamento da rede. Use Wi-Fi de
 5 GHz para o resultado mais consistente, e teste exatamente a sua montagem
 antes do show.
@@ -118,7 +118,7 @@ selecione a ação correspondente à fonte:
   avançar uma lista de clips ou parar uma track via AbletonOSC, com regras
   opcionais *After it starts* e edição da quantização global do Set.
 
-O Follow Detected Note (seguir a nota detectada) foi removido. Modos de
+O Follow Detected Note (seguir a nota detectada) não está disponível. Modos de
 mapeamento não suportados são descartados ao carregar; os vínculos válidos, incluindo Trigger Note fixo, ficam.
 
 Use o Receiver v2 (**SDK / LOCAL MAX — NO UDP**) e troque instâncias antigas
@@ -137,13 +137,12 @@ de estado.
 
 ### O celular vibra quando eu bato num pad?
 
-Não. Vibração e resposta tátil foram removidas na v1.0.0, para a interface se
-comportar do mesmo jeito no iOS e no Android.
+Não. O celular não vibra ao tocar num pad.
 
 ### Dá para transformar o que eu toco em notas MIDI?
 
 Não. O **Follow Detected Note** (seguir a nota detectada) e a análise tonal dele
-foram removidos porque testes musicais repetidos não deram resultados confiáveis. **Trigger Note** fixo
+não estão disponíveis: testes musicais repetidos não deram resultados confiáveis. **Trigger Note** fixo
 continua; ele não estima a nota que você está tocando.
 
 ### O que posso mapear a partir do áudio?
@@ -231,8 +230,8 @@ está no [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md).
 
 Não. O código-fonte é público (source-available) sob a licença PolyForm
 Noncommercial 1.0.0, e não existe versão Pro nem recurso bloqueado. A página do
-Gumroad é **pague quanto quiser** (sugestão R$25, mínimo R$0). R$0 é o padrão,
-para o custo nunca ser barreira. Veja o [`FUNDING.md`](../FUNDING.md) para os
+Gumroad é **pague quanto quiser** (sugestão R$25, mínimo R$0). O preço padrão é
+R$0. Veja o [`FUNDING.md`](../FUNDING.md) para os
 detalhes. Confie apenas nos links publicados no README deste repositório e nas
 notas de release.
 

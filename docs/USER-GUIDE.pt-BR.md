@@ -12,7 +12,7 @@ montagem, passagem de som e apresentação. Leia uma vez antes de tocar um set.
 
 ### Controle em tempo real nesta versão
 
-O MAP não reduz mais a frequência do controle: XY, MIX e sensores usam um fluxo
+O MAP não reduz a frequência do controle: XY, MIX e sensores usam um fluxo
 separado, com primeiro envio imediato e tráfego seguinte agrupado com espaçamento
 mínimo de 8 ms. Esse é um limite de despacho, não uma promessa de latência total.
 Posições contínuas novas substituem as ainda não enviadas; pressões e solturas
@@ -106,7 +106,7 @@ header para `SYNC` e a duração passa a vir do andamento do Live, escolhida em
 | Controle | O que faz |
 | --- | --- |
 | Duração (subdivisão) | De um compasso até 1/16. A 120 BPM, `1 beat` dá 500 ms. |
-| Attack | Arraste o pico ao longo do envelope desenhado. A forma é o que você está ajustando, então é a forma que você arrasta. No celular, pressione e segure o pico por cerca de 0,6 s antes; rolar sobre o envelope curto nunca o altera. |
+| Attack | Arraste o pico ao longo do envelope desenhado. No celular, pressione e segure o pico por cerca de 0,6 s antes; rolar sobre o envelope curto nunca o altera. |
 
 Abaixo do desenho o painel escreve no que o ajuste atual realmente dá — a
 subdivisão, o andamento pelo qual ela é multiplicada, a fonte de clock por trás
@@ -154,10 +154,9 @@ fidelidade física medida no Live.
 
 ## 4. Pulso Square
 
-Square agora alterna entre **0 e a amplitude escolhida**: com 50% de amplitude,
-alterna 0%/50%, em vez dos 25%/75% da antiga Square centrada. Ela inclui swing
-e ratchet (1–4) do antigo Stutter, que deixa de existir como onda ou controle
-separado. O pulso não grava nem repete áudio; o efeito musical depende do destino
+Square alterna entre **0 e a amplitude escolhida**: com 50% de amplitude,
+alterna 0%/50%. Ela inclui swing e ratchet (1–4); não existe onda nem controle
+Stutter separado. O pulso não grava nem repete áudio; o efeito musical depende do destino
 mapeado. Qualquer T1–T8 pode usar Square.
 
 O indicador local acompanha o gate real, com uma régua fina de valor. É uma
@@ -239,7 +238,7 @@ calibração já concluída em outra aba. Recarregar a página restaura as três
   luz e continuidade das detecções reais da mão. Só ativa exposição/foco contínuos
   se a câmera oferecer suporte e confirmar a alteração. Caso contrário, informa
   que verificou a câmera sem alterar ajustes. Luz ruim ou mão ausente pedem nova
-  tentativa, não um sucesso fictício. Coordenadas, posição neutra da mão, gestos
+  tentativa. Coordenadas, posição neutra da mão, gestos
   aprendidos e confiança do MediaPipe nunca são modificados.
 
 A faixa compacta explica o que fazer e mostra o progresso. **CANCELAR** interrompe
@@ -587,7 +586,7 @@ do knob volta a 50%; o reset dos faders é descrito abaixo.
   partir do centro — o meio é o repouso dele, não meio curso.
 - Faixa de arrasto de 150 px.
 
-A aba MIX é onde a maioria das pessoas liga volume, pan, sends, EQ e macros do
+Na aba MIX você liga volume, pan, sends, EQ e macros do
 Live. Toque **MAP**, depois toque num knob ou fader, para fazer o bind direto
 pelo celular.
 
@@ -897,9 +896,8 @@ Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâne
 Abaixo de 512 amostras não há opção: 256 mandaria mais que as 120 mensagens por
 segundo que o caminho de controle aceita.
 
-SENS e RELEASE são compartilhados por Transiente, Kick e Snare de propósito —
-é a resposta de um instrumento só, e uma versão por detector de cada knob
-viraria uma parede de controles numa superfície que se toca com a mão.
+SENS e RELEASE são compartilhados por Transiente, Kick e Snare: definem uma
+resposta para os três detectores, e não há cópia desses knobs por detector.
 
 ### Nível de ataque
 

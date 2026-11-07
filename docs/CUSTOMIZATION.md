@@ -1,6 +1,6 @@
 # Customization Guide
 
-This guide explains where to change RC Surface without duplicating old code.
+This guide explains where to change RC Surface.
 It is written for maintainers and contributors.
 
 Read first:
@@ -169,7 +169,7 @@ Editor fields currently exposed on mobile:
 - `takeoverMode`: `scale` (default), `pickup`, or advanced `jump`
 - `neutralPolicy` and `neutralValue` for signal-loss behavior
 
-Unsupported/retired mapping modes are discarded on load and rejected on creation.
+Mapping modes that are not supported are discarded on load and rejected on creation.
 
 The curve canvas is a local visual preview of the mapping response. If
 the backend curve implementation changes, update both the backend tests
@@ -224,7 +224,7 @@ low-confidence targets remain preserved but disconnected.
 
 ## Vision
 
-Vision is single-hand by design.
+Vision supports one hand.
 
 Files:
 
@@ -258,7 +258,7 @@ Runtime vision diagnostics:
 
 Public vision controls: `x/y/z`, `palm`, `face`, the four opt-in detectors, `rotateVal`, Pinch Clutch `pinch_x/y/z` and `sensor.vision.gesture.1` through `.15`. PALM is apparent size; FACE is palm/back orientation, normalized from −1–1 to 0–1 on the wire. `active`, fingers and RGB stay outside the picker. Missing/nonfinite values must emit `lost:true`, never a new neutral reading. Reuse Safe loss and the existing parameter/note/clip mapper. Capture-consistency warnings are advisory and do not alter recognition.
 
-Do not reintroduce two-hand names from old plans unless the user asks for a new migration.
+Use only single-hand control names unless the user asks for a new migration.
 
 ## Audio
 
@@ -282,16 +282,16 @@ Files:
 
 Transient measures a new attack; Kick and Snare weight it by low-band and
 upper-band spectral energy. They are heuristics, not instrument classification.
-Brightness preserves the logarithmic power centroid (100–12000 Hz); new
+Brightness preserves the logarithmic power centroid (100–12000 Hz);
 Centroid uses full-range magnitude weights. They are related, not duplicates
-with identical scaling. New spectral definitions/units are in the
+with identical scaling. Spectral definitions and units are in the
 [User Guide](./USER-GUIDE.md#built-in-audio-detectors).
 Timbre uses a 2N Hann window at hop N; attacks retain rectangular N. The
 compatibility AnalyserNode uses Blackman (mean-square .3046), with band energy
 corrected accordingly. No per-descriptor queue, automatic gain or lookahead.
 The legacy `controls` packet accepts complete legacy4/current12 descriptor batches.
 Negotiated `control_frame` shares one bounded clock across controls and audio;
-`app.js` publishes the descriptor set atomically into that stream. New snapshots
+`app.js` publishes the descriptor set atomically into that stream. Snapshots
 set `controlsRealtime:true` and never actuate Live. Keep the legacy reader for
 mixed versions; negotiate with `hello.controlStreamVersion=1` before switching.
 Extend capture zero/reset, catalog, bounds and mapping dispatch together.
@@ -306,9 +306,9 @@ microphone-to-Live latency separately; a DSP window is not an end-to-end result.
 ### Amplitude primitives
 
 `audio-analysis-controls.js` retains only `HystereticGate`, `OnsetGate`
-and `VelocityWindow` for the existing amplitude mapping sources. No tonal
-analysis, note-hold, key estimator or audio BPM estimator remains.
-Amplitude defaults no longer read the retired browser preferences.
+and `VelocityWindow` for the existing amplitude mapping sources. There is no tonal
+analysis, note-hold, key estimator or audio BPM estimator.
+Amplitude defaults are not read from browser preferences.
 Detector settings and musical timing live in the dedicated descriptor modules.
 
 ### Listening to a track

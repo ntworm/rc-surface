@@ -56,7 +56,7 @@ the new QR after restarting; old pages become read-only.
 
 Private keys are never bundled in `.ablx` packages.
 
-## Bundled Max devices — v2 migration
+## Bundled Max devices
 
 Receiver v2 accepts Trigger Note commands through its versioned integer SDK
 parameter on the selected track. The extension verifies the parameter contract,
@@ -67,20 +67,20 @@ is OFF at Receiver load; enable it only on intended destinations. Multiple
 enabled Receivers intentionally hear that local bus. Both devices are plain
 Max patchers without networking objects, external scripts or compiled externals.
 
-This removes the unauthenticated MIDI network listener; it does not authenticate
+Receiver v2 has no unauthenticated MIDI network listener; it does not authenticate
 other local Max patches. Only load trusted devices. Phone commands still require
 the existing WSS role/token checks. No new firewall rule is needed for v2 MIDI.
 
 Replace **both** devices and all old Receiver instances in saved Sets; merely
 upgrading the extension or copying a new file into the library does not update
-already-loaded devices. Back up the Set first. The new panel reads
+already-loaded devices. Back up the Set first. The panel reads
 **RC MIDI RECEIVER v2 / SDK / LOCAL MAX — NO UDP**. Do not remove an existing
 firewall rule until every legacy Receiver is unloaded. A release check must
 confirm the actual loaded version, no UDP 9000 listener attributable to it,
 two-track note routing and OFF/cleanup. Source/patcher tests do not prove these
 conditions in Live or establish latency. Device v2 field acceptance is pending.
 
-Receiver v2.2 keeps v2.1's API-visible command parameter (automatable/stored)
+Receiver v2.2 exposes the API-visible command parameter (automatable/stored)
 behind an ordinary non-parameter **SDK Notes** gate. The gate is closed at
 construction, so a restored command is dropped; after Live's post-initialization
 notification the device arms itself, which first clears the previous value
