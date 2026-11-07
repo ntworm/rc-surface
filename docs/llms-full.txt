@@ -31,15 +31,14 @@ The host runs inside Ableton Live on the official Extensions SDK; the phone clie
 
 ## New in 2.1.0
 
-- **REC in three views.** Record, Arrangement and Clip share one capture bar. Tracks appear as native rows with **ARM / SOLO / MUTE** and a volume fader; groups open on the phone without changing the Set. Pick a range between two markers, follow a focused take, and find the destinations and **CLICK** in the REC header.
-- **The Network tab.** The QR uses the address that reaches your network, judged per address: the route out first, then a gateway on the same subnet, with hotspots, virtual adapters and VPNs last. The Network tab in the panel says why, lets you pin an address with **USE** and has **FIND SETUP** for when the phone does not open. Moving to another network issues a certificate on the running server; nothing needs a restart.
-- **CFG is explicit.** CFG opens only by tapping **CFG** at the top; holding a pad or any control no longer opens it.
-- **Network details in one place.** The network details left the Main page of the Live panel and live only in the **Network** tab.
-- **One certificate to install.** A local certificate authority of this computer signs the server certificate for the private addresses of the network. The **Certificate** section of the **Network** tab links the install page at the HTTPS port + 1, where the phone and the computer install it once.
-- **AUT warns once.** AUT warnings show only in the yellow toast, never twice.
-- **Mac fixes.** The AbletonOSC link starts with the server instead of at activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it, which removes most of the log traffic. A phone tab in the background keeps its connection, running modulators come back after a reconnect, and the camera pauses and says so while the page is hidden.
-- **Reliability.** A resumed phone keeps its client card, a malformed path gets a 400 instead of a server error, and the Network selector holds a pending choice instead of jumping back.
-- **Compatibility.** Mappings, presets and projects from 2.0 keep working: install 2.1.0 and reload the browser. A network choice made in the 2.0.1 preview lived in the browser and is not carried over.
+- **REC.** Three views (Record, Arrangement, Clip) share one capture bar. Tracks are listed with **ARM / SOLO / MUTE** and a volume fader; groups expand on the phone without changing the Set. A take range can be set between two markers; the REC header shows the destinations and **CLICK**.
+- **Network tab.** The QR code uses the address that reaches the network, ranked per address: default route first, then a gateway on the same subnet; hotspots, virtual adapters and VPNs last. The tab shows the reason for the choice, **USE** pins an address and **FIND SETUP** lists each address with its own QR code. A network change issues a new certificate without restarting the server. Network details were removed from the Main tab of the panel.
+- **Local certificate.** A certificate authority of this computer signs the server certificate for localhost and private network addresses. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1; once the certificate is installed on a device, the browser no longer warns. A public address selected with **USE** keeps a self-signed certificate. The authority is a trust root valid for 10 years; remove it from a device to revoke trust.
+- **CFG.** The CFG panel opens only from the **CFG** button; holding a pad or another control no longer opens it.
+- **AUT.** AUT warnings appear once, in the yellow toast.
+- **macOS.** The AbletonOSC link starts with the server, not at activation. Live's playhead listener runs only while a **Launch Clip** mapping needs it. A background phone tab keeps its connection, running modulators resume after a reconnect, and the camera pauses while the page is hidden.
+- **Fixes.** A resumed phone keeps its client card; a malformed path returns 400; the Network selector keeps a pending choice.
+- **Compatibility.** 2.0 mappings, presets and projects work unchanged; reload the browser after installing. A network choice made in the 2.0.1 preview was stored in the browser and is not migrated. Recording and playback have not yet been verified in Live on macOS.
 
 See the [2.1.0 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) for the files and the full notes.
 

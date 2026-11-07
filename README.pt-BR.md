@@ -15,17 +15,14 @@ O host roda dentro do Ableton Live sobre o SDK oficial de Extensions; o cliente 
 
 ## Novo na 2.1.0
 
-- **REC em três vistas.** Gravar, Arrangement e Clip dividem uma barra de captura. As tracks aparecem como linhas nativas com **ARM / SOLO / MUTE** e fader de volume; os grupos abrem no celular sem mudar o Set. Escolha um trecho entre dois markers, acompanhe um take em foco, e encontre os destinos e o **CLICK** no cabeçalho do REC.
-- **A aba Rede.** O QR usa o endereço que alcança a sua rede, avaliado endereço por endereço: primeiro a saída, depois um gateway na mesma sub-rede, e por último hotspots, adaptadores virtuais e VPNs. A aba Rede do painel mostra o motivo, deixa fixar um endereço com **USAR** e tem **ACHAR CONFIGURAÇÃO** para quando o celular não abre. Ao trocar de rede, o servidor em execução emite um certificado; não é preciso reiniciar.
-- **CFG explícito.** O CFG abre só tocando em **CFG** no topo; segurar um pad ou qualquer controle não abre mais.
-- **Detalhes de rede em um lugar só.** Os detalhes de rede saíram da página Main do painel do Live e existem só na aba **Rede**.
-- **Um certificado só para instalar.** Uma autoridade certificadora local deste computador assina o certificado do servidor para os endereços privados da rede. A seção **Certificado** da aba **Rede** indica a página de instalação na porta HTTPS + 1, onde o celular e o computador instalam uma vez.
-- **AUT avisa uma vez só.** Os avisos de AUT aparecem só no toast amarelo, nunca duas vezes.
-- **Correções no Mac.** O link do AbletonOSC liga junto com o servidor, não na ativação. O listener da posição do Live só roda enquanto um mapeamento de **Launch Clip** precisa dele, o que tira a maior parte do tráfego do log. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar, e a câmera pausa e avisa com a página escondida.
-- **Confiabilidade.** O celular que retoma a sessão mantém a sua ficha, um caminho malformado recebe 400 em vez de erro do servidor, e o seletor de rede segura uma escolha pendente em vez de voltar atrás.
-- **Compatibilidade.** Mapeamentos, presets e projetos da 2.0 continuam funcionando: instale a 2.1.0 e recarregue o navegador. A escolha de rede feita na prévia 2.0.1 ficava no navegador e não é aproveitada.
-
-Veja a [versão 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) para os arquivos e as notas completas.
+- **REC.** Três vistas (Gravar, Arrangement, Clip) dividem uma barra de captura. As tracks aparecem com **ARM / SOLO / MUTE** e fader de volume; os grupos abrem no celular sem mudar o Set. O trecho do take pode ser definido entre dois markers; o cabeçalho do REC mostra os destinos e o **CLICK**.
+- **Aba Rede.** O QR usa o endereço que alcança a rede, avaliado endereço por endereço: primeiro a rota padrão, depois um gateway na mesma sub-rede; hotspots, adaptadores virtuais e VPNs por último. A aba mostra o motivo da escolha, **USAR** fixa um endereço e **ACHAR CONFIGURAÇÃO** lista cada endereço com o próprio QR. Uma troca de rede emite um certificado novo sem reiniciar o servidor. Os detalhes de rede saíram da aba Main do painel.
+- **Certificado local.** Uma autoridade certificadora deste computador assina o certificado do servidor para localhost e endereços privados da rede. A seção **Certificado** da aba **Rede** leva a uma página de instalação na porta HTTPS + 1; com o certificado instalado num aparelho, o navegador deixa de avisar. Um endereço público escolhido com **USAR** mantém um certificado autoassinado. A autoridade é uma raiz de confiança válida por 10 anos; remova-a do aparelho para revogar a confiança.
+- **CFG.** O painel CFG abre só pelo botão **CFG**; segurar um pad ou outro controle não abre mais o painel.
+- **AUT.** Os avisos de AUT aparecem uma vez, no toast amarelo.
+- **macOS.** O link do AbletonOSC liga junto com o servidor, não na ativação. O listener da posição do Live só roda enquanto um mapeamento de **Launch Clip** precisa dele. Uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
+- **Correções.** O celular que retoma a sessão mantém a sua ficha; um caminho malformado recebe 400; o seletor de rede mantém uma escolha pendente.
+- **Compatibilidade.** Mapeamentos, presets e projetos da 2.0 funcionam sem mudança; recarregue o navegador depois de instalar. A escolha de rede feita na prévia 2.0.1 ficava no navegador e não é migrada. Gravar e reproduzir ainda não foram verificados no Live no macOS.
 
 ## Visão geral
 
