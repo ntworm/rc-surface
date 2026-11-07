@@ -1,50 +1,66 @@
 # RC Surface
 
-> RC Surface is a free, source-available extension for Ableton Live 12.4.5+ Suite that turns a phone's web browser into a wireless controller for Live. The computer serves the controller over the local network; the phone scans a QR code and opens it in Safari (iOS 15.4+) or a Chromium browser (Android). Nothing is installed on the phone and nothing goes through the cloud.
+> RC Surface is an extension for Ableton Live that serves a control surface in the browser of a phone. The computer runs the server on the local network over HTTPS/WSS, and the phone scans a QR code and opens the page. Nothing is installed on the phone, and nothing goes through the cloud.
 
-What it controls and how:
+## Overview
 
-- Controls: 12 performance pads with modes A/B/C/D (momentary, hold, toggle, burst), two independent Static/Physics XY panels, 8 knobs, 8 faders, 8 toggles T1-T8 with Square pulses, 8 snapshots with timed and vector (XY) morph.
-- Sensors as mapping sources: motion and orientation, the phone microphone or a selected audio input (RMS, envelope, gate, attack and twelve audio descriptors such as transient, kick, snare, brightness and K-weighted low/mid/high loudness), and single-hand camera tracking with MediaPipe Hands (bundled, works offline).
-- Mapping: from the phone (MAP) or the panel inside Live, any control can be bound to a Live parameter (tracks, returns, main, devices), to a fixed MIDI trigger note through the bundled Max for Live receiver `RC-Midi-Receiver.amxd`, or to Launch Clip (launch Session clip, advance clip list, or stop track via AbletonOSC, with optional After it starts rules). Curves, ranges, soft takeover and signal-loss behaviour are per mapping.
-- Seven pages: PERF/MIX/SNP/SNS/AUD/VID/REC. MAP is an overlay. AUT is the PERF header mode for XY loops: SYNC 1–5 bars or FREE 1–30 seconds in steps of one second.
-- REC verifies the armed input set through ARM/SOLO/MUTE cards (with live volume knobs and inline double-click rename), a bar/beat marker timeline with Zoom, START/END (`1–10` passes or `∞`, or FREE until STOP) and pre-roll OFF/1/2/4; Punch In is temporary and owned cleanup never replays after loss. AbletonOSC is required for REC and Live-clock SYNC.
-- REC also selects CLIP: an explicitly empty Session scene for all armed inputs, native 1/2/4/8/16-bar length, Global/None/1bar/1beat quantization, and BACK TO ARR when idle. CLIP STOP preserves ARM/global transport and stops only still-owned targets, with observed pending/unknown states and no reconnect replay. No existing-clip overdub or take/comp browser.
-- CFG is explicit: holding a pad or any control no longer opens the CFG panel. CFG opens only by tapping CFG at the top, the same way AUT is tapped to write automation in the XY pads.
-- The Live panel keeps the network details in its Network tab; they left the Main page.
-- A local certificate authority of this computer signs the server certificate for localhost and the private addresses of the network, and hands it over on a plain page at the HTTPS port + 1, with a QR in the panel's Certificate section, so the phone and the computer install it once and the browser stops warning. A public address pinned with USE keeps a self-signed certificate.
-- AUT warnings show only in the yellow toast, never twice.
-- VID supports fifteen learned-pose cards with 3-6 examples each and advisory RETAKE/KEEP. PALM/FACE are real normalized MAP inputs; FACE is palm/back orientation, not facial tracking. Missing/invalid values follow Safe loss.
-- 2.0 uses isolated surface-v2 storage and schema 2, without importing/deleting 1.x data. Reported use is not an exhaustive hardware or latency certification.
-- Built on the Ableton Extensions SDK (host side, TypeScript) and plain browser JavaScript (phone side). HTTPS/WSS with a per-install certificate authority of this computer, signed for the private addresses of the network, and rotating session tokens; meant for a trusted studio or home network.
-- Licence: PolyForm Noncommercial 1.0.0 (free for noncommercial use; not open source in the OSI sense). Independent project by Gabriel Worm, not affiliated with Ableton AG.
-- Not supported: Ableton Live 11 or earlier, other DAWs, more than one controlling phone at a time, Linux hosts.
+- **Controls.** 12 performance pads with modes A/B/C/D (momentary, hold, toggle, burst), two independent Static/Physics XY panels, 8 knobs, 8 faders, 8 toggles **T1–T8** with **Square** pulses and 8 snapshots with timed and vector (XY) morph.
+- **Sensors.** Motion and orientation, the phone microphone or a selected audio input (RMS, envelope, gate, attack and twelve audio descriptors such as transient, kick, snare, brightness and K-weighted low/mid/high loudness), and single-hand camera tracking with MediaPipe Hands (bundled, works offline).
+- **Mapping.** From the phone (**MAP**) or the panel inside Live, any control can be bound to a Live parameter (tracks, returns, main, devices), to a fixed MIDI trigger note on a MIDI track through the bundled Max for Live receiver `RC-Midi-Receiver.amxd`, or to **Launch Clip** (launch Session clip, advance clip list, or stop track via AbletonOSC, with optional **After it starts** rules). Curves, ranges, soft takeover and signal-loss behaviour are set per mapping.
+- **Pages.** The phone has seven pages: **PERF**, **MIX**, **SNP**, **SNS**, **AUD**, **VID** and **REC**. **MAP** is an overlay. **AUT** is the **PERF** header mode for XY loops: **SYNC** 1–5 bars or **FREE** 1–30 seconds in steps of one second.
+- **Recording.** **REC** verifies the armed input set through **ARM / SOLO / MUTE** cards (with live volume knobs and inline double-click rename), a bar/beat marker timeline with **ZOOM**, **START**/**END** (`1–10` passes or `∞`, or **FREE** until **STOP**) and pre-roll OFF/1/2/4. **Punch In** is temporary, and owned cleanup never replays after loss.
+- **Recording to a clip.** **REC** also selects **CLIP**: an explicitly empty Session scene for all armed inputs, native 1/2/4/8/16-bar length, Global/None/1bar/1beat quantization, and **BACK TO ARR** when idle. **CLIP STOP** preserves **ARM** and the global transport, and stops only still-owned targets, with observed pending/unknown states and no reconnect replay. There is no existing-clip overdub and no take/comp browser.
+- **Configuration.** **CFG** opens only by tapping **CFG** at the top of the phone; holding a pad or another control does not open it.
+- **Automation.** **AUT** warnings appear once, in the yellow toast.
+- **Vision.** **VID** supports fifteen learned-pose cards with 3-6 examples each and advisory **RETAKE**/**KEEP**. **PALM** and **FACE** are normalized **MAP** inputs. **FACE** reads the palm and back orientation of the hand, not facial tracking. Missing or invalid values follow **Safe loss**.
+- **Panel.** The **Main** tab of the Live panel shows the QR code and the connected clients. The addresses and the certificate are in the **Network** tab.
+- **Certificates.** A local certificate authority of this computer signs the server certificate for localhost and for the private addresses of the network. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1, so the phone and the computer install it once and the browser stops warning. An address pinned with **USE** keeps a self-signed certificate.
+- **Storage.** Projects, presets and mappings live in `storageDirectory/surface-v2/` with schema 2, and data from 1.x is neither imported nor deleted.
+- **Architecture.** The host side runs on the Ableton Extensions SDK in TypeScript, and the phone side in plain browser JavaScript. The transport is HTTPS/WSS with rotating session tokens, meant for a trusted studio or home network.
 
-Interface and documentation exist in English and Brazilian Portuguese.
+## Requirements
 
-## Docs
+- Ableton Live 12.4.5+ Suite (Beta) with the official Extensions SDK.
+- A phone on the same local network: iOS 15.4+ Safari or Chromium on Android, held in landscape.
+- **AbletonOSC** (UDP `11000`/`11001`) is optional; **REC**, **Launch Clip**, **TRN**, **AUT** in **SYNC** and **Deep Sync** need it.
+- Reported use is not an exhaustive hardware or latency certification.
 
-- [Landing page](https://ntworm.github.io/rc-surface/): overview, surface map, control inventory, install steps and troubleshooting
-- [README](https://raw.githubusercontent.com/ntworm/rc-surface/main/README.md): feature summary, quick start, architecture and development commands
-- [Install guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/INSTALL.md): installing the .ablx, connecting the phone, certificates, AbletonOSC, the Max devices and troubleshooting
-- [User guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/USER-GUIDE.md): every page of the phone controller, pad modes, T1-T8/Square, MAP, AUT, CFG, REC, snapshots, sensors, audio descriptors and vision
-- [FAQ](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/FAQ.md): compatibility, latency, privacy, pricing and common questions
-- [Security](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/SECURITY.md): threat model, tokens, certificates and network exposure
-- [Privacy](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/PRIVACY.md): what data exists and where it stays
+## Unsupported versions and platforms
+
+- Ableton Live 11 or earlier.
+- Other DAWs.
+- More than one controlling phone at a time.
+- Linux hosts.
+
+## Licence
+
+PolyForm Noncommercial 1.0.0, free for noncommercial use and not open source in the OSI sense. RC Surface is an independent project by Gabriel Worm, not affiliated with Ableton AG.
+
+## Documentation
+
+- [Landing page](https://ntworm.github.io/rc-surface/): the surface map, the control inventory, the install steps and the troubleshooting.
+- [README](https://raw.githubusercontent.com/ntworm/rc-surface/main/README.md): the features, the quick start, the architecture and the development commands.
+- [Install guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/INSTALL.md): installing the `.ablx`, connecting the phone, the certificates, AbletonOSC, the Max devices and the troubleshooting.
+- [User guide](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/USER-GUIDE.md): every page of the phone controller, the pad modes, **T1–T8**/**Square**, **MAP**, **AUT**, **CFG**, **REC**, the snapshots, the sensors, the audio descriptors and the vision.
+- [FAQ](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/FAQ.md): compatibility, latency, privacy, pricing and the common questions.
+- [Security](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/SECURITY.md): the threat model, the tokens, the certificates and the network exposure.
+- [Privacy](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/PRIVACY.md): what data exists and where it stays.
 
 ## Português (Brasil)
 
-- [Página em português](https://ntworm.github.io/rc-surface/pt-br.html): visão geral, mapa da superfície, controles, instalação e solução de problemas
+The phone interface and these documents are in Brazilian Portuguese.
+
+- [Página em português](https://ntworm.github.io/rc-surface/pt-br.html): a visão geral, o mapa da superfície, os controles, a instalação e a solução de problemas.
 - [README em português](https://raw.githubusercontent.com/ntworm/rc-surface/main/README.pt-BR.md)
 - [Guia de instalação](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/INSTALL.pt-BR.md)
 - [Guia do usuário](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/USER-GUIDE.pt-BR.md)
 - [Perguntas frequentes](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/FAQ.pt-BR.md)
 
-## Optional
+## Reference
 
 - [All English docs in one file](https://ntworm.github.io/rc-surface/llms-full.txt)
-- [Customization and development](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CUSTOMIZATION.md): source map, control names and extension points
-- [Contracts](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CONTRACTS.md): protocol limits and host/phone parity rules
-- [Compatibility](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/COMPATIBILITY.md): tested Live, browser and Node versions
+- [Customization and development](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CUSTOMIZATION.md): the source map, the control names and the extension points.
+- [Contracts](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/CONTRACTS.md): the protocol limits and the host/phone parity rules.
+- [Compatibility](https://raw.githubusercontent.com/ntworm/rc-surface/main/docs/COMPATIBILITY.md): the tested Live, browser and Node versions.
 - [Changelog](https://raw.githubusercontent.com/ntworm/rc-surface/main/CHANGELOG.md)
-- [Releases](https://github.com/ntworm/rc-surface/releases): the installable .ablx packages
+- [Releases](https://github.com/ntworm/rc-surface/releases): the installable `.ablx` packages.
