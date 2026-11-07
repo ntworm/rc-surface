@@ -95,7 +95,7 @@ test('the page says where to put the certificate, in the language of the phone',
       );
       assert.match(pt, /Autoridades de Certificação Raiz Confiáveis/, 'the Windows steps');
       assert.match(pt, /Sempre Confiar/, 'the Mac steps');
-      assert.match(pt, /só vale para localhost e endereços de rede local/, 'the limit');
+      assert.match(pt, /só vale para localhost e endereços privados da rede/, 'the limit');
 
       const english = await request(port, '/ca/', {
         headers: { 'accept-language': 'en-US,en;q=0.9', host: 'rc-surface.local' },
