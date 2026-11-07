@@ -297,8 +297,8 @@
       'pt-BR': 'Abra o painel',
     },
     'lp.install.010': {
-      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken — the link drawn in <a href=\"#chain\">2.0</a>.",
-      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada — o elo desenhado em <a href=\"#chain\">2.0</a>.",
+      en: "In Live, open <span class=\"path\">Extensions → RC Surface → Show panel</span>. It shows the QR code, the connection status and the real URL if a port is taken; the link drawn in <a href=\"#chain\">2.0</a>.",
+      'pt-BR': "No Live, abra <span class=\"path\">Extensions → RC Surface → Show panel</span>. Ele mostra o QR code, o status da conexão e a URL real se alguma porta estiver ocupada; o elo desenhado em <a href=\"#chain\">2.0</a>.",
     },
     'lp.install.011': {
       en: 'Connect the phone',
@@ -313,8 +313,8 @@
       'pt-BR': 'Ative os sensores',
     },
     'lp.install.016': {
-      en: "Enable <b data-i18n=\"lp.map.076\">Motion</b>, <b>Audio</b> or <b>Vision</b> as needed. Raw camera and microphone never leave the phone — only numeric values do.",
-      'pt-BR': "Ative <b data-i18n=\"lp.map.076\">Movimento</b>, <b>Áudio</b> ou <b>Visão</b> conforme precisar. A imagem da câmera e o som do microfone nunca saem do celular — só valores numéricos.",
+      en: "Enable <b data-i18n=\"lp.map.076\">Motion</b>, <b>Audio</b> or <b>Vision</b> as needed. Raw camera and microphone never leave the phone. Only numeric values do.",
+      'pt-BR': "Ative <b data-i18n=\"lp.map.076\">Movimento</b>, <b>Áudio</b> ou <b>Visão</b> conforme precisar. A imagem da câmera e o som do microfone nunca saem do celular. Só valores numéricos saem.",
     },
     'lp.install.017': {
       en: 'Map a control to Live',
@@ -329,8 +329,8 @@
       'pt-BR': 'Opcional: Deep Sync',
     },
     'lp.install.020': {
-      en: "Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock — see <a href=\"#clock\">2.1</a>.",
-      'pt-BR': "Instale o AbletonOSC como Control Surface com UDP <code>11000</code> e <code>11001</code> livres, e segure <code>SYNC</code> para escolher o clock — veja <a href=\"#clock\">2.1</a>.",
+      en: "Install AbletonOSC as a Control Surface with UDP <code>11000</code> and <code>11001</code> free, then long-press <code>SYNC</code> to pick the clock; see <a href=\"#clock\">2.1</a>.",
+      'pt-BR': "Instale o AbletonOSC como Control Surface com UDP <code>11000</code> e <code>11001</code> livres, e segure <code>SYNC</code> para escolher o clock; veja <a href=\"#clock\">2.1</a>.",
     },
     'lp.trouble.001': {
       en: 'Troubleshooting',
@@ -458,8 +458,8 @@
       'pt-BR': 'Fig. 1',
     },
     'lp.map.005': {
-      en: "PERF — the layout as built",
-      'pt-BR': "PERF — o layout real",
+      en: "PERF: the layout as built",
+      'pt-BR': "PERF: o layout real",
     },
     'lp.map.006': {
       en: 'Scale none',
@@ -598,8 +598,8 @@
       'pt-BR': 'Fig. 2',
     },
     'lp.map.030': {
-      en: "MIX — eight knobs and eight faders",
-      'pt-BR': "MIX — oito knobs e oito faders",
+      en: "MIX: eight knobs and eight faders",
+      'pt-BR': "MIX: oito knobs e oito faders",
     },
     'lp.map.039': {
       en: "<code>knob-1..8</code>, four across by two down. Relative vertical drag.",
@@ -614,8 +614,8 @@
       'pt-BR': 'Fig. 3',
     },
     'lp.map.048': {
-      en: "SNP — eight stored states and vector morph",
-      'pt-BR': "SNP — oito estados guardados e vector morph",
+      en: "SNP: eight stored states and vector morph",
+      'pt-BR': "SNP: oito estados guardados e vector morph",
     },
     'lp.map.056': {
       en: 'Morph slots',
@@ -646,8 +646,8 @@
       'pt-BR': 'Fig. 4',
     },
     'lp.map.068': {
-      en: "SNS — motion and orientation axes",
-      'pt-BR': "SNS — eixos de movimento e orientação",
+      en: "SNS: motion and orientation axes",
+      'pt-BR': "SNS: eixos de movimento e orientação",
     },
     'lp.map.076': {
       en: 'Motion',
@@ -686,8 +686,8 @@
       'pt-BR': 'Fig. 5',
     },
     'lp.map.090': {
-      en: "AUD — audio input and twelve descriptors",
-      'pt-BR': "AUD — entrada de áudio e doze descritores",
+      en: "AUD: audio input and twelve descriptors",
+      'pt-BR': "AUD: entrada de áudio e doze descritores",
     },
     'lp.map.098': {
       en: 'Audio input',
@@ -746,8 +746,8 @@
       'pt-BR': 'Fig. 6',
     },
     'lp.map.114': {
-      en: "VID — camera, learned poses, detectors",
-      'pt-BR': "VID — câmera, poses aprendidas, detectores",
+      en: "VID: camera, learned poses, detectors",
+      'pt-BR': "VID: câmera, poses aprendidas, detectores",
     },
     'lp.map.122': {
       en: 'Camera',
@@ -794,8 +794,8 @@
       'pt-BR': "Fig. 8",
     },
     'lp.map.138': {
-      en: "MAP — armed strip, action mode, then target picker",
-      'pt-BR': "MAP — barra armada, modo de ação e seletor de destino",
+      en: "MAP: armed strip, action mode, then target picker",
+      'pt-BR': "MAP: barra armada, modo de ação e seletor de destino",
     },
     'lp.map.144': {
       en: 'Underlying page',
@@ -859,8 +859,8 @@
       'pt-BR': "Controles",
     },
     'lp.controls.003': {
-      en: 'Control inventory <span class="tail">— 18 rows</span>',
-      'pt-BR': 'Inventário de controles <span class="tail">— 18 linhas</span>',
+      en: 'Control inventory <span class="tail">18 rows</span>',
+      'pt-BR': 'Inventário de controles <span class="tail">18 linhas</span>',
     },
     'lp.controls.004': {
       en: 'local',
@@ -1003,8 +1003,8 @@
       'pt-BR': "As linhas <b>SDK</b> mapeiam números para parâmetros do Live. MIDI precisa do Receiver opcional. Controles locais nunca saem do navegador.",
     },
     'lp.controls.053': {
-      en: "The header <span class=\"tail\">— on every page</span>",
-      'pt-BR': "O header <span class=\"tail\">— em todas as páginas</span>",
+      en: "The header <span class=\"tail\">on every page</span>",
+      'pt-BR': "O header <span class=\"tail\">em todas as páginas</span>",
     },
     'lp.controls.057': {
       en: "Full-screen transport overlay: locator list, search, and the SYNCED / SDK / FREE readout.",
@@ -1031,8 +1031,8 @@
       'pt-BR': "Trava a superfície na página atual.",
     },
     'lp.controls.066': {
-      en: "What each one does <span class=\"tail\">— from touch to Live</span>",
-      'pt-BR': "O que cada um faz <span class=\"tail\">— do toque até o Live</span>",
+      en: "What each one does <span class=\"tail\">from touch to Live</span>",
+      'pt-BR': "O que cada um faz <span class=\"tail\">do toque até o Live</span>",
     },
     'lp.controls.068': {
       en: 'Performance',
@@ -1063,8 +1063,8 @@
       'pt-BR': 'Pads, LFOs, squares',
     },
     'lp.controls.075': {
-      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst — set per pad in CFG. Each of the eight LFO slots can use Square; choose its own clock in CFG or follow the global SYNC/FREE setting.",
-      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst — ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Square; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.",
+      en: "<code>A</code> returns to zero, <code>B</code> keeps what you leave, <code>C</code> latches, <code>D</code> fires one burst, set per pad in CFG. Each of the eight LFO slots can use Square; choose its own clock in CFG or follow the global SYNC/FREE setting.",
+      'pt-BR': "<code>A</code> volta a zero, <code>B</code> mantém o que você deixa, <code>C</code> trava, <code>D</code> dispara um burst, ajustável por pad no CFG. Cada um dos oito slots LFO pode usar Square; escolha seu clock no CFG ou siga o ajuste global SYNC/FREE.",
     },
     'lp.controls.076': {
       en: 'VALUE ↑',
@@ -1127,8 +1127,8 @@
       'pt-BR': "Cada XY escolhe Estático ou Física, com atrito, ricochete e velocidade próprios. Knobs e faders seguem o dedo a partir do valor atual e nunca pulam para o ponto tocado.",
     },
     'lp.controls.092': {
-      en: 'The touch point is never the value — the control starts from its current value',
-      'pt-BR': 'O ponto do toque nunca é o valor — o controle parte do valor atual',
+      en: 'The touch point is never the value. The control starts from its current value',
+      'pt-BR': 'O ponto do toque nunca é o valor. O controle parte do valor atual',
     },
     'lp.controls.093': {
       en: 'value',
@@ -1259,8 +1259,8 @@
       'pt-BR': 'o valor fica onde estava',
     },
     'lp.controls.127': {
-      en: 'PINCH AGAIN — THE CLUTCH RESUMES FROM THE SAVED VALUE',
-      'pt-BR': 'REPITA A PINÇA — O CLUTCH RETOMA DO VALOR GUARDADO',
+      en: 'PINCH AGAIN: THE CLUTCH RESUMES FROM THE SAVED VALUE',
+      'pt-BR': 'REPITA A PINÇA: O CLUTCH RETOMA DO VALOR GUARDADO',
     },
     'lp.controls.128': {
       en: 'CONTACT = gap between landmark 4 and landmark 8, divided by palm size',
@@ -1487,8 +1487,8 @@
       'pt-BR': "FILTRAR ALVOS...",
     },
     'lp.fig.100': {
-      en: "PLAN VIEW — NOT A SCREENSHOT — NOT TO SCALE",
-      'pt-BR': "PLANTA — NÃO É CAPTURA DE TELA — FORA DE ESCALA",
+      en: "PLAN VIEW: NOT A SCREENSHOT, NOT TO SCALE",
+      'pt-BR': "PLANTA: NÃO É CAPTURA DE TELA, FORA DE ESCALA",
     },
     'lp.fig.102': {
       en: "PERFORMANCE CONTROLS",
@@ -1639,8 +1639,8 @@
       'pt-BR': "MOVIMENTO DEFINE UMA REFERÊNCIA · ÁUDIO MAPEIA O SOM PARA VALORES DE CONTROLE",
     },
     'lp.fig.140': {
-      en: "PINCH CLUTCH — YOU CAN RELEASE THE PINCH AND RESUME FROM THE SAVED VALUE",
-      'pt-BR': "PINCH CLUTCH — VOCÊ PODE SOLTAR A PINÇA E RETOMAR DO VALOR GUARDADO",
+      en: "PINCH CLUTCH: YOU CAN RELEASE THE PINCH AND RESUME FROM THE SAVED VALUE",
+      'pt-BR': "PINCH CLUTCH: VOCÊ PODE SOLTAR A PINÇA E RETOMAR DO VALOR GUARDADO",
     },
     'lp.fig.141': {
       en: "1 · ENGAGE",
@@ -1768,12 +1768,12 @@
       'pt-BR': "AUT seleciona XY1/XY2; os botões AUT separados abrem ajustes sem gravar. SYNC captura 1–5 compassos pelo clock atual do Live tocando; FREE captura 1–30 segundos em passos de um segundo. Reproduzir/Parar são explícitos; o toque assume o loop até soltar. Pontos salvos não retomam após reconectar. São dados de controle, não automação nativa do Arrangement.",
     },
     'lp.rec.title': {
-      en: "REC — Arrangement / CLIP",
-      'pt-BR': "REC — Arrangement / CLIP",
+      en: "REC: Arrangement / CLIP",
+      'pt-BR': "REC: Arrangement / CLIP",
     },
     'lp.rec.versionNotice': {
-      en: "This drawing is the 2.0.0 schematic: two views, round level dials and the STAGE button. The current REC page has three views — Record, Arrangement and Clip — on one shared capture bar, with a volume fader on each track row. The table below describes each part; the User Guide describes it in full.",
-      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A página REC atual tem três visões — Gravar, Arrangement e Clip — sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve cada parte; o Guia de Uso descreve por completo.",
+      en: "This drawing is the 2.0.0 schematic: two views, round level dials and the STAGE button. The current REC page has three views (Record, Arrangement and Clip) on one shared capture bar, with a volume fader on each track row. The table below describes each part; the User Guide describes it in full.",
+      'pt-BR': "Este desenho é o esquema da 2.0.0: duas visões, mostradores redondos de nível e o botão STAGE. A página REC atual tem três visões (Gravar, Arrangement e Clip) sobre uma barra de captura compartilhada, com um fader de volume em cada linha de track. A tabela abaixo descreve cada parte; o Guia de Uso descreve por completo.",
     },
     'lp.rec.figure': {
       en: "Fig. 7",
@@ -1874,8 +1874,8 @@
       'pt-BR': "Fig. 9",
     },
     'lp.map.trnTitle': {
-      en: "TRN — Transport Lite overlay",
-      'pt-BR': "TRN — overlay Transport Lite",
+      en: "TRN: Transport Lite overlay",
+      'pt-BR': "TRN: overlay Transport Lite",
     },
     'lp.map.trnRow1': {
       en: "Main transport row",
@@ -1916,8 +1916,8 @@
       'pt-BR': "Fig. 10",
     },
     'lp.map.autPageTitle': {
-      en: "AUT — XY gesture loop settings and capture",
-      'pt-BR': "AUT — ajustes e captura de loops de gesto XY",
+      en: "AUT: XY gesture loop settings and capture",
+      'pt-BR': "AUT: ajustes e captura de loops de gesto XY",
     },
     'lp.map.autRow1': {
       en: "Header mode activation",
@@ -1966,8 +1966,8 @@
       'pt-BR': "Fig. 11",
     },
     'lp.map.cfgPageTitle': {
-      en: "CFG — per-control configuration overlay",
-      'pt-BR': "CFG — overlay de configuração por controle",
+      en: "CFG: per-control configuration overlay",
+      'pt-BR': "CFG: overlay de configuração por controle",
     },
     'lp.map.cfgRow1': {
       en: "Configuration mode (CFG)",
@@ -2012,8 +2012,8 @@
 
     /* Vision card "Teach a pose" */
     'lp.vision.teachTitle': {
-      en: "TEACH A POSE — STEP SEQUENCE",
-      'pt-BR': "ENSINAR UMA POSE — SEQUÊNCIA DE PASSOS",
+      en: "TEACH A POSE: STEP SEQUENCE",
+      'pt-BR': "ENSINAR UMA POSE: SEQUÊNCIA DE PASSOS",
     },
     'lp.vision.step1Title': {
       en: "1 · ADD POSE",
@@ -2074,8 +2074,8 @@
 
     /* Mapping & MIDI 6-step sequence */
     'lp.mapdesk.stepSeqTitle': {
-      en: "SIX-STEP MAPPING SEQUENCE — FROM TOUCH TO LIVE",
-      'pt-BR': "SEQUÊNCIA DE MAPEAMENTO EM SEIS PASSOS — DO TOQUE AO LIVE",
+      en: "SIX-STEP MAPPING SEQUENCE: FROM TOUCH TO LIVE",
+      'pt-BR': "SEQUÊNCIA DE MAPEAMENTO EM SEIS PASSOS: DO TOQUE AO LIVE",
     },
     'lp.mapdesk.step1Title': {
       en: "1 · PICK TARGET",

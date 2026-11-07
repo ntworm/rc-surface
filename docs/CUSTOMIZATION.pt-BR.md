@@ -12,24 +12,24 @@ Leia antes:
 
 Backend:
 
-- `src/extension.ts` — só o bootstrap.
-- `src/server/state.ts` — ciclo de vida do servidor.
-- `src/server/http.ts` — HTTP e arquivos estáticos.
-- `src/server/ws.ts` — clientes WebSocket, dispatch, tratamento de snapshot.
-- `src/server/cert.ts` — geração do certificado autoassinado e checagem de SAN.
-- `src/live/mappings.ts` — registro de comandos, motor de mapeamento, curvas, suavização e modos de evento.
-- `src/live/safe-input.ts` — takeover contínuo, estados de perda e filtragem de sensores.
-- `src/live/project-config.ts` — perfis `.rcsurface` versionados, religamento semântico, backup atômico e rollback.
-- `src/live/state.ts` — loop de playhead e estado do Live.
-- `src/server/autostart.ts` — se o bridge toma a rede no carregamento. Só o início automático depende disso; o botão Start do painel nunca consulta essa opção.
-- `src/ui/panel.ts` — diálogos do painel do Ableton.
-- `src/runtime/safety.ts` — handlers de segurança do processo.
+- `src/extension.ts`: só o bootstrap.
+- `src/server/state.ts`: ciclo de vida do servidor.
+- `src/server/http.ts`: HTTP e arquivos estáticos.
+- `src/server/ws.ts`: clientes WebSocket, dispatch, tratamento de snapshot.
+- `src/server/cert.ts`: geração do certificado autoassinado e checagem de SAN.
+- `src/live/mappings.ts`: registro de comandos, motor de mapeamento, curvas, suavização e modos de evento.
+- `src/live/safe-input.ts`: takeover contínuo, estados de perda e filtragem de sensores.
+- `src/live/project-config.ts`: perfis `.rcsurface` versionados, religamento semântico, backup atômico e rollback.
+- `src/live/state.ts`: loop de playhead e estado do Live.
+- `src/server/autostart.ts`: se o bridge toma a rede no carregamento. Só o início automático depende disso; o botão Start do painel nunca consulta essa opção.
+- `src/ui/panel.ts`: diálogos do painel do Ableton.
+- `src/runtime/safety.ts`: handlers de segurança do processo.
 
 Frontend:
 
-- `static/phone-v3/` — cliente de performance do celular.
-- `static/panel/` — interface do painel do Ableton.
-- `static/admin/` — painel administrativo.
+- `static/phone-v3/`: cliente de performance do celular.
+- `static/panel/`: interface do painel do Ableton.
+- `static/admin/`: painel administrativo.
 
 Todos os clientes estáticos são JavaScript de navegador puro. Sem bundler. Os
 testes ficam ao lado dos arquivos estáticos.
@@ -96,12 +96,12 @@ Antes de acrescentar um controle:
 
 Arquivos principais:
 
-- `static/phone-v3/index.html` — DOM.
-- `static/phone-v3/style.css` — layout e visual.
-- `static/phone-v3/app.js` — estado do app, WebSocket, sensores, snapshots.
-- `static/phone-v3/controls.js` — controles de toque.
-- `static/phone-v3/mode-engine.js` — comportamento dos modos escalares.
-- `static/phone-v3/mapping-mode.js` — fluxo de MAP no celular e editor de destino.
+- `static/phone-v3/index.html`: DOM.
+- `static/phone-v3/style.css`: layout e visual.
+- `static/phone-v3/app.js`: estado do app, WebSocket, sensores, snapshots.
+- `static/phone-v3/controls.js`: controles de toque.
+- `static/phone-v3/mode-engine.js`: comportamento dos modos escalares.
+- `static/phone-v3/mapping-mode.js`: fluxo de MAP no celular e editor de destino.
 
 Modos de pad:
 
@@ -125,11 +125,11 @@ interface do painel e da administração.
 
 Arquivos principais:
 
-- `static/phone-v3/index.html` — botão MAP e contêineres do overlay.
-- `static/phone-v3/app.js` — `window.sendPhoneCommand`, callbacks de resposta de comando, limitação de telemetria no modo de mapeamento, e eventos do ciclo de vida do WebSocket.
-- `static/phone-v3/mapping-mode.js` — estado do mapeamento no celular, interceptação de seleção, seletor de destino, presets, fluxo de trigger note e editor completo.
-- `static/phone-v3/style.css` — destaque do MAP, overlay, árvore de destinos, controles de nota MIDI e visual do editor de curva.
-- `static/phone-v3/mapping-mode.test.mjs` e `static/phone-v3/mobile-ui.test.mjs` — regressões estáticas de interface.
+- `static/phone-v3/index.html`: botão MAP e contêineres do overlay.
+- `static/phone-v3/app.js`: `window.sendPhoneCommand`, callbacks de resposta de comando, limitação de telemetria no modo de mapeamento, e eventos do ciclo de vida do WebSocket.
+- `static/phone-v3/mapping-mode.js`: estado do mapeamento no celular, interceptação de seleção, seletor de destino, presets, fluxo de trigger note e editor completo.
+- `static/phone-v3/style.css`: destaque do MAP, overlay, árvore de destinos, controles de nota MIDI e visual do editor de curva.
+- `static/phone-v3/mapping-mode.test.mjs` e `static/phone-v3/mobile-ui.test.mjs`: regressões estáticas de interface.
 
 Comportamentos importantes:
 
@@ -252,16 +252,16 @@ usuário peça uma migração nova.
 
 Arquivos:
 
-- `static/phone-v3/audio-processor.js` — captura, o loop por frame e o que é publicado.
-- `static/phone-v3/audio-analysis-controls.js` — todas as primitivas de análise, cada uma testável sozinha.
-- `static/phone-v3/audio-descriptors.js` — DSP puro de transiente/kick/snare/brilho: subidas por banda comparadas à energia recente da própria banda, joelho suave para sensibilidade, release exponencial e curva de resposta. `normalizeSettings` é o único clamp de todo ajuste de detector.
-- `static/phone-v3/audio-spectral-descriptors.js` — oito medidas espectrais definidas.
-- `static/shared/audio-descriptor-catalog.js` — IDs, grupos, três tons por família e escalas de leitura em Hz compartilhados. Preserve a ordem do catálogo e contraste das marcas >=3:1 contra #0e0e0e. Curvas e amostras dos descritores são contínuas; os botões nomeados da legenda identificam sem depender só da cor.
-- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — os doze cartões agrupados, o controle único de visão do gráfico e históricos limitados selecionáveis. As visões normalizadas se ajustam à curva visível mais alta e publicam esse teto em `#audio-timeline[data-scale]`; a amplitude mantém escala própria para RMS/envelope, e o gráfico não mostra o limiar do Gate.
-- `static/phone-v3/audio-descriptor-stream.js` — janelas contíguas de amostras e buffers FFT reutilizados.
-- `static/phone-v3/audio-descriptor-worklet.js` — captura contínua com uma mensagem de descritores pendente, confirmada pelo consumidor.
-- `static/phone-v3/style.css` — knobs planos com arco organizados por grupo (rolagem horizontal de grupos em telas baixas) e barra separada de JANELA. Os controles aposentados não têm regras; não reserve linhas vazias no grid.
-- `static/phone-v3/audio-detector-timing.js` — subdivisões em semínimas para RELEASE/SUAVE: 1/128..1/1, retas/tercinas/pontuadas, ordenadas por duração. Escolhas `*Beats` e tempos FREE `*Ms` ficam independentes; app.js resolve milissegundos fracionários quando BPM do Live/SYNC muda pelo caminho de configurações do worklet. RELEASE no DSP aceita 1,25..360000 ms (1/128 T a 1000 BPM até 1/1 D a 1 BPM); a interface FREE continua 10..500 ms e SUAVE 0..200 ms. Só rótulos arredondam. Mudanças de BPM preservam knobs ativos. Bandas continuam RMS linear, sem ponderação de loudness.
+- `static/phone-v3/audio-processor.js`: captura, o loop por frame e o que é publicado.
+- `static/phone-v3/audio-analysis-controls.js`: todas as primitivas de análise, cada uma testável sozinha.
+- `static/phone-v3/audio-descriptors.js`: DSP puro de transiente/kick/snare/brilho: subidas por banda comparadas à energia recente da própria banda, joelho suave para sensibilidade, release exponencial e curva de resposta. `normalizeSettings` é o único clamp de todo ajuste de detector.
+- `static/phone-v3/audio-spectral-descriptors.js`: oito medidas espectrais definidas.
+- `static/shared/audio-descriptor-catalog.js`: IDs, grupos, três tons por família e escalas de leitura em Hz compartilhados. Preserve a ordem do catálogo e contraste das marcas >=3:1 contra #0e0e0e. Curvas e amostras dos descritores são contínuas; os botões nomeados da legenda identificam sem depender só da cor.
+- `static/phone-v3/audio-workspace.js`, `audio-timeline.js`: os doze cartões agrupados, o controle único de visão do gráfico e históricos limitados selecionáveis. As visões normalizadas se ajustam à curva visível mais alta e publicam esse teto em `#audio-timeline[data-scale]`; a amplitude mantém escala própria para RMS/envelope, e o gráfico não mostra o limiar do Gate.
+- `static/phone-v3/audio-descriptor-stream.js`: janelas contíguas de amostras e buffers FFT reutilizados.
+- `static/phone-v3/audio-descriptor-worklet.js`: captura contínua com uma mensagem de descritores pendente, confirmada pelo consumidor.
+- `static/phone-v3/style.css`: knobs planos com arco organizados por grupo (rolagem horizontal de grupos em telas baixas) e barra separada de JANELA. Os controles aposentados não têm regras; não reserve linhas vazias no grid.
+- `static/phone-v3/audio-detector-timing.js`: subdivisões em semínimas para RELEASE/SUAVE: 1/128..1/1, retas/tercinas/pontuadas, ordenadas por duração. Escolhas `*Beats` e tempos FREE `*Ms` ficam independentes; app.js resolve milissegundos fracionários quando BPM do Live/SYNC muda pelo caminho de configurações do worklet. RELEASE no DSP aceita 1,25..360000 ms (1/128 T a 1000 BPM até 1/1 D a 1 BPM); a interface FREE continua 10..500 ms e SUAVE 0..200 ms. Só rótulos arredondam. Mudanças de BPM preservam knobs ativos. Bandas continuam RMS linear, sem ponderação de loudness.
 - `static/phone-v3/audio-processor.test.mjs`, `audio-analysis-controls.test.mjs`
 - `static/phone-v3/app.js`
 - `static/panel/app.js`

@@ -7,7 +7,7 @@ performance.
 > Ableton panel and the admin dashboard are covered in
 > `docs/CUSTOMIZATION.md`.
 > RC Surface supports one controller at a time. Control the performance from
-> the phone or from the desktop, not from both at once.
+> the phone or desktop, never both simultaneously.
 
 ---
 
@@ -70,13 +70,13 @@ The selected mode applies to **all 12 pads** (`pad-1`..`pad-12`),
 **all eight LFO slots** (`toggle-1`..`toggle-8`, `T1`..`T8`).
 The mode is shared: pick one mode and every control uses it.
 
-### Mode A — Momentary (default)
+### Mode A: Momentary (default)
 
 - Touch sends a non-zero value. Release sends zero.
 - Drag **vertically** to scale the value from `0` at the release point to `1`
   at the top of the drag range.
 
-### Mode B — Hold
+### Mode B: Hold
 
 - Touch latches the control **on**. Release without a drag sends it back off.
 - Any movement, vertical or horizontal, keeps it held until you drag the value
@@ -85,7 +85,7 @@ The mode is shared: pick one mode and every control uses it.
   Release with an amplitude below `0.02` also turns it off. Horizontal speed
   changes keep it running while the amplitude is nonzero.
 
-### Mode C — Toggle
+### Mode C: Toggle
 
 - Tap turns the control on. Tap again turns it off.
 - A small vertical drag while the control is on re-modulates the value without
@@ -93,7 +93,7 @@ The mode is shared: pick one mode and every control uses it.
 - A tap that turns the control on restores the last value you used in this
   mode. Without a value, it starts at `1`.
 
-### Mode D — Burst
+### Mode D: Burst
 
 - Touch fires a one-shot envelope that peaks at `1`.
 - Drag **vertically while holding** modulates the peak between `0.15` and `1`.
@@ -488,8 +488,8 @@ disconnection or a failure. It never retries or reapplies the value after a
 reconnect, after opening an editor or after loading a mapping or a preset.
 Save the Set in Live to persist it.
 
-**State** comes only from what Live reports back: Ready, Sent — waiting for
-Live, Waiting in Live (next boundary), Playing, Stop waiting in Live, Track
+**State** comes only from what Live reports back: Ready, Sent (waiting for
+Live), Waiting in Live (next boundary), Playing, Stop waiting in Live, Track
 stopped, No confirmation from Live, AbletonOSC disconnected, Destination
 missing, More than one match, and a blocked state when Live and AbletonOSC
 list the tracks differently. Sending a message is never shown as playback.
@@ -767,14 +767,14 @@ work and map them elsewhere.
 
 Each panel header shows the sensor state reported by the browser API:
 
-- `ready` — real finite readings are arriving and can be mapped.
-- `waiting` / `no-readings` — the page is waiting for the first reading. A
+- `ready`: real finite readings are arriving and can be mapped.
+- `waiting` / `no-readings`: the page is waiting for the first reading. A
   desktop browser with no sensor hardware stays here. This is silence, and it
   is not a permission denial.
-- `lost` — a working sensor stopped delivering for more than two seconds. The
+- `lost`: a working sensor stopped delivering for more than two seconds. The
   stale values are discarded and are not mapped.
-- `denied` — the browser permission was explicitly refused.
-- `error` — the permission call itself failed. Retry with the button.
+- `denied`: the browser permission was explicitly refused.
+- `error`: the permission call itself failed. Retry with the button.
 
 Motion and orientation are tracked independently, and one denied API does not
 affect the other. The sensors start automatically when the browser allows it.
@@ -786,8 +786,8 @@ error. The camera and the microphone require a separate permission.
 
 Six axes from the accelerometer and the gyroscope:
 
-- `GX`, `GY`, `GZ` — gyroscope angular velocity (rad/s)
-- `AX`, `AY`, `AZ` — linear acceleration (m/s²)
+- `GX`, `GY`, `GZ`: gyroscope angular velocity (rad/s)
+- `AX`, `AY`, `AZ`: linear acceleration (m/s²)
 
 The values reach the live mappings as:
 
@@ -798,9 +798,9 @@ The values reach the live mappings as:
 
 Three angles from the device orientation sensor:
 
-- `YAW` (alpha) — compass heading
-- `PITCH` (beta) — tilt forward / back
-- `ROLL` (gamma) — tilt left / right
+- `YAW` (alpha): compass heading
+- `PITCH` (beta): tilt forward / back
+- `ROLL` (gamma): tilt left / right
 
 The values reach the mappings under `sensor.orient.*`. The yaw is shown with a
 compass-style orbit, and the pitch and roll with level-style orbits.
@@ -845,10 +845,10 @@ control and no clarity control.
 
 Once enabled:
 
-- `sensor.audio.rms` — input RMS amplitude, `0..1`, not perceived loudness
-- `sensor.audio.envelope` — short-term amplitude envelope
-- `sensor.audio.gate` — `1` while input RMS exceeds its internal threshold (with hysteresis)
-- `sensor.audio.attack` — peak strength after an onset, `0..1`; no note recognition
+- `sensor.audio.rms`: input RMS amplitude, `0..1`, not perceived loudness
+- `sensor.audio.envelope`: short-term amplitude envelope
+- `sensor.audio.gate`: `1` while input RMS exceeds its internal threshold (with hysteresis)
+- `sensor.audio.attack`: peak strength after an onset, `0..1`; no note recognition
 
 ### Selecting the browser audio input
 
@@ -875,16 +875,16 @@ preserved. The Live tempo and the SYNC remain available.
 
 Twelve cards expose the normalized `0..1` mapping sources:
 
-- `sensor.audio.transient` — how much of the whole frame is new energy.
-- `sensor.audio.kick` — a rise that happened in 35–100 Hz.
-- `sensor.audio.snare` — a rise that happened in 1.5–8 kHz.
-- `sensor.audio.brightness` — dark-to-bright spectral centroid, logarithmically normalized.
-- `sensor.audio.centroid` — magnitude-weighted spectral center; readout in Hz, mapping = Hz / 20000.
-- `sensor.audio.flux` — spectral shape change (half L1 distance of normalized magnitudes); gain changes alone do not increase it.
-- `sensor.audio.flatness` — power geometric/arithmetic mean: tonal toward 0, noise-like toward 1.
-- `sensor.audio.spread` — magnitude-weighted spectral standard deviation; readout in Hz, mapping = Hz / 10000.
-- `sensor.audio.rolloff` — frequency containing 95% of spectral power; readout in Hz, mapping = Hz / 20000.
-- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high` — K-weighted loudness in 20–250, 250–2000, and 2000–20000 Hz bands, mapped to `0..1` from −50 LU to −5 LU relative to the digital full scale of the input. Each band applies the ITU-R BS.1770-4 K-weighting per bin (high-shelf + RLB high-pass) and a 400 ms momentaneous integrator on the K-weighted power. `sensor.audio.flatness` uses Wiener entropy in dB: tonal → 0 (−60 dB), noise-like → 1 (0 dB).
+- `sensor.audio.transient`: how much of the whole frame is new energy.
+- `sensor.audio.kick`: a rise that happened in 35–100 Hz.
+- `sensor.audio.snare`: a rise that happened in 1.5–8 kHz.
+- `sensor.audio.brightness`: dark-to-bright spectral centroid, logarithmically normalized.
+- `sensor.audio.centroid`: magnitude-weighted spectral center; readout in Hz, mapping = Hz / 20000.
+- `sensor.audio.flux`: spectral shape change (half L1 distance of normalized magnitudes); gain changes alone do not increase it.
+- `sensor.audio.flatness`: power geometric/arithmetic mean: tonal toward 0, noise-like toward 1.
+- `sensor.audio.spread`: magnitude-weighted spectral standard deviation; readout in Hz, mapping = Hz / 10000.
+- `sensor.audio.rolloff`: frequency containing 95% of spectral power; readout in Hz, mapping = Hz / 20000.
+- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high`: K-weighted loudness in 20–250, 250–2000, and 2000–20000 Hz bands, mapped to `0..1` from −50 LU to −5 LU relative to the digital full scale of the input. Each band applies the ITU-R BS.1770-4 K-weighting per bin (high-shelf + RLB high-pass) and a 400 ms momentaneous integrator on the K-weighted power. `sensor.audio.flatness` uses Wiener entropy in dB: tonal → 0 (−60 dB), noise-like → 1 (0 dB).
 
 The eight new measures use the bin centers from 20 Hz to min(20 kHz, Nyquist),
 excluding DC. The bands are disjoint, and a boundary bin belongs to the higher
@@ -1293,13 +1293,13 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 ## 14. Gestures
 
-- **Tap** — momentary press (mode A default).
-- **Long press** — same as tap; it has no separate action.
-- **Drag up** — increase value (depth, rate, count, etc).
-- **Drag down** — decrease value. Reaching the bottom of the range
+- **Tap**: momentary press (mode A default).
+- **Long press**: same as tap; it has no separate action.
+- **Drag up**: increase value (depth, rate, count, etc).
+- **Drag down**: decrease value. Reaching the bottom of the range
   sends `0`.
-- **Drag horizontally on a Square** — change speed; vertically changes amplitude.
-- **Drag horizontally on an LFO** — change modulation rate.
+- **Drag horizontally on a Square**: change speed; vertically changes amplitude.
+- **Drag horizontally on an LFO**: change modulation rate.
 
 ---
 
@@ -1307,7 +1307,7 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 | Symptom | Fix |
 | --- | --- |
-| Phone won't connect | See `docs/INSTALL.md` — check Wi-Fi, IP, certificate warning. |
+| Phone won't connect | See `docs/INSTALL.md`: check Wi-Fi, IP, certificate warning. |
 | Sensor values stuck / wrong | Press **CALIBRATE** on a stable surface. |
 | LFOs desynced from Live | Press **SYNC** to re-lock to Live's BPM. |
 | MAP target list looks stale | Press **Refresh** in MAP mode after adding/removing Live devices. |

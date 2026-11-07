@@ -88,8 +88,8 @@ Receivers UDP antigos são recusados, sem fallback inseguro.
 
 ### RC-Audio-Sender.amxd
 
-A extensão não consegue ouvir uma track do Live — o SDK de Extensions não expõe
-áudio nenhum — então escutar uma é trabalho de um device Max dentro do caminho
+A extensão não consegue ouvir uma track do Live. O SDK de Extensions não expõe
+áudio nenhum, então escutar uma é trabalho de um device Max dentro do caminho
 de áudio do Live.
 
 1. Ache o `RC-Audio-Sender.amxd` no kit da release, ou em `static/` no código.
@@ -148,7 +148,7 @@ Desligue quando outra extensão RC dividir a máquina e você quiser escolher qu
 delas fica com as portas na sessão, em vez de deixar as duas disputarem no
 carregamento. Só o início automático é afetado: o botão **Start** do painel
 continua funcionando, e o painel abre direto do disco mesmo com o servidor
-parado — então a chave fica sempre acessível, inclusive quando foi ela que
+parado, então a chave fica sempre acessível, inclusive quando foi ela que
 deixou o servidor desligado. A escolha persiste entre sessões.
 
 O painel com o servidor parado inclui todos os scripts e a fonte, então o
@@ -180,7 +180,7 @@ na primeira vez. Isso é esperado. Para seguir:
   por completo, e você não consegue usar câmera nem microfone.
 
 O navegador guarda a decisão pelo tempo de vida do certificado (cerca de um
-ano — veja [Ciclo de vida do certificado](#ciclo-de-vida-do-certificado)
+ano. Veja [Ciclo de vida do certificado](#ciclo-de-vida-do-certificado)
 abaixo).
 
 A seção **Certificado** da aba **Rede** leva a uma página de instalação na

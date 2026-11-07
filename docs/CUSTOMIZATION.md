@@ -264,16 +264,16 @@ Use only single-hand control names unless the user asks for a new migration.
 
 Files:
 
-- `static/phone-v3/audio-processor.js` — capture, the frame loop, and what is published.
-- `static/phone-v3/audio-analysis-controls.js` — every analysis primitive, each one testable on its own.
-- `static/phone-v3/audio-descriptors.js` — pure transient/kick/snare/brightness DSP: band-local rises against each band's own running energy, a soft knee for sensitivity, an exponential release and a response curve. `normalizeSettings` is the single clamp for every detector setting.
-- `static/phone-v3/audio-spectral-descriptors.js` — eight defined spectral features.
-- `static/shared/audio-descriptor-catalog.js` — shared mapping IDs, groups, three shades per family and Hz readout scales. Preserve catalog order and >=3:1 mark contrast against #0e0e0e. Descriptor curves and swatches are solid; their labelled legend toggles are the non-colour identifier.
-- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — the twelve grouped cards, the single graph-view control and bounded selectable histories. The normalized views scale to the loudest visible curve and publish that ceiling on `#audio-timeline[data-scale]`; amplitude keeps its own scale for RMS/envelope, and the graph does not show the Gate threshold.
-- `static/phone-v3/audio-descriptor-stream.js` — contiguous sample windows and reusable FFT buffers.
-- `static/phone-v3/audio-descriptor-worklet.js` — continuous capture with one pending, acknowledged descriptor message.
-- `static/phone-v3/style.css` — grouped flat arc dials (horizontal group scroll on short screens), a separate WINDOW toolbar. Retired controls have no rules; do not reserve empty rows in the grid.
-- `static/phone-v3/audio-detector-timing.js` — quarter-note-based subdivisions for RELEASE/SMOOTH: 1/128..1/1, straight/triplet/dotted, sorted by duration. Saved `*Beats` choices and FREE `*Ms` values stay independent; app.js resolves fractional milliseconds when Live tempo/SYNC changes through the existing worklet settings path. DSP RELEASE supports 1.25..360000 ms (1/128 T at 1000 BPM through 1/1 D at 1 BPM); FREE UI stays 10..500 ms and SMOOTH 0..200 ms. Only labels round. Tempo updates preserve active dials. Band outputs remain linear RMS, not loudness-weighted.
+- `static/phone-v3/audio-processor.js`: capture, the frame loop, and what is published.
+- `static/phone-v3/audio-analysis-controls.js`: every analysis primitive, each one testable on its own.
+- `static/phone-v3/audio-descriptors.js`: pure transient/kick/snare/brightness DSP: band-local rises against each band's own running energy, a soft knee for sensitivity, an exponential release and a response curve. `normalizeSettings` is the single clamp for every detector setting.
+- `static/phone-v3/audio-spectral-descriptors.js`: eight defined spectral features.
+- `static/shared/audio-descriptor-catalog.js`: shared mapping IDs, groups, three shades per family and Hz readout scales. Preserve catalog order and >=3:1 mark contrast against #0e0e0e. Descriptor curves and swatches are solid; their labelled legend toggles are the non-colour identifier.
+- `static/phone-v3/audio-workspace.js`, `audio-timeline.js`: the twelve grouped cards, the single graph-view control and bounded selectable histories. The normalized views scale to the loudest visible curve and publish that ceiling on `#audio-timeline[data-scale]`; amplitude keeps its own scale for RMS/envelope, and the graph does not show the Gate threshold.
+- `static/phone-v3/audio-descriptor-stream.js`: contiguous sample windows and reusable FFT buffers.
+- `static/phone-v3/audio-descriptor-worklet.js`: continuous capture with one pending, acknowledged descriptor message.
+- `static/phone-v3/style.css`: grouped flat arc dials (horizontal group scroll on short screens), a separate WINDOW toolbar. Retired controls have no rules; do not reserve empty rows in the grid.
+- `static/phone-v3/audio-detector-timing.js`: quarter-note-based subdivisions for RELEASE/SMOOTH: 1/128..1/1, straight/triplet/dotted, sorted by duration. Saved `*Beats` choices and FREE `*Ms` values stay independent; app.js resolves fractional milliseconds when Live tempo/SYNC changes through the existing worklet settings path. DSP RELEASE supports 1.25..360000 ms (1/128 T at 1000 BPM through 1/1 D at 1 BPM); FREE UI stays 10..500 ms and SMOOTH 0..200 ms. Only labels round. Tempo updates preserve active dials. Band outputs remain linear RMS, not loudness-weighted.
 - `static/phone-v3/audio-processor.test.mjs`, `audio-analysis-controls.test.mjs`
 - `static/phone-v3/app.js`
 - `static/panel/app.js`

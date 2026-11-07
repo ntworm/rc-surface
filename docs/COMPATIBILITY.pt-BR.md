@@ -4,14 +4,14 @@ Requisitos e evidências atuais do RC Surface 2.1.0.
 
 ## Live
 
-- Ableton Live 12.4.5+ Suite (Beta) com Extensions SDK `1.0.0-beta.0` (instalado a partir de `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtido da Ableton; o tarball não faz parte deste repositório — ver `vendor/README.md`).
+- Ableton Live 12.4.5+ Suite (Beta) com Extensions SDK `1.0.0-beta.0` (instalado a partir de `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtido da Ableton; o tarball não faz parte deste repositório. Ver `vendor/README.md`).
 - Padrão de duas tracks: uma track recebe o `RC-Midi-Receiver.amxd` (Receiver v2); a track com a fonte de áudio recebe o `RC-Audio-Sender.amxd` (o helper de áudio em Max, independente). A entrada do Sender precisa estar ativada no Receiver v2 que vai tocar.
 - Veja `docs/INSTALL.pt-BR.md` para o passo a passo completo de instalação.
 
 ## Navegador (superfície do operador)
 
-- Chrome desktop (versão estável atual) — console do operador + páginas administrativas avançadas.
-- Chrome mobile na horizontal — console do operador em resoluções de celular (emulação do Pixel 5 e viewports equivalentes).
+- Chrome desktop (versão estável atual): console do operador + páginas administrativas avançadas.
+- Chrome mobile na horizontal: console do operador em resoluções de celular (emulação do Pixel 5 e viewports equivalentes).
 - A matriz Playwright (`tests/ui/*.spec.mjs`) cobre os dois projetos.
 
 ## Node e ferramentas
@@ -40,8 +40,8 @@ Mappings, presets e projetos usam `surface-v2` e schema 2. Dados da linha 1.x n�
 
 ## Veja também
 
-- `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md` — passo a passo de instalação.
-- `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md` — avisos de terceiros.
-- `internal/TESTER-GUIDE.md` — orientação atual com evidência histórica separada.
-- [revisão da distribuição](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) — matriz de dependências e conclusão de distribuição.
-- [arquivo de gates](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json) — os gates registrados.
+- `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: passo a passo de instalação.
+- `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: avisos de terceiros.
+- `internal/TESTER-GUIDE.md`: orientação atual com evidência histórica separada.
+- [revisão da distribuição](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): matriz de dependências e conclusão de distribuição.
+- [arquivo de gates](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json): os gates registrados.

@@ -89,8 +89,8 @@ Receivers are rejected; there is no insecure compatibility fallback.
 
 ### RC-Audio-Sender.amxd
 
-The extension cannot hear a Live track — the Extensions SDK exposes no audio at
-all — so listening to one is done by a Max device inside Live's audio path.
+The extension cannot hear a Live track. The Extensions SDK exposes no audio at
+all, so listening to one is done by a Max device inside Live's audio path.
 
 1. Find `RC-Audio-Sender.amxd` in the release kit, or under `static/` in the
    source.
@@ -148,7 +148,7 @@ Turn it off when another RC extension shares the machine and you want to choose
 which one takes the ports for a session rather than have them race at load.
 Only the automatic start is affected: the panel's **Start** button still works,
 and the panel renders from disk when nothing is listening, so the switch is
-always reachable — including in the state it creates. The choice persists
+always reachable, including in the state it creates. The choice persists
 between sessions.
 
 The stopped-server panel includes all its scripts and font, so **Start** and

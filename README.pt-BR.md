@@ -6,9 +6,9 @@
 
 **English:** [README.md](README.md) · [landing page](https://ntworm.github.io/rc-surface/)
 
-[Página em português](https://ntworm.github.io/rc-surface/pt-br.html) — mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
+[Página em português](https://ntworm.github.io/rc-surface/pt-br.html): mapa interativo da superfície, passo a passo de instalação e guia visual no navegador.
 
-O RC Surface é uma extensão para o Ableton Live 12 que serve uma superfície de controle no navegador do celular ou tablet. Faz o trabalho de um controlador físico — pads, knobs, faders, XY, mixer, transporte e gravação — e usa os sensores de movimento, o microfone e a câmera do celular como fontes de controle. A extensão roda dentro do Live no SDK oficial de Extensions. Ela serve a superfície por HTTPS/WSS local, e o cliente mobile roda em JavaScript puro no navegador.
+O RC Surface é uma extensão para o Ableton Live 12 que serve uma superfície de controle no navegador do celular ou tablet. Faz o trabalho de um controlador físico: pads, knobs, faders, XY, mixer, transporte e gravação. Usa os sensores de movimento, o microfone e a câmera do celular como fontes de controle. A extensão roda dentro do Live no SDK oficial de Extensions. Ela serve a superfície por HTTPS/WSS local, e o cliente mobile roda em JavaScript puro no navegador.
 
 ## Requisitos
 
@@ -35,7 +35,7 @@ O RC Surface é uma extensão para o Ableton Live 12 que serve uma superfície d
 | **`SNS`** | Sensores de movimento (acelerômetro/giroscópio) e orientação 3D do celular com calibração de postura. |
 | **`AUD`** | Análise de microfone em tempo real com 12 descritores espectrais/ataques por banda. |
 | **`VID`** | Rastreamento local de mão pela câmera (MediaPipe Hands embutido) com entradas contínuas `X / Y / Z / PALM / FACE` e até 15 poses aprendidas (`G1`–`G15`). O `RC-Midi-Receiver.amxd` repassa o MIDI de entrada byte a byte (`midiin → midiout`). |
-| **`REC`** | Estação de gravação com três visões locais — **GRAVAR / ARRANGEMENT / CLIP**, com **Gravar** como padrão — compartilhando uma barra de captura fixa (**REC / STOP**, **PRÉ-ROLL**, **PASSES**, **INÍCIO / FIM**, **CLICK**) e uma barra de modo fixa. Gravar mostra as linhas nativas de track e uma lista compacta de marcadores; só a lista de tracks rola, e essa visão não lê clips, takes nem waveforms. Arrangement acrescenta a timeline de marcadores, os clips nativos do Arrangement e a inspeção de takes. Clip captura uma cena vazia da Session. |
+| **`REC`** | Estação de gravação com três visões locais (**GRAVAR / ARRANGEMENT / CLIP**, com **Gravar** como padrão) compartilhando uma barra de captura fixa (**REC / STOP**, **PRÉ-ROLL**, **PASSES**, **INÍCIO / FIM**, **CLICK**) e uma barra de modo fixa. Gravar mostra as linhas nativas de track e uma lista compacta de marcadores; só a lista de tracks rola, e essa visão não lê clips, takes nem waveforms. Arrangement acrescenta a timeline de marcadores, os clips nativos do Arrangement e a inspeção de takes. Clip captura uma cena vazia da Session. |
 | **`MAP`** | Sobreposição de cabeçalho para o mapeamento no celular: vincule um controle ou sensor a um parâmetro do Live (**Bind**), dispare notas MIDI quantizadas via `RC-Midi-Receiver.amxd` (**Trigger Note**) ou acione clips da Session e regras de avanço (**Launch Clip**). Os pontos de curva e do Burst exigem segurar por `0,6 s`. |
 | **`TRN`** | Sobreposição de cabeçalho para transporte e locators. |
 | **`AUT`** | Sobreposição de cabeçalho para loops de gesto XY: grave e repita movimentos no `XY 1` e no `XY 2` após contagem `3–2–1`, sincronizados ao Live (`1–5 compassos`) ou livres (`1–30 segundos`). |
@@ -62,9 +62,9 @@ Veja a [versão 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0)
 
 ## Documentação
 
-- [Guia de Uso](docs/USER-GUIDE.pt-BR.md) — abas da superfície, gestos, modos de mapeamento, snapshots, calibração e modo Stage.
-- [Guia de Instalação](docs/INSTALL.pt-BR.md) — certificados, rede local, devices Max for Live e solução de problemas.
-- [Personalização e Catálogo de Controles](docs/CUSTOMIZATION.pt-BR.md) — catálogo completo de nomes de controles (`pad-*`, `knob-*`, `fader-*`, `xy-*`, `toggle-*`, `sensor.*`) e pontos de extensão.
+- [Guia de Uso](docs/USER-GUIDE.pt-BR.md): abas da superfície, gestos, modos de mapeamento, snapshots, calibração e modo Stage.
+- [Guia de Instalação](docs/INSTALL.pt-BR.md): certificados, rede local, devices Max for Live e solução de problemas.
+- [Personalização e Catálogo de Controles](docs/CUSTOMIZATION.pt-BR.md): catálogo completo de nomes de controles (`pad-*`, `knob-*`, `fader-*`, `xy-*`, `toggle-*`, `sensor.*`) e pontos de extensão.
 - [Compatibilidade](docs/COMPATIBILITY.pt-BR.md) · [Contratos](docs/CONTRACTS.pt-BR.md) · [Perguntas Frequentes (FAQ)](docs/FAQ.pt-BR.md)
 - [Política de Segurança](docs/SECURITY.pt-BR.md) · [Privacidade](docs/PRIVACY.pt-BR.md) · [Contribuindo (EN)](CONTRIBUTING.md)
 
@@ -91,7 +91,7 @@ npm run build:prod-ablx
 
 ## Licença
 
-PolyForm Noncommercial 1.0.0 — livre para uso, redistribuição e modificação sem fins comerciais; a venda comercial deste software ou de versões modificadas não é permitida. Veja a [LICENSE](LICENSE) para o texto completo e o aviso obrigatório.
+PolyForm Noncommercial 1.0.0: livre para uso, redistribuição e modificação sem fins comerciais; a venda comercial deste software ou de versões modificadas não é permitida. Veja a [LICENSE](LICENSE) para o texto completo e o aviso obrigatório.
 © Gabriel Worm · <https://github.com/ntworm/rc-surface>.
 
 Ableton e Live são marcas registradas da Ableton AG. O RC Surface é um projeto independente, sem vínculo, endosso ou patrocínio da Ableton AG.

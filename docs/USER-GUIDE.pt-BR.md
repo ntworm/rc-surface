@@ -72,13 +72,13 @@ O seletor de modo fica na coluna do meio da aba PERF:
 O modo escolhido vale para **os 12 pads** (`pad-1`..`pad-12`), **os oito slots LFO** (`toggle-1`..`toggle-8`, `T1`..`T8`). O modo é compartilhado: você
 escolhe uma vez e todos os controles seguem a mesma regra.
 
-### Modo A — Momentâneo (padrão)
+### Modo A: Momentâneo (padrão)
 
 - O toque manda um valor diferente de zero; soltar manda zero.
 - Arraste **na vertical** para escalar o valor de `0` no ponto de soltura até
   `1` no topo da faixa de arrasto.
 
-### Modo B — Hold
+### Modo B: Hold
 
 - O toque trava o controle **ligado**; soltar sem arrastar volta a
   desligá-lo. Qualquer movimento, vertical ou horizontal, mantém segurado até
@@ -87,15 +87,15 @@ escolhe uma vez e todos os controles seguem a mesma regra.
   desliga; soltar com amplitude abaixo de `0.02` também desliga. Arrastar a
   velocidade na horizontal mantém o square ligado enquanto há amplitude.
 
-### Modo C — Toggle
+### Modo C: Toggle
 
 - Um toque liga; outro toque desliga.
-- Um arrasto vertical curto com ele ligado remodula o valor sem desligar — o
+- Um arrasto vertical curto com ele ligado remodula o valor sem desligar. O
   arrasto é ignorado pelo estado do toggle.
 - Ao ligar por toque, o valor volta para o último que você usou neste modo. Se
   você nunca definiu um, o padrão é `1`.
 
-### Modo D — Burst
+### Modo D: Burst
 
 - O toque dispara um envelope de uma vez só, com pico em `1`.
 - Arraste **na vertical enquanto segura** para modular o pico entre `0.15` e
@@ -253,8 +253,8 @@ Alterna o **modo tela cheia**:
   só o que não é essencial: o título da seção, a dica e o readout do XY.
 - O controle do cabeçalho é um ícone fixo de expandir/recolher, sem nenhuma
   palavra visível. O título e o nome de acessibilidade dele são localizados,
-  então um leitor de tela anuncia no seu idioma. Aperte o mesmo ícone de novo —
-  ou saia da tela cheia pelo navegador ou pelo sistema — para sair do modo.
+  então um leitor de tela anuncia no seu idioma. Aperte o mesmo ícone de novo
+  (ou saia da tela cheia pelo navegador ou pelo sistema) para sair do modo.
 
 O modo tela cheia deixa mais espaço para os controles. Outros aplicativos
 ainda podem interromper a tela cheia.
@@ -315,8 +315,8 @@ selecionáveis, com contorno e rótulo azuis. Isso inclui:
 Toque num controle destacado para escolher. Nos XY pads, o editor expõe os
 eixos separadamente:
 
-- `xy-1.x` / `xy-2.x` — eixo horizontal.
-- `xy-1.y` / `xy-2.y` — eixo vertical.
+- `xy-1.x` / `xy-2.x`: eixo horizontal.
+- `xy-1.y` / `xy-2.y`: eixo vertical.
 
 ### Bind num parâmetro
 
@@ -388,8 +388,8 @@ Ao mapear um controle para disparar notas em uma track MIDI com o dispositivo `R
 
 ### Launch Clip (`clip_launch`)
 
-Use **Launch Clip** quando um controle — normalmente uma pose aprendida G1,
-G2 ou G3 — deve pedir ao Live um clip da Session que já está no seu Set. Tudo
+Use **Launch Clip** quando um controle (normalmente uma pose aprendida G1,
+G2 ou G3) deve pedir ao Live um clip da Session que já está no seu Set. Tudo
 é configurado pelo MAP: sem loopMIDI, sem track auxiliar e sem mapeamento por
 Ctrl+M. O Launch Clip precisa do AbletonOSC (veja o
 [INSTALL](INSTALL.pt-BR.md)); o SDK de Extensions lista tracks e clips, mas
@@ -407,7 +407,7 @@ têm esse botão; filtro e track escolhida são mantidos quando disponíveis.
 Se salvar falhar, o picker de Launch Clip continua aberto e mostra o erro
 para você tentar novamente.
 
-**Escolha** — uma por mapeamento:
+**Escolha**: uma por mapeamento:
 
 - **Lançar clip** (padrão): cada ativação pede aquele clip. Manter a pose não
   repete, soltar deixa o clip tocando e outra pose escolhe outro clip direto,
@@ -432,8 +432,8 @@ mantém o valor observado visível durante a espera e mostra desconexão ou
 falha. Nunca tenta de novo nem reaplica o valor ao reconectar, abrir um editor
 ou carregar mapping/preset. Salve o Set no Live para persistir o ajuste.
 
-O **estado** vem só do que o Live informa: Pronto, Enviado — aguardando o
-Live, Aguardando no Live (próximo limite), Tocando, Parada aguardando no
+O **estado** vem só do que o Live informa: Pronto, Enviado (aguardando o
+Live), Aguardando no Live (próximo limite), Tocando, Parada aguardando no
 Live, Track parada, Sem confirmação do Live, AbletonOSC desconectado, Destino
 ausente, Mais de um candidato e um estado de bloqueio quando o Live e o
 AbletonOSC listam as tracks de forma diferente. Enviar uma mensagem nunca
@@ -450,7 +450,7 @@ tocando): a API não tem "cancelar lançamento", então pedir a Base de novo
 substitui o clip que aguardava e, como documentado na API do Live, reinicia a
 Base no limite.
 
-**Depois que entra** — só no modo Lançar clip, separado da escolha:
+**Depois que entra**: só no modo Lançar clip, separado da escolha:
 
 - **Deixar o Live decidir** (padrão): o clip repete, ou a Follow Action nativa
   do Live assume.
@@ -475,8 +475,8 @@ loop), ou há alguns tempos de silêncio (clip sem loop).
 A regra é recusada quando a quantização do Live é None, o quantum é curto
 demais no andamento atual (janela menor que 250 ms), o clip está com Legato
 ou com modo de lançamento diferente de Trigger, o clip é áudio sem warp, ou
-um clip sem loop recebe mais de uma passagem. A regra é cancelada — e nunca
-reenviada — quando outro clip é escolhido na track (pelo RC Surface ou no
+um clip sem loop recebe mais de uma passagem. A regra é cancelada (e nunca
+reenviada) quando outro clip é escolhido na track (pelo RC Surface ou no
 Live), a track ou o transporte param, o mapeamento é removido ou alterado, o
 link do AbletonOSC cai, ou as atualizações de posição não provam quantas
 passagens tocaram (ela não chuta). Uma desconexão do celular não cancela uma
@@ -581,7 +581,7 @@ do knob volta a 50%; o reset dos faders é descrito abaixo.
   superfície; a faixa do parâmetro mapeado determina o valor real em dB.
 - Visual: um cursor sobre uma trilha, com a trilha preenchida de baixo até o
   valor atual. Um fader ligado a um parâmetro bipolar, como o pan, preenche a
-  partir do centro — o meio é o repouso dele, não meio curso.
+  partir do centro: o meio é o repouso dele, não meio curso.
 
 Os dois painéis usam a faixa vertical de arrasto da
 [§ 13](#13-referencia-rapida).
@@ -659,9 +659,9 @@ O slider à direita dos controles define quanto tempo leva a transição até o
 snapshot chamado. O
 par **Free / Sync** acima dele decide o que o slider significa:
 
-- **Free** — o slider é em segundos, de `0.1 s` a `5.0 s`, padrão `1.0 s`. A
+- **Free**: o slider é em segundos, de `0.1 s` a `5.0 s`, padrão `1.0 s`. A
   transição ignora o andamento do Live.
-- **Sync** — o slider escolhe uma duração musical, e a leitura mostra `4 tempos`
+- **Sync**: o slider escolhe uma duração musical, e a leitura mostra `4 tempos`
   ou `1/4 tempo` em vez de um número de segundos:
 
   | 16 tempos | 8 tempos | 4 tempos | 2 tempos | 1 tempo | 1/2 tempo | 1/4 tempo | 1/8 tempo | 1/16 tempo |
@@ -678,11 +678,11 @@ duração cai para 120 BPM em vez de travar.
 
 ### Modos de morph
 
-- **Grade (1-8)** — toque em qualquer slot para fazer morph do estado atual até
+- **Grade (1-8)**: toque em qualquer slot para fazer morph do estado atual até
   o estado do slot, ao longo do tempo de morph. Toque em outro slot para fazer
   morph de novo. O Tempo de transição (configurado pelos controles Free / Sync)
   aplica-se somente à Grade.
-- **Vetor XY (1-4)** — aparece um pad vetorial 2D para interpolação direta,
+- **Vetor XY (1-4)**: aparece um pad vetorial 2D para interpolação direta,
   sem Transition Time. O pad tem quatro cantos, cada um ligado a um snapshot.
   Arraste o ponto dentro do pad para misturar os quatro contínua e instantaneamente;
   o bloco de tempo de morph (slider Free/Sync) fica desabilitado no modo Vetor.
@@ -695,7 +695,7 @@ longo da transição, em vez de esperar o morph terminar.
 
 ## 11. Aba SNS
 
-Leituras ao vivo dos sensores do celular. Não há controles aqui — são os
+Leituras ao vivo dos sensores do celular. Não há controles aqui: são os
 valores sendo transmitidos para o Live, para você conferir que funcionam e
 mapear em outro lugar.
 
@@ -703,14 +703,14 @@ mapear em outro lugar.
 
 Cada painel mostra o estado atual do sensor, informado separadamente por API:
 
-- `ready` — leituras reais e finitas estão chegando e podem ser mapeadas.
-- `waiting` / `no-readings` — a página aguarda a primeira leitura. Um
+- `ready`: leituras reais e finitas estão chegando e podem ser mapeadas.
+- `waiting` / `no-readings`: a página aguarda a primeira leitura. Um
 desktop sem hardware de movimento permanece aqui; isso é silêncio, nunca
 uma negação de permissão.
-- `lost` — um sensor que funcionava parou de entregar por mais de dois
+- `lost`: um sensor que funcionava parou de entregar por mais de dois
 segundos. Valores antigos são descartados e deixam de ser mapeados.
-- `denied` — a permissão do navegador foi recusada explicitamente.
-- `error` — a chamada de permissão falhou; tente novamente pelo botão.
+- `denied`: a permissão do navegador foi recusada explicitamente.
+- `error`: a chamada de permissão falhou; tente novamente pelo botão.
 
 Movimento e orientação são rastreados de forma independente: uma API negada
 não afeta a outra. Os sensores começam automaticamente quando o navegador
@@ -722,8 +722,8 @@ recusa ou de um erro. Câmera e microfone exigem permissões próprias.
 
 Seis eixos, do acelerômetro e do giroscópio:
 
-- `GX`, `GY`, `GZ` — velocidade angular do giroscópio (rad/s)
-- `AX`, `AY`, `AZ` — aceleração linear (m/s²)
+- `GX`, `GY`, `GZ`: velocidade angular do giroscópio (rad/s)
+- `AX`, `AY`, `AZ`: aceleração linear (m/s²)
 
 Os valores chegam nos mapeamentos como:
 
@@ -734,9 +734,9 @@ Os valores chegam nos mapeamentos como:
 
 Três ângulos, do sensor de orientação do aparelho:
 
-- `YAW` (alpha) — direção, como uma bússola
-- `PITCH` (beta) — inclinação para frente e para trás
-- `ROLL` (gamma) — inclinação para os lados
+- `YAW` (alpha): direção, como uma bússola
+- `PITCH` (beta): inclinação para frente e para trás
+- `ROLL` (gamma): inclinação para os lados
 
 Os valores chegam nos mapeamentos sob `sensor.orient.*`. O yaw aparece com uma
 órbita de bússola; pitch e roll com órbitas de nível.
@@ -749,7 +749,7 @@ permissão.
 ### VISÃO LOCAL
 
 Duas chaves: mostram e escondem os painéis de MOVIMENTO e ORIENTAÇÃO nesta aba.
-Elas mexem só no que é exibido aqui — **não** silenciam a transmissão do
+Elas mexem só no que é exibido aqui. **Não** silenciam a transmissão do
 sensor.
 
 ---
@@ -779,10 +779,10 @@ detectores abaixo. Não há controle de pitch nem de clareza.
 
 Uma vez ligada:
 
-- `sensor.audio.rms` — amplitude RMS da entrada, `0..1`, não loudness percebido
-- `sensor.audio.envelope` — envelope de amplitude de curto prazo
-- `sensor.audio.gate` — `1` enquanto o RMS da entrada passa do limiar interno (com histerese)
-- `sensor.audio.attack` — força do pico após um ataque, `0..1`; sem reconhecer nota
+- `sensor.audio.rms`: amplitude RMS da entrada, `0..1`, não loudness percebido
+- `sensor.audio.envelope`: envelope de amplitude de curto prazo
+- `sensor.audio.gate`: `1` enquanto o RMS da entrada passa do limiar interno (com histerese)
+- `sensor.audio.attack`: força do pico após um ataque, `0..1`; sem reconhecer nota
 
 ### Escolher a entrada de áudio do navegador
 
@@ -808,20 +808,20 @@ descartados ao carregar; bindings válidos são preservados. BPM/SYNC do Live co
 
 Doze cartões expõem as fontes de mapeamento normalizadas `0..1`:
 
-- `sensor.audio.transient` — quanta energia do quadro inteiro é nova.
-- `sensor.audio.kick` — uma subida que aconteceu entre 35 e 100 Hz.
-- `sensor.audio.snare` — uma subida que aconteceu entre 1,5 e 8 kHz.
-- `sensor.audio.brightness` — centroide espectral do escuro ao brilhante, normalizado em escala logarítmica.
-- `sensor.audio.centroid` — centro espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 20000.
-- `sensor.audio.flux` — mudança de forma espectral (metade da distância L1 entre magnitudes normalizadas); mudar apenas o ganho não aumenta o fluxo.
-- `sensor.audio.flatness` — média geométrica/aritmética da potência: tonal perto de 0, ruidoso perto de 1.
-- `sensor.audio.spread` — desvio padrão espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 10000.
-- `sensor.audio.rolloff` — frequência que contém 95% da potência espectral; leitura em Hz, mapeamento = Hz / 20000.
-- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high` — loudness ponderado K (ITU-R BS.1770-4) nas bandas 20–250, 250–2000 e 2000–20000 Hz, mapeado para `0..1` de −50 LU a −5 LU em relação ao fundo de escala digital da entrada. Cada banda aplica a ponderação K por bin (high-shelf + high-pass RLB) e um integrador momentâneo de 400 ms sobre a potência ponderada K. `sensor.audio.flatness` usa entropia de Wiener em dB: tonal → 0 (−60 dB), ruidoso → 1 (0 dB).
+- `sensor.audio.transient`: quanta energia do quadro inteiro é nova.
+- `sensor.audio.kick`: uma subida que aconteceu entre 35 e 100 Hz.
+- `sensor.audio.snare`: uma subida que aconteceu entre 1,5 e 8 kHz.
+- `sensor.audio.brightness`: centroide espectral do escuro ao brilhante, normalizado em escala logarítmica.
+- `sensor.audio.centroid`: centro espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 20000.
+- `sensor.audio.flux`: mudança de forma espectral (metade da distância L1 entre magnitudes normalizadas); mudar apenas o ganho não aumenta o fluxo.
+- `sensor.audio.flatness`: média geométrica/aritmética da potência: tonal perto de 0, ruidoso perto de 1.
+- `sensor.audio.spread`: desvio padrão espectral ponderado por magnitude; leitura em Hz, mapeamento = Hz / 10000.
+- `sensor.audio.rolloff`: frequência que contém 95% da potência espectral; leitura em Hz, mapeamento = Hz / 20000.
+- `sensor.audio.low`, `sensor.audio.mid`, `sensor.audio.high`: loudness ponderado K (ITU-R BS.1770-4) nas bandas 20–250, 250–2000 e 2000–20000 Hz, mapeado para `0..1` de −50 LU a −5 LU em relação ao fundo de escala digital da entrada. Cada banda aplica a ponderação K por bin (high-shelf + high-pass RLB) e um integrador momentâneo de 400 ms sobre a potência ponderada K. `sensor.audio.flatness` usa entropia de Wiener em dB: tonal → 0 (−60 dB), ruidoso → 1 (0 dB).
 
 As oito novas medidas usam centros de bins de 20 Hz até min(20 kHz, Nyquist), sem DC. As bandas não se sobrepõem; bins na fronteira pertencem à banda superior. Silêncio digital zera as oito medidas; reiniciar também zera o histórico do fluxo. Brilho preserva o centroide logarítmico ponderado por potência de 100–12000 Hz: é relacionado ao novo centroide por magnitude, mas não idêntico.
 
-**Cor e identificação:** cada grupo tem sua cor — Ataques vermelho, Timbre âmbar, Textura violeta, Bandas ciano — usada no título e nos knobs. Seus três descritores usam tons claro, médio e escuro, iguais na amostra do cartão, na legenda e na curva contínua. As doze marcas superam contraste de 3:1 contra o fundo do gráfico. O tom identifica o descritor, não sua intensidade. A distinção dentro do grupo depende dos nomes e dos botões da legenda, não só da cor: oculte outras curvas se uma sobreposição ou diferença de visão de cores dificultar a leitura. O limiar tracejado do gate em Amplitude continua sendo uma referência, não um descritor.
+**Cor e identificação:** cada grupo tem sua cor (Ataques vermelho, Timbre âmbar, Textura violeta, Bandas ciano), usada no título e nos knobs. Seus três descritores usam tons claro, médio e escuro, iguais na amostra do cartão, na legenda e na curva contínua. As doze marcas superam contraste de 3:1 contra o fundo do gráfico. O tom identifica o descritor, não sua intensidade. A distinção dentro do grupo depende dos nomes e dos botões da legenda, não só da cor: oculte outras curvas se uma sobreposição ou diferença de visão de cores dificultar a leitura. O limiar tracejado do gate em Amplitude continua sendo uma referência, não um descritor.
 
 **Controles dos detectores:** os knobs usam o mesmo corpo radial e ponteiro retangular da MIX, com a cor do grupo no foco e no arraste. Arraste verticalmente, use as setas com o controle focado ou dê um duplo clique para voltar ao padrão. Em Tudo, a faixa quebra em linhas pelo conteúdo no desktop; em telas baixas, deslize-a horizontalmente para alcançar todos os knobs e JANELA. O gráfico ocupa a altura restante, sem uma linha reservada para controles aposentados.
 
@@ -831,7 +831,7 @@ As oito novas medidas usam centros de bins de 20 Hz até min(20 kHz, Nyquist), s
 
 **Como um ataque é decidido.** O Transiente compara a energia que subiu no
 quadro com a energia que aquele quadro vinha carregando nos últimos ~300 ms,
-passando por um joelho suave — assim uma pancada forte não gruda em `1.000` e a
+passando por um joelho suave. Assim uma pancada forte não gruda em `1.000` e a
 dinâmica sobrevive. Kick e Snare fazem então uma segunda pergunta: quanto dessa
 energia nova caiu na banda deles, comparado com a fatia que aquela banda
 costuma ter. Banda que só recebeu a fatia de sempre não dispara. O conteúdo de
@@ -841,7 +841,7 @@ vazia; e uma banda mais de 30 dB abaixo do quadro é tratada como mascarada.
 
 Kick e Snare continuam sendo heurísticas, não separação de fontes: qualquer
 coisa que acrescente energia naquela banda vai movê-los. O limite honesto é a
-resolução em frequência — na janela estreita, um corpo de caixa perto de 200 Hz
+resolução em frequência. Na janela estreita, um corpo de caixa perto de 200 Hz
 também move o Kick, porque bins de 46–94 Hz não distinguem os dois. Aumente a
 JANELA e eles se separam.
 
@@ -884,7 +884,7 @@ suavização zero continua OFF. Subdivisões salvas válidas são preservadas;
 RELEASE novo de 45 ms escolhe a subdivisão mais próxima (1/64 D a 120 BPM).
 O áudio não estima BPM; em SYNC, o relógio vem do Live.
 
-Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâneo de 400 ms, mapeado logaritmicamente para `0..1` (0 = −50 LU, 1 = −5 LU, relativos ao fundo de escala digital da entrada — não SPL). O pré-filtro K e o high-pass RLB são aplicados por bin, então uma banda aguda claramente audível que carrega pouca energia RMS deixa de ficar presa perto de zero. Flatness é mapeada em dB (entropia de Wiener): tonal → 0 (−60 dB), ruidoso → 1 (0 dB). O knob de bandas adiciona um offset de ±dB na mesma escala (ganho `×2` → +6 dB, `×0,5` → −6 dB) antes do clamp; ele não multiplica o valor unitário.
+Bandas são **loudness ponderado K (ITU-R BS.1770-4)** com integrador momentâneo de 400 ms, mapeado logaritmicamente para `0..1` (0 = −50 LU, 1 = −5 LU, relativos ao fundo de escala digital da entrada, não SPL). O pré-filtro K e o high-pass RLB são aplicados por bin, então uma banda aguda claramente audível que carrega pouca energia RMS deixa de ficar presa perto de zero. Flatness é mapeada em dB (entropia de Wiener): tonal → 0 (−60 dB), ruidoso → 1 (0 dB). O knob de bandas adiciona um offset de ±dB na mesma escala (ganho `×2` → +6 dB, `×0,5` → −6 dB) antes do clamp; ele não multiplica o valor unitário.
 
 | Knob | Grupo | O que decide |
 | --- | --- | --- |
@@ -913,7 +913,7 @@ Para modulação mais imediata, use Transiente/Kick/Snare, sem essa janela de pi
 
 A extensão não consegue ouvir uma track do Live. O SDK de Extensions expõe
 nomes de track, devices e parâmetros, e uma renderização offline do
-arrangement — sem medidor, sem buffer, sem stream — então nada rodando dentro
+arrangement (sem medidor, sem buffer, sem stream), então nada rodando dentro
 da extensão consegue escutar áudio. Só um device dentro do caminho de áudio do
 Live consegue.
 
@@ -968,18 +968,18 @@ página.
 
 Valores de saída:
 
-- `sensor.vision.x`, `sensor.vision.y` — posição horizontal e vertical da palma,
+- `sensor.vision.x`, `sensor.vision.y`: posição horizontal e vertical da palma,
   em coordenadas normalizadas de imagem
-- `sensor.vision.z` — profundidade normalizada pelo tamanho da palma: sobe
+- `sensor.vision.z`: profundidade normalizada pelo tamanho da palma: sobe
   conforme a mão chega perto da câmera. É um sinal direto de performance, não um
   espaço 3D calibrado nem simulado.
 - `sensor.vision.fist`, `sensor.vision.pinch`, `sensor.vision.victory`,
-  `sensor.vision.open` — canais de gesto
-- `sensor.vision.rotateVal` (**Victory Rotate**) — rotação contínua do punho,
+  `sensor.vision.open`: canais de gesto
+- `sensor.vision.rotateVal` (**Victory Rotate**): rotação contínua do punho,
   neutra em `0.5`, ao vivo só enquanto o Victory está segurado
 - `sensor.vision.pinch_x`, `sensor.vision.pinch_y`, `sensor.vision.pinch_z`
-  (**Pinch Clutch X / Y / Z**) — três eixos contínuos de clutch
-- `sensor.vision.gesture.1`, `.2`, `.3` — canais de pose estática aprendida
+  (**Pinch Clutch X / Y / Z**): três eixos contínuos de clutch
+- `sensor.vision.gesture.1`, `.2`, `.3`: canais de pose estática aprendida
 
 Faça a pinça para engatar o clutch, mova a mão para conduzir X/Y/Z, e solte. Os
 eixos ficam onde foram deixados, então a próxima pinça continua daquela posição
@@ -1127,7 +1127,7 @@ mesma mudança relativa em qualquer lugar.
 | D | burst no toque | pico (0.15..1) | sem efeito horizontal |
 
 Em `SYNC`, o modo D tira a duração dos Ajustes de Deep Sync, em vez do envelope
-fixo de 520 ms, e vale igual para pads, LFOs e squares — veja
+fixo de 520 ms, e vale igual para pads, LFOs e squares. Veja
 [§ 2](#2-modos-de-pad-a--b--c--d).
 
 ### Nomes de controle (para mapear)
@@ -1151,12 +1151,12 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 ## 14. Gestos
 
-- **Toque** — pressão momentânea (padrão do modo A).
-- **Toque longo** — igual ao toque; não tem ação separada.
-- **Arrastar para cima** — aumenta o valor (profundidade, taxa, contagem etc).
-- **Arrastar para baixo** — diminui o valor. Chegar ao fim da faixa manda `0`.
-- **Arrastar na horizontal num square** — muda a velocidade; na vertical, a amplitude.
-- **Arrastar na horizontal num LFO** — muda a taxa de modulação.
+- **Toque**: pressão momentânea (padrão do modo A).
+- **Toque longo**: igual ao toque; não tem ação separada.
+- **Arrastar para cima**: aumenta o valor (profundidade, taxa, contagem etc).
+- **Arrastar para baixo**: diminui o valor. Chegar ao fim da faixa manda `0`.
+- **Arrastar na horizontal num square**: muda a velocidade; na vertical, a amplitude.
+- **Arrastar na horizontal num LFO**: muda a taxa de modulação.
 
 ---
 
@@ -1164,7 +1164,7 @@ sensor.vision.{x,y,z,fist,pinch,victory,rotateVal,open,
 
 | Sintoma | Solução |
 | ------- | ------- |
-| O celular não conecta | Veja o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) — confira Wi-Fi, IP e o aviso de certificado. |
+| O celular não conecta | Veja o [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md): confira Wi-Fi, IP e o aviso de certificado. |
 | Valores de sensor travados ou errados | Aperte **CALIBRAR** com o aparelho numa superfície estável. |
 | LFOs fora de sincronia com o Live | Aperte **SYNC** para travar de novo no BPM do Live. |
 | A lista de destinos do MAP parece desatualizada | Aperte **Refresh** no modo MAP, depois de adicionar ou remover devices no Live. |
@@ -1262,13 +1262,13 @@ selecionar cena ou abrir CFG nunca arma track nem inicia playback/gravação. A
 troca de visão fica bloqueada enquanto existe tentativa REC própria; STOP
 segue essa posse. Nomes, ARM MULTI/EXCLUSIVE e SOLO/MUTE são compartilhados.
 
-**GRAVAR** mostra a barra de captura compartilhada — **REC** e **STOP** — junto
+**GRAVAR** mostra a barra de captura compartilhada (**REC** e **STOP**), junto
 com a configuração da captura (**PRÉ-ROLL** **OFF / 1 / 2 / 4**,
 **OFF** por padrão; **PASSAGENS** **1 / 2 / 3 / ∞**, uma passagem por padrão;
 **INÍCIO** e **FIM**), as linhas nativas de track e a lista compacta de
 marcadores. No celular deitado, só a lista de tracks rola na vertical; as
 faixas acima dela ficam no lugar. Esta visão não lê clips, nem take lanes, nem
-waveforms — isso pertence ao **ARRANGEMENT**. As tracks e os marcadores usados
+waveforms. Isso pertence ao **ARRANGEMENT**. As tracks e os marcadores usados
 na captura são preparados no Live: o RC Surface nunca cria track e nunca cria
 marcador. **ARRANGEMENT** é o editor do Arrangement (timeline de marcadores e
 clips, clips nativos, foco de takes); **CLIP** é a visão já existente de
@@ -1282,9 +1282,9 @@ rolam abaixo dela.
 
 ### Arrangement
 
-Crie os marcadores do Arrangement no Live antes — o RC Surface não tem
+Crie os marcadores do Arrangement no Live antes. O RC Surface não tem
 controle que crie marcador, e os marcadores que você preparou aparecem no
-catálogo — depois abra **REC** com o playback parado:
+catálogo. Depois abra **REC** com o playback parado:
 
 1. Arme as entradas nas linhas de track do REC. Cada linha mostra
    **ARM / SOLO / MUTE** observados, e **ARM ALL** arma todas as tracks
@@ -1320,7 +1320,7 @@ catálogo — depois abra **REC** com o playback parado:
    **PRÉ-ROLL** alterna **OFF / 1 / 2 / 4** compassos, com **OFF**
    como padrão, e **PASSAGENS** alterna **1 / 2 / 3 / ∞**, em que ∞ são
    passagens ilimitadas até você apertar **STOP**. **PASSAGENS** fica disponível
-   quando o fim é limitado — **Próximo marcador** ou um marcador explícito —,
+   quando o fim é limitado (**Próximo marcador** ou um marcador explícito),
    e o padrão é uma passagem. Uma contagem fora desses valores é normalizada
    para **1**, e a página avisa.
    A linha **FIM** oferece **Próximo marcador** (o primeiro marcador depois do
@@ -1354,7 +1354,7 @@ inicia playback ou gravação. Os clips em take lanes são inspecionados na vis�
 Arrangement que você escolheu. Um marcador movido ou removido precisa ser
 escolhido novamente.
 
-Gravação livre — uma captura **Até STOP** — desliga o Arrangement Loop.
+Gravação livre: uma captura **Até STOP** desliga o Arrangement Loop.
 Gravação limitada confirma o trecho
 e o Punch Out nativo antes de começar. Uma passagem deixa Loop desligado;
 repetição finita desliga Loop na última passagem observada e confirma STOP após
@@ -1435,7 +1435,7 @@ de uma estimativa.
 - **Atualização do catálogo:** nomes de clips, intervalos e o catálogo de takes
   mostram a última leitura explícita; nada acompanha as edições de clips no
   Live. Se você renomear, mover ou apagar um clip no Live, use **Atualizar**
-  (ou **Carregar**), ou recarregue a página, e escolha o clip de novo — a
+  (ou **Carregar**), ou recarregue a página, e escolha o clip de novo. A
   escolha anterior não é mais a atual. Enquanto uma track está em foco para
   inspeção de takes, edições feitas no Live não são observadas antes dessa nova
   leitura.

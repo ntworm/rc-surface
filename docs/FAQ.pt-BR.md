@@ -92,7 +92,7 @@ customizar a interface do celular ou contribuir com código.
 Não. WebSocket local, HTTPS e certificados gerados na hora podem parecer
 estranhos para software de segurança. O código-fonte do projeto é público
 (source-available), e o `.ablx` contém o código da extensão mais os arquivos estáticos do
-navegador — nada de chaves privadas ou certificados embutidos.
+navegador: nada de chaves privadas ou certificados embutidos.
 
 ---
 
@@ -130,11 +130,11 @@ Library na track MIDI no Live e tente de novo.
 
 ### Quantos celulares podem conectar ao mesmo tempo?
 
-O RC Surface suporta um controlador por vez. Opere a performance pelo celular
-ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador
-possam abrir a página na rede local e receber IDs de cliente isolados, o
-controle simultâneo por múltiplos dispositivos não é suportado e causará
-conflitos de estado.
+O RC Surface suporta um controlador por vez. Opere a performance pelo
+celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de
+navegador possam abrir a página na rede local e receber IDs de cliente
+isolados, o controle simultâneo por múltiplos dispositivos não é suportado e
+causará conflitos de estado.
 
 ### O celular vibra quando eu bato num pad?
 
@@ -253,7 +253,7 @@ problemas de segurança pelo canal privado descrito no
 
 ## Veja também
 
-- [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md) — guia de instalação detalhado
-- [`PRIVACY.pt-BR.md`](./PRIVACY.pt-BR.md) — política de privacidade completa
-- [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md) — modelo de ameaças e desenho de segurança
-- [README](../README.md) — visão geral do projeto
+- [`INSTALL.pt-BR.md`](./INSTALL.pt-BR.md): guia de instalação detalhado
+- [`PRIVACY.pt-BR.md`](./PRIVACY.pt-BR.md): política de privacidade completa
+- [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md): modelo de ameaças e desenho de segurança
+- [README](../README.md): visão geral do projeto

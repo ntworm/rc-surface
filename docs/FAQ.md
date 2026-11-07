@@ -265,7 +265,7 @@ instead of a public issue.
 
 ## See also
 
-- [INSTALL.md](./INSTALL.md) — detailed install guide
-- [PRIVACY.md](./PRIVACY.md) — full privacy policy
-- [SECURITY.md](./SECURITY.md) — threat model and security design
-- [README](../README.md) — project overview
+- [INSTALL.md](./INSTALL.md): detailed install guide
+- [PRIVACY.md](./PRIVACY.md): full privacy policy
+- [SECURITY.md](./SECURITY.md): threat model and security design
+- [README](../README.md): project overview

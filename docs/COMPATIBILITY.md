@@ -4,14 +4,14 @@ Requirements and current evidence for RC Surface 2.1.0.
 
 ## Live
 
-- Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK `1.0.0-beta.0` (installed from `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtained from Ableton; the tarball is not part of this repository — see `vendor/README.md`).
+- Ableton Live 12.4.5+ Suite (Beta) with Extensions SDK `1.0.0-beta.0` (installed from `vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz`, obtained from Ableton; the tarball is not part of this repository. See `vendor/README.md`).
 - Two-track pattern: one track hosts `RC-Midi-Receiver.amxd` (Receiver v2); the audio source track hosts `RC-Audio-Sender.amxd` (the standalone Max audio helper). Sender input must be enabled on the Receiver v2 that should play.
 - See `docs/INSTALL.md` for the end-to-end setup walk-through.
 
 ## Browser (operator surface)
 
-- Desktop Chrome (current stable) — operator console + advanced admin pages.
-- Mobile Chrome Landscape — operator console at phone resolutions (Pixel 5 emulation and equivalent viewport sizes).
+- Desktop Chrome (current stable): operator console + advanced admin pages.
+- Mobile Chrome Landscape: operator console at phone resolutions (Pixel 5 emulation and equivalent viewport sizes).
 - The Playwright matrix (`tests/ui/*.spec.mjs`) covers both projects.
 
 ## Node and tooling
@@ -40,8 +40,8 @@ Mappings, presets and projects use `surface-v2` and schema 2. Data from the 1.x 
 
 ## See also
 
-- `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md` — installation walkthrough.
-- `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md` — third-party notices.
-- `internal/TESTER-GUIDE.md` — current guidance with separately labeled historical evidence.
-- [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) — dependency matrix and distribution conclusion.
-- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json) — the recorded gates.
+- `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: installation walkthrough.
+- `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: third-party notices.
+- `internal/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
+- [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): dependency matrix and distribution conclusion.
+- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json): the recorded gates.
