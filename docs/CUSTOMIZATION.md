@@ -1,6 +1,6 @@
-# Customization Guide
+# Customization guide
 
-This guide explains where to change RC Surface.
+This guide points at the files that implement each part of RC Surface.
 It is written for maintainers and contributors.
 
 Read first:
@@ -8,7 +8,7 @@ Read first:
 - `CONTRIBUTING.md`
 - `internal/README.md`
 
-## Current Architecture
+## Current architecture
 
 Backend:
 
@@ -33,7 +33,7 @@ Frontend:
 
 All static clients are plain browser JS. No bundler. Tests live beside the static files.
 
-## Development Loop
+## Development loop
 
 Install:
 
@@ -62,7 +62,7 @@ Hot reload:
 - `src/**` change: rebuild, then disable/enable extension in Ableton Live.
 - `npm run watch` can sync built files into Ableton AppData during development.
 
-## Control Names
+## Control names
 
 Control updates use:
 
@@ -84,14 +84,14 @@ Canonical groups:
 
 Before adding a control:
 
-1. Search current source.
-2. Reuse existing owner.
-3. Emit through existing snapshot/controls flow.
-4. Add panel/admin target entry if user should map it.
+1. Search the current source.
+2. Reuse the module that already owns it.
+3. Emit through the existing snapshot and controls flow.
+4. Add the target entry in the panel and in the admin pages when the user should map it.
 5. Add tests.
-6. Update this file if public.
+6. Update this file when the control is public.
 
-## Phone Controls
+## Phone controls
 
 Main files:
 
@@ -116,7 +116,7 @@ If mode behavior changes, update:
 - `static/phone-v3/mode-engine.test.mjs`
 - specific UI tests such as `static/phone-v3/stutter-mode.test.mjs`
 
-## Mobile MAP Mode
+## Mobile MAP mode
 
 The phone MAP workflow lets users create and edit mappings without
 opening the Ableton panel. It uses the same backend command registry as
@@ -175,7 +175,7 @@ The curve canvas is a local visual preview of the mapping response. If
 the backend curve implementation changes, update both the backend tests
 and the mobile preview math.
 
-## Safe Input Layer
+## Safe input layer
 
 Continuous mappings use soft takeover by default. The backend reads the
 confirmed Live parameter value, starts at that value, and scales phone
@@ -208,7 +208,7 @@ without a CDN or internet connection after the extension has been built.
 Motion/orientation values receive the same jitter and confirmed-spike filtering
 in the backend before takeover and mapping dispatch.
 
-## Set Project Profiles
+## Set project profiles
 
 Mappings and set-specific safety state are stored as schema-versioned
 `.rcsurface` files under `storageDirectory/surface-v2/projects/` (schema 2). Writes
@@ -269,10 +269,10 @@ Files:
 - `static/phone-v3/audio-descriptors.js` — pure transient/kick/snare/brightness DSP: band-local rises against each band's own running energy, a soft knee for sensitivity, an exponential release and a response curve. `normalizeSettings` is the single clamp for every detector setting.
 - `static/phone-v3/audio-spectral-descriptors.js` — eight defined spectral features.
 - `static/shared/audio-descriptor-catalog.js` — shared mapping IDs, groups, three shades per family and Hz readout scales. Preserve catalog order and >=3:1 mark contrast against #0e0e0e. Descriptor curves and swatches are solid; their labelled legend toggles are the non-colour identifier.
-- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — the twelve grouped cards, the single graph-view control and bounded selectable histories. The normalized views scale to the loudest visible curve and publish that ceiling on `#audio-timeline[data-scale]`; amplitude scales from RMS/envelope.
+- `static/phone-v3/audio-workspace.js`, `audio-timeline.js` — the twelve grouped cards, the single graph-view control and bounded selectable histories. The normalized views scale to the loudest visible curve and publish that ceiling on `#audio-timeline[data-scale]`; amplitude keeps its own scale for RMS/envelope, and the graph does not show the Gate threshold.
 - `static/phone-v3/audio-descriptor-stream.js` — contiguous sample windows and reusable FFT buffers.
 - `static/phone-v3/audio-descriptor-worklet.js` — continuous capture with one pending, acknowledged descriptor message.
-- `static/phone-v3/style.css` — grouped flat arc dials (horizontal group scroll on short screens), a separate WINDOW toolbar.
+- `static/phone-v3/style.css` — grouped flat arc dials (horizontal group scroll on short screens), a separate WINDOW toolbar. Retired controls have no rules; do not reserve empty rows in the grid.
 - `static/phone-v3/audio-detector-timing.js` — quarter-note-based subdivisions for RELEASE/SMOOTH: 1/128..1/1, straight/triplet/dotted, sorted by duration. Saved `*Beats` choices and FREE `*Ms` values stay independent; app.js resolves fractional milliseconds when Live tempo/SYNC changes through the existing worklet settings path. DSP RELEASE supports 1.25..360000 ms (1/128 T at 1000 BPM through 1/1 D at 1 BPM); FREE UI stays 10..500 ms and SMOOTH 0..200 ms. Only labels round. Tempo updates preserve active dials. Band outputs remain linear RMS, not loudness-weighted.
 - `static/phone-v3/audio-processor.test.mjs`, `audio-analysis-controls.test.mjs`
 - `static/phone-v3/app.js`
@@ -365,7 +365,7 @@ Mapping UI must support:
 
 Do not add another modal if inline editing can solve it.
 
-## Backend Commands
+## Backend commands
 
 Command registry lives in `src/live/mappings.ts`.
 
@@ -390,7 +390,7 @@ When adding a command:
 4. Add source-side test in `tests/*.test.mjs`.
 5. Wire UI only after handler test passes.
 
-## WebSocket Protocol
+## WebSocket protocol
 
 Typed phone messages such as `snapshot`, `ping`, and display-name updates are not Live commands.
 Command envelopes are separate.
@@ -401,13 +401,16 @@ When adding a message type:
 - preserve snapshot `controls[]` shape;
 - add tests to avoid "foreign msg" log spam.
 
-## Docs Checklist
+## Docs checklist
 
 Update docs when public behavior changes:
 
 - Install/certs/network: `docs/INSTALL.md`, `docs/SECURITY.md`.
 - Data flow/privacy: `docs/PRIVACY.md`.
 - New controls/sensors: `docs/CUSTOMIZATION.md`, `README.md`.
+
+> When you change these files, update the Portuguese version beside them
+> (`docs/*.pt-BR.md`).
 
 ## Local pose diagnostics
 

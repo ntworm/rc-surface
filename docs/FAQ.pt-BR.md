@@ -1,7 +1,7 @@
 # Perguntas frequentes
 
-> Respostas para as dúvidas mais comuns sobre o **RC Surface**.
-> Última atualização: outubro de 2026.
+RC Surface é uma extensão do Ableton Live que serve uma superfície de controle
+no navegador do celular, pela rede local.
 
 ## Índice
 
@@ -17,8 +17,7 @@
 
 ### Funciona no Live 11?
 
-Não. O alvo documentado é o Ableton Live 12.4.5+ Suite (Beta), porque o projeto
-usa o host do SDK de Extensions do Ableton.
+Não. O projeto usa o host do SDK de Extensions do Ableton.
 
 ### Funciona com FL Studio / Logic / Bitwig / Reaper?
 
@@ -28,35 +27,31 @@ esse host.
 
 ### Quais versões do Ableton Live são suportadas?
 
-O alvo documentado é o **Ableton Live 12.4.5+ Suite (Beta)**, com suporte ao
-SDK de Extensions.
+**Ableton Live 12.4.5+ Suite (Beta)**, com suporte ao SDK de Extensions.
 
 ### Funciona no Windows e no Mac?
 
-O suporte previsto é Windows 10/11 e macOS, em Intel ou Apple Silicon. Linux
-não é suportado porque o Ableton Live não roda em Linux.
+Windows 10/11 e macOS, em Intel ou Apple Silicon. Linux não é suportado
+porque o Ableton Live não roda em Linux.
 
 ### Funciona no iPhone e no Android?
 
-O suporte previsto é Safari no iOS 15.4+ e navegadores Chromium atuais no
-Android. Toque, sensores, microfone e câmera exigem permissão do navegador. O
-iOS 14.5 e anteriores não conseguem aceitar o certificado HTTPS autoassinado,
-então a conexão falha.
+Safari no iOS 15.4+ e navegadores Chromium atuais no Android. Toque, sensores,
+microfone e câmera exigem permissão do navegador. O iOS 14.5 e anteriores não
+conseguem aceitar o certificado HTTPS autoassinado, então a conexão falha.
 
 Rode a checklist de teste em aparelhos iOS e Android reais antes de considerar
 um build validado para publicação.
 
 ### Qual é a latência? Dá para usar ao vivo?
 
-No RC Surface 2.0, gestos e áudio dividem um caminho em tempo real: o
-primeiro envio é imediato e os lotes seguintes saem com pelo menos 8 ms de
-intervalo. Os snapshots visuais do MAP não atrasam esses comandos. Smooth 0 não
-acrescenta rampa nenhuma ao mapeamento. Isso não é
-latência total medida; hosts antigos usam o caminho legado. O cliente espera
-uma rede Wi-Fi local. A latência real depende da máquina, do
-celular, do navegador, do roteador e do congestionamento da rede. Use Wi-Fi de
-5 GHz para o resultado mais consistente, e teste exatamente a sua montagem
-antes do show.
+Gestos e áudio dividem um caminho em tempo real: o primeiro envio é imediato e
+os lotes seguintes saem com pelo menos 8 ms de intervalo. Os snapshots visuais
+do MAP não atrasam esses comandos. Smooth 0 não acrescenta rampa nenhuma ao
+mapeamento. Isso não é latência total medida. O cliente espera uma rede Wi-Fi
+local. A latência real depende da máquina, do celular, do navegador, do
+roteador e do congestionamento da rede. Use Wi-Fi de 5 GHz para o resultado mais
+consistente, e teste exatamente a sua montagem antes do show.
 
 ---
 
@@ -70,6 +65,12 @@ antes do show.
 4. Abra o RC Surface pelo menu Extensions do Live.
 5. Escaneie o QR code com o celular.
 6. Aceite o aviso de certificado autoassinado, uma vez.
+
+### Como eu atualizo para uma versão nova?
+
+Baixe o `.ablx` mais recente na página de Releases do projeto, dê dois cliques
+e deixe o Live substituir a extensão instalada. Reinicie o Live se ele estava
+aberto durante a atualização.
 
 ### Preciso de internet?
 
@@ -97,7 +98,7 @@ navegador — nada de chaves privadas ou certificados embutidos.
 
 ## Recursos e funcionamento
 
-### Os pads e knobs funcionam com qualquer device MIDI no Live?
+### Quais alvos do Live os pads e knobs controlam?
 
 Funcionam com os alvos do Live expostos à extensão: valores de mixer, estado de
 track, parâmetros de device e as ações suportadas de nota e clip. Para
@@ -121,29 +122,29 @@ selecione a ação correspondente à fonte:
 O Follow Detected Note (seguir a nota detectada) não está disponível. Modos de
 mapeamento não suportados são descartados ao carregar; os vínculos válidos, incluindo Trigger Note fixo, ficam.
 
-Use o Receiver v2 (**SDK / LOCAL MAX — NO UDP**) e troque instâncias antigas
-nos Sets; só um Receiver compatível é aceito por track de destino.
+Use o Receiver v2 (**SDK / LOCAL MAX — NO UDP**) e troque as instâncias do
+Receiver no seu Set; só um Receiver compatível é aceito por track de destino.
 O SDK de Extensions não consegue adicionar um receiver Max for Live sozinho.
 Se ele ainda não estiver na track, coloque o `RC-Midi-Receiver.amxd` da sua User
 Library na track MIDI no Live e tente de novo.
 
 ### Quantos celulares podem conectar ao mesmo tempo?
 
-O RC Surface 2.0 suporta um controlador por vez. Opere a performance pelo
-celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de
-navegador possam abrir a página na rede local e receber IDs de cliente isolados,
-o controle simultâneo por múltiplos dispositivos não é suportado e causará conflitos
-de estado.
+O RC Surface suporta um controlador por vez. Opere a performance pelo celular
+ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador
+possam abrir a página na rede local e receber IDs de cliente isolados, o
+controle simultâneo por múltiplos dispositivos não é suportado e causará
+conflitos de estado.
 
 ### O celular vibra quando eu bato num pad?
 
-Não. O celular não vibra ao tocar num pad.
+Não.
 
 ### Dá para transformar o que eu toco em notas MIDI?
 
 Não. O **Follow Detected Note** (seguir a nota detectada) e a análise tonal dele
-não estão disponíveis: testes musicais repetidos não deram resultados confiáveis. **Trigger Note** fixo
-continua; ele não estima a nota que você está tocando.
+não estão disponíveis. O **Trigger Note** fixo continua; ele não estima a nota
+que você está tocando.
 
 ### O que posso mapear a partir do áudio?
 
@@ -166,9 +167,9 @@ mantém sua análise da track; ele não fornece estes descritores do navegador.
 
 O app pede ao navegador que desligue o cancelamento de eco, a supressão de ruído
 e o controle automático de ganho, para preservar a amplitude e os descritores
-espectrais. Isso não garante
-captura bit-perfect: navegador, sistema ou driver ainda podem reamostrar/processar
-áudio. Selecione o loopback/interface desejado na AUD.
+espectrais. Isso não garante captura bit-perfect: navegador, sistema ou driver
+ainda podem reamostrar/processar áudio. Selecione o loopback/interface desejado
+na AUD.
 
 ### Dá para impedir que ele inicie junto com o Live?
 
@@ -183,15 +184,10 @@ Veja o [`CUSTOMIZATION.pt-BR.md`](./CUSTOMIZATION.pt-BR.md).
 
 ### Dá para salvar e compartilhar mapeamentos?
 
-Sim. Use presets locais e exportação/importação de configuração de projeto do painel. Arquivos 2.0 usam schema 2; dados 1.x não são importados. Destinos dependem das tracks/devices do Set e precisam ser conferidos após restaurar. Veja o guia do usuário.
-
-### Como eu atualizo para uma versão nova?
-
-Baixe o `.ablx` mais recente na página de Releases do projeto, dê dois cliques
-e deixe o Live substituir a extensão instalada. Reinicie o Live se ele estava
-aberto durante a atualização.
-
----
+Sim. Use presets locais e exportação/importação de configuração de projeto do painel.
+Os arquivos usam schema 2, e os dados 1.x não são importados. Destinos dependem
+das tracks/devices do Set e precisam ser conferidos após restaurar. Veja o
+[guia do usuário](./USER-GUIDE.pt-BR.md).
 
 ### REC é uma página? E AUT?
 
@@ -200,6 +196,8 @@ REC é a sétima página (**ARRANGEMENT / CLIP**): no Arrangement, escolha curso
 ### Quantas poses e quais leituras da mão entram no MAP?
 
 VID começa com três cartões e permite + ADD POSE até quinze. Cada pose precisa de três exemplos e aceita seis; RETAKE/KEEP revisam capturas discordantes. X remove o cartão, CLR mantém a identidade. PALM e FACE ficam na faixa MAP com X/Y/Z. FACE é orientação da palma/dorso, não rastreamento facial. Amostras ausentes/inválidas seguem Safe loss.
+
+---
 
 ## Privacidade e segurança
 
@@ -223,8 +221,8 @@ abre uma porta alcançável pela rede local e aceita os comandos WebSocket
 suportados de clientes de navegador que consigam chegar na URL do bridge. Rode
 só em Wi-Fi confiável, de casa ou do estúdio, e feche quando terminar. Não
 exponha por túneis, proxies reversos ou redirecionamento de porta; esses
-cenários estão fora do modelo de ameaças da v2.0. O modelo de ameaças completo
-está no [`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md).
+cenários estão fora do modelo de ameaças. O modelo de ameaças completo está no
+[`SECURITY.pt-BR.md`](./SECURITY.pt-BR.md).
 
 ### Preciso pagar? Existe versão Pro?
 

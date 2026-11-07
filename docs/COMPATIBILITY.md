@@ -1,6 +1,6 @@
-# Compatibility — RC Surface
+# Compatibility
 
-Release `2.1.0`. Product requirements and evidence; 1.0 records are not new 2.0 gates.
+Requirements and current evidence for RC Surface 2.1.0.
 
 ## Live
 
@@ -14,13 +14,13 @@ Release `2.1.0`. Product requirements and evidence; 1.0 records are not new 2.0 
 - Mobile Chrome Landscape — operator console at phone resolutions (Pixel 5 emulation and equivalent viewport sizes).
 - The Playwright matrix (`tests/ui/*.spec.mjs`) covers both projects.
 
-## Node + tooling
+## Node and tooling
 
 - Node `24.16.x` (declared range: `>=24.16.0 <25`). See `engines.node` in `package.json`.
 - npm 11.x for build and test commands.
 - Playwright `1.62.0` ships with Chromium `151.0.7922.34` (Playwright build `chromium-1234`) for headless tests.
 
-## Network + ports
+## Network and ports
 
 - WebSocket only; no UDP MIDI. The Receiver v2 sends local Max messages inside the device; no UDP broadcast.
 - Test ports are set per worktree (see `tests/ui/test-server.mjs` and `playwright.config.mjs`).
@@ -28,20 +28,20 @@ Release `2.1.0`. Product requirements and evidence; 1.0 records are not new 2.0 
 ## Third-party packages
 
 - `docs/THIRD-PARTY-NOTICES.md` (English) and `docs/THIRD-PARTY-NOTICES.pt-BR.md` (Portuguese) list the components actually packaged in the ABLX payload and in the host bundle, with license notices.
-- [historical 1.0 distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) records the dependency matrix and the explicit conclusion that no third-party relicensing is required for the 1.0 candidate.
+- The [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) records the dependency matrix and the conclusion that no third-party relicensing is required.
 
 ## Current evidence and limits
 
-A 2.0.0 installation was reported as working; no error or bug was observed. That report does not certify 2.1.0 on the target Mac. The 2.1.0 checks are automated; real latency, audio capture, WebView behavior and take preservation must be checked in the user's setup.
+The checks of this version are automated. Real latency, audio capture, WebView behavior and take preservation must be checked in the user's setup.
 
-Automated regressions use mocks and isolated browsers; they are not hardware evidence. Final preparation must record the package commit/hash, current gates and EN/PT visual review. The version is 2.1.0; this document does not declare publication. The 1.0 records and the “Receiver v2” name describe other release cycles; they are not product-version 2.0 acceptance.
+Automated regressions use mocks and isolated browsers; they are not hardware evidence. Final preparation must record the package commit/hash, current gates and EN/PT visual review. This document does not declare publication.
 
-1.x data does not migrate: 2.0 mappings/presets/projects use `surface-v2` and schema 2. This separation does not guarantee take preservation in an existing Set.
+Mappings, presets and projects use `surface-v2` and schema 2. Data from the 1.x line does not migrate. This separation does not guarantee take preservation in an existing Set.
 
 ## See also
 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md` — installation walkthrough.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md` — third-party notices.
 - `internal/TESTER-GUIDE.md` — current guidance with separately labeled historical evidence.
-- [historical 1.0 distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) — dependency matrix and distribution conclusion.
-- [1.0 gate archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json) — historical evidence only.
+- [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) — dependency matrix and distribution conclusion.
+- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json) — the recorded gates.

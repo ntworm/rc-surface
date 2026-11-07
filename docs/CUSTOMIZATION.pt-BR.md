@@ -1,6 +1,6 @@
 # Guia de customização
 
-Este guia explica onde mexer no RC Surface.
+Este guia aponta para os arquivos que implementam cada parte do RC Surface.
 Foi escrito para mantenedores e contribuidores.
 
 Leia antes:
@@ -90,7 +90,7 @@ Antes de acrescentar um controle:
 3. Emita pelo fluxo de snapshot e controles que já existe.
 4. Acrescente a entrada de alvo no painel e na administração, se o usuário puder mapear.
 5. Escreva testes.
-6. Atualize este arquivo, se for público.
+6. Atualize este arquivo, quando o controle for público.
 
 ## Controles do celular
 

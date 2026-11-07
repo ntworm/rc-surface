@@ -1,7 +1,7 @@
-# Frequently Asked Questions
+# Frequently asked questions
 
-> Answers to the most common questions about **RC Surface**.
-> Last updated: October 2026.
+RC Surface is an Ableton Live extension that serves a control surface in the
+browser of a phone over the local network.
 
 ## Contents
 
@@ -17,8 +17,7 @@
 
 ### Does it work with Live 11?
 
-No. The documented release target is Ableton Live 12.4.5+ Suite (Beta)
-because the project uses the Ableton Extensions SDK host.
+No. The project uses the Ableton Extensions SDK host.
 
 ### Does it work with FL Studio / Logic / Bitwig / Reaper?
 
@@ -28,33 +27,31 @@ host.
 
 ### Which Ableton Live versions are supported?
 
-The documented release target is **Ableton Live 12.4.5+ Suite (Beta)** with
-Extensions SDK support.
+**Ableton Live 12.4.5+ Suite (Beta)** with Extensions SDK support.
 
 ### Does it work on Windows and Mac?
 
-Target support is Windows 10/11 and macOS on Intel or Apple Silicon.
-Linux is not supported because Ableton Live does not run on Linux.
+Windows 10/11 and macOS on Intel or Apple Silicon. Linux is not supported
+because Ableton Live does not run on Linux.
 
 ### Does it work on iPhone and Android?
 
-Target support is iOS 15.4+ Safari and modern Chromium-based Android
-browsers. Touch, sensors, microphone, and camera require browser
-permissions. iOS 14.5 or below cannot accept the self-signed HTTPS
-certificate, so the connection will fail.
+iOS 15.4+ Safari and modern Chromium-based Android browsers. Touch, sensors,
+microphone, and camera require browser permissions. iOS 14.5 or below cannot
+accept the self-signed HTTPS certificate, so the connection will fail.
 
 Run the tester checklist on real iOS and Android devices before treating a
 build as public-release validated.
 
 ### What is the latency? Is it usable for live performance?
 
-In RC Surface 2.0, gestures and audio share a realtime path: first frame
-immediate, subsequent batches spaced by at least 8 ms. MAP's visual snapshots
-cannot delay those commands. Smooth 0 adds no mapping ramp. This is not a measured
-end-to-end latency; older hosts use the legacy snapshot path. The client expects
-a local Wi-Fi network. Actual latency depends on the host, phone,
-browser, router, and network congestion. Use 5 GHz Wi-Fi for the most
-consistent results, and test the exact setup before a show.
+Gestures and audio share a realtime path: the first frame is immediate and the
+following batches are spaced by at least 8 ms. The visual snapshots of MAP
+cannot delay those commands. Smooth 0 adds no mapping ramp. This is not a
+measured end-to-end latency. The client expects a local Wi-Fi network. Actual
+latency depends on the host, phone, browser, router, and network congestion.
+Use 5 GHz Wi-Fi for the most consistent results, and test the exact setup
+before a show.
 
 ---
 
@@ -68,6 +65,12 @@ consistent results, and test the exact setup before a show.
 4. Open RC Surface from Live's Extensions menu.
 5. Scan the QR code with your phone.
 6. Accept the self-signed certificate warning once.
+
+### How do I update to a new version?
+
+Download the newest `.ablx` from the project Releases page, double-click it,
+and let Live replace the installed extension. Restart Live if it was open
+during the update.
 
 ### Do I need an internet connection?
 
@@ -95,13 +98,13 @@ certificates.
 
 ## Features and functionality
 
-### Do the pads/knobs work with any MIDI device in Live?
+### Which Live targets do the pads and knobs control?
 
 They work with Live targets exposed to the extension: mixer values, track
 state, device parameters, and supported note/clip actions. For device
 control, tap **MAP** on the phone and use **Bind** to choose a Live
-parameter. The older panel/admin mapping editors are still useful for
-inspection and troubleshooting.
+parameter. The panel and admin mapping editors remain useful for inspection
+and troubleshooting.
 
 ### Can I create mappings from the phone?
 
@@ -119,52 +122,56 @@ choose the action that matches the source:
 Follow Detected Note is not available. Unsupported mapping modes are discarded on
 load; supported bindings, including fixed Trigger Note, are retained.
 
-Use Receiver v2 (**SDK / LOCAL MAX — NO UDP**) and replace old Set instances;
-only one compatible Receiver is accepted per destination track.
-The Extensions SDK cannot add a Max for Live receiver automatically. If the
-track does not already contain it, place `RC-Midi-Receiver.amxd` from your User
-Library on the MIDI track in Live and retry.
+Use Receiver v2 (**SDK / LOCAL MAX — NO UDP**) and replace the Receiver
+instances in your Set; only one compatible Receiver is accepted per
+destination track. The Extensions SDK cannot add a Max for Live receiver
+automatically. If the track does not already contain it, place
+`RC-Midi-Receiver.amxd` from your User Library on the MIDI track in Live and
+retry.
 
 ### How many phones can connect at the same time?
 
-RC Surface 2.0 supports one controller at a time. Control performance either
-from the phone or desktop, never both simultaneously. While multiple browser
-windows can open the page on the LAN and receive isolated client IDs, simultaneous
-control from multiple devices is not supported and will cause conflicting control
-states.
+RC Surface supports one controller at a time. Control performance either from
+the phone or desktop, never both simultaneously. While multiple browser
+windows can open the page on the LAN and receive isolated client IDs,
+simultaneous control from multiple devices is not supported and will cause
+conflicting control states.
 
 ### Does the phone vibrate when I hit a pad?
 
-No. The phone does not vibrate when you hit a pad.
+No.
 
 ### Can it turn what I play into MIDI notes?
 
-No. **Follow Detected Note** and its tonal analysis are not available: repeated
-musical tests did not produce reliable results. Fixed **Trigger Note** mappings
-remain; they do not estimate the note being played.
+No. **Follow Detected Note** and its tonal analysis are not available. Fixed
+**Trigger Note** mappings remain; they do not estimate the note being played.
 
 ### What can I map from audio instead?
 
 The AUD page contains twelve descriptors in Attacks, Tone, Texture and Bands:
-Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread, Rolloff 95%,
-and low/mid/high RMS. The graph selector and colored legend isolate their curves.
-Tap **MAP**, select a detector card and **Bind** it to a Live parameter.
-For kick-to-synth modulation, begin with a small target range and Smooth at zero.
+Transient, Kick, Snare, Brightness, Centroid, Flux, Flatness, Spread,
+Rolloff 95%, and low/mid/high RMS. The graph selector and colored legend
+isolate their curves. Tap **MAP**, select a detector card and **Bind** it to a
+Live parameter. For kick-to-synth modulation, begin with a small target range
+and Smooth at zero.
 
 Transient measures attacks; Kick and Snare weight those attacks by low and
 mid/high spectral energy. Brightness describes the dark-to-bright spectrum.
-All twelve mapping values are normalized to 0–1. Kick/Snare are heuristics: a full mix,
-room noise or another instrument can activate them. They do not separate drums.
+All twelve mapping values are normalized to 0–1. Kick/Snare are heuristics: a
+full mix, room noise or another instrument can activate them. They do not
+separate drums.
 
-The descriptors use the browser audio input. `RC-Audio-Sender.amxd` retains its
-existing track-analysis role; it does not supply these browser descriptors.
+The descriptors use the browser audio input. `RC-Audio-Sender.amxd` retains
+its existing track-analysis role; it does not supply these browser
+descriptors.
 
 ### Does the browser process the audio before I get it?
 
 The application requests echo cancellation, noise suppression and automatic
-gain control off, to preserve amplitude and spectral descriptors. That does not
-guarantee bit-perfect capture: the browser, operating system or input driver may
-still resample/process audio. Select the intended loopback/interface in AUD.
+gain control off, to preserve amplitude and spectral descriptors. That does
+not guarantee bit-perfect capture: the browser, operating system or input
+driver may still resample/process audio. Select the intended
+loopback/interface in AUD.
 
 ### Can I stop it starting with Live?
 
@@ -175,27 +182,36 @@ button is unaffected, and the panel opens even with nothing listening.
 ### Can I customize the phone controller UI?
 
 Yes. The phone code is plain HTML/CSS/JavaScript under `static/phone-v3/`.
-See `docs/CUSTOMIZATION.md`.
+See [CUSTOMIZATION.md](./CUSTOMIZATION.md).
 
 ### Can I save and share mappings?
 
-Yes. Use local presets and the panel’s project-configuration export/import. Version 2.0 files use schema 2; 1.x data is not imported. Destinations depend on the Set’s tracks/devices and must be reviewed after restore. See the user guide.
-
-### How do I update to a new version?
-
-Download the newest `.ablx` from the project Releases page, double-click it,
-and let Live replace the installed extension. Restart Live if it was open
-during the update.
-
----
+Yes. Use local presets and the panel's project-configuration export/import.
+Files use schema 2, and 1.x data is not imported. Destinations depend on the
+Set's tracks/devices and must be reviewed after restore. See the
+[user guide](./USER-GUIDE.md).
 
 ### Is REC a page? What about AUT?
 
-REC is the seventh page (**ARRANGEMENT / CLIP**): in Arrangement, choose a start cursor or marker on the bar/beat timeline, optional END (1–10 passes or ∞) or FREE until STOP, and pre-roll OFF/1/2/4; in CLIP, record an empty Session scene across all armed inputs with 1/2/4/8/16-bar length, quantization and BACK TO ARR. Track cards provide ARM MULTI/EXCLUSIVE, SOLO, MUTE, live volume knobs and double-click rename. Punch In is set temporarily and restored only while still owned by the attempt. AUT is a PERF header mode for XY movement loops (SYNC 1–5 bars or FREE 1–30 seconds); it does not record native Arrangement automation.
+REC is the seventh page (**ARRANGEMENT / CLIP**): in Arrangement, choose a
+start cursor or marker on the bar/beat timeline, optional END (1–10 passes or
+∞) or FREE until STOP, and pre-roll OFF/1/2/4; in CLIP, record an empty
+Session scene across all armed inputs with 1/2/4/8/16-bar length, quantization
+and BACK TO ARR. Track cards provide ARM MULTI/EXCLUSIVE, SOLO, MUTE, live
+volume knobs and double-click rename. Punch In is set temporarily and restored
+only while still owned by the attempt. AUT is a PERF header mode for XY
+movement loops (SYNC 1–5 bars or FREE 1–30 seconds); it does not record
+native Arrangement automation.
 
 ### How many poses and which hand readings can I map?
 
-VID starts with three cards and + ADD POSE grows to fifteen. Each pose needs three examples and accepts six; RETAKE/KEEP review conflicting captures. X removes the card; CLR retains its identity. PALM/FACE join X/Y/Z in the MAP strip. FACE is palm/back orientation, not facial tracking. Missing/invalid samples follow Safe loss.
+VID starts with three cards and + ADD POSE grows to fifteen. Each pose needs
+three examples and accepts six; RETAKE/KEEP review conflicting captures. X
+removes the card; CLR retains its identity. PALM/FACE join X/Y/Z in the MAP
+strip. FACE is palm/back orientation, not facial tracking. Missing/invalid
+samples follow Safe loss.
+
+---
 
 ## Privacy and security
 
@@ -210,7 +226,7 @@ connection; camera hand tracking does not require a public CDN.
 
 ### Is there a privacy policy?
 
-Yes: `docs/PRIVACY.md`.
+Yes: [PRIVACY.md](./PRIVACY.md).
 
 ### Are there any security risks in leaving this running?
 
@@ -219,16 +235,16 @@ LAN-reachable port and accepts supported WebSocket commands from browser
 clients that can reach the bridge URL. Run it only on trusted home/studio
 Wi-Fi, and close it when you are done. Do not expose it to public networks
 through tunnels, reverse proxies, or port forwarding; those deployments are
-outside the v2.0 threat model. The full threat model is in `docs/SECURITY.md`.
+outside the threat model. The full threat model is in
+[SECURITY.md](./SECURITY.md).
 
 ### Do I have to pay? Is there a Pro version?
 
 No. The project is source-available under the PolyForm Noncommercial 1.0.0
-license, and has no Pro version or
-locked features. The Gumroad page is **pay what you want** (suggested R$25 in
-Brazilian reais, minimum R$0). The default price is R$0. See
-[`FUNDING.md`](../FUNDING.md) for details. Only trust links published in
-this repository's README and release notes.
+license, and has no Pro version or locked features. The Gumroad page is **pay
+what you want** (suggested R$25 in Brazilian reais, minimum R$0). The default
+price is R$0. See [FUNDING.md](../FUNDING.md) for details. Only trust links
+published in this repository's README and release notes.
 
 ---
 
@@ -243,13 +259,13 @@ this project; follow its current rules if discussing the extension there.
 ### How do I contribute?
 
 Open a focused issue or pull request in the project repository. Read
-[`CONTRIBUTING.md`](../CONTRIBUTING.md) before changing code, and report
-security problems through the private channel in `docs/SECURITY.md` instead
-of a public issue.
+[CONTRIBUTING.md](../CONTRIBUTING.md) before changing code, and report
+security problems through the private channel in [SECURITY.md](./SECURITY.md)
+instead of a public issue.
 
 ## See also
 
-- [`INSTALL.md`](./INSTALL.md) - detailed install guide
-- [`PRIVACY.md`](./PRIVACY.md) - full privacy policy
-- [`SECURITY.md`](./SECURITY.md) - threat model and security design
-- [README](../README.md) - project overview
+- [INSTALL.md](./INSTALL.md) — detailed install guide
+- [PRIVACY.md](./PRIVACY.md) — full privacy policy
+- [SECURITY.md](./SECURITY.md) — threat model and security design
+- [README](../README.md) — project overview

@@ -1,38 +1,22 @@
 # Install and first-run guide
 
-This document walks you through installing **RC Surface** on
-Windows or macOS, scanning the QR code from your phone, and getting
-your first pad-to-Live mapping working.
+RC Surface is an Ableton Live extension that serves a control surface in the
+browser of a phone. This guide covers the install on Windows or macOS, the
+connection of the phone, and the first mapping.
 
 > [!WARNING]
 > **Security Notice**: This extension runs a WebSocket server on your local network. Controller and admin actions require session tokens, but the bridge should still be used only on trusted networks. Do not share QR or admin URLs. See [SECURITY.md](./SECURITY.md) for the threat model.
 
-If you only want the short version: see the [Quick start](../README.md#quick-start) in the README.
+For the short version, see the [Quick start](../README.md#quick-start) in the README.
 
-## Updating from 2.0 to 2.1.0
-
-Version 2.1.0 is distributed as a [pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Before using it for a performance, check Start/Close and the QR in the native Live panel, then record and replay a take in a copy of your Set on the target Mac. Automated CI does not replace that acceptance.
-
-It replaces the 2.0.1 preview. REC gains three local views (Record, Arrangement, Clip) over one capture bar, native track rows with groups, and marker ranges; the destinations and CLICK move into the REC header. On a Mac the AbletonOSC link starts with the server, a phone tab left in the background keeps its connection, running modulators come back after a reconnect and the camera pauses while the page is hidden.
-
-Install the new ABLX and reload the browser. Existing 2.0 mappings, presets and projects remain compatible; no reset or migration is required. The stopped-server panel includes all its scripts and font, so Start and the automatic-start preference work offline. The QR uses the address that reaches your network: the one with a route out first, then one with a gateway, and virtual adapters and VPNs last. The **Network** tab in the panel shows why, lets you pin an address and has **FIND SETUP** for when the phone does not open; **Network address** on the Main tab offers the same choice and the server remembers it. After changing networks there is nothing to restart: the panel prepares a certificate for the new address and the phone asks you to accept it once. A choice made in an earlier 2.0.1 preview lived in the browser and is not carried over.
-
-Install AbletonOSC in Remote Scripts inside the configured User Library, rather than inside the Live application. This survives Live updates. REC and SYNC require AbletonOSC.
-
-## Upgrading to 2.0.0
-
-2.0.0 breaks compatibility with previous projects, presets, mappings and performance settings. Install the supplied package, reload the browser and configure the surface from a fresh state. The host uses `storageDirectory/surface-v2/` for mappings, presets and projects with schema 2. Old files are neither deleted nor automatically imported; do not copy 1.x data into this folder or use the old rename migrator as a 2.0 upgrade.
-
-The extension name remains RC Surface. Certificates and preferences outside performance storage do not migrate your mappings. Fresh browser performance keys also exclude overrides/snapshots from the first 2.0.0 candidate. Version and hash identify the package; follow its supplied verification instructions.
-
-## 1. Prerequisites
+## Requirements
 
 You need:
 
 - **Ableton Live 12.4.5+ Suite (Beta)** with the Extensions SDK host enabled.
 - A computer and a phone on the **same WiFi network**.
 - A modern browser on the phone: Chrome 90+, Safari 15.4+, Edge 90+, or any Chromium-based Android browser.
-- **Required for REC, Launch Clip, TRN and beat sync; optional for basic control**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
+- **Required for REC, Launch Clip, TRN, `AUT` in `SYNC` and Deep Sync; optional for basic control**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) installed and configured in Live.
 - **Optional (for MIDI Trigger Notes)**: `RC-Midi-Receiver.amxd` saved in your Ableton User Library.
 - Optional, for advanced features: a phone with a working gyroscope, accelerometer, microphone, and camera.
 - Camera hand tracking works on the local network; its MediaPipe runtime and
@@ -42,19 +26,26 @@ The extension itself is built on the
 [Ableton Extensions SDK](https://github.com/ableton-extensions/sdk)
 1.0.0-beta. No additional runtime is required on the host computer.
 
-## 2. Download and install
+## Install
 
-### From a test candidate or published release
+### Release package
+
+Version 2.1.0 is distributed as a
+[pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0).
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.
-   The source version is **2.1.0**; a local candidate is not a declaration
-   that the matching public release exists. Use the version and verification instructions
-   supplied with the actual package.
+   A local candidate is not a declaration that the matching public release
+   exists. Use the version and verification instructions supplied with the
+   actual package.
 2. Double-click the file. Live's extension installer opens.
 3. Click *Install*. Live places the file under
    `User Library / Extensions`.
 4. Restart Live if it was already running.
+
+Before a performance, check Start/Close and the QR in the native Live panel,
+then record and replay a take in a copy of your Set on the target Mac.
+Automated CI does not replace that acceptance.
 
 ### From source
 
@@ -63,9 +54,12 @@ If you cloned the repository and ran `npm ci` followed by
 the same `.ablx` file in the project root. Install it the same way
 (double-click).
 
-### Install AbletonOSC (required for REC and SYNC)
+### AbletonOSC
 
-To enable beat-accurate sync for toggle, the flashing metronome header, and the full-screen transport control overlay (`TRN` button), you must install and configure **AbletonOSC**:
+AbletonOSC enables beat-accurate sync for toggle, the flashing metronome
+header, and the full-screen transport control overlay (`TRN` button). Install
+it in Remote Scripts inside the configured User Library, rather than inside
+the Live application, so the install survives Live updates.
 
 1. Download **AbletonOSC** from the repository: [AbletonOSC GitHub](https://github.com/ideoforms/AbletonOSC). Click **Code** -> **Download ZIP**.
 2. Extract the ZIP and place the `AbletonOSC` folder in your Ableton Live **MIDI Remote Scripts** directory:
@@ -75,7 +69,7 @@ To enable beat-accurate sync for toggle, the flashing metronome header, and the 
 4. Add **AbletonOSC** as a Control Surface in the list. Under **Input** and **Output**, leave them as **None**.
 5. Once configured, the extension will automatically detect it and sync using ports `11000` (outgoing) and `11001` (incoming). Stock AbletonOSC replies only on `11001`: if another RC extension holds it while Live starts, the surface listens on a fallback port and moves back to `11001` as soon as it frees.
 
-### Optional: Install RC-Midi-Receiver.amxd (for MIDI Trigger Notes)
+### RC-Midi-Receiver.amxd
 
 To let pads or other controls trigger MIDI notes on a selected MIDI track:
 
@@ -93,7 +87,7 @@ Receivers are rejected; there is no insecure compatibility fallback.
    Max for Live device automatically. Trigger Note tells you to place the
    copy from your User Library.
 
-### Optional: RC-Audio-Sender.amxd (to listen to a Live track)
+### RC-Audio-Sender.amxd
 
 The extension cannot hear a Live track — the Extensions SDK exposes no audio at
 all — so listening to one is done by a Max device inside Live's audio path.
@@ -104,9 +98,9 @@ all — so listening to one is done by a Max device inside Live's audio path.
 3. Put `RC-Midi-Receiver.amxd` on the **MIDI track that should play**.
 
 4. Enable **Audio Sender input** on the intended Receiver v2. It starts OFF.
-Both devices must be v2: they use an internal Max bus, not UDP. All Receivers
-with that input enabled hear the Sender; leave the others OFF. Trigger Note
-from the phone uses the SDK and does not need that input enabled.
+   Both devices must be v2: they use an internal Max bus, not UDP. All Receivers
+   with that input enabled hear the Sender; leave the others OFF. Trigger Note
+   from the phone uses the SDK and does not need that input enabled.
 
 Requires Max for Live, which is included with Live Suite.
 
@@ -114,7 +108,13 @@ Requires Max for Live, which is included with Live Suite.
 > old UDP version, not this replacement. Verify loading, stereo pass-through,
 > notes/OFF and measured latency before performance use.
 
-## 3. Start the bridge
+## Data storage
+
+Mappings, presets and projects are stored under `storageDirectory/surface-v2/`,
+with schema 2. Files from the 1.x line are neither deleted nor automatically
+imported. Do not copy 1.x data into this folder.
+
+## Start the bridge
 
 1. In Live, open the **Extensions** menu (or `Cmd-Shift-A` / `Ctrl-Shift-A`).
 2. Look for **RC Surface** and click *Show panel* (or *Open*,
@@ -135,6 +135,7 @@ is already occupied, Surface falls back to an OS-assigned port and the panel
 shows the one actually in use. Set `RC_SURFACE_PORT` to override the preferred
 HTTP port. LAN access is available only through the generated HTTPS URL, so
 use a trusted studio/home network.
+
 The generated QR URL grants the controller role through a rotating session
 token, so treat the QR code and copied controller/admin URLs as credentials.
 
@@ -150,10 +151,13 @@ and the panel renders from disk when nothing is listening, so the switch is
 always reachable — including in the state it creates. The choice persists
 between sessions.
 
-## 4. Connect your phone
+The stopped-server panel includes all its scripts and font, so **Start** and
+the automatic-start preference work offline.
+
+## Connect the phone
 
 > [!IMPORTANT]
-> **Single controller policy**: RC Surface 2.0 supports one controller at a time. Control your session from the phone or desktop, never both simultaneously. While multiple browser windows can technically connect on the LAN, simultaneous inputs are not supported and will conflict.
+> **Single controller policy**: RC Surface supports one controller at a time. Control your session from the phone or desktop, never both simultaneously. While multiple browser windows can technically connect on the LAN, simultaneous inputs are not supported and will conflict.
 
 Pick one:
 
@@ -167,9 +171,8 @@ port was overridden or unavailable, use the actual URL shown in the panel.
 
 ### The "Your connection is not private" warning
 
-Because the bridge uses a self-signed certificate unique to your
-install, the phone's browser will warn you the first time. This is
-expected. To proceed:
+The phone does not trust the certificate of the bridge yet, so the browser
+warns you the first time. This is expected. To proceed:
 
 - **Chrome on Android**: tap *Advanced* → *Proceed anyway*.
 - **Safari on iOS**: tap *Show details* → *visit this website* → *Visit*.
@@ -178,8 +181,13 @@ expected. To proceed:
   microphone.
 
 Your browser will remember the decision for the lifetime of the cert
-(about a year, see [Certificate lifecycle](#8-certificate-lifecycle)
+(about a year, see [Certificate lifecycle](#certificate-lifecycle)
 below).
+
+The **Certificate** section of the **Network** tab links an install page on the
+HTTPS port + 1, where the phone installs the certificate authority of this
+computer. With the authority installed, the browser opens the pages without a
+warning.
 
 ### What you see
 
@@ -191,7 +199,7 @@ needs a tap, open **SNS**, tap the **⚙** gear in the top bar, then tap
 **Enable sensors**. You can retry after a denial or an error. Camera and
 microphone require separate permission.
 
-## 5. Sanity check: make your first mobile mapping
+## First mapping
 
 With the phone connected:
 
@@ -233,7 +241,7 @@ modes are discarded on load; supported bindings remain. The twelve descriptors
 analyze the selected browser audio input (microphone, interface or loopback
 where available). The optional Max Audio Sender does not feed these controls.
 
-## 6. OS-specific notes
+## Operating system notes
 
 ### Windows
 
@@ -249,15 +257,15 @@ where available). The optional Max Audio Sender does not feed these controls.
 - Live's persistent storage is under
   `~/Music/Ableton/User Library/`.
 - The certs live under
-  `~/Music/Ableton/User Library/Preferences/Extensions/<id>/certs/`.
+  `~/Music/Ableton/User Library/Preferences/Extensions/<id>/certs\`.
 - The first time you double-click the `.ablx`, macOS may show a
   *cannot be opened because the developer cannot be verified* dialog.
   Right-click the file, choose *Open*, then *Open* again in the
   confirmation prompt.
 
-## 7. Network boundary
+## Network boundary
 
-The v2.0 supported deployment is a trusted studio/home LAN with the phone and
+The supported deployment is a trusted studio/home LAN with the phone and
 computer on the same network. Do not expose the bridge with port forwarding,
 a public tunnel, or a public reverse proxy. Those deployments are outside the
 tested threat model, even when the public endpoint supplies a trusted
@@ -267,10 +275,18 @@ A public IP never goes into the QR by itself, because the QR carries the
 control token. If a public address is all the computer has, the panel says so
 and only shows a QR after you click **USE** on that address.
 
-## 8. Certificate lifecycle
+The QR uses the address that reaches your network: the one with a route out
+first, then one with a gateway, and virtual adapters and VPNs last. The
+**Network** tab in the panel shows why and lets you pin an address.
+**Network address** on the Main tab offers the same choice and the server
+remembers it.
 
-The bridge generates a fresh self-signed cert on first run, using
-the `selfsigned` npm package. The cert:
+## Certificate lifecycle
+
+The bridge generates a fresh certificate on first run. A certificate authority
+of this computer signs it for `localhost` and the private addresses of the
+network; a public address chosen with **USE** keeps a self-signed certificate,
+made with the `selfsigned` npm package. The certificate:
 
 - Is RSA 2048-bit, signed with SHA-256.
 - Has a one-year validity (`notAfterDate` defaults to one year from
@@ -285,7 +301,7 @@ the `selfsigned` npm package. The cert:
 To force a new cert, stop Live, delete the `certs/` folder under
 `Preferences/Extensions/<id>/`, and restart.
 
-## 9. Troubleshooting
+## Troubleshooting
 
 ### The page opens on the computer but not on the phone
 
@@ -354,7 +370,7 @@ nothing about the network. Open the **Network** tab in the panel:
 - Most common cause: a stale cert in the storage directory with the
   wrong format. Delete `certs/` and let the extension generate a new one.
 
-## 10. Uninstall
+## Uninstall
 
 In Live: *Extensions* menu → *Manage Extensions* → remove the entry.
 Then delete the cert folder under

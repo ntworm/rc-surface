@@ -1,39 +1,22 @@
 # Guia de instalação e primeira execução
 
-Este documento leva você pela instalação do **RC Surface** no Windows
-ou no macOS, pela leitura do QR code no celular, e até o primeiro mapeamento de
-pad para o Live funcionando.
+RC Surface é uma extensão do Ableton Live que serve uma superfície de controle
+no navegador do celular. Este guia cobre a instalação no Windows ou no macOS,
+a conexão do celular e o primeiro mapeamento.
 
 > [!WARNING]
 > **Aviso de segurança**: esta extensão sobe um servidor WebSocket na sua rede local. Ações de controlador e de administração exigem tokens de sessão, mas o bridge ainda assim só deve ser usado em redes confiáveis. Não compartilhe URLs de QR nem de administração. Veja o [SECURITY.pt-BR.md](./SECURITY.pt-BR.md) para o modelo de ameaças.
 
-Se você só quer a versão curta, veja o [início rápido](../README.md#quick-start)
-no README.
+Para a versão curta, veja o [início rápido](../README.md#quick-start) no README.
 
-## Atualizando da 2.0 para a 2.1.0
-
-Esta versão 2.1.0 é distribuída como [pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0). Antes de usá-la numa apresentação, confira Start/Close e o QR no painel nativo do Live; depois grave e reproduza um take numa cópia do Set no Mac de destino. O CI automatizado não substitui esse aceite.
-
-Ela substitui a prévia 2.0.1. O REC ganha três vistas locais (Gravar, Arrangement, Clip) sobre uma barra de captura única, linhas nativas das tracks com grupos e intervalos entre markers; os destinos e o CLICK passam para o cabeçalho do REC. No Mac, o link do AbletonOSC liga junto com o servidor, uma aba do celular em segundo plano mantém a conexão, os moduladores em execução voltam depois de reconectar e a câmera pausa com a página escondida.
-
-Instale o novo ABLX e recarregue o navegador. Mappings, presets e projetos 2.0 continuam compatíveis; não é preciso zerar nem migrar dados. O painel com servidor parado inclui todos os scripts e a fonte, mantendo Start e a preferência de início automático acessíveis. O QR usa o endereço que alcança a sua rede: primeiro o que tem saída, depois o que tem gateway, e por último adaptadores virtuais e VPNs. A aba **Rede** do painel mostra o motivo, deixa fixar um endereço e tem **ACHAR CONFIGURAÇÃO** para quando o celular não abre; **Endereço de rede**, na aba Principal, oferece a mesma escolha, e o servidor guarda essa escolha. Depois de trocar de rede não é preciso reiniciar nada: o painel prepara um certificado para o endereço novo e o celular pede para aceitar o aviso uma vez. A escolha feita numa prévia anterior da 2.0.1 ficava no navegador e não é aproveitada.
-
-Instale o AbletonOSC em Remote Scripts dentro da User Library configurada, em vez de dentro do aplicativo Live. Isso preserva a instalação nas atualizações. REC e SYNC precisam do AbletonOSC.
-
-## Atualizando para 2.0.0
-
-2.0.0 quebra compatibilidade com os projetos, presets, mappings e configurações de performance anteriores. Instale o pacote recebido, recarregue o navegador e configure a superfície do zero. O host usa `storageDirectory/surface-v2/` para mappings, presets e projetos, com schema 2. Arquivos antigos não são apagados nem importados automaticamente; não copie dados 1.x para essa pasta nem use o migrador antigo de renomeação como atualização para 2.0.
-
-O nome da extensão continua RC Surface. Certificados e preferências que vivem fora do armazenamento de performance não constituem uma migração dos seus mappings. As chaves novas de performance do navegador também não importam overrides/snapshots do primeiro candidato 2.0.0. A versão e o hash identificam o pacote; siga as instruções entregues com ele.
-
-## 1. Pré-requisitos
+## Pré-requisitos
 
 Você precisa de:
 
 - **Ableton Live 12.4.5+ Suite (Beta)** com o host do SDK de Extensions habilitado.
 - Um computador e um celular na **mesma rede Wi-Fi**.
 - Um navegador atual no celular: Chrome 90+, Safari 15.4+, Edge 90+, ou qualquer navegador Chromium no Android.
-- **Obrigatório para REC, Launch Clip, TRN e sincronização; opcional para controle básico**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
+- **Obrigatório para REC, Launch Clip, TRN, `AUT` em `SYNC` e Deep Sync; opcional para controle básico**: [AbletonOSC](https://github.com/ideoforms/AbletonOSC) instalado e configurado no Live.
 - **Opcional (para trigger notes MIDI)**: `RC-Midi-Receiver.amxd` salvo na sua User Library do Ableton.
 - Opcional, para os recursos avançados: um celular com giroscópio, acelerômetro, microfone e câmera funcionando.
 - O rastreio de mãos por câmera funciona na rede local; o runtime e os arquivos de modelo do MediaPipe vêm junto com a extensão.
@@ -42,30 +25,40 @@ A extensão em si é construída sobre o
 [SDK de Extensions do Ableton](https://github.com/ableton-extensions/sdk)
 1.0.0-beta. Nenhum runtime adicional é necessário no computador.
 
-## 2. Baixar e instalar
+## Instalação
 
-### A partir de uma versão candidata de teste ou de uma release publicada
+### Versão publicada ou candidata de teste
+
+A versão 2.1.0 é distribuída como
+[pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0).
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
-   do projeto, ou use o pacote de teste enviado pelo mantenedor. A versão do
-   código é **2.1.0**; ter uma versão candidata local não significa que já existe
-   a release pública correspondente. Siga a versão e as instruções de verificação do pacote recebido.
+   do projeto, ou use o pacote de teste enviado pelo mantenedor. Ter uma
+   versão candidata local não significa que já existe a release pública
+   correspondente. Siga a versão e as instruções de verificação do pacote
+   recebido.
 2. Dê dois cliques no arquivo. O instalador de extensões do Live abre.
 3. Clique em *Install*. O Live coloca o arquivo em
    `User Library / Extensions`.
 4. Reinicie o Live se ele já estava aberto.
 
-### A partir do código-fonte
+Antes de uma apresentação, confira Start/Close e o QR no painel nativo do
+Live; depois grave e reproduza um take numa cópia do Set no Mac de destino.
+O CI automatizado não substitui esse aceite.
+
+### Do código-fonte
 
 Se você clonou o repositório e rodou `npm ci` seguido de
 `npm run build:prod-ablx`, terá o mesmo arquivo `.ablx` na raiz do projeto.
 Instale do mesmo jeito, com dois cliques.
 
-### Instalar o AbletonOSC (obrigatório para REC e SYNC)
+### AbletonOSC
 
-Para habilitar sincronia travada no beat para LFO e square, o metrônomo que
-pisca no header, e o overlay de transporte em tela cheia (botão `TRN`), você
-precisa instalar e configurar o **AbletonOSC**:
+O AbletonOSC habilita a sincronia travada no beat para LFO e square, o
+metrônomo que pisca no header, e o overlay de transporte em tela cheia (botão
+`TRN`). Instale-o em Remote Scripts dentro da User Library configurada, em
+vez de dentro do aplicativo Live, para que a instalação sobreviva às
+atualizações do Live.
 
 1. Baixe o **AbletonOSC** no repositório: [AbletonOSC no GitHub](https://github.com/ideoforms/AbletonOSC). Clique em **Code** → **Download ZIP**.
 2. Extraia o ZIP e coloque a pasta `AbletonOSC` no diretório **MIDI Remote Scripts** do seu Ableton Live:
@@ -75,7 +68,7 @@ precisa instalar e configurar o **AbletonOSC**:
 4. Adicione o **AbletonOSC** como Control Surface na lista. Em **Input** e **Output**, deixe **None**.
 5. Feito isso, a extensão detecta o AbletonOSC sozinha e sincroniza pelas portas `11000` (saída) e `11001` (entrada). O AbletonOSC original só responde na `11001`: se outra extensão RC estiver com ela quando o Live abre, a superfície escuta numa porta reserva e volta para a `11001` assim que ela libera.
 
-### Opcional: instalar o RC-Midi-Receiver.amxd (para trigger notes MIDI)
+### RC-Midi-Receiver.amxd
 
 Para os pads e outros controles dispararem notas MIDI numa track MIDI escolhida:
 
@@ -93,7 +86,7 @@ Receivers UDP antigos são recusados, sem fallback inseguro.
    Extensions do Live não consegue inserir um device Max for Live
    automaticamente. O Trigger Note orienta usar a cópia da User Library.
 
-### Opcional: RC-Audio-Sender.amxd (para escutar uma track do Live)
+### RC-Audio-Sender.amxd
 
 A extensão não consegue ouvir uma track do Live — o SDK de Extensions não expõe
 áudio nenhum — então escutar uma é trabalho de um device Max dentro do caminho
@@ -104,9 +97,9 @@ de áudio do Live.
 3. Coloque o `RC-Midi-Receiver.amxd` na **track MIDI que vai tocar**.
 
 4. Ative **Audio Sender input** no Receiver v2 de destino. Ele começa em OFF.
-Os dois devices precisam ser v2: eles usam um barramento interno do Max, sem UDP. Todos os
-Receivers com essa entrada habilitada recebem o Sender; deixe os demais OFF.
-Trigger Note do celular usa o SDK e não exige habilitar essa entrada.
+   Os dois devices precisam ser v2: eles usam um barramento interno do Max, sem UDP. Todos os
+   Receivers com essa entrada habilitada recebem o Sender; deixe os demais OFF.
+   Trigger Note do celular usa o SDK e não exige habilitar essa entrada.
 
 Exige Max for Live, que vem com o Live Suite.
 
@@ -114,7 +107,13 @@ Exige Max for Live, que vem com o Live Suite.
 > eram da versão UDP, não desta substituta. Confira o carregamento, a
 > passagem do estéreo, as notas/OFF e a latência medida antes de usar ao vivo.
 
-## 3. Iniciar o bridge
+## Armazenamento dos dados
+
+Mappings, presets e projetos ficam em `storageDirectory/surface-v2/`, com
+schema 2. Arquivos da linha 1.x não são apagados nem importados
+automaticamente. Não copie dados 1.x para essa pasta.
+
+## Iniciar o bridge
 
 1. No Live, abra o menu **Extensions** (ou `Cmd-Shift-A` / `Ctrl-Shift-A`).
 2. Procure **RC Surface** e clique em *Show panel* (ou *Open*,
@@ -152,10 +151,13 @@ continua funcionando, e o painel abre direto do disco mesmo com o servidor
 parado — então a chave fica sempre acessível, inclusive quando foi ela que
 deixou o servidor desligado. A escolha persiste entre sessões.
 
-## 4. Conectar o celular
+O painel com o servidor parado inclui todos os scripts e a fonte, então o
+**Start** e a preferência de início automático funcionam offline.
+
+## Conectar o celular
 
 > [!IMPORTANT]
-> **Política de controlador único**: o RC Surface 2.0 suporta um controlador por vez. Opere a performance pelo celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador possam conectar na rede local, entradas simultâneas não são suportadas e entrarão em conflito.
+> **Política de controlador único**: o RC Surface suporta um controlador por vez. Opere a performance pelo celular ou desktop, nunca ambos simultaneamente. Embora várias janelas de navegador possam conectar na rede local, entradas simultâneas não são suportadas e entrarão em conflito.
 
 Escolha um caminho:
 
@@ -169,8 +171,8 @@ painel.
 
 ### O aviso "Sua conexão não é particular"
 
-Como o bridge usa um certificado autoassinado, único da sua instalação, o
-navegador do celular avisa na primeira vez. Isso é esperado. Para seguir:
+O celular ainda não confia no certificado do bridge, então o navegador avisa
+na primeira vez. Isso é esperado. Para seguir:
 
 - **Chrome no Android**: toque em *Avançado* → *Ir para o site*.
 - **Safari no iOS**: toque em *Mostrar detalhes* → *visitar este site* → *Visitar*.
@@ -178,8 +180,12 @@ navegador do celular avisa na primeira vez. Isso é esperado. Para seguir:
   por completo, e você não consegue usar câmera nem microfone.
 
 O navegador guarda a decisão pelo tempo de vida do certificado (cerca de um
-ano — veja [Ciclo de vida do certificado](#8-ciclo-de-vida-do-certificado)
+ano — veja [Ciclo de vida do certificado](#ciclo-de-vida-do-certificado)
 abaixo).
+
+A seção **Certificado** da aba **Rede** leva a uma página de instalação na
+porta HTTPS + 1, onde o celular instala a autoridade certificadora deste
+computador. Com a autoridade instalada, o navegador abre as páginas sem aviso.
 
 ### O que você vê
 
@@ -191,7 +197,7 @@ precisar de um toque, abra **SNS**, toque no **⚙** da barra de cima e depois
 em **Ativar sensores**. Você pode repetir depois de uma recusa ou de um erro.
 Câmera e microfone exigem permissões próprias.
 
-## 5. Teste rápido: seu primeiro mapeamento pelo celular
+## Primeiro mapeamento
 
 Com o celular conectado:
 
@@ -234,7 +240,7 @@ mapeamento não suportados são descartados ao carregar; vínculos válidos perm
 descritores analisam a entrada selecionada no navegador (microfone, interface
 ou loopback quando disponível). O Max Audio Sender não alimenta esses controles.
 
-## 6. Notas por sistema
+## Notas por sistema
 
 ### Windows
 
@@ -250,16 +256,16 @@ ou loopback quando disponível). O Max Audio Sender não alimenta esses controle
 - O armazenamento persistente do Live fica em
   `~/Music/Ableton/User Library/`.
 - Os certificados ficam em
-  `~/Music/Ableton/User Library/Preferences/Extensions/<id>/certs/`.
+  `~/Music/Ableton/User Library/Preferences/Extensions/<id>/certs\`.
 - Na primeira vez que você der dois cliques no `.ablx`, o macOS pode mostrar um
   diálogo de *não pode ser aberto porque o desenvolvedor não pode ser
   verificado*. Clique com o botão direito no arquivo, escolha *Abrir*, e
   *Abrir* de novo no aviso de confirmação.
 
-## 7. Fronteira de rede
+## Fronteira de rede
 
-O cenário suportado na v2.0 é uma rede local confiável, de estúdio ou de casa,
-com o celular e o computador na mesma rede. Não exponha o bridge com
+O cenário suportado é uma rede local confiável, de estúdio ou de casa, com o
+celular e o computador na mesma rede. Não exponha o bridge com
 redirecionamento de porta, túnel público ou proxy reverso público. Esses
 cenários estão fora do modelo de ameaças testado, mesmo quando o endpoint
 público fornece um certificado confiável.
@@ -268,10 +274,17 @@ Um IP público nunca entra no QR sozinho, porque o QR leva o token de controle.
 Se o computador só tem endereço público, o painel avisa e só mostra o QR depois
 que você clica em **USAR** nesse endereço.
 
-## 8. Ciclo de vida do certificado
+O QR usa o endereço que alcança a sua rede: primeiro o que tem saída, depois o
+que tem gateway, e por último adaptadores virtuais e VPNs. A aba **Rede** do
+painel mostra o motivo e deixa fixar um endereço. **Endereço de rede**, na aba
+Principal, oferece a mesma escolha, e o servidor guarda essa escolha.
 
-O bridge gera um certificado autoassinado novo na primeira execução, usando o
-pacote npm `selfsigned`. O certificado:
+## Ciclo de vida do certificado
+
+O bridge gera um certificado novo na primeira execução. Uma autoridade
+certificadora deste computador assina o certificado para `localhost` e para os
+endereços privados da rede; um endereço público escolhido com **USAR** mantém
+um certificado autoassinado, feito com o pacote npm `selfsigned`. O certificado:
 
 - É RSA de 2048 bits, assinado com SHA-256.
 - Vale um ano (`notAfterDate` assume, por padrão, um ano a partir da geração).
@@ -285,7 +298,7 @@ pacote npm `selfsigned`. O certificado:
 Para forçar um certificado novo, feche o Live, apague a pasta `certs/` em
 `Preferences/Extensions/<id>/`, e reinicie.
 
-## 9. Diagnóstico
+## Diagnóstico
 
 ### A página abre no computador, mas não no celular
 
@@ -355,7 +368,7 @@ nada sobre a rede. Abra a aba **Rede** do painel:
 - Causa mais comum: um certificado antigo, em formato errado, no diretório de
   armazenamento. Apague `certs/` e deixe a extensão gerar um novo.
 
-## 10. Desinstalar
+## Desinstalar
 
 No Live: menu *Extensions* → *Manage Extensions* → remova a entrada.
 Depois apague a pasta de certificados em
