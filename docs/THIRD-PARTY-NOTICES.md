@@ -2,8 +2,7 @@
 
 Build `2.1.0`. This file lists the third-party components that are actually
 packaged in the ABLX payload and in the host bundle, with the notices their
-licenses require. The canonical distribution matrix lives in the internal
-distribution review document.
+licenses require.
 
 ## Packaged in the ABLX payload
 
@@ -89,5 +88,4 @@ by distinctive-symbol scan and is not present in the built bundle.
   `node_modules/` and are summarized above with author attribution.
 - CC BY-SA 4.0: attribution preserved in `NOTICE` and on the landing page.
 - Ableton Extensions SDK License: preserved inside the installed packages and
-  the `vendor/` tarballs; not reproduced publicly (see the internal
-  distribution review).
+  the `vendor/` tarballs; not reproduced publicly.

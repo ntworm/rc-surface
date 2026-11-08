@@ -2,8 +2,7 @@
 
 Build `2.1.0`. Este arquivo lista os componentes de terceiros efetivamente
 empacotados no payload ABLX e no bundle do host, com os avisos exigidos pelas
-respectivas licenças. A matriz canônica de distribuição está no documento
-interno de revisão de distribuição.
+respectivas licenças.
 
 ## Empacotados no payload ABLX
 
@@ -90,5 +89,4 @@ gerado.
   `node_modules/` e são resumidos acima com a atribuição dos autores.
 - CC BY-SA 4.0: atribuição preservada no `NOTICE` e na landing page.
 - Ableton Extensions SDK License: preservada dentro dos pacotes instalados e
-  nos tarballs de `vendor/`; não reproduzida publicamente (ver a revisão
-  interna de distribuição).
+  nos tarballs de `vendor/`; não reproduzida publicamente.
