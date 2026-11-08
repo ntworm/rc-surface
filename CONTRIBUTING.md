@@ -116,7 +116,7 @@ package:tester` to generate the tester kit.
 3. Keep commits focused: one logical change per commit.
 4. Do not commit build artifacts (`dist/`, `.ablx`, `release-kits/`) unless a maintainer explicitly asks.
 5. Keep public docs aligned with behavior when changing install flow, controls, network behavior, or compatibility.
-6. When adding or upgrading a dependency, update `NOTICE` and `docs/THIRD-PARTY-NOTICES.md` in both English and Portuguese, and keep the internal distribution review current, so the packaged-component matrix and notices stay true. The Ableton Extensions SDK/CLI tarballs in `vendor/` are licensed only for use inside the application: they are untracked (`vendor/*.tgz` in `.gitignore`), verified by `npm run check:vendor` against `vendor/manifest.json`, and must never be added to releases, commits or public artifacts. Hosted CI stages them from a private repository (see the README inside `vendor/`).
+6. When adding or upgrading a dependency, update `NOTICE` and `docs/THIRD-PARTY-NOTICES.md` in both English and Portuguese, so the packaged-component matrix and notices stay true. The Ableton Extensions SDK/CLI tarballs in `vendor/` are licensed only for use inside the application: they are untracked (`vendor/*.tgz` in `.gitignore`), verified by `npm run check:vendor` against `vendor/manifest.json`, and must never be added to releases, commits or public artifacts. Hosted CI stages them from a private repository (see the README inside `vendor/`).
 
 ## Style guide
 

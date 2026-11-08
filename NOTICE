@@ -71,7 +71,7 @@ Licensed under the zlib/libpng License:
 Ableton Extensions SDK (1.0.0-beta.0)
 Bundled inside the application under the Ableton Extensions SDK License.
 The SDK or parts of it are not distributed outside of this application.
-See docs/THIRD-PARTY-NOTICES.md and internal/DISTRIBUTION-REVIEW-1.0.md.
+See docs/THIRD-PARTY-NOTICES.md.
 
 MediaPipe Hands and Camera Utilities
 Copyright 2019 The MediaPipe Authors

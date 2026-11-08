@@ -28,7 +28,6 @@ Requisitos e evidências atuais do RC Surface 2.1.0.
 ## Pacotes de terceiros
 
 - `docs/THIRD-PARTY-NOTICES.md` (inglês) e `docs/THIRD-PARTY-NOTICES.pt-BR.md` (português) listam os componentes efetivamente empacotados no payload ABLX e no bundle do host, com os avisos de licença.
-- A [revisão da distribuição](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) registra a matriz de dependências e a conclusão explícita de que nenhum componente de terceiros precisa ser relicenciado.
 
 ## Evidência atual e limites
 
@@ -43,5 +42,4 @@ Mappings, presets e projetos usam `surface-v2` e schema 2. Dados da linha 1.x n�
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: passo a passo de instalação.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: avisos de terceiros.
 - `dev/TESTER-GUIDE.md`: orientação atual com evidência histórica separada.
-- [revisão da distribuição](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): matriz de dependências e conclusão de distribuição.
 - [arquivo de gates](https://github.com/ntworm/rc-surface/blob/main/dev/RELEASE-GATES-1.0.json): os gates registrados.

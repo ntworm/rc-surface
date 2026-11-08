@@ -28,7 +28,6 @@ Requirements and current evidence for RC Surface 2.1.0.
 ## Third-party packages
 
 - `docs/THIRD-PARTY-NOTICES.md` (English) and `docs/THIRD-PARTY-NOTICES.pt-BR.md` (Portuguese) list the components actually packaged in the ABLX payload and in the host bundle, with license notices.
-- The [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md) records the dependency matrix and the conclusion that no third-party relicensing is required.
 
 ## Current evidence and limits
 
@@ -43,5 +42,4 @@ Mappings, presets and projects use `surface-v2` and schema 2. Data from the 1.x 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: installation walkthrough.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: third-party notices.
 - `dev/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
-- [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): dependency matrix and distribution conclusion.
 - [release gates archive](https://github.com/ntworm/rc-surface/blob/main/dev/RELEASE-GATES-1.0.json): the recorded gates.

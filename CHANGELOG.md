@@ -706,7 +706,7 @@ The records below describe their own versions and evidence, not new 2.0 gates.
 - The phone, panel and admin surfaces now share that visual system.
 - Pinch Clutch adds three always-live X/Y/Z axes that hold their values between
   pinches and continue from the last position.
-- `internal/THEME_CONTRACT.md` is the binding visual contract, indexed from the
+- `dev/THEME_CONTRACT.md` is the binding visual contract, indexed from the
   documentation README and protected by a regression test.
 
 ### Improved

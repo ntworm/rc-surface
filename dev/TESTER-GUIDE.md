@@ -201,7 +201,7 @@ phase when speed changes. Preserve the recorded Set for point-density analysis;
 high-frequency waveform fidelity is NOT approved by the automated tests.
 The accepted Receiver/XY/MIX checks are not being reopened.
 Physical audio/latency recording remains pending; the 8 ms dispatch spacing is
-not an end-to-end measurement. See [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/CONTROL-LATENCY-AUDIT-2026-09-09.md).
+not an end-to-end measurement.
 
 This kit contains the production-equivalent `.ablx` and the docs you need
 to install it, open the panel, connect your phone, and report any issues
@@ -225,7 +225,7 @@ Use the descriptor checks below; physical microphone tests remain required.
 | `LICENSE` | PolyForm Noncommercial 1.0.0 license text |
 | `CHANGELOG.md` | Version history |
 | `CONTRIBUTING.md` | Development workflow and contribution notes |
-| `dev/README.md` | Canonical docs index |
+| `dev/README.md` | Index of the files in `dev/` |
 | `docs/INSTALL.md` | Step-by-step install and phone connection |
 | `docs/USER-GUIDE.md` | Phone controller usage guide |
 | `docs/FAQ.md` | Common questions and answers |
@@ -233,7 +233,6 @@ Use the descriptor checks below; physical microphone tests remain required.
 | `docs/SECURITY.md` | Threat model, certificate policy, network behavior |
 | `docs/CUSTOMIZATION.md` | Controls, sensors, mappings, extension points |
 | `dev/TESTER-GUIDE.md` | This file |
-| [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/PESQUISA_CELULAR_GESTUAL.md) | Research and roadmap evidence |
 | `Migrate-RC-Surface-Data.cmd` / `.ps1` | Windows data migrator (Ableton-RC-Surface → RC Surface) |
 | `Migrate RC Surface Data.command` | macOS data migrator |
 | `SHA256SUMS.txt` | File hashes for integrity checks |
