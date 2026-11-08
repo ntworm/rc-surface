@@ -39,8 +39,8 @@ Read these first:
 - `docs/INSTALL.md` - install, phone connection, certificates, troubleshooting.
 - `docs/FAQ.md` - user-facing answers.
 - `docs/CUSTOMIZATION.md` - how to change controls, sensors, mappings, UI.
-- `internal/THEME_CONTRACT.md` - binding visual language, palette, typography, geometry, and documented exceptions.
-- `internal/TESTER-GUIDE.md` - manual release and compatibility smoke-test checklist.
+- `dev/THEME_CONTRACT.md` - binding visual language, palette, typography, geometry, and documented exceptions.
+- `dev/TESTER-GUIDE.md` - manual release and compatibility smoke-test checklist.
 - `docs/AUDIO-AUDIT.md` / `docs/AUDIO-AUDIT.pt-BR.md` - owner-operated browser audio checks; not proof of latency or Native Track acceptance.
 - `docs/PRIVACY.md` - data flow and third-party runtime notes.
 - `docs/SECURITY.md` - threat model and certificate policy.

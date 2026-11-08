@@ -35,7 +35,7 @@ const repoRoot = resolve(here, '..');
 function printHelp() {
   console.log(
     'verify-release.mjs — local-only release verifier.\n' +
-      '  default: runs npm run ci, validates internal/RELEASE-GATES-1.0.json.\n' +
+      '  default: runs npm run ci, validates dev/RELEASE-GATES-1.0.json.\n' +
       '  --package PATH        verify an existing candidate against a fresh build.\n' +
       '  --build-dir DIR       directory to compare against (default: dist).\n' +
       '  --report PATH         write a JSON report outside the payload.\n' +
@@ -101,7 +101,7 @@ function guardEnvironment() {
 const STAGE_KEYS = { '--package': 'package', '--build-dir': 'buildDir', '--report': 'report', '--stage': 'stage' };
 
 async function loadGates() {
-  const path = resolve(repoRoot, 'internal', 'RELEASE-GATES-1.0.json');
+  const path = resolve(repoRoot, 'dev', 'RELEASE-GATES-1.0.json');
   let raw;
   try {
     raw = await readFile(path, 'utf8');

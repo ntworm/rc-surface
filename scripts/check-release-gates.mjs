@@ -30,7 +30,7 @@ function printHelp() {
     'check-release-gates.mjs — gates document validator.\n' +
       '  --stage local|publish   stage semantics (default: local).\n' +
       '  --report PATH           write JSON report (default: test-results/check-release-gates.json).\n' +
-      '  --gates PATH            gates document to evaluate (default: internal/RELEASE-GATES-1.0.json).\n',
+      '  --gates PATH            gates document to evaluate (default: dev/RELEASE-GATES-1.0.json).\n',
   );
 }
 
@@ -69,7 +69,7 @@ function acceptedFor(stage) {
 }
 
 async function loadGates(gatesPath) {
-  const path = gatesPath ? resolve(gatesPath) : resolve(repoRoot, 'internal', 'RELEASE-GATES-1.0.json');
+  const path = gatesPath ? resolve(gatesPath) : resolve(repoRoot, 'dev', 'RELEASE-GATES-1.0.json');
   if (!existsSync(path)) {
     return { ok: false, reason: `gates document missing: ${path}` };
   }

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-const contractPath = path.resolve(import.meta.dirname, '../../internal/THEME_CONTRACT.md');
+const contractPath = path.resolve(import.meta.dirname, '../../dev/THEME_CONTRACT.md');
 
 test('theme contract preserves the current visual language', () => {
   const contract = fs.readFileSync(contractPath, 'utf8');

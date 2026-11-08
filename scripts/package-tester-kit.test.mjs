@@ -16,7 +16,7 @@ import { spawnSync } from "node:child_process";
 
 const repoRoot = join(import.meta.dirname, "..");
 const scriptPath = join(repoRoot, "scripts", "package-tester-kit.mjs");
-const testerGuidePath = join(repoRoot, "internal", "TESTER-GUIDE.md");
+const testerGuidePath = join(repoRoot, "dev", "TESTER-GUIDE.md");
 
 test("tester-kit: script is present and runnable via node", () => {
   const r = spawnSync("node", ["--check", scriptPath], { encoding: "utf8" });
@@ -105,14 +105,14 @@ test("tester-kit: stage docs list includes required user-facing files", async ()
     "NOTICE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
-    "internal/README.md",
+    "dev/README.md",
     "docs/INSTALL.md",
     "docs/USER-GUIDE.md",
     "docs/FAQ.md",
     "docs/PRIVACY.md",
     "docs/SECURITY.md",
     "docs/CUSTOMIZATION.md",
-    "internal/TESTER-GUIDE.md",
+    "dev/TESTER-GUIDE.md",
     "docs/COMPATIBILITY.md",
     "docs/CONTRACTS.md",
     ".github/release-notes/v2.0.0.md",

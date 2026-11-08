@@ -2577,7 +2577,7 @@ It is written for maintainers and contributors.
 Read first:
 
 - `CONTRIBUTING.md`
-- `internal/README.md`
+- `dev/README.md`
 
 ## Current architecture
 
@@ -3083,9 +3083,9 @@ Mappings, presets and projects use `surface-v2` and schema 2. Data from the 1.x 
 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: installation walkthrough.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: third-party notices.
-- `internal/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
+- `dev/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
 - [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): dependency matrix and distribution conclusion.
-- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json): the recorded gates.
+- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/dev/RELEASE-GATES-1.0.json): the recorded gates.
 
 ---
 
@@ -3333,7 +3333,7 @@ Host `src/live/transport-clock.ts` and phone `static/phone-v3/controls.js` prese
 
 These are product control-rate limits, not an SDK throughput or latency guarantee. SYNC filters subdivisions by BPM/shape; swing and ratchet account for the shortest half-step. Pins that are too fast slow by octaves. Square FREE stays within 15 Hz including ratchet. CFG does not offer unreachable subdivisions or edit touch-owned rate/depth.
 
-The [historical ceiling audit](https://github.com/ntworm/rc-surface/blob/main/internal/LIVE-WRITE-CEILING-1.0.md) describes its 1.0 cycle; it does not establish a new 2.0 candidate measurement.
+The [historical ceiling audit](https://github.com/ntworm/rc-surface/blob/main/dev/LIVE-WRITE-CEILING-1.0.md) describes its 1.0 cycle; it does not establish a new 2.0 candidate measurement.
 
 ---
 

@@ -67,7 +67,7 @@ const stageDocs = [
   ".github/release-notes/v2.1.0.md",
   "vendor/README.md",
   "FUNDING.md",
-  "internal/README.md",
+  "dev/README.md",
   "docs/INSTALL.md",
   "docs/USER-GUIDE.md",
   "docs/FAQ.md",
@@ -82,8 +82,8 @@ const stageDocs = [
   "docs/CUSTOMIZATION.pt-BR.md",
   "docs/AUDIO-AUDIT.md",
   "docs/AUDIO-AUDIT.pt-BR.md",
-  "internal/THEME_CONTRACT.md",
-  "internal/TESTER-GUIDE.md",
+  "dev/THEME_CONTRACT.md",
+  "dev/TESTER-GUIDE.md",
 ];
 
 const companionDevices = [

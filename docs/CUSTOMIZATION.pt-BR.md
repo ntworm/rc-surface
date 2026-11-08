@@ -6,7 +6,7 @@ Foi escrito para mantenedores e contribuidores.
 Leia antes:
 
 - `CONTRIBUTING.md`
-- `internal/README.md`
+- `dev/README.md`
 
 ## Arquitetura atual
 

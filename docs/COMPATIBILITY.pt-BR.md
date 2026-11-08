@@ -42,6 +42,6 @@ Mappings, presets e projetos usam `surface-v2` e schema 2. Dados da linha 1.x n�
 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: passo a passo de instalação.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: avisos de terceiros.
-- `internal/TESTER-GUIDE.md`: orientação atual com evidência histórica separada.
+- `dev/TESTER-GUIDE.md`: orientação atual com evidência histórica separada.
 - [revisão da distribuição](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): matriz de dependências e conclusão de distribuição.
-- [arquivo de gates](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json): os gates registrados.
+- [arquivo de gates](https://github.com/ntworm/rc-surface/blob/main/dev/RELEASE-GATES-1.0.json): os gates registrados.

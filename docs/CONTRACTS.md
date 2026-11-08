@@ -23,7 +23,7 @@ Host `src/live/transport-clock.ts` and phone `static/phone-v3/controls.js` prese
 
 These are product control-rate limits, not an SDK throughput or latency guarantee. SYNC filters subdivisions by BPM/shape; swing and ratchet account for the shortest half-step. Pins that are too fast slow by octaves. Square FREE stays within 15 Hz including ratchet. CFG does not offer unreachable subdivisions or edit touch-owned rate/depth.
 
-The [historical ceiling audit](https://github.com/ntworm/rc-surface/blob/main/internal/LIVE-WRITE-CEILING-1.0.md) describes its 1.0 cycle; it does not establish a new 2.0 candidate measurement.
+The [historical ceiling audit](https://github.com/ntworm/rc-surface/blob/main/dev/LIVE-WRITE-CEILING-1.0.md) describes its 1.0 cycle; it does not establish a new 2.0 candidate measurement.
 
 ---
 

@@ -14,7 +14,7 @@
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   // Mirrors transport-clock.ts; host/preview bandwidth parity is regression tested.
-  // Source: internal/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
+  // Source: dev/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
   // Fallback applied 2026-09-17: write-ceiling P04 pendente, teto_efetivo ~ 50 escritas/s, min pontos/cycle = sine 10 / triangle 16 / ramp_up 16 / ramp_down 16 / square 4.
   const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 };
   function getLfoMaxHz(shape = window.syncSettings?.lfoShape || 'sine') {

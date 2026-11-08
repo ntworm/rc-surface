@@ -33,7 +33,7 @@ test('check-release-gates --stage publish is blocked by a blocked gate', async (
   // A fixture with one blocked gate: the live document passed every gate
   // on 2026-09-21, so the block is no longer observable through it.
   const gatesPath = join(reportDir, 'gates-fixture-blocked.json');
-  const live = JSON.parse(await readFile(join(repoRoot, 'internal', 'RELEASE-GATES-1.0.json'), 'utf8'));
+  const live = JSON.parse(await readFile(join(repoRoot, 'dev', 'RELEASE-GATES-1.0.json'), 'utf8'));
   live.gates.push({ id: 'fixture-blocked', phase: 'PXX', stage: 'publish', status: 'blocked', owner: 'test', rationale: 'fixture' });
   writeFileSync(gatesPath, JSON.stringify(live));
   const reportPath = join(reportDir, 'gates-publish-blocked.json');

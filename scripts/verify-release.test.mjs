@@ -30,7 +30,7 @@ test('packagePath with .. is rejected by verify-release', () => {
 
 test('check-release-gates --stage publish refuses a gates document with pending status', async () => {
   const tmpPath = join(reportDir, 'gates-pending.json');
-  const origPath = join(repoRoot, 'internal', 'RELEASE-GATES-1.0.json');
+  const origPath = join(repoRoot, 'dev', 'RELEASE-GATES-1.0.json');
   const original = await readFile(origPath, 'utf8');
   try {
     const parsed = JSON.parse(original);

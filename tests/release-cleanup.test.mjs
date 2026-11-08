@@ -250,7 +250,7 @@ test("release docs and control catalogs use current names only", () => {
   const releaseDocs = [
     "README.md",
     "docs/INSTALL.md",
-    "internal/TESTER-GUIDE.md",
+    "dev/TESTER-GUIDE.md",
   ];
   for (const rel of releaseDocs) {
     const text = read(rel);
@@ -282,7 +282,7 @@ test("release docs and control catalogs use current names only", () => {
   ];
   const removedPerfFiles = [
     "README.md",
-    "internal/README.md",
+    "dev/README.md",
     "docs/CUSTOMIZATION.md",
     "docs/USER-GUIDE.md",
     "docs/INSTALL.md",

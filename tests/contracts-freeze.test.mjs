@@ -136,7 +136,7 @@ test("osc-transport routes through the osc-tokens registry", async () => {
 
 test("transport-clock shape ceilings are frozen", async () => {
   const tc = await import("../src/live/transport-clock.ts");
-  // Source: internal/LIVE-WRITE-CEILING-1.0.md fallback (write-ceiling P04 pendente);
+  // Source: dev/LIVE-WRITE-CEILING-1.0.md fallback (write-ceiling P04 pendente);
   // rule maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape)), teto_efetivo ~ 50 escritas/s.
   const expected = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 };
   for (const [shape, max] of Object.entries(expected)) {

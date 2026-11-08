@@ -42,6 +42,6 @@ Mappings, presets and projects use `surface-v2` and schema 2. Data from the 1.x 
 
 - `docs/INSTALL.md`, `docs/INSTALL.pt-BR.md`: installation walkthrough.
 - `docs/THIRD-PARTY-NOTICES.md`, `docs/THIRD-PARTY-NOTICES.pt-BR.md`: third-party notices.
-- `internal/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
+- `dev/TESTER-GUIDE.md`: current guidance with separately labeled historical evidence.
 - [distribution review](https://github.com/ntworm/rc-surface/blob/main/internal/DISTRIBUTION-REVIEW-1.0.md): dependency matrix and distribution conclusion.
-- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/internal/RELEASE-GATES-1.0.json): the recorded gates.
+- [release gates archive](https://github.com/ntworm/rc-surface/blob/main/dev/RELEASE-GATES-1.0.json): the recorded gates.

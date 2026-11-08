@@ -7,7 +7,7 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 // Product bandwidth for editable control-rate automation, not an SDK throughput
 // guarantee. Keep browser policy in controls.js in parity (covered by tests).
-// Source: internal/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
+// Source: dev/LIVE-WRITE-CEILING-1.0.md, rule `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`.
 // Measured 2026-09 on Windows 11; write-ceiling P04 (Live 12.4.5 + Automation Arm) pendente, fallback aplicado:
 // teto_efetivo ~ 50 escritas/s, min pontos por ciclo = sine 10 / triangle 16 / ramp_up 16 / ramp_down 16 / square 4.
 export const LFO_SHAPE_MAX_HZ = { sine: 4, triangle: 3, ramp_up: 3, ramp_down: 3, square: 15 } as const;

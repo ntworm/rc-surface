@@ -103,7 +103,7 @@ payloads: they protect the current product. Remove a test only when its subject
 is genuinely retired or its coverage is demonstrably redundant.
 
 Local gates do not certify physical Live timing, real device behavior or
-macOS acceptance. See `internal/TESTER-GUIDE.md` for manual acceptance;
+macOS acceptance. See `dev/TESTER-GUIDE.md` for manual acceptance;
 experimental audio benchmark evidence is maintained separately.
 
 Use `npm run build:prod-ablx` to generate the versioned `.ablx` and `npm run

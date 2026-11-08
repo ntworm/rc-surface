@@ -122,7 +122,6 @@ test('2.0 public upgrade instructions and storage contracts cannot suggest the h
     assert.doesNotMatch(custom,/toggle-4`|button-1`/);
   }
   for(const file of ['README.md','README.pt-BR.md','docs/index.html','docs/pt-br.html'])assert.doesNotMatch(read(file),/e930ebe|523b7d93/,'operator acceptance details belong to the internal record');
-  assert.match(read('internal/RELEASE-CANDIDATE-CHECKLIST.pt-BR.md'),/523b7d93/);
 });
 
 test('site generation replaces a stale English fallback from its catalog before deriving both language pages',async()=>{

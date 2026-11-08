@@ -23,7 +23,7 @@ Host `src/live/transport-clock.ts` e celular `static/phone-v3/controls.js` mant�
 
 Esses tetos são limites de produto para controle, não uma garantia de throughput ou latência do SDK. Em SYNC, subdivisões são filtradas por BPM/forma; swing e ratchet consideram o menor meio-passo. Pins rápidos demais desaceleram por oitavas. Square FREE respeita até 15 Hz, incluindo ratchet. CFG não oferece subdivisões inviáveis nem edita rate/depth que pertencem ao toque.
 
-A [medição histórica de teto](https://github.com/ntworm/rc-surface/blob/main/internal/LIVE-WRITE-CEILING-1.0.md) descreve seu ciclo 1.0; não prova uma medição nova da candidata 2.0.
+A [medição histórica de teto](https://github.com/ntworm/rc-surface/blob/main/dev/LIVE-WRITE-CEILING-1.0.md) descreve seu ciclo 1.0; não prova uma medição nova da candidata 2.0.
 
 ---
 

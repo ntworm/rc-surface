@@ -225,14 +225,14 @@ Use the descriptor checks below; physical microphone tests remain required.
 | `LICENSE` | PolyForm Noncommercial 1.0.0 license text |
 | `CHANGELOG.md` | Version history |
 | `CONTRIBUTING.md` | Development workflow and contribution notes |
-| `internal/README.md` | Canonical docs index |
+| `dev/README.md` | Canonical docs index |
 | `docs/INSTALL.md` | Step-by-step install and phone connection |
 | `docs/USER-GUIDE.md` | Phone controller usage guide |
 | `docs/FAQ.md` | Common questions and answers |
 | `docs/PRIVACY.md` | Local data flow and third-party runtime notes |
 | `docs/SECURITY.md` | Threat model, certificate policy, network behavior |
 | `docs/CUSTOMIZATION.md` | Controls, sensors, mappings, extension points |
-| `internal/TESTER-GUIDE.md` | This file |
+| `dev/TESTER-GUIDE.md` | This file |
 | [historical reference](https://github.com/ntworm/rc-surface/blob/main/internal/PESQUISA_CELULAR_GESTUAL.md) | Research and roadmap evidence |
 | `Migrate-RC-Surface-Data.cmd` / `.ps1` | Windows data migrator (Ableton-RC-Surface → RC Surface) |
 | `Migrate RC Surface Data.command` | macOS data migrator |

@@ -624,7 +624,7 @@ test('TRN controls exist with CSS-drawn media icons and no typed transport glyph
   const css = read('style.css');
   const transport = read('modules/transport.js');
   const playhead = read('modules/playhead.js');
-  const contract = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'internal', 'THEME_CONTRACT.md'), 'utf8');
+  const contract = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'dev', 'THEME_CONTRACT.md'), 'utf8');
 
   assert.match(html, /id="btn-trn-mode"/);
   assert.match(html, /id="transport-lite-overlay"/);
