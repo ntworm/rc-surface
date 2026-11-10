@@ -18,7 +18,7 @@ O RC Surface é uma extensão para o Ableton Live 12 que serve uma superfície d
 
 ## Início rápido
 
-1. **Download.** Baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) na [versão 2.1.0](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0) e confira os arquivos com o `SHA256SUMS.txt`.
+1. **Download.** Baixe `RC-Surface-2.1.0.ablx` e `RC-Midi-Receiver.amxd` (mais o `RC-Audio-Sender.amxd` opcional) na [versão mais recente](https://github.com/ntworm/rc-surface/releases/latest) e confira os arquivos com o `SHA256SUMS.txt`.
 2. **Instalação.** Dê dois cliques no `RC-Surface-2.1.0.ablx` para instalar no Live (reinicie o Live se ele já estiver aberto) e ative o **RC Surface** em *Options → Preferences → Extensions*.
 3. **Conexão.** No Live, abra *Extensions → RC Surface → Show panel* e escaneie o QR code com o celular. Instale uma única vez a autoridade certificadora local deste computador, pela página simples na porta HTTPS + 1; a seção **Certificado** da aba **Rede** do painel aponta essa página. Se o celular não abrir a página, use a aba **Rede**: ela mostra o endereço que o QR usa e tem **ACHAR CONFIGURAÇÃO**.
 4. **Controle.** Use as 7 abas da superfície para controlar o Live. Toque em **MAP** no cabeçalho para vincular parâmetros, disparar notas MIDI ou lançar clips.

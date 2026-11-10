@@ -30,8 +30,8 @@ The extension itself is built on the
 
 ### Release package
 
-Version 2.1.0 is distributed as a
-[pre-release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0).
+The current version, 2.1.0, is on the
+[latest release](https://github.com/ntworm/rc-surface/releases/latest) page.
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
    project Releases page, or use the test package shared by the maintainer.

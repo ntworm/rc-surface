@@ -29,8 +29,8 @@ A extensão em si é construída sobre o
 
 ### Versão publicada ou candidata de teste
 
-A versão 2.1.0 é distribuída como
-[pré-lançamento](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0).
+A versão atual, 2.1.0, está na página da
+[versão mais recente](https://github.com/ntworm/rc-surface/releases/latest).
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases
    do projeto, ou use o pacote de teste enviado pelo mantenedor. Ter uma
