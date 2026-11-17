@@ -1,6 +1,11 @@
 // Copyright © 2026 Gabriel Worm
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
+import { ActuatorStats } from "./actuator-stats.js";
+import type { ActuatorStatsBucket, WriteLatencySummary } from "./actuator-stats.js";
+
+export type { ActuatorStatsBucket, WriteLatencySummary };
+
 export interface ContinuousRequest {
   targetKey: string;
   value: number;
@@ -40,41 +45,7 @@ interface ContinuousLane {
   waiters: Array<() => void>;
 }
 
-export interface ActuatorStatsBucket {
-  writesStarted: number;
-  writesCompleted: number;
-  writesFailed: number;
-  meanMs: number;
-  p50Ms: number;
-  p95Ms: number;
-  maxMs: number;
-  ratePerSecond: number;
-  lastCompletedAtMs: number | null;
-}
-
-export interface WriteLatencySummary {
-  p50Ms: number;
-  p95Ms: number;
-  maxMs: number;
-  count: number;
-}
-
-const EMPTY_BUCKET: ActuatorStatsBucket = Object.freeze({
-  writesStarted: 0,
-  writesCompleted: 0,
-  writesFailed: 0,
-  meanMs: 0,
-  p50Ms: 0,
-  p95Ms: 0,
-  maxMs: 0,
-  ratePerSecond: 0,
-  lastCompletedAtMs: null,
-});
-
 const EPSILON = 1e-9;
-
-const COMPLETION_RING_SIZE = 512;
-const RATE_WINDOW_MS = 1000;
 
 /**
  * How many SDK writes may be in flight for one physical target. Two lets the
@@ -97,16 +68,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const rank = clamp((sorted.length - 1) * p, 0, sorted.length - 1);
-  const lo = Math.floor(rank);
-  const hi = Math.ceil(rank);
-  if (lo === hi) return sorted[lo] ?? 0;
-  const weight = rank - lo;
-  return (sorted[lo] ?? 0) * (1 - weight) + (sorted[hi] ?? 0) * weight;
-}
-
 /**
  * Owns continuous writes by physical Live target. Incoming frames retarget the
  * newest value (or explicit user ramp); the actuator is the sole writer and
@@ -127,18 +88,12 @@ export class ContinuousTargetActuator {
   // Stats are kept per physical target and aggregated for a "total" bucket.
   // They exist for the live-write-ceiling bench: a diagnostic path that
   // observes real production traffic without altering actuator behaviour.
-  private readonly completionSamples = new Map<string, { values: number[]; next: number }>();
-  private readonly completionTimestamps = new Map<string, number[]>();
-  private readonly statsCounters = new Map<string, {
-    writesStarted: number;
-    writesCompleted: number;
-    writesFailed: number;
-    lastCompletedAtMs: number | null;
-  }>();
+  private readonly stats: ActuatorStats;
 
   constructor(options: { now?: () => number; minWriteIntervalMs?: number } = {}) {
     this.now = options.now ?? defaultNow;
     this.minWriteIntervalMs = Math.max(1, options.minWriteIntervalMs ?? 20);
+    this.stats = new ActuatorStats({ now: this.now });
   }
 
   request(request: ContinuousRequest): void {
@@ -347,7 +302,7 @@ export class ContinuousTargetActuator {
     lane.writeSeq = seq;
     lane.lastWriteAtMs = nowMs;
     lane.lastDispatched = value;
-    this.recordWriteStart(lane.targetKey);
+    this.stats.recordWriteStart(lane.targetKey);
     const writePromise = Promise.resolve()
       .then(() => {
         // A cancelled or replaced lane must not reach Live.
@@ -369,14 +324,14 @@ export class ContinuousTargetActuator {
           lane.lastWrittenSeq = seq;
         }
         lane.current = value;
-        this.recordWriteComplete(lane.targetKey, this.now() - startedAtMs);
+        this.stats.recordWriteComplete(lane.targetKey, this.now() - startedAtMs);
       })
       .catch((error: unknown) => {
         console.error(
           '[ContinuousTargetActuator] target write failed:',
           error instanceof Error ? error.message : String(error),
         );
-        this.recordWriteFailure(lane.targetKey);
+        this.stats.recordWriteFailure(lane.targetKey);
         // The value never reached Live: let the next pump send it again.
         if (seq === lane.writeSeq) lane.lastDispatched = lane.lastWritten;
       })
