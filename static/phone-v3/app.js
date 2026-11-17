@@ -937,10 +937,16 @@
    * snapshot repeats the list only as a keyframe: the first snapshot after the
    * socket changed, and one every KEYFRAME_MS after that. Without the stream
    * the snapshot keeps carrying the list, exactly as it always has.
+   *
+   * A clock that went backwards (a system time change, a resumed laptop)
+   * leaves the elapsed time unknown: the whole list travels again rather
+   * than the keyframe waiting for a clock that may take a long time to catch
+   * up with the last one.
    */
   function carriesControls(now) {
     if (controlStream?.isActive() !== true) return true;
     if (lastKeyframeSocket !== window.phoneWs) return true;
+    if (now < lastKeyframeAt) return true;
     return now - lastKeyframeAt >= KEYFRAME_MS;
   }
 
@@ -1012,7 +1018,11 @@
       const now = Date.now();
       const throttleActive = window.RCSurface.getMappingModeActive() || window.RCSurface.getTelemetryThrottleUntil() > now;
       const minSnapshotInterval = throttleActive ? 500 : TICK_MS;
-      if (now - lastSnapshotSentAt < minSnapshotInterval) return;
+      // A clock that went backwards leaves the elapsed time unknown, so the
+      // snapshot goes out now: waiting for the clock to catch up would
+      // silence the snapshot stream until it did.
+      const sinceLastSnapshot = now - lastSnapshotSentAt;
+      if (sinceLastSnapshot >= 0 && sinceLastSnapshot < minSnapshotInterval) return;
       lastSnapshotSentAt = now;
 
       const _ws = window.phoneWs;

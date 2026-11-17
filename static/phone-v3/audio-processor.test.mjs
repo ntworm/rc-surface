@@ -1036,6 +1036,41 @@ test('AudioProcessor integration: a realtime snapshot carries the control list o
     'a new socket starts a new keyframe');
 });
 
+test('AudioProcessor integration: a clock that went backwards still yields a keyframe', () => {
+  const { windowContext } = loadAudioAndApp((ctx) => {
+    ctx.RcControlStream = {
+      create: () => ({ isActive: () => true, push: () => true, batch: (fn) => fn(), reset: () => {}, discard: () => {} }),
+    };
+  });
+  const sent = [];
+  let now = 1000;
+  windowContext.Date = class extends Date { static now() { return now; } };
+  windowContext.WebSocket.OPEN = 1;
+  windowContext.phoneWs = {
+    readyState: 1,
+    bufferedAmount: 0,
+    send: (payload) => sent.push(JSON.parse(payload)),
+  };
+  windowContext.getPhoneClientId = () => 'clock-client';
+  windowContext.state.controls = [{ name: 'pad-1', value: 1 }];
+  const tick = windowContext.__intervals.find(({ delay }) => delay === 33).callback;
+
+  tick();
+  assert.deepEqual(sent.at(-1).data.controls, [{ name: 'pad-1', value: 1 }], 'the first snapshot is a keyframe');
+
+  now += 100;
+  tick();
+  assert.equal('controls' in sent.at(-1).data, false, 'a snapshot inside the keyframe window carries no list');
+
+  // The system clock goes backwards (a time change, a resumed laptop): the
+  // elapsed time is unknown, so the whole list travels again instead of the
+  // keyframe waiting for a clock that may take a long time to catch up.
+  now -= 5000;
+  tick();
+  assert.deepEqual(sent.at(-1).data.controls, [{ name: 'pad-1', value: 1 }],
+    'a clock that went backwards yields a keyframe');
+});
+
 test('AudioProcessor integration: a snapshot without the realtime stream keeps the whole list', () => {
   const { windowContext } = loadAudioAndApp();
   const sent = [];
