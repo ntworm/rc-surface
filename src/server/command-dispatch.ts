@@ -119,6 +119,8 @@ export const COMMAND_SIDE_EFFECTS: Record<string, SideEffect> = {
   nextNetworkAddress: "server-admin",
   getActuatorStats: "server-admin",
   resetActuatorStats: "server-admin",
+  getLatencyStats: "server-admin",
+  resetLatencyStats: "server-admin",
   benchDeviceParamWrites: "server-admin",
 };
 

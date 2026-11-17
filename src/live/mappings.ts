@@ -20,6 +20,7 @@ import { registerCatalogCommands } from "./catalog/index.js";
 import { applyCurve, applyCurveInverse } from "./curves.js";
 import { scaleTargetValue, unscaleTargetValue, type TargetScale } from "./target-scale.js";
 import { continuousTargetActuator, defaultNow as nowMs } from "./continuous-target-actuator.js";
+import { getLatencyStats, resetLatencyStats } from "../server/latency-stats.js";
 import { stopAllHostModulators } from "./host-modulators.js";
 import { SafeInputRegistry, SafeSignalFilter, type SafeInputResult, type TakeoverMode } from "./safe-input.js";
 import { TriggerNoteClock, resolveTriggerNoteOptions, resolveGridDurationMs, type NoteTiming, type NoteGate } from "./trigger-note-clock.js";
@@ -2127,6 +2128,19 @@ export const commands: Record<string, CommandSpec> = {
     description: "Clear every counter, ring buffer, and rate window in ContinuousTargetActuator. Admin-only diagnostic.",
     handler: async () => {
       continuousTargetActuator.resetStats();
+      return { reset: true };
+    },
+  },
+
+  getLatencyStats: {
+    description: "Read the per-phase latency percentiles of the control path from live-write clients. Admin-only diagnostic.",
+    handler: async () => getLatencyStats(),
+  },
+
+  resetLatencyStats: {
+    description: "Clear every latency ring buffer and per-client counter. Admin-only diagnostic.",
+    handler: async () => {
+      resetLatencyStats();
       return { reset: true };
     },
   },

@@ -257,6 +257,45 @@ export function boundImmediateControls(controls: unknown): ImmediateDescriptorCo
   return controls as ImmediateDescriptorControl[];
 }
 
+// ── Frame timing telemetry ───────────────────────────────────────────────────
+
+/** Largest frame number a client may use. */
+export const MAX_FRAME_SEQ = 2 ** 31 - 1;
+
+/** Largest age or round-trip time a frame may report (ms). */
+export const MAX_FRAME_TIMING_MS = 10_000;
+
+/** The timing a control frame carries: its number, the age of its oldest item, the last ping round trip. */
+export interface FrameTiming { seq: number; ageMs?: number; rttMs?: number; }
+
+function isFrameSeq(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_FRAME_SEQ;
+}
+
+function boundMilliseconds(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  if (value < 0 || value > MAX_FRAME_TIMING_MS) return undefined;
+  return value;
+}
+
+/**
+ * Read the timing telemetry a control frame carries.
+ *
+ * The phone sends its own queue and the round trip of its last ping with
+ * every frame, so the host can tell a slow link from a slow write. A number
+ * that does not hold up is dropped — never the frame: its controls apply.
+ */
+export function boundFrameTiming(parsed: Record<string, unknown> | null | undefined): FrameTiming | null {
+  const seq = parsed?.["seq"];
+  if (!isFrameSeq(seq)) return null;
+  const ageMs = boundMilliseconds(parsed?.["age_ms"]);
+  const rttMs = boundMilliseconds(parsed?.["rtt_ms"]);
+  const timing: FrameTiming = { seq };
+  if (ageMs !== undefined) timing.ageMs = ageMs;
+  if (rttMs !== undefined) timing.rttMs = rttMs;
+  return timing;
+}
+
 // ── Per-connection rate limiter ──────────────────────────────────────────────
 
 /** Minimum spacing between rate-limit notices sent back to one client. */

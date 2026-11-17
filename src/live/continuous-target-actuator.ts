@@ -43,6 +43,13 @@ export interface ActuatorStatsBucket {
   lastCompletedAtMs: number | null;
 }
 
+export interface WriteLatencySummary {
+  p50Ms: number;
+  p95Ms: number;
+  maxMs: number;
+  count: number;
+}
+
 const EMPTY_BUCKET: ActuatorStatsBucket = Object.freeze({
   writesStarted: 0,
   writesCompleted: 0,
@@ -454,6 +461,24 @@ export class ContinuousTargetActuator {
       lastCompletedAtMs,
     };
     return { total, byTarget };
+  }
+
+  /**
+   * Latency of the completed writes, pooled over every physical target.
+   *
+   * The per-target rings keep the detail; this is the one number a latency
+   * budget needs: how long a write to Live took, whatever it wrote.
+   */
+  getWriteLatency(): WriteLatencySummary {
+    const pooled: number[] = [];
+    for (const ring of this.completionSamples.values()) pooled.push(...ring.values);
+    const sorted = pooled.sort((a, b) => a - b);
+    return {
+      p50Ms: percentile(sorted, 0.5),
+      p95Ms: percentile(sorted, 0.95),
+      maxMs: sorted.length > 0 ? (sorted[sorted.length - 1] ?? 0) : 0,
+      count: sorted.length,
+    };
   }
 
   resetStats(): void {

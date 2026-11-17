@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { boundControlFrame } from '../src/server/ws-bounds.ts';
+import { boundControlFrame, boundFrameTiming } from '../src/server/ws-bounds.ts';
 
 test('control frames admit bounded scalar/XY batches and reject the entire malformed frame', () => {
   const valid = [{ name: 'xy-1', x: 0.2, y: 0.9 }, { name: 'sensor.audio.transient', value: 0.5, lost: false }];
@@ -18,4 +18,15 @@ test('fresh vision metadata is admitted only on learned poses with bounded monot
   assert.equal(boundControlFrame([{...sample,name:'pad-1'}]),null);
   assert.equal(boundControlFrame([{...sample,value:0}]),null);
   assert.equal(boundControlFrame([{...sample,lost:true}]),null);
+});
+test('frame timing keeps the numbers that hold up and drops the ones that do not',()=>{
+  assert.deepEqual(boundFrameTiming({seq:0,age_ms:12,rtt_ms:20}),{seq:0,ageMs:12,rttMs:20});
+  assert.deepEqual(boundFrameTiming({seq:7}),{seq:7});
+  assert.deepEqual(boundFrameTiming({seq:7,age_ms:0,rtt_ms:10000}),{seq:7,ageMs:0,rttMs:10000});
+  for(const seq of ['5',1.5,-1,2**31,undefined,null,NaN]) assert.equal(boundFrameTiming({seq,age_ms:12}),null);
+  assert.equal(boundFrameTiming(null),null);
+  assert.equal(boundFrameTiming(undefined),null);
+  for(const bad of [-1,10001,NaN,Infinity,'12',null]){
+    assert.deepEqual(boundFrameTiming({seq:3,age_ms:bad,rtt_ms:bad}),{seq:3});
+  }
 });
