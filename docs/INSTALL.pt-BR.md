@@ -128,16 +128,17 @@ automaticamente. Não copie dados 1.x para essa pasta.
 
 O servidor mantém HTTP simples em loopback na **8730** e expõe o celular por
 HTTPS/WSS na rede local, normalmente na **8731**. Portas estáveis permitem
-reencontrar o servidor após reiniciar, mas a sessão antiga fica somente para
-leitura até você escanear o novo QR. Isso também vale para Stop/Start no painel.
-Se uma porta já estiver ocupada, o Surface cai para uma porta
-atribuída pelo sistema, e o painel mostra a que está realmente em uso. Defina
-`RC_SURFACE_PORT` para trocar a porta HTTP preferida. O acesso pela rede local
-existe apenas pela URL HTTPS gerada, então use uma rede confiável, de estúdio
-ou de casa.
-A URL do QR gerado concede o papel de controlador através de um token de sessão
-rotativo, então trate o QR code e as URLs copiadas de controlador e de
-administração como credenciais.
+reencontrar o servidor após reiniciar, e o celular volta como controlador: o
+token de controlador é mantido entre os inícios. Isso também vale para
+Stop/Start no painel. Só a sessão de administração precisa do link novo,
+porque o token de administração é gerado a cada início. Se uma porta já
+estiver ocupada, o Surface cai para uma porta atribuída pelo sistema, e o
+painel mostra a que está realmente em uso. Defina `RC_SURFACE_PORT` para
+trocar a porta HTTP preferida. O acesso pela rede local existe apenas pela
+URL HTTPS gerada, então use uma rede confiável, de estúdio ou de casa.
+A URL do QR gerado concede o papel de controlador através de um token de
+sessão mantido até ser substituído, então trate o QR code e as URLs copiadas
+de controlador e de administração como credenciais.
 
 ### Iniciar automaticamente com o Live
 

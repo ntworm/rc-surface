@@ -94,7 +94,7 @@ npm run build:prod-ablx
 ## Security
 
 > [!WARNING]
-> **Security notice:** RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require rotating session tokens, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes or URLs. See [docs/SECURITY.md](docs/SECURITY.md) for the full threat model.
+> **Security notice:** RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require session tokens, and only the admin token is drawn on every server start, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes or URLs. See [docs/SECURITY.md](docs/SECURITY.md) for the full threat model.
 
 - **Local processing.** Camera frames and microphone audio are analyzed locally in the phone browser; raw media never leaves the device.
 - **Max for Live devices.** `Trigger Note` requires `RC-Midi-Receiver.amxd` on the target MIDI track. Replace legacy v1 receiver instances in older Sets so no unauthenticated UDP port stays open.
@@ -241,15 +241,17 @@ imported. Do not copy 1.x data into this folder.
 
 The server keeps plain HTTP on loopback at **8730** and exposes the phone over
 LAN HTTPS/WSS, normally at **8731**. Stable ports let a phone find the server
-after a restart, but its old session is read-only until you scan the new QR.
-This also applies to Stop/Start in the panel. If a port
-is already occupied, Surface falls back to an OS-assigned port and the panel
-shows the one actually in use. Set `RC_SURFACE_PORT` to override the preferred
-HTTP port. LAN access is available only through the generated HTTPS URL, so
-use a trusted studio/home network.
+after a restart, and the phone comes back as controller: the controller token
+is kept between starts. This also applies to Stop/Start in the panel. Only the
+admin session needs the new link, because the admin token is drawn on every
+start. If a port is already occupied, Surface falls back to an OS-assigned port
+and the panel shows the one actually in use. Set `RC_SURFACE_PORT` to override
+the preferred HTTP port. LAN access is available only through the generated
+HTTPS URL, so use a trusted studio/home network.
 
-The generated QR URL grants the controller role through a rotating session
-token, so treat the QR code and copied controller/admin URLs as credentials.
+The generated QR URL grants the controller role through a session token that
+is kept until it is replaced, so treat the QR code and copied controller/admin
+URLs as credentials.
 
 ### Start automatically with Live
 
@@ -3124,16 +3126,25 @@ Attack surface:
 
 The current design assumes a trusted studio/home LAN. HTTPS protects the
 browser transport and enables camera/microphone APIs. Controller and admin
-actions also require cryptographically random session tokens that are
-regenerated whenever the server starts, including panel Stop/Start without
-reloading Live. Requests are classified as viewer,
-controller, or admin and commands are authorized by role.
+actions also require cryptographically random session tokens. The admin token
+is drawn on every server start, including a panel Stop/Start without
+reloading Live, so an admin link from an earlier run stops working. The
+controller token is kept in the extension storage directory, under
+`storageDirectory/session/`, and stays valid until it is replaced. Requests
+are classified as viewer, controller, or admin and commands are authorized
+by role.
 
 The controller token is delivered by the generated QR URL and then moved into
 an HttpOnly, SameSite session cookie. Treat QR images, controller URLs, admin
 URLs, and active browser sessions as credentials. A party that obtains one of
-those tokens receives its associated role until the server restarts. Rescan
-the new QR after restarting; old pages become read-only.
+those tokens receives its associated role: the controller token keeps working
+across restarts, so a paired phone stays a controller, while the admin token
+only lasts for the run that issued it.
+
+To remove the access of every phone, quit Live, delete the file
+`session/controller-token` under `Preferences/Extensions/<id>/`, open Live
+again and scan the new QR. The next start draws a new controller token, and
+the phones that were paired come back as viewers.
 
 ## HTTPS and certificates
 
@@ -3230,7 +3241,10 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Do not publish or forward QR, controller, or admin URLs.
 - Do not expose the bridge through public tunnels, public reverse proxies, or
   router port forwarding. Those deployments are outside the v2.0 threat model.
-- Stop and start the server to invalidate all issued session tokens.
+- Stop and start the server to invalidate the admin link: the admin token is
+  drawn again on the next start. The controller token survives a restart; it
+  is revoked by deleting `session/controller-token` under
+  `Preferences/Extensions/<id>/`.
 
 ## Command safety
 

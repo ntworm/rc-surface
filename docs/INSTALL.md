@@ -129,15 +129,17 @@ imported. Do not copy 1.x data into this folder.
 
 The server keeps plain HTTP on loopback at **8730** and exposes the phone over
 LAN HTTPS/WSS, normally at **8731**. Stable ports let a phone find the server
-after a restart, but its old session is read-only until you scan the new QR.
-This also applies to Stop/Start in the panel. If a port
-is already occupied, Surface falls back to an OS-assigned port and the panel
-shows the one actually in use. Set `RC_SURFACE_PORT` to override the preferred
-HTTP port. LAN access is available only through the generated HTTPS URL, so
-use a trusted studio/home network.
+after a restart, and the phone comes back as controller: the controller token
+is kept between starts. This also applies to Stop/Start in the panel. Only the
+admin session needs the new link, because the admin token is drawn on every
+start. If a port is already occupied, Surface falls back to an OS-assigned port
+and the panel shows the one actually in use. Set `RC_SURFACE_PORT` to override
+the preferred HTTP port. LAN access is available only through the generated
+HTTPS URL, so use a trusted studio/home network.
 
-The generated QR URL grants the controller role through a rotating session
-token, so treat the QR code and copied controller/admin URLs as credentials.
+The generated QR URL grants the controller role through a session token that
+is kept until it is replaced, so treat the QR code and copied controller/admin
+URLs as credentials.
 
 ### Start automatically with Live
 

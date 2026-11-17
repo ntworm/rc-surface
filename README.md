@@ -78,7 +78,7 @@ npm run build:prod-ablx
 ## Security
 
 > [!WARNING]
-> **Security notice:** RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require rotating session tokens, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes or URLs. See [docs/SECURITY.md](docs/SECURITY.md) for the full threat model.
+> **Security notice:** RC Surface runs an HTTPS/WebSocket server on your local network. Controller and admin actions require session tokens, and only the admin token is drawn on every server start, but the bridge is designed strictly for trusted home or studio networks. Do not expose ports to the public internet or share session QR codes or URLs. See [docs/SECURITY.md](docs/SECURITY.md) for the full threat model.
 
 - **Local processing.** Camera frames and microphone audio are analyzed locally in the phone browser; raw media never leaves the device.
 - **Max for Live devices.** `Trigger Note` requires `RC-Midi-Receiver.amxd` on the target MIDI track. Replace legacy v1 receiver instances in older Sets so no unauthenticated UDP port stays open.
