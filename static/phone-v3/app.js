@@ -19,6 +19,7 @@
       (params && Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : whole));
 
   const TICK_MS = 33;          // ~30 Hz
+  const KEYFRAME_MS = 1000;    // the whole control list, once a second
   const DEBUG_LEN = 240;       // single-line debug; truncate
 
   // A saved posture is not evidence of calibration in a new browser session.
@@ -924,6 +925,24 @@
 
   // Snapshot throttle state (was previously in the WS block, now local to this module)
   let lastSnapshotSentAt = 0;
+  // The socket and the moment of the last keyframe: the snapshot that carried
+  // the whole control list.
+  let lastKeyframeSocket = null;
+  let lastKeyframeAt = 0;
+
+  /**
+   * Whether this snapshot carries the whole control list.
+   *
+   * A client on the realtime stream sends its controls in frames, so the
+   * snapshot repeats the list only as a keyframe: the first snapshot after the
+   * socket changed, and one every KEYFRAME_MS after that. Without the stream
+   * the snapshot keeps carrying the list, exactly as it always has.
+   */
+  function carriesControls(now) {
+    if (controlStream?.isActive() !== true) return true;
+    if (lastKeyframeSocket !== window.phoneWs) return true;
+    return now - lastKeyframeAt >= KEYFRAME_MS;
+  }
 
   function sendLoop() {
     setInterval(() => {
@@ -1001,6 +1020,11 @@
       // MAP throttles visual telemetry only. Negotiated snapshots cannot
       // actuate Live; legacy hosts retain their snapshot fallback.
       if (_ws && _ws.readyState === WebSocket.OPEN && _clientId && !(_ws.bufferedAmount > 0)) {
+        const withControls = carriesControls(now);
+        if (withControls) {
+          lastKeyframeSocket = window.phoneWs;
+          lastKeyframeAt = now;
+        }
         const msg = {
           type: 'snapshot',
           client_id: _clientId,
@@ -1008,7 +1032,7 @@
           ts: Date.now(),
           data: {
             controlsRealtime: controlStream?.isActive() === true,
-            controls: state.controls,
+            ...(withControls ? { controls: state.controls } : {}),
             touches: state.touches,
             motion: state.motion,
             orient: state.orient,

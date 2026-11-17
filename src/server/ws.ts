@@ -60,6 +60,13 @@ import {
   type RateLimiterState,
 } from "./ws-bounds.js";
 import { forgetClient, recordControlFrame } from "./latency-stats.js";
+import {
+  buildControls,
+  createControlCache,
+  recordFrameControl,
+  seedFromSnapshot,
+  type ControlCache,
+} from "./snapshot-controls.js";
 import { sendWithBackpressure } from "./backpressure.js";
 import { getQueryParam } from "../util/url.js";
 import { noteControllerConnection } from "./lan-runtime.js";
@@ -88,6 +95,11 @@ export interface TrackedClient {
   lastSeen: number;
   userAgent: string;
   lastData: Record<string, any> | null;
+  /**
+   * The control list of a realtime client. Such a client sends its controls
+   * in frames, so the list is rebuilt here from its keyframe and its frames.
+   */
+  controlsCache: ControlCache;
   history: Record<string, [number, number][]>;
   /**
    * Monotonic count of samples ever appended per control. The ring buffer
@@ -703,6 +715,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
       lastSeen: Date.now(),
       userAgent: String(req.headers["user-agent"] ?? "unknown"),
       lastData: null,
+      controlsCache: createControlCache(),
       history: {},
       historyWritten: {},
       adminHistoryCursor: {},
@@ -982,14 +995,19 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     }
     const snapData = parsed["data"] as Record<string, any> | undefined;
     if (snapData) {
+      // A keyframe is the snapshot that carries the whole control list. The
+      // decision is made on the raw field: an absent list and an empty list
+      // are both no keyframe.
+      const rawControls = snapData["controls"];
+      const isKeyframe = Array.isArray(rawControls) && rawControls.length > 0;
       // Validate controls count against the protocol bound (see ws-bounds.ts)
-      const rawControls = (snapData["controls"] ?? []) as unknown[];
-      const bounded = boundSnapshotControls(rawControls);
+      const bounded = boundSnapshotControls((rawControls ?? []) as unknown[]);
       if (bounded === null) {
         // Too many controls — reject the snapshot
         return { handled: true, pushClientUpdate: false };
       }
       snapData["controls"] = bounded;
+      if (isKeyframe) seedFromSnapshot(info.controlsCache, bounded);
       handleSnapshot(info, snapData);
     }
     return { handled: true, pushClientUpdate: true };
@@ -1008,7 +1026,10 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     // The dispatch is one phase of the latency budget: the time the host
     // spends turning the controls of the frame into Live writes.
     const startedAtMs = dispatchClockMs();
-    for (const control of controls) handleControl(info, control, receivedAt);
+    for (const control of controls) {
+      recordFrameControl(info.controlsCache, control);
+      handleControl(info, control, receivedAt);
+    }
     recordControlFrame(info.id, timing, dispatchClockMs() - startedAtMs);
     return { handled: true, pushClientUpdate: false };
   } else if (t === "controls") {
@@ -1098,7 +1119,12 @@ function handleSnapshot(info: TrackedClient, snapData: Record<string, any>): voi
   info.lastData = snapData;
   // Negotiated v1 clients send gestures separately. A visual snapshot must
   // never replay stale positions, remote echoes or momentary presses.
-  if (snapData['controlsRealtime'] === true) return;
+  if (snapData['controlsRealtime'] === true) {
+    // Such a client carries its controls in frames, so the list the panel and
+    // the admin show is rebuilt from its keyframe and its frames.
+    snapData['controls'] = buildControls(info.controlsCache);
+    return;
+  }
   const receivedAt = Date.now();
   const controls = (snapData["controls"] ?? []) as any[];
   const controlNames = new Set<string>();

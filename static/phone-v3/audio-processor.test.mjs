@@ -492,7 +492,7 @@ test('AudioProcessor: keeps publishing analysis across many frames (regression)'
 
 // ---- App integration ----------------------------------------------------
 
-function loadAudioAndApp() {
+function loadAudioAndApp(configure) {
   const apFile = path.join(import.meta.dirname, 'audio-processor.js');
   const apSource = fs.readFileSync(apFile, 'utf8');
   const descriptorsFile = path.join(import.meta.dirname, 'audio-descriptors.js');
@@ -670,6 +670,9 @@ function loadAudioAndApp() {
   // is defined when setupAudioUI calls its adaptive smoother.
   vm.runInNewContext(smoothSource, windowContext, { filename: smoothFile });
   vm.runInNewContext(fs.readFileSync(path.join(import.meta.dirname, '../shared/audio-descriptor-catalog.js'), 'utf8'), windowContext);
+  // The phone modules a test needs (the control stream, for one) must exist
+  // before app.js reads them.
+  configure?.(windowContext);
   vm.runInNewContext(appSource, windowContext, { filename: appFile });
 
   return { windowContext, mockElements };
@@ -981,6 +984,82 @@ test('AudioProcessor integration: snapshot cannot bypass descriptor backpressure
     now += 34; snapshotTick();
     assert.equal(sent.at(-1).type, 'snapshot', 'latest fallback resumes normally');
   } finally { ap.stop(); }
+});
+
+test('AudioProcessor integration: a realtime snapshot carries the control list only as a keyframe', () => {
+  const { windowContext } = loadAudioAndApp((ctx) => {
+    ctx.RcControlStream = {
+      create: () => ({
+        isActive: () => true,
+        push: () => true,
+        batch: (fn) => fn(),
+        reset: () => {},
+        discard: () => {},
+      }),
+    };
+  });
+  const sent = [];
+  let now = 1000;
+  windowContext.Date = class extends Date { static now() { return now; } };
+  windowContext.WebSocket.OPEN = 1;
+  const openSocket = () => ({
+    readyState: 1,
+    bufferedAmount: 0,
+    send: (payload) => sent.push(JSON.parse(payload)),
+  });
+  windowContext.phoneWs = openSocket();
+  windowContext.getPhoneClientId = () => 'keyframe-client';
+  windowContext.state.controls = [{ name: 'pad-1', value: 1 }];
+  const tick = windowContext.__intervals.find(({ delay }) => delay === 33).callback;
+
+  tick();
+  const first = sent.at(-1);
+  assert.equal(first.type, 'snapshot');
+  assert.equal(first.data.controlsRealtime, true);
+  assert.deepEqual(first.data.controls, [{ name: 'pad-1', value: 1 }], 'the first snapshot is a keyframe');
+
+  now += 500;
+  tick();
+  const second = sent.at(-1);
+  assert.equal(second.data.controlsRealtime, true);
+  assert.equal('controls' in second.data, false, 'a snapshot inside the keyframe window carries no list');
+
+  now += 500;
+  tick();
+  assert.deepEqual(sent.at(-1).data.controls, [{ name: 'pad-1', value: 1 }],
+    'a second after the keyframe the list returns');
+
+  windowContext.phoneWs = openSocket();
+  now += 100;
+  tick();
+  assert.deepEqual(sent.at(-1).data.controls, [{ name: 'pad-1', value: 1 }],
+    'a new socket starts a new keyframe');
+});
+
+test('AudioProcessor integration: a snapshot without the realtime stream keeps the whole list', () => {
+  const { windowContext } = loadAudioAndApp();
+  const sent = [];
+  let now = 1000;
+  windowContext.Date = class extends Date { static now() { return now; } };
+  windowContext.WebSocket.OPEN = 1;
+  windowContext.phoneWs = {
+    readyState: 1,
+    bufferedAmount: 0,
+    send: (payload) => sent.push(JSON.parse(payload)),
+  };
+  windowContext.getPhoneClientId = () => 'legacy-client';
+  windowContext.state.controls = [{ name: 'pad-1', value: 1 }];
+  const tick = windowContext.__intervals.find(({ delay }) => delay === 33).callback;
+
+  tick();
+  now += 100;
+  tick();
+  assert.equal(sent.length, 2);
+  for (const message of sent) {
+    assert.equal(message.data.controlsRealtime, false);
+    assert.deepEqual(message.data.controls, [{ name: 'pad-1', value: 1 }],
+      'a snapshot without the stream always carries the whole list');
+  }
 });
 
 test('AudioProcessor integration: stale capture resets DSP and immediately releases all descriptors once', async () => {
