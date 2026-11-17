@@ -135,6 +135,7 @@
       state,
       requestWakeLock,
       calibrateHorizon,
+      gravityFromOrientation,
     };
   }
   // Local monotonic clock; never compared with host epoch time. Each API
@@ -412,6 +413,59 @@
     }
   }
 
+  // ---- Screen-relative tilt: accelerometer or fused orientation ----
+  // Standard gravity (m/s^2), and the rest band around 1 g: outside it the
+  // accelerometer says nothing about the attitude.
+  const GRAVITY_MS2 = 9.80665;
+  const REST_MIN_MS2 = 7.845;
+  const REST_MAX_MS2 = 11.768;
+  // The derived gravity and the accelerometer must agree within 20 degrees.
+  const AGREE_COS = Math.cos((20 * Math.PI) / 180);
+  // Consecutive disagreeing rest samples needed to drop the derived gravity.
+  const DISAGREE_LIMIT = 10;
+
+  // Gravity implied by the fused deviceorientation, in the device frame.
+  // Only beta/gamma take part, so alpha cannot change the result. Using the
+  // relative orientation this way rests on the hypothesis that beta/gamma
+  // follow gravity; the agreement gate below is what checks that hypothesis
+  // against the accelerometer before the derived vector is used.
+  function gravityFromOrientation(beta, gamma) {
+    const d2r = Math.PI / 180;
+    const b = (beta || 0) * d2r;
+    const g = (gamma || 0) * d2r;
+    return {
+      x: -Math.cos(b) * Math.sin(g) * GRAVITY_MS2,
+      y: Math.sin(b) * GRAVITY_MS2,
+      z: Math.cos(b) * Math.cos(g) * GRAVITY_MS2,
+    };
+  }
+
+  // Cosine of the angle between two vectors.
+  function cosineBetween(a, b) {
+    const na = Math.hypot(a.x, a.y, a.z);
+    const nb = Math.hypot(b.x, b.y, b.z);
+    if (!na || !nb) return 0;
+    return (a.x * b.x + a.y * b.y + a.z * b.z) / (na * nb);
+  }
+
+  // Agreement gate step. From 'accel' a rest sample that agrees with the
+  // derived gravity switches to the derived vector, or to its inverse when
+  // the accelerometer points the other way. From a derived source the
+  // accelerometer only wins again after ten consecutive disagreeing rest
+  // samples.
+  function gravitySourceStep(source, streak, cosine) {
+    if (source === 'accel') {
+      if (cosine > AGREE_COS) return { source: 'derived', streak: 0 };
+      if (cosine < -AGREE_COS) return { source: 'derived-inverted', streak: 0 };
+      return { source, streak: 0 };
+    }
+    const agrees = source === 'derived' ? cosine > AGREE_COS : cosine < -AGREE_COS;
+    if (agrees) return { source, streak: 0 };
+    const next = streak + 1;
+    if (next >= DISAGREE_LIMIT) return { source: 'accel', streak: 0 };
+    return { source, streak: next };
+  }
+
   function deviceOrientationToRotationMatrix(alpha, beta, gamma) {
     const d2r = Math.PI / 180;
     const a = (alpha || 0) * d2r;
@@ -454,6 +508,12 @@
     orientationTracker.start();
     if (orientationListenerAttached) return; // one listener per API, ever
     orientationListenerAttached = true;
+
+    // Agreement gate state, kept in the handler's closure: the source of
+    // the screen-relative tilt and its run of disagreeing rest samples.
+    let gravitySource = 'accel';
+    let gravityDisagreeStreak = 0;
+
     try {
       window.addEventListener('deviceorientation', (e) => {
         const axis = (v) => (v === null || v === undefined) ? null : v;
@@ -476,6 +536,23 @@
         let gamma = rawGamma;
 
         if (state.motion && typeof state.motion.ax === 'number' && typeof state.motion.ay === 'number' && typeof state.motion.az === 'number') {
+          const accel = { x: state.motion.ax, y: state.motion.ay, z: state.motion.az };
+          const derived = gravityFromOrientation(rawBeta, rawGamma);
+          const magnitude = Math.hypot(accel.x, accel.y, accel.z);
+
+          // The derived gravity is only trusted while it agrees with the
+          // accelerometer at rest. A sample outside the rest band is not
+          // evidence about the attitude and never changes the source.
+          if (magnitude >= REST_MIN_MS2 && magnitude <= REST_MAX_MS2) {
+            const step = gravitySourceStep(gravitySource, gravityDisagreeStreak, cosineBetween(derived, accel));
+            gravitySource = step.source;
+            gravityDisagreeStreak = step.streak;
+          }
+
+          let tilt = accel;
+          if (gravitySource === 'derived') tilt = derived;
+          else if (gravitySource === 'derived-inverted') tilt = { x: -derived.x, y: -derived.y, z: -derived.z };
+
           let angle = 0;
           if (typeof window !== 'undefined') {
             if (window.orientation !== undefined) angle = window.orientation;
@@ -484,15 +561,15 @@
 
           if (angle === 90 || angle === -90 || angle === 270) {
             if (angle === 90) {
-              beta = -state.motion.az * 9.18;
-              gamma = state.motion.ay * 18.36;
+              beta = -tilt.z * 9.18;
+              gamma = tilt.y * 18.36;
             } else {
-              beta = state.motion.az * 9.18;
-              gamma = -state.motion.ay * 18.36;
+              beta = tilt.z * 9.18;
+              gamma = -tilt.y * 18.36;
             }
           } else {
-            beta = -state.motion.az * 9.18;
-            gamma = state.motion.ax * 18.36;
+            beta = -tilt.z * 9.18;
+            gamma = tilt.x * 18.36;
           }
 
           beta = Math.max(-90, Math.min(90, beta));
