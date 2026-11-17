@@ -93,6 +93,16 @@ test("D1: Live's embedded WebView 'null' origin is accepted", () => {
   assert.equal(result.reason, "null-origin");
 });
 
+test("D1: a foreign Host is refused and the report names it, as /diag/echo shows", () => {
+  const result = checkSameOrigin({
+    headers: { origin: "http://evil.example:8730", host: "evil.example:8730" },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "host-not-allowed");
+  assert.equal(result.hostValue, "evil.example:8730");
+  assert.equal(result.originValue, "http://evil.example:8730");
+});
+
 test("D1: validateSameOrigin keeps its boolean contract on top of the detailed check", () => {
   assert.equal(
     validateSameOrigin({

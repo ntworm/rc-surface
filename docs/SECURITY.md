@@ -148,6 +148,10 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Do not publish or forward QR, controller, or admin URLs.
 - Do not expose the bridge through public tunnels, public reverse proxies, or
   router port forwarding. Those deployments are outside the v2.0 threat model.
+- The server answers only requests addressed by an IP address, by `localhost`
+  or by this computer's name, which stops pages on other domains that point
+  their own name at this computer. A refused request shows the reason in
+  `/diag/echo`.
 - Stop and start the server to invalidate the admin link: the admin token is
   drawn again on the next start. The controller token survives a restart; it
   is revoked by deleting `session/controller-token` under

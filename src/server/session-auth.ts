@@ -7,6 +7,7 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as http from "node:http";
 import * as crypto from "node:crypto";
+import { hostname } from "node:os";
 import { parseOrigin, getQueryParam } from "../util/url.js";
 
 export type SessionRole = "viewer" | "controller" | "admin";
@@ -74,6 +75,7 @@ export type OriginCheckReason =
   | "no-origin-header"
   | "null-origin"
   | "no-host-header"
+  | "host-not-allowed"
   | "origin-unparseable"
   | "non-http-origin-scheme"
   | "exact-host-match"
@@ -89,6 +91,69 @@ export interface OriginCheck {
   hostValue: string | null;
   originPort: string | null;
   hostPort: string | null;
+}
+
+/** A Host header that carries an IPv6 address, with an optional port. */
+const BRACKETED_HOST = /^\[([^\]]*)\](?::\d+)?$/;
+
+/** The characters an IPv6 address may be built from, plus an optional zone. */
+const IPV6_LITERAL = /^[0-9A-Fa-f:.]+(?:%[0-9A-Za-z._~-]+)?$/;
+
+/** The suffix a name of this computer may carry next to its own name. */
+const LOCAL_SUFFIX = ".local";
+
+/**
+ * The Host headers this server answers to.
+ *
+ * A page on another domain can point its own name at this machine (DNS
+ * rebinding), and the browser then sends that name in the Host header of a
+ * request that looks same-origin. Only an address of this computer, localhost
+ * or a name of this computer may be answered.
+ */
+export function isAllowedHost(host: string): boolean {
+  return isAllowedHostForOwnName(host, hostname());
+}
+
+/**
+ * The same rule, with the name of this computer passed in, so the own-name
+ * rule can be exercised with a name of a chosen shape.
+ */
+export function isAllowedHostForOwnName(host: string, ownName: string): boolean {
+  const trimmed = host.trim();
+  const bracketed = BRACKETED_HOST.exec(trimmed);
+  if (bracketed) return isBracketedIPv6(bracketed[1] ?? "");
+  const name = trimmed.replace(/:\d+$/, "").toLowerCase();
+  if (isDottedQuadIPv4(name)) return true;
+  if (name === "localhost") return true;
+  const own = ownName.trim().toLowerCase();
+  // A name that carries the suffix may be reached without it too.
+  const base = own.endsWith(LOCAL_SUFFIX) ? own.slice(0, -LOCAL_SUFFIX.length) : own;
+  if (!base) return false;
+  return name === base || name === `${base}${LOCAL_SUFFIX}`;
+}
+
+/**
+ * The inside of a bracketed Host header, if it is an IPv6 literal: at least
+ * two colons, because "[cafe]" is a name and not an address.
+ */
+function isBracketedIPv6(inner: string): boolean {
+  if (inner.split(":").length < 3) return false;
+  return IPV6_LITERAL.test(inner);
+}
+
+/**
+ * A dotted quad of four decimal parts, each from 0 to 255.
+ *
+ * Deliberately strict: "2130706433", "127.1" and "0x7f.0.0.1" all reach
+ * 127.0.0.1 in a browser that is lenient about the form, and a Host header
+ * that is not a plain address must not be answered at all. A part with a
+ * leading zero is refused as well: the URL parser reads "0177.0.0.1" as
+ * another address, so a Host in that form names another host.
+ */
+function isDottedQuadIPv4(name: string): boolean {
+  const parts = name.split(".");
+  if (parts.length !== 4) return false;
+  return parts.every(part => /^\d{1,3}$/.test(part) && !/^0\d/.test(part) && Number(part) <= 255);
 }
 
 /**
@@ -109,6 +174,14 @@ export function checkSameOrigin(req: http.IncomingMessage): OriginCheck {
     originPort: null,
     hostPort: null,
   };
+
+  // DNS rebinding: a page on another domain can point its own name at this
+  // machine, and the browser then sends that name in the Host header of a
+  // request that looks same-origin. Refused before the Origin rules, which
+  // would otherwise accept it.
+  if (typeof host === "string" && !isAllowedHost(host)) {
+    return { ...base, ok: false, reason: "host-not-allowed" };
+  }
 
   // No Origin header — non-browser client (e.g. curl, CLI, native code) or a
   // top-level navigation.

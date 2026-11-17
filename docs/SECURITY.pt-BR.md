@@ -153,6 +153,7 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Prefira uso na mesma sala ou na rede do estúdio.
 - Não publique nem repasse URLs de QR, de controlador ou de administração.
 - Não exponha o bridge por túneis públicos, proxies reversos públicos ou redirecionamento de porta no roteador. Esses cenários estão fora do modelo de ameaças da v2.0.
+- O servidor responde apenas a requisições endereçadas por um endereço IP, por `localhost` ou pelo nome deste computador, o que impede páginas de outros domínios que apontem o próprio nome para este computador. Uma requisição recusada mostra o motivo em `/diag/echo`.
 - Pare e inicie o servidor para invalidar o link de administração: o token de
   administração é gerado de novo no próximo início. O token de controlador
   sobrevive a um reinício; ele é revogado ao apagar o arquivo
