@@ -5,6 +5,7 @@
 // the network, the dispatch in the host, and the write Live itself takes.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import { WebSocket } from "ws";
 
@@ -14,6 +15,7 @@ if (typeof globalThis.__dirname === "undefined") {
 
 const { getLatencyStats, recordControlFrame, resetLatencyStats, forgetClient, PHASE_RING_SIZE } =
   await import("../src/server/latency-stats.ts");
+const { PHONE_MAX_AGE_MS } = await import("../src/server/ws-bounds.ts");
 const serverState = await import("../src/server/state.ts");
 const { getControllerToken } = await import("../src/server/session-auth.ts");
 const { dispatchClockMs, trackedClients } = await import("../src/server/ws.ts");
@@ -205,6 +207,108 @@ test("a frame with a broken timing is ignored but still applies", async () => {
     assert.equal(stats.halfRttMs.count, 0);
     assert.equal(stats.hostDispatchMs.count, 0);
     assert.equal(stats.clients.length, 0);
+    assert.ok(trackedClients.get(PHONE_ID)?.history["fader-9"], "the controls of the frame still apply");
+    phone.close();
+  });
+});
+
+test("the frame age is the sum of the phone queue, the round trip half and the host dispatch", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 10, rttMs: 20 }, 4);
+  const stats = getLatencyStats();
+  assert.equal(stats.frameAgeMs.count, 1);
+  assert.equal(stats.frameAgeMs.p50, 24, "10 + 20/2 + 4");
+  assert.equal(stats.frameAgeMs.p95, 24);
+  assert.equal(stats.frameAgeMs.max, 24);
+  assert.equal(stats.overMaxAge.count, 0, "24 ms is well inside the limit");
+  assert.equal(stats.queueAtLimit.count, 0, "the queue of the phone is far from the limit");
+});
+
+test("a frame without a round trip or without an age stays out of the frame age", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 10 }, 4);
+  recordControlFrame("phone-1", { seq: 1, rttMs: 20 }, 4);
+  recordControlFrame("phone-1", { seq: 2 }, 4);
+  const stats = getLatencyStats();
+  assert.equal(stats.frameAgeMs.count, 0, "the frame age needs both numbers");
+  assert.equal(stats.phoneQueueMs.count, 1, "the queue alone is still measured");
+  assert.equal(stats.halfRttMs.count, 1, "the round trip alone is still measured");
+  assert.equal(stats.overMaxAge.count, 0);
+  assert.equal(stats.queueAtLimit.count, 0);
+});
+
+test("a frame older than the limit of the phone is counted, globally and per client", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 100, rttMs: 20 }, 0);
+  recordControlFrame("phone-1", { seq: 1, ageMs: 100, rttMs: 40 }, 0);
+  recordControlFrame("phone-1", { seq: 2, ageMs: 100, rttMs: 60 }, 0);
+  recordControlFrame("phone-2", { seq: 0, ageMs: 200, rttMs: 0 }, 0);
+  const stats = getLatencyStats();
+  assert.equal(stats.overMaxAge.count, 2, "only the frames past the limit count");
+  assert.equal(stats.overMaxAge.thresholdMs, 120);
+  const phone1 = stats.clients.find((client) => client.clientId === "phone-1");
+  const phone2 = stats.clients.find((client) => client.clientId === "phone-2");
+  assert.equal(phone1.overMaxAge, 1);
+  assert.equal(phone2.overMaxAge, 1);
+});
+
+test("a frame whose queue reached the limit of the phone is counted, globally and per client", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 119 }, 1);
+  recordControlFrame("phone-1", { seq: 1, ageMs: 120 }, 1);
+  recordControlFrame("phone-2", { seq: 0, ageMs: 300 }, 1);
+  const stats = getLatencyStats();
+  assert.equal(stats.queueAtLimit.count, 2, "the queue alone reached the limit");
+  const phone1 = stats.clients.find((client) => client.clientId === "phone-1");
+  const phone2 = stats.clients.find((client) => client.clientId === "phone-2");
+  assert.equal(phone1.queueAtLimit, 1);
+  assert.equal(phone2.queueAtLimit, 1);
+});
+
+test("the counts of a client go with the client, the global count stays", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 200, rttMs: 50 }, 1);
+  let stats = getLatencyStats();
+  assert.equal(stats.clients[0].overMaxAge, 1);
+  assert.equal(stats.clients[0].queueAtLimit, 1);
+  forgetClient("phone-1");
+  stats = getLatencyStats();
+  assert.equal(stats.clients.length, 0, "the client and its counts are gone");
+  assert.equal(stats.overMaxAge.count, 1, "the global count is cumulative since the reset");
+  assert.equal(stats.queueAtLimit.count, 1);
+});
+
+test("the reset clears the frame age and the age counters", () => {
+  resetLatencyStats();
+  recordControlFrame("phone-1", { seq: 0, ageMs: 200, rttMs: 50 }, 1);
+  resetLatencyStats();
+  const stats = getLatencyStats();
+  assert.equal(stats.frameAgeMs.count, 0);
+  assert.equal(stats.frameAgeMs.max, 0);
+  assert.equal(stats.overMaxAge.count, 0);
+  assert.equal(stats.queueAtLimit.count, 0);
+  assert.equal(stats.clients.length, 0);
+});
+
+test("the limit of the host is the limit of the phone", () => {
+  const source = fs.readFileSync(new URL("../static/phone-v3/control-stream.js", import.meta.url), "utf8");
+  const match = source.match(/const MAX_AGE_MS = (\d+);/);
+  assert.ok(match, "the phone states its own limit");
+  assert.equal(Number(match[1]), PHONE_MAX_AGE_MS, "the host measures against the limit of the phone");
+});
+
+test("a frame older than the limit still applies its controls", async () => {
+  await withSession(async ({ port }) => {
+    const phone = await openSocket(socketUrl(port, PHONE_ID, getControllerToken()));
+    phone.send(frame(0, 200, 50, "fader-9"));
+    await sleep(150);
+    const stats = getLatencyStats();
+    assert.equal(stats.phoneQueueMs.count, 1, "the frame is measured");
+    assert.equal(stats.frameAgeMs.count, 1);
+    assert.equal(stats.overMaxAge.count, 1, "the frame is older than the limit");
+    assert.equal(stats.queueAtLimit.count, 1, "the queue of the phone reached the limit");
+    assert.equal(stats.clients[0].overMaxAge, 1);
+    assert.equal(stats.clients[0].queueAtLimit, 1);
     assert.ok(trackedClients.get(PHONE_ID)?.history["fader-9"], "the controls of the frame still apply");
     phone.close();
   });
