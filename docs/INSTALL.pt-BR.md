@@ -187,6 +187,14 @@ A seção **Certificado** da aba **Rede** leva a uma página de instalação na
 porta HTTPS + 1, onde o celular instala a autoridade certificadora deste
 computador. Com a autoridade instalada, o navegador abre as páginas sem aviso.
 
+Debaixo desse endereço, o painel mostra o SHA-256 da autoridade certificadora
+deste computador. Antes de confiar nela no celular, compare esse valor com o
+SHA-256 da autoridade instalada, cujo nome é **RC Surface local CA**: no
+iPhone, nos detalhes do perfil instalado; no Android, nas credenciais
+confiáveis do usuário. Compare a autoridade, não o certificado do cadeado do
+site. O celular pode separar os pares com espaços em vez de `:`; só os
+dígitos contam.
+
 ### O que você vê
 
 O controlador é usado na horizontal, com os dois polegares na tela; na vertical

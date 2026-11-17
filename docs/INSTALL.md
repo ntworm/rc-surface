@@ -189,6 +189,14 @@ HTTPS port + 1, where the phone installs the certificate authority of this
 computer. With the authority installed, the browser opens the pages without a
 warning.
 
+Under that address, the panel shows the SHA-256 of the certificate authority
+of this computer. Before you trust it on the phone, compare that value with
+the SHA-256 of the installed authority named **RC Surface local CA**: on the
+iPhone, in the details of the installed profile; on Android, in the trusted
+credentials of the user. Compare the authority, not the certificate behind
+the padlock of the site. The phone may separate the pairs with spaces
+instead of `:`; only the digits count.
+
 ### What you see
 
 The controller works in landscape orientation. Hold the phone with both thumbs
