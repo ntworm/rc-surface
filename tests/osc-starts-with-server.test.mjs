@@ -60,6 +60,7 @@ function serverHarness() {
     useHttps: false, httpsOptions: null,
     loadCerts() { const gate = deferred(); certs.push(gate); return gate.promise; },
     regenerateTokens() {},
+    loadControllerToken: async () => null,
     handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {}, getLanAddresses: () => [],
     onCertificateChange() {},
     getPublishedLan: () => ({ primaryIp: '', otherIps: [] }),

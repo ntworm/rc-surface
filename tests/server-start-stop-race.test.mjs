@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { isolatedModule, deferred, settle } from './helpers/isolated-module.mjs';
 
-function harness({ tls = false, manualListen = false, manualClose = false } = {}) {
-  const certs = [], servers = [], closed = [];
+function harness({ tls = false, manualListen = false, manualClose = false, pendingToken = false } = {}) {
+  const certs = [], servers = [], closed = [], tokens = [];
   let rotations = 0;
   class Server extends EventEmitter {
     active = false;
@@ -25,6 +25,9 @@ function harness({ tls = false, manualListen = false, manualClose = false } = {}
     http: { createServer }, https: { createServer }, process: { env: {} },
     useHttps: tls, httpsOptions: tls ? {} : null,
     loadCerts() { const gate = deferred(); certs.push(gate); return gate.promise; },
+    loadControllerToken: pendingToken
+      ? () => { const gate = deferred(); tokens.push(gate); return gate.promise; }
+      : async () => null,
     regenerateTokens() { rotations++; },
     getLocalCaDer: () => null,
     handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {},
@@ -32,7 +35,7 @@ function harness({ tls = false, manualListen = false, manualClose = false } = {}
     getPublishedLan: () => ({ primaryIp: '', otherIps: [] }),
     startLanRuntime: async () => {}, stopLanRuntime: () => {},
   });
-  return { api, certs, servers, closed, rotations: () => rotations };
+  return { api, certs, servers, closed, tokens, rotations: () => rotations };
 }
 
 test('overlapping starts share one initialization and Stop closes every listener', async () => {
@@ -56,6 +59,24 @@ test('Stop during certificate loading prevents a late listener', async () => {
   h.certs[0].resolve();
   await Promise.all([starting, stopping]);
   assert.equal(h.servers.length, 0);
+  assert.equal(h.api.serverInstance, null);
+  assert.equal(h.api.actualPort, null);
+});
+
+test('Stop while the controller token is pending rotates nothing and opens nothing', async () => {
+  const h = harness({ pendingToken: true });
+  const starting = h.api.startServer();
+  await settle();
+  h.certs[0].resolve();
+  await settle();
+  assert.equal(h.tokens.length, 1, 'the controller token is loaded before the listener opens');
+
+  const stopping = h.api.stopServer();
+  h.tokens[0].resolve(null);
+  await Promise.all([starting, stopping]);
+
+  assert.equal(h.servers.length, 0, 'a cancelled generation must not open a listener');
+  assert.equal(h.rotations(), 0, 'a cancelled generation must not rotate the tokens');
   assert.equal(h.api.serverInstance, null);
   assert.equal(h.api.actualPort, null);
 });

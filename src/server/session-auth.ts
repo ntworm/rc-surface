@@ -28,8 +28,18 @@ export function getAdminToken(): string {
   return adminToken;
 }
 
-export function regenerateTokens(): { controllerToken: string; adminToken: string } {
-  controllerToken = crypto.randomBytes(16).toString("hex");
+/**
+ * Issues the tokens of a new session.
+ *
+ * The admin token is drawn every time: an admin session belongs to the run
+ * that granted it. The controller token is the one that was persisted, so a
+ * phone that was paired before the restart stays a controller; without a
+ * persisted token a new one is drawn and it rotates on every start.
+ */
+export function regenerateTokens(persistedController?: string | null): { controllerToken: string; adminToken: string } {
+  controllerToken = persistedController
+    ? persistedController
+    : crypto.randomBytes(16).toString("hex");
   adminToken = crypto.randomBytes(16).toString("hex");
   return { controllerToken, adminToken };
 }
@@ -214,7 +224,7 @@ export function buildSessionCookie(token: string, secure: boolean): string {
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",
-    "Max-Age=2592000", // 30 days; a token that outlives its server reads as stale
+    "Max-Age=2592000", // 30 days; only the admin token expires with its run
   ];
   if (secure) parts.push("Secure");
   return parts.join("; ");
@@ -250,10 +260,10 @@ function extractToken(req: AuthLikeRequest): string | null {
 
 /**
  * Resolves the role AND distinguishes "no token" from "token that no longer
- * matches". Tokens are regenerated on every extension start, so a phone
- * reconnecting from a still-open page or a bookmark presents a stale token.
- * Collapsing that into a plain "viewer" leaves the user with a session that
- * looks connected while every live-write is silently rejected.
+ * matches". A token stops matching when the session that issued it is gone:
+ * an admin token from an earlier run, or a controller token whose stored file
+ * was deleted. Collapsing that into a plain "viewer" leaves the user with a
+ * session that looks connected while every live-write is silently rejected.
  */
 export function classifyRequestToken(req: AuthLikeRequest): TokenClassification {
   const token = extractToken(req);

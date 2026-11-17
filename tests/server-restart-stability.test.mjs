@@ -18,6 +18,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as net from "node:net";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
+import { clearExtensionContext, setExtensionContext } from "../src/context.ts";
 import {
   startServer,
   stopServer,
@@ -165,7 +169,7 @@ test("R1: a sibling extension holding the preferred port does not break startup"
   );
 });
 
-test("R2: every real server restart rotates both session credentials", async () => {
+test("R2: without a storage directory, every real server restart rotates both session credentials", async () => {
   const beforeStart = {
     controller: getControllerToken(),
     admin: getAdminToken(),
@@ -197,4 +201,38 @@ test("R2: every real server restart rotates both session credentials", async () 
     { role: "viewer", tokenPresent: true, tokenValid: false },
     "a controller credential from the stopped server must be stale",
   );
+});
+
+test("R2: with a storage directory the controller token survives the restart", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "rc-surface-session-"));
+  setExtensionContext({ environment: { storageDirectory: dir } });
+  try {
+    await startServer();
+    const firstStart = { controller: getControllerToken(), admin: getAdminToken() };
+    await stopServer();
+
+    await startServer();
+    const secondStart = { controller: getControllerToken(), admin: getAdminToken() };
+    await stopServer();
+
+    assert.equal(
+      secondStart.controller,
+      firstStart.controller,
+      "BUG: the controller token must survive a restart, or the phone has to be paired again",
+    );
+    assert.notEqual(
+      secondStart.admin,
+      firstStart.admin,
+      "the admin token belongs to the run that issued it and must rotate",
+    );
+    assert.deepEqual(
+      classifyRequestToken({ url: `/ws?token=${firstStart.controller}`, headers: {} }),
+      { role: "controller", tokenPresent: true, tokenValid: true },
+      "a controller credential from before the restart must still be a controller",
+    );
+  } finally {
+    await stopServer();
+    clearExtensionContext();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });

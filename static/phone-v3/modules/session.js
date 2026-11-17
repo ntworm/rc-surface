@@ -191,7 +191,8 @@
           const name = localStorage.getItem('ableton-rc:display_name') || clientId.slice(0, 8);
           if (msg.tokenStatus === 'stale') {
             // The socket is open, but the token this page was loaded with no
-            // longer exists \u2014 tokens are regenerated on every Ableton restart.
+            // longer exists - it was an admin token from an earlier run, or
+            // the stored controller token was deleted.
             // The session works as a viewer, so transport, pads and knobs are
             // all rejected. Say that plainly instead of showing a healthy
             // "connected" badge the user cannot act on.
