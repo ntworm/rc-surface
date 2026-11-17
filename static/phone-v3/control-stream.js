@@ -9,6 +9,13 @@
   const MAX_CONTROLS = 128;
   const MAX_AGE_MS = 120;
   const DISCRETE = /^(?:pad|toggle|button)-|^sensor\.vision\.gesture\.|\.(?:active|fist|pinch|victory|open|gate)$/;
+  // The publisher knows what a control means: an ordered event keeps every
+  // edge in order, a latest-value control keeps only its newest position.
+  // Without an explicit choice the name decides, exactly as it always has.
+  function isOrdered(name, opts) {
+    if (opts && typeof opts.ordered === 'boolean') return opts.ordered;
+    return DISCRETE.test(name);
+  }
   function create({ getConnection, now = () => performance.now(), setTimer = setTimeout, clearTimer = clearTimeout }) {
     const pending = new Map();
     const events = [];
@@ -57,7 +64,7 @@
         lastSent = time; pending.clear(); events.length = 0;
       } catch { failClosed(); }
     }
-    function push(raw) {
+    function push(raw, opts) {
       if (!connection()) return false;
       if (!raw || typeof raw.name !== 'string' || !raw.name.length || raw.name.length > 128) return true;
       const unit = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
@@ -82,15 +89,22 @@
         control.tracking = {seq: t.seq, qualified: t.qualified, graceMs: t.graceMs};
         if (t.activation !== undefined) control.tracking.activation = t.activation;
       }
+      const ordered = isOrdered(control.name, opts);
       const signature = JSON.stringify(control);
       // Sensor filters/recovery need fresh equal-valued measurements too.
       // Deduplicate only discrete heartbeats, never sustained measurements.
-      if (DISCRETE.test(control.name) && seen.get(control.name) === signature) return true;
+      if (ordered && seen.get(control.name) === signature) return true;
       if (seen.size >= MAX_CONTROLS && !seen.has(control.name)) return true;
       seen.set(control.name, signature);
       const item = { control, at: now() };
-      if (DISCRETE.test(control.name)) events.push(item);
-      else pending.set(control.name, item);
+      if (ordered) {
+        // A frame sends events before pending values, so an ordered event for
+        // this name replaces the queued latest value instead of trailing it.
+        pending.delete(control.name);
+        events.push(item);
+      } else {
+        pending.set(control.name, item);
+      }
       if (events.length + pending.size > MAX_CONTROLS) { failClosed(); return true; }
       if (!batchDepth) { flush(); schedule(); }
       return true;
