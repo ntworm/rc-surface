@@ -89,6 +89,9 @@ const BRACKETED_HOST = /^\[([^\]]*)\](?::\d+)?$/;
 /** The characters an IPv6 address may be built from, plus an optional zone. */
 const IPV6_LITERAL = /^[0-9A-Fa-f:.]+(?:%[0-9A-Za-z._~-]+)?$/;
 
+/** The suffix a name of this computer may carry next to its own name. */
+const LOCAL_SUFFIX = ".local";
+
 /**
  * The Host headers this server answers to.
  *
@@ -98,14 +101,34 @@ const IPV6_LITERAL = /^[0-9A-Fa-f:.]+(?:%[0-9A-Za-z._~-]+)?$/;
  * or a name of this computer may be answered.
  */
 export function isAllowedHost(host: string): boolean {
+  return isAllowedHostForOwnName(host, hostname());
+}
+
+/**
+ * The same rule, with the name of this computer passed in, so the own-name
+ * rule can be exercised with a name of a chosen shape.
+ */
+export function isAllowedHostForOwnName(host: string, ownName: string): boolean {
   const trimmed = host.trim();
   const bracketed = BRACKETED_HOST.exec(trimmed);
-  if (bracketed) return IPV6_LITERAL.test(bracketed[1] ?? "");
+  if (bracketed) return isBracketedIPv6(bracketed[1] ?? "");
   const name = trimmed.replace(/:\d+$/, "").toLowerCase();
   if (isDottedQuadIPv4(name)) return true;
   if (name === "localhost") return true;
-  const own = hostname().toLowerCase();
-  return name === own || name === `${own}.local`;
+  const own = ownName.trim().toLowerCase();
+  // A name that carries the suffix may be reached without it too.
+  const base = own.endsWith(LOCAL_SUFFIX) ? own.slice(0, -LOCAL_SUFFIX.length) : own;
+  if (!base) return false;
+  return name === base || name === `${base}${LOCAL_SUFFIX}`;
+}
+
+/**
+ * The inside of a bracketed Host header, if it is an IPv6 literal: at least
+ * two colons, because "[cafe]" is a name and not an address.
+ */
+function isBracketedIPv6(inner: string): boolean {
+  if (inner.split(":").length < 3) return false;
+  return IPV6_LITERAL.test(inner);
 }
 
 /**
@@ -113,12 +136,14 @@ export function isAllowedHost(host: string): boolean {
  *
  * Deliberately strict: "2130706433", "127.1" and "0x7f.0.0.1" all reach
  * 127.0.0.1 in a browser that is lenient about the form, and a Host header
- * that is not a plain address must not be answered at all.
+ * that is not a plain address must not be answered at all. A part with a
+ * leading zero is refused as well: the URL parser reads "0177.0.0.1" as
+ * another address, so a Host in that form names another host.
  */
 function isDottedQuadIPv4(name: string): boolean {
   const parts = name.split(".");
   if (parts.length !== 4) return false;
-  return parts.every(part => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  return parts.every(part => /^\d{1,3}$/.test(part) && !/^0\d/.test(part) && Number(part) <= 255);
 }
 
 /**
