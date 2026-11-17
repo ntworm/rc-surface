@@ -265,6 +265,15 @@ export const MAX_FRAME_SEQ = 2 ** 31 - 1;
 /** Largest age or round-trip time a frame may report (ms). */
 export const MAX_FRAME_TIMING_MS = 10_000;
 
+/**
+ * The age a control frame reaches before the phone gives it up (ms).
+ *
+ * It mirrors MAX_AGE_MS of static/phone-v3/control-stream.js:10: the phone
+ * drops the items that grew older than this before it sends them, so a frame
+ * that arrives at the limit carries the tail of its queue.
+ */
+export const PHONE_MAX_AGE_MS = 120;
+
 /** The timing a control frame carries: its number, the age of its oldest item, the last ping round trip. */
 export interface FrameTiming { seq: number; ageMs?: number; rttMs?: number; }
 
