@@ -14,9 +14,16 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
-import { X509Certificate, generateKeyPairSync } from 'node:crypto';
+import { X509Certificate, createPublicKey, generateKeyPairSync } from 'node:crypto';
+import {
+  BasicConstraintsExtension,
+  KeyUsageFlags,
+  KeyUsagesExtension,
+  X509CertificateGenerator,
+} from '@peculiar/x509';
 
 import {
+  CA_COMMON_NAME,
   CA_NAME_CONSTRAINTS_DER,
   isIssuedByCa,
   isPermittedServerIp,
@@ -26,6 +33,41 @@ import {
 
 const temporaryDir = () => fs.mkdtempSync(path.join(tmpdir(), 'rc-surface-local-ca-'));
 const removeDir = (dir) => fs.rmSync(dir, { recursive: true, force: true });
+
+/** The milliseconds of a day. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The bytes of a PEM text. */
+const derOf = (pem) =>
+  Buffer.from(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''), 'base64');
+
+/**
+ * An authority with the validity we choose: the days it has left before it
+ * ends. A negative number is an authority that has already ended.
+ */
+async function authorityEndingIn(days) {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const keyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const algorithm = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+  const publicPem = createPublicKey(keyPem).export({ type: 'spki', format: 'pem' }).toString();
+  const keys = {
+    privateKey: await crypto.subtle.importKey('pkcs8', derOf(keyPem), algorithm, false, ['sign']),
+    publicKey: await crypto.subtle.importKey('spki', derOf(publicPem), algorithm, true, ['verify']),
+  };
+  const notBefore = new Date(Date.now() - 2 * DAY_MS);
+  const certificate = await X509CertificateGenerator.createSelfSigned({
+    name: [{ CN: [CA_COMMON_NAME] }],
+    keys,
+    notBefore,
+    notAfter: new Date(Date.now() + days * DAY_MS),
+    signingAlgorithm: algorithm,
+    extensions: [
+      new BasicConstraintsExtension(true, 0, true),
+      new KeyUsagesExtension(KeyUsageFlags.keyCertSign | KeyUsageFlags.cRLSign, true),
+    ],
+  });
+  return { certPem: certificate.toString('pem'), keyPem };
+}
 
 /**
  * The name constraints extension, as it is written in the certificate.
@@ -115,4 +157,48 @@ test('only the loopback, the private addresses and the link-local ones may be si
   assert.equal(isPermittedServerIp('172.32.0.1'), false);
   assert.equal(isPermittedServerIp('192.169.0.1'), false);
   assert.equal(isPermittedServerIp('localhost'), false);
+});
+
+test('an authority that has ended is not used again', async () => {
+  const dir = temporaryDir();
+  try {
+    const ended = await authorityEndingIn(-1);
+    fs.writeFileSync(path.join(dir, 'rc-surface-local-ca.crt'), ended.certPem);
+    fs.writeFileSync(path.join(dir, 'rc-surface-local-ca.key'), ended.keyPem);
+
+    const ca = await loadOrCreateLocalCa(dir);
+
+    assert.ok(ca, 'an authority must be made');
+    assert.notEqual(ca.certPem, ended.certPem, 'the authority that ended must not be kept');
+    assert.ok(new X509Certificate(ca.certPem).validToDate.getTime() > Date.now(),
+      'the new authority still has time on it');
+  } finally {
+    removeDir(dir);
+  }
+});
+
+test('an authority that is about to end says so', async () => {
+  const dir = temporaryDir();
+  try {
+    const ending = await authorityEndingIn(60);
+    fs.writeFileSync(path.join(dir, 'rc-surface-local-ca.crt'), ending.certPem);
+    fs.writeFileSync(path.join(dir, 'rc-surface-local-ca.key'), ending.keyPem);
+
+    const warnings = [];
+    const said = console.warn;
+    console.warn = (...args) => { warnings.push(args.join(' ')); };
+    let ca;
+    try {
+      ca = await loadOrCreateLocalCa(dir);
+    } finally {
+      console.warn = said;
+    }
+
+    assert.ok(ca, 'the authority is kept');
+    assert.equal(ca.certPem, ending.certPem, 'an authority that still lives is kept');
+    assert.equal(warnings.length, 1, 'the authority that is about to end must say so');
+    assert.match(warnings[0], /authority/, 'the warning says which authority it is');
+  } finally {
+    removeDir(dir);
+  }
 });
