@@ -100,7 +100,7 @@ const IPV6_LITERAL = /^[0-9A-Fa-f:.]+(?:%[0-9A-Za-z._~-]+)?$/;
 export function isAllowedHost(host: string): boolean {
   const trimmed = host.trim();
   const bracketed = BRACKETED_HOST.exec(trimmed);
-  if (bracketed) return IPV6_LITERAL.test(bracketed[1]);
+  if (bracketed) return IPV6_LITERAL.test(bracketed[1] ?? "");
   const name = trimmed.replace(/:\d+$/, "").toLowerCase();
   if (isDottedQuadIPv4(name)) return true;
   if (name === "localhost") return true;
