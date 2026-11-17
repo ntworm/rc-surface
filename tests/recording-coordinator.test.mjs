@@ -16,7 +16,8 @@ test('REC conservative getter addresses match public AbletonOSC handlers literal
     overdub:'/live/song/get/arrangement_overdub', backToArranger:'/live/song/get/back_to_arranger',
     sessionRecord:'/live/song/get/session_record', trackArm:'/live/track/get/arm', trackCanArm:'/live/track/get/can_be_armed',
     trackSolo:'/live/track/get/solo',trackMute:'/live/track/get/mute',
-    trackMonitor:'/live/track/get/current_monitoring_state', signatureNumerator:'/live/song/get/signature_numerator',
+    trackMonitor:'/live/track/get/current_monitoring_state', trackColor:'/live/track/get/color',
+    signatureNumerator:'/live/song/get/signature_numerator',
     signatureDenominator:'/live/song/get/signature_denominator',
   });
 });
@@ -74,6 +75,7 @@ function fixture(t,nativePositioning=false) {
     if (address === REC_PREFLIGHT.trackMute) response = [index, song.tracks[index].mute];
     if (address === REC_PREFLIGHT.trackCanArm) response = [index, song.tracks[index].canArm??true];
     if (address === REC_PREFLIGHT.trackMonitor) response = [index, song.tracks[index].monitor??values.monitor];
+    if (address === REC_PREFLIGHT.trackColor && typeof song.tracks[index]?.color === 'number') response = [index, song.tracks[index].color];
     if (response) queueMicrotask(() => push(address, response));
   };
   const coordinator = new RecordingCoordinator(osc, () => song);
@@ -99,6 +101,24 @@ function nativeVolume(f, value=0.17) {
   f.song.tracks[0].mixer={volume:parameter};
   return {writes,parameter,external:next=>{value=next;}};
 }
+
+test('REC reads the Live track colour of every track without making the read wait for it',async t=>{
+  const f=fixture(t);
+  f.song.tracks[0].color=0xFF3366;
+  const state=await f.coordinator.refresh();
+  assert.equal(state.tracks[0].color,16724838);
+  assert.equal(state.tracks[1].color,null,'a track without a colour never invents one');
+});
+
+test('REC a track colour that never answers neither delays nor fails the read',async t=>{
+  const f=fixture(t);
+  f.block(REC_PREFLIGHT.trackColor);
+  const state=await f.coordinator.refresh();
+  assert.ok(f.sent.some(([address])=>address===REC_PREFLIGHT.trackColor),'the colour is asked for');
+  assert.equal(state.tracks[0].color,null);
+  assert.equal(state.tracks[0].arm,true,'the read completes with its own evidence');
+  assert.equal(state.pending,null);
+});
 
 test('REC volume reads the actual SDK asynchronous parameter and follows external changes',async t=>{
   const f=fixture(t),v=nativeVolume(f);

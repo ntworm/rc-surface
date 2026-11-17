@@ -954,6 +954,16 @@
           entry.toggle.hidden=true;
           entry.card.dataset.group='false';
         }
+        // The Live track colour tints the row. The card is reused, so a
+        // colour that vanished is cleared and never left behind.
+        const color=track.color;
+        if(typeof color==='number'&&Number.isInteger(color)&&color>=0&&color<=0xFFFFFF){
+          entry.card.style?.setProperty?.('--rec-track-color','#'+color.toString(16).padStart(6,'0'));
+          entry.card.dataset.trackColor='true';
+        }else{
+          entry.card.style?.removeProperty?.('--rec-track-color');
+          delete entry.card.dataset.trackColor;
+        }
         const visible=trackVisible(track,tree);
         entry.card.hidden=!visible;
         if(!visible)entry.cancelVolume();

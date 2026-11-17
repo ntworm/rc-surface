@@ -249,6 +249,41 @@ test('REC ARM recovery DOM marks an unconfirmed vector unknown and reconciles be
   observed={...observed,tracks:observed.tracks.map(track=>({...track,canArm:track.index===2?null:track.canArm,arm:track.index===2?false:track.arm}))};await client.command('getRecordingState');assert.equal(node('rec-start').disabled,true,'unknown capability may conceal another armed input');
 });
 
+test('REC a track row wears the Live track colour and loses it when the colour is gone',async t=>{
+  const nodes=new Map(),calls=[];let generated=0;
+  // The style stub keeps the custom properties the row paints.
+  const styleOf=()=>{
+    const props=new Map();
+    const style={};
+    style.setProperty=function(name,value){props.set(name,String(value));};
+    style.removeProperty=function(name){props.delete(name);};
+    style.getPropertyValue=function(name){const value=props.get(name);return value===undefined?'':value;};
+    return style;
+  };
+  const node=id=>{
+    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:styleOf(),children:[],listeners:new Map(),
+      setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
+      replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);}});
+    return nodes.get(id);
+  };
+  const field=value=>({value,fresh:true,observedAt:Date.now()});
+  let observed={transport:{connected:true,isPlaying:field(false),recordMode:field(false),songTimeBeats:field(8),metronome:field(false)},
+    pending:null,attemptActive:false,safety:{loop:false},meter:{numerator:4,denominator:4},locators:[{name:'Start',time:8}],
+    tracks:[{index:0,id:'a',name:'Input A',arm:false,canArm:true,solo:false,mute:false,color:0x00AA55}]};
+  const doc={readyState:'loading',body:{dataset:{page:'recording'}},hidden:false,getElementById:node,createElement:()=>node('generated-'+(++generated)),addEventListener(){}};
+  const context=vm.createContext({document:doc,Date,setTimeout:()=>1,clearTimeout(){},addEventListener(){},RcSurfaceI18n:{t:key=>key},
+    sendPhoneCommand:(name,args,cb)=>{calls.push({name,args,cb});if(name==='getRecordingState')cb({ok:true,result:observed});}});
+  vm.runInContext(rangeSource,context);vm.runInContext(source,context);const client=context.RcRecording.setup();t.after(()=>client.session(false));
+  client.session(true,'controller');await client.command('getRecordingState');
+  const row=node('rec-track-grid').children[0];
+  assert.equal(row.dataset.trackColor,'true','the row carries the colour of its track');
+  assert.equal(row.style.getPropertyValue('--rec-track-color'),'#00aa55');
+  observed={...observed,tracks:observed.tracks.map(track=>({...track,color:null}))};
+  await client.command('getRecordingState');
+  assert.equal(row.dataset.trackColor,undefined,'a vanished colour leaves no mark behind');
+  assert.equal(row.style.getPropertyValue('--rec-track-color'),'');
+});
+
 test('REC timeline geometry covers real marker times and bounds zoom without modifying the Set',t=>{
   const {api:a,calls}=api(t);
   assert.equal(a.timelineBounds([{time:8},{time:24}],2).end,28);
