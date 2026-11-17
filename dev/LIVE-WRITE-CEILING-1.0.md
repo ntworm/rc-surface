@@ -3,9 +3,12 @@
 **Status:** P04 executado em 2026-09-21 na candidata instalada
 (`RC-Surface-1.0.0.ablx`, Live 12.4.15b3, Windows 11, Extensions SDK
 1.0.0-beta.0). 12 células medidas, 0 falhas. `teto_single = 48 escritas/s`,
-`teto_paralelo_max = 181 escritas/s (k = 4; k = 8 não acrescenta)`. A tabela
-`LFO_SHAPE_MAX_HZ` (sine 4, triangle 3, ramps 3, square 12) fica confirmada
-pela medição: nenhuma mudança de código.
+`teto_paralelo_max = 181 escritas/s (k = 4; k = 8 não acrescenta)`. Em
+2026-11-17 a contagem física de pontos no `.als` salvo mediu
+`teto_pontos_gravados/s = 45` (single) e `teto_efetivo = 45`. A tabela
+`LFO_SHAPE_MAX_HZ` em uso (sine 4, triangle 3, ramps 3, square 15) **não** é
+confirmada por essa medição: a regra derivada com `teto_efetivo = 45` daria
+square 11. A decisão é do item 18 da lista de mudanças de 2026-11-16; o código não muda.
 
 ## 1. Setup
 
@@ -107,27 +110,40 @@ em parallel 2 é o intervalo de 5 ms batendo no limite de 2 em voo, esperado.
 
 ### 3.2 Contagem física de pontos de automação
 
-> Pelo menos 2 células (Utility single, Utility parallel 4). Automation
-> Arm ligado, gravar, rodar a célula, parar; zoom em 1 compasso exato
-> (2 s @ 120 BPM); `pontos/s = pontos/2`. Print em
-> `test-results/write-ceiling/<célula>.png`.
+> A contagem é feita no arquivo salvo (`.als`), não na tela: o envelope
+> gravado é o registro do que o Live gravou.
 
-A matriz do Utility Output foi repetida com Automation Arm ligado e
-gravação de arranjo ativa (`bench-utility-output-matrix-automation-arm.json`):
-single 47.3/s, parallel 2 94.8/s, parallel 4 179.2/s, parallel 8 181.5/s,
-0 falhas; a gravação não altera o teto. O Live gravou o envelope como um
-bloco denso contínuo (print do responsável). O responsável optou por não
-contar pontos por compasso; `teto_pontos_gravados/s` fica **não contado** e
-`teto_efetivo` usa o teto single.
+Método (2026-11-17), um Set novo a 120 BPM com o Utility na track 0, gravando a
+matriz inteira do Utility Output de uma vez:
 
-| célula | pontos no compasso | pontos/s gravados |
-| --- | --- | --- |
-| Utility Output — single | não contado | — |
-| Utility Output — parallel 4 | não contado | — |
+1. Comando do bench na forma de :21, com Automation Arm ligado e gravação de
+   arranjo ativa:
+   `node scripts/bench-live-write-rate.mjs --matrix --port 8730 --insecure --token <admin> --track 0 --device 0 --param 9 --seconds 10`.
+2. Ao fim da matriz, parar e salvar o Set como cópia para contar o envelope
+   gravado.
+3. Contagem no `.als` salvo:
+   `node scripts/count-automation-points.mjs <cópia>.als --device-class StereoGain --param Gain --bpm 120 --window 34.66:54.66 --window 54.66:74.66 --window 74.66:94.66 --window 94.66:114.66`
+   — o primeiro ponto gravado está no beat 34,66; cada janela de 20 beats
+   (10 s) cobre uma célula, na ordem single, parallel 2, parallel 4 e
+   parallel 8. As bordas variam ±2 pontos.
 
-Se o Live simplificar a curva ao parar a gravação, registrar aqui
-(`pontos visíveis após stop ≠ pontos durante gravação`) — isso é parte
-do resultado.
+| célula | escritas (janela) | escritas/s (bench) | pontos distintos | pontos/s (contagem) | razão | eventos (envelope) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Utility Output — single | 473 | 47.1 | 452 | 45.2 | 0.96 | 688 |
+| Utility Output — parallel 2 | 916 | 91.3 | 879 | 87.9 | 0.96 | 1701 |
+| Utility Output — parallel 4 | 1721 | 171.5 | 1258 | 125.8 | 0.73 | 2004 |
+| Utility Output — parallel 8 | 1772 | 176.5 | 1344 | 134.4 | 0.76 | 2131 |
+
+Leitura: o gargalo do caminho de produção (single-flight, uma escrita por
+vez) é o do single — 452 pontos distintos na janela de 10 s, ou seja
+`teto_pontos_gravados/s = 45`. Com 4 escritas em voo o Live grava 1258
+pontos distintos na mesma janela (125,8 pontos/s) para 1721 escritas: a razão
+cai para 0.73, e o gravador do Live satura em ≈ 125–135 pontos/s. Até ≈ 90
+escritas/s quase toda escrita vira ponto. O padrão em degraus faz o Live
+gravar duas vezes o mesmo instante em muitas mudanças, por isso a coluna de
+eventos é maior que a de pontos distintos.
+A contagem é do `.als` salvo, não da tela. A tabela `LFO_SHAPE_MAX_HZ` em
+uso não é confirmada por esta medição; a decisão é do item 18 da lista de mudanças de 2026-11-16.
 
 ### 3.3 Caminho de produção (actuador real)
 
@@ -151,13 +167,13 @@ pelo responsável nas cinco formas.
 
 ## 4. Conclusão (uma frase)
 
-**Medido em 2026-09-21: o Live aceita ≈ 48 escritas/s por parâmetro no caminho single-flight (21 ms por `setValue`), 181/s com 4 em voo; a tabela `LFO_SHAPE_MAX_HZ` em uso já corresponde a esse teto e não muda.**
+**Medido em 2026-09-21: o Live aceita ≈ 48 escritas/s por parâmetro no caminho single-flight (21 ms por `setValue`), 181/s com 4 em voo; medido em 2026-11-17 no `.als` salvo, o Live grava ≈ 45 pontos/s no single — a tabela `LFO_SHAPE_MAX_HZ` em uso não é a que a regra derivada produz, e o código não muda (decisão no item 18 da lista de mudanças de 2026-11-16).**
 
 - `teto_single_escritas/s = 48`
 - `teto_paralelo_max_escritas/s = 181 (k = 4)`
-- `teto_pontos_gravados/s = não contado` (envelope gravado como bloco contínuo; sem contagem por compasso por decisão do responsável)
+- `teto_pontos_gravados/s = 45` (contagem no `.als` salvo, célula single: 452 pontos distintos em 10 s)
 
-`teto_efetivo = min(teto_single_escritas/s, teto_pontos_gravados/s)`
+`teto_efetivo = min(teto_single_escritas/s, teto_pontos_gravados/s) = 45`
 (o menor — o gargalo real é o que o Live grava, não o que o SDK aceita).
 
 ## 5. Regra derivada para `LFO_SHAPE_MAX_HZ`
@@ -174,18 +190,22 @@ forma ser distinguível na automação gravada:
 | `ramp_down` | 16 | descida precisa de segmentos distintos |
 | `square` | 4 | só precisa de 2 transições por ciclo |
 
-Aplicando a regra com `teto_efetivo = 48`:
+Ao lado da tabela em uso no código (`src/live/transport-clock.ts` e
+`static/phone-v3/controls.js`), com a regra aplicada a `teto_efetivo = 45`
+(contagem de 2026-11-17):
 
-| shape | min pontos / ciclo | max Hz |
-| --- | --- | --- |
-| `sine` | 10 | `floor(48 / 10) = 4` |
-| `triangle` | 16 | `floor(48 / 16) = 3` |
-| `ramp_up` | 16 | `floor(48 / 16) = 3` |
-| `ramp_down` | 16 | `floor(48 / 16) = 3` |
-| `square` | 4 | `floor(48 / 4) = 12` |
+| shape | min pontos / ciclo | em uso | derivada com 48 | derivada com 45 |
+| --- | --- | --- | --- | --- |
+| `sine` | 10 | 4 | 4 | `floor(45 / 10) = 4` |
+| `triangle` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
+| `ramp_up` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
+| `ramp_down` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
+| `square` | 4 | 15 | 12 | `floor(45 / 4) = 11` |
 
-Idêntica à tabela fallback já em `src/live/transport-clock.ts` e
-`static/phone-v3/controls.js`; nenhuma alteração necessária.
+O `square` já diferia antes desta medição: 15 no código contra 12 derivado
+de `teto_efetivo = 48`. Com o teto de 45 a diferença passa a valer também
+para `triangle` e para as rampas. O código **não** muda com esta medição; a
+decisão é do item 18 da lista de mudanças de 2026-11-16.
 
 Esta tabela alimenta `LFO_SHAPE_MAX_HZ` na task
 `rc-surface-modulator-quality-2026-09-16` (atualmente bloqueada por esta).
