@@ -53,11 +53,13 @@ import {
   boundSnapshotControls,
   boundImmediateControls,
   boundControlFrame,
+  boundFrameTiming,
   createRateLimiter,
   consumeToken,
   takeRateLimitNotice,
   type RateLimiterState,
 } from "./ws-bounds.js";
+import { forgetClient, recordControlFrame } from "./latency-stats.js";
 import { sendWithBackpressure } from "./backpressure.js";
 import { getQueryParam } from "../util/url.js";
 import { noteControllerConnection } from "./lan-runtime.js";
@@ -668,6 +670,9 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
     const existing = trackedClients.get(clientId);
     if (existing && existing.ws !== ws) {
       if (!existing.isAdmin) void retireLearnedPoseSession(clientId);
+      // The newer socket owns the client id from here on. The latency
+      // counters of the replaced session are over with it.
+      forgetClient(clientId);
       try {
         console.log(`[ableton-rc-surface] closing existing duplicate connection for client ${clientId}`);
         // Say *why* it is being closed. A phone's client_id lives in
@@ -823,6 +828,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
       // A disconnect must not be coalesced away behind a pending trailing emit.
       pushClientUpdate(info, { immediate: true });
       trackedClients.delete(clientId);
+      forgetClient(clientId);
     });
 
     ws.on("error", (err) => {
@@ -929,6 +935,23 @@ async function sendHello(ws: WebSocket, info: TrackedClient, path: string): Prom
   }
 }
 
+/**
+ * The clock that times the dispatch of a control frame, in milliseconds.
+ *
+ * The monotonic high-resolution clock is preferred. A host without
+ * `process.hrtime` falls back to the wall clock, whose millisecond resolution
+ * is still enough for a dispatch that takes microseconds.
+ */
+export function dispatchClockMs(useHrtime: boolean = hasHrtime()): number {
+  if (useHrtime) return Number(process.hrtime.bigint()) / 1e6;
+  return Date.now();
+}
+
+function hasHrtime(): boolean {
+  const hrtime: { bigint?: () => bigint } | undefined = process.hrtime;
+  return typeof hrtime?.bigint === "function";
+}
+
 interface TypedMessageResult {
   handled: boolean;
   // True when the type-tagged message should also push a client_update
@@ -980,8 +1003,13 @@ function handleTypedPhoneMessage(ws: WebSocket, info: TrackedClient, raw: string
     if (!isRoleAuthorized(info.role, "live-write")) return { handled: true, pushClientUpdate: false };
     const controls = boundControlFrame(parsed["controls"]);
     if (controls === null) return { handled: true, pushClientUpdate: false };
+    const timing = boundFrameTiming(parsed);
     const receivedAt = Date.now();
+    // The dispatch is one phase of the latency budget: the time the host
+    // spends turning the controls of the frame into Live writes.
+    const startedAtMs = dispatchClockMs();
     for (const control of controls) handleControl(info, control, receivedAt);
+    recordControlFrame(info.id, timing, dispatchClockMs() - startedAtMs);
     return { handled: true, pushClientUpdate: false };
   } else if (t === "controls") {
     if (!isRoleAuthorized(info.role, "live-write")) {

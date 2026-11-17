@@ -154,3 +154,21 @@ test("getStats aggregates latency and counters across multiple physical targets"
   assert.equal(stats.total.ratePerSecond, 2);
   actuator.stop();
 });
+
+/** One write per target, each with a known latency, pooled into one number. */
+test("getWriteLatency pools the completion samples of every target", async () => {
+  const clock = fakeClock();
+  const actuator = new ContinuousTargetActuator({ now: clock.now });
+  assert.deepEqual(actuator.getWriteLatency(), { p50Ms: 0, p95Ms: 0, maxMs: 0, count: 0 });
+  for (const [targetKey, latencyMs] of [["gain", 12], ["pan", 30]]) {
+    actuator.request({ targetKey, value: 0.4, write: instantWrite().write, immediate: true });
+    clock.advance(latencyMs);
+    await drainMicrotasks();
+  }
+  const latency = actuator.getWriteLatency();
+  assert.equal(latency.count, 2, "both targets are pooled");
+  assert.ok(latency.p50Ms > 0, "the pooled write latency is positive");
+  assert.equal(latency.p50Ms, 21);
+  assert.equal(latency.maxMs, 30);
+  actuator.stop();
+});

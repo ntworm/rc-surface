@@ -16,14 +16,28 @@
     if (opts && typeof opts.ordered === 'boolean') return opts.ordered;
     return DISCRETE.test(name);
   }
-  function create({ getConnection, now = () => performance.now(), setTimer = setTimeout, clearTimer = clearTimeout }) {
+  // The age of a frame is the age of its oldest item: a frame that still
+  // carries an old measurement must look old on the wire.
+  function oldestAt(items, fallback) {
+    let oldest = fallback;
+    for (const item of items) if (item.at < oldest) oldest = item.at;
+    return oldest;
+  }
+  function create({ getConnection, now = () => performance.now(), setTimer = setTimeout, clearTimer = clearTimeout, getRtt = () => null }) {
     const pending = new Map();
     const events = [];
     const seen = new Map();
     let socket, clientId, timer = null, lastSent = -Infinity, batchDepth = 0;
+    // The number of the frame on the wire. It restarts with every reset, so a
+    // reader never mistakes a new session for a stalled one.
+    let seq = 0;
+    // The ping round trip travels with the frame. A stream that has none
+    // simply leaves the field out.
+    const readRtt = typeof getRtt === 'function' ? getRtt : () => null;
     function reset() {
       if (timer !== null) clearTimer(timer);
       timer = null; pending.clear(); events.length = 0; seen.clear(); lastSent = -Infinity;
+      seq = 0;
     }
     function connection() {
       const c = getConnection();
@@ -58,10 +72,22 @@
         if (timer === null) timer = setTimer(() => { timer = null; flush(); }, INTERVAL_MS);
         return;
       }
-      const controls = events.map(item => item.control).concat([...pending.values()].map(item => item.control));
+      const items = events.concat([...pending.values()]);
+      // Every frame carries its own telemetry: the number of the frame, the
+      // age of the oldest item it carries and the last ping round trip. The
+      // host reads them to measure the latency of the stream itself.
+      const frame = {
+        type: 'control_frame',
+        client_id: clientId,
+        seq,
+        age_ms: Math.round(time - oldestAt(items, time)),
+        controls: items.map(item => item.control),
+      };
+      const rtt = readRtt();
+      if (Number.isFinite(rtt)) frame.rtt_ms = rtt;
       try {
-        socket.send(JSON.stringify({ type: 'control_frame', client_id: clientId, controls }));
-        lastSent = time; pending.clear(); events.length = 0;
+        socket.send(JSON.stringify(frame));
+        lastSent = time; pending.clear(); events.length = 0; seq += 1;
       } catch { failClosed(); }
     }
     function push(raw, opts) {
