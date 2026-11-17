@@ -1,79 +1,80 @@
-// Benchmark WS compression for the ableton-rc-surface snapshot stream.
+// bench-ws-compression.mjs — WebSocket compression bench.
 //
 // Usage:
-//   node scripts/bench-ws-compression.mjs [--no-deflate]
+//   node scripts/bench-ws-compression.mjs [--deflate]
 //
-// Spawns a WebSocketServer + client, exchanges N snapshot-shaped messages
-// and reports: bytes on the wire, compress ratio, server CPU, send
-// latency, and round-trip latency. Defaults to perMessageDeflate: true
-// so the headline number ("with compression") is the one that matters
-// when we ship.
+// Spawns a WebSocketServer + client, pushes N control_frame-shaped
+// payloads from the server to the client and reports: bytes on the wire,
+// compress ratio, server CPU, send latency and round-trip latency.
+//
+// Compression is off by default; --deflate turns perMessageDeflate on for
+// both ends, so a run with and a run without compression can be compared
+// on the same payload.
+//
+// Env:
+//   BENCH_MSGS   number of frames to send (default: 5000)
+//   BENCH_BYTES  force the payload to this size in bytes (default: off)
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { performance } from 'node:perf_hooks';
 import process from 'node:process';
 
-const USE_DEFLATE = !process.argv.includes('--no-deflate');
+const USE_DEFLATE = process.argv.includes('--deflate');
 const MESSAGE_COUNT = Number(process.env.BENCH_MSGS ?? 5000);
-const SNAPSHOT_BYTES = Number(process.env.BENCH_BYTES ?? 4096);
+const FORCED_BYTES = Number(process.env.BENCH_BYTES ?? 0);
+const CLIENT_ID = 'bench-client';
+// The control names a phone frame carries. The names stay stable across
+// frames while the values drift, like a live surface.
+const CONTROL_NAMES = [
+  'pad-1', 'pad-2', 'pad-3', 'pad-4',
+  'knob-1', 'knob-2', 'knob-3', 'knob-4',
+  'toggle-1', 'toggle-2', 'button-1', 'button-2',
+  'fader-1', 'fader-2', 'fader-3', 'fader-4',
+];
 
-function buildSnapshotLikePayload(targetBytes) {
-  // Mirror the shape of the actual snapshot message (controls array,
-  // touches, motion, orient, sensors, network). Values are *mostly the
-  // same across frames* to reflect the real workload: control names
-  // never change, only `value` floats drift slowly. That gives deflate
-  // something to compress, which is what we want to measure.
-  const slowValue = () => +(Math.sin(Date.now() / 500).toFixed(3));
+// Builds one payload shaped like the phone's realtime control frame.
+//
+// The phone batches the controls the user touched into a single frame
+// (static/phone-v3/control-stream.js):
+//
+//   { type: 'control_frame', client_id, controls: [{ name, value }] }
+//
+// The bench pushes the same shape from the server to the client, so the
+// bytes measured here are the bytes a phone receives on the wire. Real
+// frames carry between 2 and 8 controls: one finger is one control, a
+// two-finger gesture is two, and the phone batches at most eight per
+// frame. The names stay stable across frames while the values drift
+// slowly, which is what gives deflate something to compress.
+//
+// BENCH_BYTES forces a padded size: the frame grows with a filler field
+// until it reaches the requested byte count, so a padded run can be
+// compared against an unpadded one.
+function buildControlFramePayload(index) {
   const controls = [];
-  const CONTROL_TYPES = ['pad', 'toggle', 'button', 'knob', 'fader'];
-  for (let i = 0; i < 12; i++) {
-    controls.push({ name: `${CONTROL_TYPES[i % CONTROL_TYPES.length]}-${i + 1}`, value: slowValue() });
+  const controlCount = 2 + (index % 7); // 2..8 controls per frame
+  for (let i = 0; i < controlCount; i++) {
+    controls.push({
+      name: CONTROL_NAMES[i % CONTROL_NAMES.length],
+      // Unit values in [0, 1], drifting slowly like a live surface.
+      value: +((Math.sin(index / 8 + i / 3) + 1) / 2).toFixed(3),
+    });
   }
-  for (let i = 0; i < 6; i++) {
-    controls.push({ name: `knob-${i + 1}`, value: slowValue() });
-  }
-  for (let i = 0; i < 6; i++) {
-    controls.push({ name: `fader-${i + 1}`, value: slowValue() });
-  }
-  for (let i = 0; i < 4; i++) {
-    controls.push({ name: `xy-${i + 1}`, x: slowValue(), y: slowValue() });
-  }
-  for (let i = 0; i < 10; i++) {
-    controls.push({ name: `sensor.audio.${['rms', 'pitch', 'note', 'bpm', 'clarity', 'whistle.active', 'whistle.bend', 'envelope', 'transient', 'gate'][i]}`, value: slowValue() });
-  }
-  for (let i = 0; i < 9; i++) {
-    controls.push({ name: `sensor.motion.${['ax', 'ay', 'az', 'agx', 'agy', 'agz', 'aa', 'ab', 'ac'][i]}`, value: slowValue() });
-  }
-  for (let i = 0; i < 9; i++) {
-    controls.push({ name: `sensor.orient.${['alpha', 'beta', 'gamma'][i % 3]}`, value: slowValue() });
-  }
-  // Pad to target byte size by appending a longer filler that mimics
-  // a longer scene-name/telemetry field. Real payloads don't have this
-  // but we keep it to simulate realistic 4KB frame sizes.
-  const base = JSON.stringify({
-    type: 'snapshot',
-    client_id: 'bench-client',
-    ts: 1700000000000, // fixed timestamp — mirrors a stable stream
-    data: {
-      controls,
-      touches: [],
-      motion: { ax: slowValue(), ay: slowValue(), az: slowValue() },
-      orient: { alpha: slowValue(), beta: slowValue(), gamma: slowValue() },
-      sensors: { vision: 'active', audio: 'active' },
-      network: { rtt: 12, fps: 60 },
-    },
-  });
-  const filler = 'scene-state:' + 'pad-active.'.repeat(Math.max(1, Math.floor((targetBytes - base.length) / 12)));
-  return base.slice(0, base.length - 1) + `,"_f":"${filler}"}`;
+  const frame = {
+    type: 'control_frame',
+    client_id: CLIENT_ID,
+    controls,
+  };
+  const payload = JSON.stringify(frame);
+  if (!FORCED_BYTES) return payload;
+  // The frame's closing brace is replaced by the marker, so the marker
+  // adds its own length minus one byte.
+  const overhead = ',"_pad":""}'.length - 1;
+  const filler = 'p'.repeat(Math.max(0, FORCED_BYTES - payload.length - overhead));
+  return `${payload.slice(0, payload.length - 1)},"_pad":"${filler}"}`;
 }
 
-function runBenchmark() {
+function runBenchmark(wss) {
   return new Promise((resolve, reject) => {
-    const wss = new WebSocketServer({
-      port: 0,
-      perMessageDeflate: USE_DEFLATE,
-    });
-
     const samples = {
       serverSendLatencyMs: [],
       roundTripLatencyMs: [],
@@ -98,7 +99,7 @@ function runBenchmark() {
           ws.close();
           return;
         }
-        const payload = buildSnapshotLikePayload(SNAPSHOT_BYTES);
+        const payload = buildControlFramePayload(i);
         samples.bytesOnWireServer += payload.length;
         const t0 = performance.now();
         ws.send(payload, (err) => {
@@ -130,7 +131,7 @@ function runBenchmark() {
 
     ws.on('open', () => {
       // Acknowledge once so the server knows the link is up.
-      ws.send(JSON.stringify({ type: 'hello', client_id: 'bench-client' }));
+      ws.send(JSON.stringify({ type: 'hello', client_id: CLIENT_ID }));
     });
 
     ws.on('error', reject);
@@ -170,16 +171,30 @@ function percentile(arr, p) {
   return sorted[idx];
 }
 
-const result = await runBenchmark();
+// The server binds an ephemeral port, so wait for the listening event
+// before the client connects.
+const wss = new WebSocketServer({ port: 0, perMessageDeflate: USE_DEFLATE });
+await new Promise((resolve, reject) => {
+  wss.once('listening', resolve);
+  wss.once('error', reject);
+});
+
+const result = await runBenchmark(wss);
 
 const sendP50 = percentile(result.samples.serverSendLatencyMs, 0.5);
 const sendP95 = percentile(result.samples.serverSendLatencyMs, 0.95);
 const sendP99 = percentile(result.samples.serverSendLatencyMs, 0.99);
 
+console.log([
+  `ws compression bench: deflate ${result.deflate ? 'on' : 'off'}`,
+  'payload shape: phone control_frame { type, client_id, controls[2..8] }',
+  'direction: server to client sends',
+].join('\n'));
+
 console.log(JSON.stringify({
   deflate: result.deflate,
   messages: result.samples.frames,
-  payloadBytes: SNAPSHOT_BYTES,
+  payloadBytes: FORCED_BYTES,
   totalBytesSentByApp: result.samples.bytesOnWireServer,
   totalBytesOnSocket: result.samples.bytesOnWireClient,
   compressionRatio: result.samples.bytesOnWireServer === 0

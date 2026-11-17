@@ -15,8 +15,8 @@
 //     computed on the production payload, not on the gates document
 //
 // Exit codes:
-//   0  all gates passed (or, with --stage local, only `pending`/`passed`
-//      are accepted)
+//   0  all gates passed (with --stage local, `passed` | `pending` |
+//      `blocked` are accepted; with --stage publish, only `passed` is)
 //   2  bad arguments or environment
 //   3  gates document invalid
 //   4  CI gate failed
@@ -28,6 +28,7 @@ import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { evaluate } from './check-release-gates.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -119,24 +120,14 @@ async function loadGates() {
   return parsed;
 }
 
-function validateGates(gates, stage) {
-  if (!gates || typeof gates !== 'object' || !Array.isArray(gates.gates)) {
-    return { ok: false, reason: 'gates array missing' };
-  }
-  const allowed = new Set(['passed', 'pending', 'blocked', 'unknown']);
-  const knownForStage = new Set(['passed', 'pending']); // publish: only passed
-  for (const g of gates.gates) {
-    if (typeof g.id !== 'string' || typeof g.phase !== 'string' || typeof g.status !== 'string') {
-      return { ok: false, reason: `gate ${g.id ?? '(missing)'}: schema invalid` };
-    }
-    if (!allowed.has(g.status)) {
-      return { ok: false, reason: `gate ${g.id}: status ${g.status} is not from the allowed set ${[...allowed].join(',')}` };
-    }
-    if (stage === 'publish' && !knownForStage.has(g.status)) {
-      return { ok: false, reason: `gate ${g.id}: publish stage requires passed|pending, found ${g.status}` };
-    }
-  }
-  return { ok: true };
+// Renders the shared evaluation's blocking list for the verifier log:
+// one fragment per blocking gate, naming the gate and its status. The
+// stage semantics themselves live in scripts/check-release-gates.mjs.
+function describeBlocking(evaluation, stage) {
+  if (!evaluation.blocking?.length) return evaluation.reason ?? 'gates document rejected';
+  return evaluation.blocking
+    .map((gate) => `${gate.id ?? '(missing)'}: ${gate.reason ?? `${gate.status} is not acceptable at stage=${stage}`}`)
+    .join('; ');
 }
 
 function runCi(opts) {
@@ -251,9 +242,9 @@ async function main() {
   guardEnvironment();
   const opts = parseArgs(process.argv);
   const gates = await loadGates();
-  const v = validateGates(gates, opts.stage);
-  if (!v.ok) {
-    console.error(`[verify-release] gates document rejected: ${v.reason}`);
+  const evaluation = evaluate(gates, opts.stage);
+  if (!evaluation.ok) {
+    console.error(`[verify-release] gates document rejected: ${describeBlocking(evaluation, opts.stage)}`);
     process.exit(3);
   }
 
