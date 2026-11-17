@@ -178,6 +178,9 @@
           const rtt = Date.now() - msg.ts;
           lastPongAt = Date.now();
           if (window.state && window.state.sensors) window.state.sensors.network.rtt = rtt;
+          // The connection API owns `rtt` with the browser estimate, so the
+          // real round trip gets its own field for the control frames.
+          if (window.state?.sensors?.network) window.state.sensors.network.pingRtt = rtt;
           return;
         }
 

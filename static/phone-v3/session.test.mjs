@@ -352,3 +352,19 @@ test('session retries an ordinary close with a bounded delay and follows the rol
   assert.equal(session.role, 'viewer', 'the role of the new hello is authoritative');
   assert.match(env.status.textContent, /EXPIRED/i, 'a stale token stays an expired session');
 });
+
+// The connection API owns `rtt` with the browser estimate, so the real round
+// trip of the ping needs its own field: the control frames carry it.
+test('the pong round trip is stored in its own network field', () => {
+  const env = socketHarness();
+  env.context.state = { sensors: { network: {} } };
+  const socket = env.sockets[0];
+  socket.onopen();
+  const sentAt = Date.now() - 30;
+  socket.onmessage({ data: JSON.stringify({ type: 'pong', ts: sentAt }) });
+
+  const network = env.context.state.sensors.network;
+  assert.equal(typeof network.pingRtt, 'number', 'the round trip is a number');
+  assert.ok(network.pingRtt >= 30, `expected a round trip of at least 30ms, got ${network.pingRtt}`);
+  assert.equal(network.rtt, network.pingRtt, 'the browser estimate keeps its own field');
+});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-function fixture() {
+function fixture(options = {}) {
   let time = 0;
   let timerId = 0;
   const timers = new Map();
@@ -13,7 +13,7 @@ function fixture() {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(new URL('./control-stream.js', import.meta.url), 'utf8'), context);
   const stream = context.window.RcControlStream.create({
-    getConnection: () => connection, now: () => time,
+    getConnection: () => connection, now: () => time, getRtt: options.getRtt,
     setTimer(fn, ms) { const id = ++timerId; timers.set(id, { at: time + ms, fn }); return id; },
     clearTimer(id) { timers.delete(id); },
   });
@@ -192,4 +192,56 @@ test('controls without the option keep the discrete/continuous behaviour', () =>
   f.stream.push({ name: 'fader-1', value: 0.5 });
   f.socket.bufferedAmount = 0; f.tick(8);
   assert.deepEqual(f.sent[0].controls, [{ name: 'pad-1', value: 1 }, { name: 'fader-1', value: 0.5 }]);
+});
+
+test('every frame carries a sequence number that rises by one and restarts at zero', () => {
+  const f = fixture();
+  f.stream.push({ name: 'fader-1', value: 0.1 });
+  f.tick(8);
+  f.stream.push({ name: 'fader-1', value: 0.2 });
+  f.tick(8);
+  assert.deepEqual(f.sent.map(frame => frame.seq), [0, 1]);
+  f.stream.reset();
+  f.stream.push({ name: 'fader-1', value: 0.3 });
+  assert.equal(f.sent.at(-1).seq, 0, 'a reset restarts the sequence');
+});
+
+test('the frame reports the age of its oldest item', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  f.stream.push({ name: 'fader-1', value: 0.1 });   // queued at t = 0
+  f.tick(5);
+  f.stream.push({ name: 'knob-1', value: 0.2 });    // queued at t = 5
+  f.socket.bufferedAmount = 0;
+  f.tick(8);                                        // the frame leaves at t = 8
+  assert.equal(f.sent.length, 1);
+  assert.equal(f.sent[0].controls.length, 2);
+  // The oldest item is 8ms old, the newest one only 3ms.
+  assert.equal(f.sent[0].age_ms, 8);
+});
+
+test('the frame carries the ping round trip only when it is a finite number', () => {
+  const measured = fixture({ getRtt: () => 42 });
+  measured.stream.push({ name: 'fader-1', value: 0.5 });
+  assert.equal(measured.sent[0].rtt_ms, 42);
+
+  const without = fixture();
+  without.stream.push({ name: 'fader-1', value: 0.5 });
+  assert.ok(!('rtt_ms' in without.sent[0]), 'a stream without a round trip leaves the field out');
+
+  const broken = fixture({ getRtt: () => Number.NaN });
+  broken.stream.push({ name: 'fader-1', value: 0.5 });
+  assert.ok(!('rtt_ms' in broken.sent[0]), 'a broken round trip never reaches the wire');
+});
+
+test('a frame keeps the payload it always had, plus the sequence and the age', () => {
+  const f = fixture();
+  f.stream.push({ name: 'fader-1', value: 0.5 });
+  assert.deepEqual(f.sent[0], {
+    type: 'control_frame',
+    client_id: 'a',
+    seq: 0,
+    age_ms: 0,
+    controls: [{ name: 'fader-1', value: 0.5 }],
+  });
 });

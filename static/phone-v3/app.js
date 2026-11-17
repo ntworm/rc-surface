@@ -52,6 +52,7 @@
         type: null,
         downlink: null,
         rtt: null,
+        pingRtt: null,
         save_data: null,
       },
     },
@@ -262,6 +263,9 @@
       clientId: window.getPhoneClientId?.(),
       enabled: window.phoneWs?.controlStreamVersion === 1,
     }),
+    // The frame carries the real ping round trip. It has its own field
+    // because the connection API owns `rtt` with the browser estimate.
+    getRtt: () => window.state?.sensors?.network?.pingRtt ?? null,
   });
   window.onControl = (ctrl, opts) => {
     // The UI may display physical units (Hz), but the
@@ -553,12 +557,16 @@
   function attachNetwork() {
     const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const update = () => {
+      // The ping round trip is measured by the session, not by the browser:
+      // keep it when the connection API rebuilds the network state.
+      const pingRtt = state.sensors.network?.pingRtt ?? null;
       if (conn) {
         state.sensors.network = {
           online: navigator.onLine,
           type: conn.effectiveType || null,
           downlink: conn.downlink ?? null,
           rtt: conn.rtt ?? null,
+          pingRtt,
           save_data: conn.saveData ?? null,
         };
       } else {
@@ -567,6 +575,7 @@
           type: null,
           downlink: null,
           rtt: null,
+          pingRtt,
           save_data: null,
         };
       }
