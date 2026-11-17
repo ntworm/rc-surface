@@ -543,3 +543,133 @@ test('denied after ready never replays stale values from emitSensorControls', ()
   rc.__emitSensorControls();
   assert.equal(realFrames(), before, 'stale motion values must not be replayed after deny');
 });
+
+// ---- Screen-relative tilt: fused orientation vs accelerometer ----
+
+// Today's per-screen-angle formulas, kept as the reference the orientation
+// derived path has to agree with.
+function legacyTilt(accel, screenAngle) {
+  const side = screenAngle === 90 || screenAngle === -90 || screenAngle === 270;
+  const sign = screenAngle === 90 ? 1 : -1;
+  return {
+    beta: Math.max(-90, Math.min(90, side ? -sign * accel.z * 9.18 : -accel.z * 9.18)),
+    gamma: Math.max(-180, Math.min(180, side ? sign * accel.y * 18.36 : accel.x * 18.36)),
+  };
+}
+
+// A coherent pose: the accelerometer reads the gravity implied by the
+// deviceorientation beta/gamma, so both sources must give the same tilt.
+const COHERENT_POSE = { alpha: 40, beta: 20, gamma: 10 };
+const COHERENT_ACCEL = { x: -1.600, y: 3.354, z: 9.076 };
+
+function fireMotion(context, accel) {
+  context.__triggerWindowEvent('devicemotion', {
+    accelerationIncludingGravity: { x: accel.x, y: accel.y, z: accel.z },
+    interval: 16.6,
+  });
+}
+
+function fireOrientation(context, pose) {
+  context.__triggerWindowEvent('deviceorientation', {
+    alpha: pose.alpha, beta: pose.beta, gamma: pose.gamma, absolute: true,
+  });
+}
+
+test('gravityFromOrientation derives a gravity vector from beta and gamma only', () => {
+  const context = loadApp();
+  const gravityFromOrientation = context.window.__abletonRc.gravityFromOrientation;
+  const G = 9.80665;
+  const cases = [
+    { beta: 0, gamma: 0, x: 0, y: 0, z: G },
+    { beta: 90, gamma: 0, x: 0, y: G, z: 0 },
+    { beta: 0, gamma: 90, x: -G, y: 0, z: 0 },
+  ];
+  for (const c of cases) {
+    const g = gravityFromOrientation(c.beta, c.gamma);
+    for (const axis of ['x', 'y', 'z']) {
+      assert.ok(Math.abs(g[axis] - c[axis]) < 1e-9, `${axis} at ${c.beta}/${c.gamma}: ${g[axis]} != ${c[axis]}`);
+    }
+  }
+  // alpha never takes part: an extra argument cannot change the result.
+  const withAlpha = gravityFromOrientation(20, 30, 123);
+  const withoutAlpha = gravityFromOrientation(20, 30);
+  for (const axis of ['x', 'y', 'z']) {
+    assert.equal(withAlpha[axis], withoutAlpha[axis], `alpha must not change ${axis}`);
+  }
+});
+
+test('a coherent rest pose keeps the tilt the accelerometer formulas produce', () => {
+  for (const screenAngle of [0, 90, -90]) {
+    const context = loadApp();
+    context.window.orientation = screenAngle;
+    fireMotion(context, COHERENT_ACCEL);
+    fireOrientation(context, COHERENT_POSE);
+
+    const expected = legacyTilt(COHERENT_ACCEL, screenAngle);
+    const orient = context.window.__abletonRc.state.orient;
+    assert.ok(Math.abs(orient.beta - expected.beta) < 0.5, `beta at ${screenAngle}: ${orient.beta} vs ${expected.beta}`);
+    assert.ok(Math.abs(orient.gamma - expected.gamma) < 0.5, `gamma at ${screenAngle}: ${orient.gamma} vs ${expected.gamma}`);
+
+    // 15 m/s^2 is outside the rest band: the spike says nothing about the
+    // attitude, so the source of the tilt must not change.
+    fireMotion(context, { x: 0, y: 0, z: 15 });
+    fireOrientation(context, COHERENT_POSE);
+    const afterSpike = context.window.__abletonRc.state.orient;
+    assert.equal(afterSpike.beta, orient.beta);
+    assert.equal(afterSpike.gamma, orient.gamma);
+  }
+});
+
+test('an inverted accelerometer uses the inverted derived gravity', () => {
+  const context = loadApp();
+  const inverted = { x: 1.600, y: -3.354, z: -9.076 };
+  fireMotion(context, inverted);
+  fireOrientation(context, COHERENT_POSE);
+
+  // The accelerometer points the other way, so the source is the inverted
+  // derived gravity: the tilt is today's tilt for that acceleration.
+  const expected = legacyTilt(inverted, 0);
+  const orient = context.window.__abletonRc.state.orient;
+  assert.ok(Math.abs(orient.beta - expected.beta) < 0.5, `beta: ${orient.beta} vs ${expected.beta}`);
+  assert.ok(Math.abs(orient.gamma - expected.gamma) < 0.5, `gamma: ${orient.gamma} vs ${expected.gamma}`);
+
+  // A later coherent rest sample is the opposite sign for that source, so
+  // the source cannot flip to the derived vector on the first sample.
+  fireMotion(context, COHERENT_ACCEL);
+  fireOrientation(context, COHERENT_POSE);
+  const afterCoherent = context.window.__abletonRc.state.orient;
+  assert.ok(Math.abs(afterCoherent.beta - expected.beta) < 0.5, `beta after the coherent sample: ${afterCoherent.beta}`);
+});
+
+test('the accelerometer wins until the orientation agrees, and again after ten disagreements', () => {
+  const context = loadApp();
+  const disagreeing = { x: 2.0, y: 9.0, z: 3.0 };
+
+  // The orientation disagrees with the accelerometer: the accelerometer wins.
+  fireMotion(context, disagreeing);
+  fireOrientation(context, COHERENT_POSE);
+  const accelTilt = legacyTilt(disagreeing, 0);
+  let orient = context.window.__abletonRc.state.orient;
+  assert.equal(orient.beta, accelTilt.beta);
+  assert.equal(orient.gamma, accelTilt.gamma);
+
+  // A coherent rest sample switches the source to the derived gravity.
+  fireMotion(context, COHERENT_ACCEL);
+  fireOrientation(context, COHERENT_POSE);
+  const derived = { ...context.window.__abletonRc.state.orient };
+
+  // Nine disagreeing rest samples keep it; the tenth gives it back.
+  for (let sample = 1; sample <= 9; sample++) {
+    fireMotion(context, disagreeing);
+    fireOrientation(context, COHERENT_POSE);
+    orient = context.window.__abletonRc.state.orient;
+    assert.equal(orient.beta, derived.beta, `sample ${sample} must keep the derived gravity`);
+    assert.equal(orient.gamma, derived.gamma, `sample ${sample} must keep the derived gravity`);
+  }
+  fireMotion(context, disagreeing);
+  fireOrientation(context, COHERENT_POSE);
+  orient = context.window.__abletonRc.state.orient;
+  const fallback = legacyTilt(disagreeing, 0);
+  assert.equal(orient.beta, fallback.beta, 'the tenth sample falls back to the accelerometer');
+  assert.equal(orient.gamma, fallback.gamma, 'the tenth sample falls back to the accelerometer');
+});
