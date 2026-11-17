@@ -280,6 +280,7 @@ window.addEventListener("DOMContentLoaded", () => {
     statusText: window.INITIAL_STATUS_TEXT || (isRunning ? "Running" : "Stopped"),
     phoneUrl: window.INITIAL_PHONE_URL ?? null,
     certUrl: window.INITIAL_CERT_URL ?? null,
+    caFingerprint: window.INITIAL_CA_FINGERPRINT ?? null,
     primaryIp: window.INITIAL_PRIMARY_IP ?? "\u2014",
     otherIps: window.INITIAL_OTHER_IPS ?? [],
     adminToken: window.INITIAL_ADMIN_TOKEN ?? null,

@@ -1873,6 +1873,7 @@ export const commands: Record<string, CommandSpec> = {
       const serverState = await import("../server/state.js");
       const cpuUtil = await import("../util/cpu.js");
       const { getControllerToken, getAdminToken } = await import("../server/session-auth.js");
+      const { getLocalCaFingerprint } = await import("../server/cert.js");
       const ctrlToken = getControllerToken();
       const admToken = getAdminToken();
       const isRunning = serverState.serverInstance !== null;
@@ -1906,6 +1907,7 @@ export const commands: Record<string, CommandSpec> = {
         phoneUrl,
         adminUrl,
         certUrl,
+        caFingerprint: getLocalCaFingerprint(),
         statusText,
         cpuUsage,
         controllerToken: ctrlToken,

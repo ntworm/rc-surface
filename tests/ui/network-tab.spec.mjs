@@ -20,7 +20,7 @@ const info = (overrides = {}, net = {}) => ({
 const search = overrides => ({ state: 'running', ip: lumikit.ip, position: 2, total: 2, deadline: Date.now() + 18_000, skipped: [], phoneUrl: phoneUrl(lumikit.ip), ...overrides });
 const NETWORK_COMMANDS = ['getNetworkInfo', 'setNetworkChoice', 'runNetworkCheck', 'startNetworkSearch', 'stopNetworkSearch', 'nextNetworkAddress'];
 
-async function open(page, first, { locale } = {}) {
+async function open(page, first, { locale, answerServerInfo = true } = {}) {
   const fixture = { current: first, sent: [], locale: locale ?? 'en' };
   const pinned = id => {
     const chosen = fixture.current.network.candidates.find(candidate => candidate.id === id);
@@ -30,6 +30,8 @@ async function open(page, first, { locale } = {}) {
     const message = JSON.parse(raw);
     if (!message.cmd) return;
     fixture.sent.push(message.cmd);
+    // The panel keeps what the server injected when the machine says nothing.
+    if (message.cmd === 'getServerInfo' && !answerServerInfo) return;
     if (message.cmd === 'setNetworkChoice') {
       if (message.args?.mode === 'pinned') pinned(message.args.id);
       else fixture.current = info();
@@ -40,7 +42,7 @@ async function open(page, first, { locale } = {}) {
   await page.route('**/static/panel/index.html*', async route => {
     const html = await fs.readFile('static/panel/index.html', 'utf8');
     const start = fixture.current;
-    const globals = `<script>window.INITIAL_IS_RUNNING=${start.isRunning};window.INITIAL_PORT=9880;window.INITIAL_HTTPS_PORT=8731;window.INITIAL_PRIMARY_IP=${JSON.stringify(start.primaryIp)};window.INITIAL_OTHER_IPS=[];window.INITIAL_PHONE_URL=${JSON.stringify(start.phoneUrl)};</script>`;
+    const globals = `<script>window.INITIAL_IS_RUNNING=${start.isRunning};window.INITIAL_PORT=9880;window.INITIAL_HTTPS_PORT=8731;window.INITIAL_PRIMARY_IP=${JSON.stringify(start.primaryIp)};window.INITIAL_OTHER_IPS=[];window.INITIAL_PHONE_URL=${JSON.stringify(start.phoneUrl)};window.INITIAL_CERT_URL=${JSON.stringify(start.certUrl ?? null)};window.INITIAL_CA_FINGERPRINT=${JSON.stringify(start.caFingerprint ?? null)};</script>`;
     await route.fulfill({ body: html.replace('</head>', globals + '</head>'), contentType: 'text/html' });
   });
   await page.goto('/static/panel/index.html');
@@ -160,7 +162,8 @@ test('no network is reported on Network without a stopped-server notice on Main'
 
 test('Network offers the certificate QR for the phone while Main keeps quick access', async ({ page }, testInfo) => {
   const certUrl = `http://${wired.ip}:8732/ca`;
-  await open(page, info({ certUrl }));
+  const fingerprint = 'AA:BB:CC:DD:EE:FF';
+  await open(page, info({ certUrl, caFingerprint: fingerprint }));
   await expect(page.locator('#tab-main #network-address, #tab-main #conn-mode')).toHaveCount(0);
   await expect(page.locator('#qr-perf')).toHaveAttribute('data-qr-url', phoneUrl(wired.ip));
   await networkTab(page).click();
@@ -169,7 +172,20 @@ test('Network offers the certificate QR for the phone while Main keeps quick acc
   await expect(page.locator('#net-cert')).toBeVisible();
   await expect(page.locator('#net-cert-qr')).toHaveAttribute('data-qr-url', certUrl);
   await expect(page.locator('#net-cert-url')).toHaveText(certUrl);
+  await expect(page.locator('#net-cert-fp')).toHaveText(`SHA-256 ${fingerprint}`);
+  // The fingerprint is a small line under the address.
+  const address = await page.locator('#net-cert-url').boundingBox();
+  const line = await page.locator('#net-cert-fp').boundingBox();
+  expect(line.y).toBeGreaterThan(address.y);
   await page.locator('#net-cert').screenshot({ path: testInfo.outputPath('certificate-qr.png') });
+});
+
+test('the first paint shows the fingerprint the server injected', async ({ page }) => {
+  const certUrl = `http://${wired.ip}:8732/ca`;
+  const fingerprint = '11:22:33:44:55:66';
+  await open(page, info({ certUrl, caFingerprint: fingerprint }), { answerServerInfo: false });
+  await networkTab(page).click();
+  await expect(page.locator('#net-cert-fp')).toHaveText(`SHA-256 ${fingerprint}`);
 });
 
 test('the search keeps the Main QR and shows the candidate QR in the tab', async ({ page }) => {

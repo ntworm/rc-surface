@@ -7,7 +7,7 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { generateKeyPairSync, X509Certificate } from "node:crypto";
+import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import selfsigned from "selfsigned";
 import { getExtensionContext } from "../context.js";
 import { stripWslDrivePrefix } from "../util/helpers.js";
@@ -39,6 +39,16 @@ let localCa: LocalCa | null = null;
  *  this computer has no authority to hand over. */
 export function getLocalCaDer(): Buffer | null {
   return localCa ? localCa.der : null;
+}
+
+/** The SHA-256 of the certificate of the authority, in the shape a person
+ *  can read it and compare with what the phone shows: uppercase hex pairs
+ *  joined by colons. Null when this computer has no authority to show. */
+export function getLocalCaFingerprint(): string | null {
+  const der = getLocalCaDer();
+  if (der === null) return null;
+  const hex = createHash("sha256").update(der).digest("hex").toUpperCase();
+  return hex.match(/.{2}/g)?.join(":") ?? hex;
 }
 
 /** Registers the listener that is told about every new certificate, so a

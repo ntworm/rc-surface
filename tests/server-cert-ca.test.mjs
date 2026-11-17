@@ -12,7 +12,7 @@ import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as tls from 'node:tls';
-import { createPublicKey, generateKeyPairSync } from 'node:crypto';
+import { createHash, createPublicKey, generateKeyPairSync } from 'node:crypto';
 import selfsigned from 'selfsigned';
 import {
   SubjectAlternativeNameExtension,
@@ -25,6 +25,7 @@ import {
   certCoversRequiredAltNames,
   ensureCertificateCovers,
   getLocalCaDer,
+  getLocalCaFingerprint,
   httpsOptions,
   loadCerts,
 } from '../src/server/cert.ts';
@@ -146,6 +147,33 @@ test('the certificate of the server is signed by the authority of this computer'
     'the address of the machine must be named',
   );
   assert.deepEqual(getLocalCaDer(), ca.der, 'the authority hands its own certificate over');
+});
+
+test('the fingerprint of the authority is the SHA-256 of its certificate', async t => {
+  const dir = await storageDir();
+  setExtensionContext({ environment: { storageDirectory: dir } });
+  setNetworkSnapshot(snapshotOf(['192.168.100.16']));
+  t.after(async () => {
+    setExtensionContext(null);
+    setNetworkSnapshot(null);
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  await loadCerts();
+
+  const der = getLocalCaDer();
+  assert.ok(der, 'there is an authority');
+  const hex = createHash('sha256').update(der).digest('hex').toUpperCase();
+  assert.equal(
+    getLocalCaFingerprint(),
+    hex.match(/.{2}/g).join(':'),
+    'the fingerprint is the SHA-256 of the certificate of the authority',
+  );
+  assert.match(
+    getLocalCaFingerprint(),
+    /^[0-9A-F]{2}(:[0-9A-F]{2}){31}$/,
+    'it is uppercase hex pairs joined by colons',
+  );
 });
 
 test('a certificate the authority did not sign is replaced', async t => {
@@ -291,6 +319,7 @@ test('without a place to keep it there is no authority', async t => {
   await loadCerts();
 
   assert.equal(getLocalCaDer(), null, 'there is no authority to hand over');
+  assert.equal(getLocalCaFingerprint(), null, 'and no fingerprint to show');
   assert.ok(httpsOptions, 'the server still has a certificate');
   assert.ok(
     certCoversRequiredAltNames(httpsOptions.cert, ['192.168.100.16']),

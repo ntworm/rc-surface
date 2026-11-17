@@ -238,9 +238,10 @@
     el.textContent = info.httpsPort ? translate('panel.net.port', { port: info.httpsPort }) : '';
   }
 
-  // The certificate of this computer: the page where the phone gets it, and
-  // the code that opens that page. Without the page there is nothing to
-  // show, so the whole section goes away.
+  // The certificate of this computer: the page where the phone gets it, the
+  // code that opens that page and the fingerprint of the authority behind
+  // it, so the phone and the computer can be compared at a glance. Without
+  // the page there is nothing to show, so the whole section goes away.
   function drawCert(info) {
     const section = element('net-cert');
     if (!section) return;
@@ -253,6 +254,17 @@
     }
     const text = element('net-cert-url');
     if (text) text.textContent = url || '';
+    drawFingerprint(info, url);
+  }
+
+  // The fingerprint of the authority: one line under the address, and only
+  // when there is an authority to name.
+  function drawFingerprint(info, url) {
+    const line = element('net-cert-fp');
+    if (!line) return;
+    const fingerprint = url ? info.caFingerprint : null;
+    line.textContent = fingerprint ? `SHA-256 ${fingerprint}` : '';
+    line.classList.toggle('hidden', !fingerprint);
   }
 
   function drawRows(info) {
