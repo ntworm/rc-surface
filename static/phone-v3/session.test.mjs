@@ -135,9 +135,11 @@ test('session still attempts the local WebSocket when browser reports offline', 
 });
 
 // ── Root cause R2 (client half) ─────────────────────────────────────────────
-// Tokens are regenerated on every Ableton restart. A page left open reconnects
-// with a token the server no longer knows and is downgraded to viewer, so every
-// transport / pad / knob write is silently rejected. The status bar must say so.
+// A token stops matching when the session that issued it is gone: an admin
+// token from an earlier run, or a controller token whose stored file was
+// deleted. A page left open reconnects with such a token and is downgraded to
+// viewer, so every transport / pad / knob write is silently rejected. The
+// status bar must say so.
 
 function connectAndSayHello(hello) {
   const sockets = [];

@@ -35,17 +35,26 @@ Superfície de ataque:
 O desenho atual pressupõe uma rede local confiável, de estúdio ou de casa. O
 HTTPS protege o transporte do navegador e é o que libera as APIs de câmera e
 microfone. Ações de controlador e de administração também exigem tokens de
-sessão criptograficamente aleatórios, gerados de novo a cada início do servidor,
-inclusive Stop/Start no painel sem reiniciar o Live. As
+sessão criptograficamente aleatórios. O token de administração é gerado a
+cada início do servidor, inclusive no Stop/Start do painel sem reiniciar o
+Live, então um link de administração de uma execução anterior deixa de
+funcionar. O token de controlador fica guardado no armazenamento da extensão,
+em `storageDirectory/session/`, e continua válido até ser substituído. As
 requisições são classificadas como viewer, controller ou admin, e os comandos
 são autorizados por papel.
 
 O token de controlador é entregue pela URL do QR gerado e depois passa para um
 cookie de sessão HttpOnly com SameSite. Trate imagens de QR, URLs de
 controlador, URLs de administração e sessões de navegador ativas **como
-credenciais**. Quem obtiver um desses tokens recebe o papel associado a ele até
-o servidor ser reiniciado. Escaneie o novo QR depois de reiniciar; páginas antigas
-ficam somente para leitura.
+credenciais**. Quem obtiver um desses tokens recebe o papel associado a ele: o
+token de controlador continua valendo depois de reiniciar, então um celular já
+pareado continua como controlador, enquanto o token de administração dura
+apenas a execução que o emitiu.
+
+Para remover o acesso de todos os celulares, feche o Live, apague o arquivo
+`session/controller-token` em `Preferences/Extensions/<id>/`, abra o Live de
+novo e escaneie o QR novo. O próximo início gera um token de controlador
+novo, e os celulares que estavam pareados voltam como viewers.
 
 ## HTTPS e certificados
 
@@ -144,7 +153,10 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Prefira uso na mesma sala ou na rede do estúdio.
 - Não publique nem repasse URLs de QR, de controlador ou de administração.
 - Não exponha o bridge por túneis públicos, proxies reversos públicos ou redirecionamento de porta no roteador. Esses cenários estão fora do modelo de ameaças da v2.0.
-- Pare e inicie o servidor para invalidar todos os tokens de sessão já emitidos.
+- Pare e inicie o servidor para invalidar o link de administração: o token de
+  administração é gerado de novo no próximo início. O token de controlador
+  sobrevive a um reinício; ele é revogado ao apagar o arquivo
+  `session/controller-token` em `Preferences/Extensions/<id>/`.
 
 ## Segurança dos comandos
 

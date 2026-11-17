@@ -33,16 +33,25 @@ Attack surface:
 
 The current design assumes a trusted studio/home LAN. HTTPS protects the
 browser transport and enables camera/microphone APIs. Controller and admin
-actions also require cryptographically random session tokens that are
-regenerated whenever the server starts, including panel Stop/Start without
-reloading Live. Requests are classified as viewer,
-controller, or admin and commands are authorized by role.
+actions also require cryptographically random session tokens. The admin token
+is drawn on every server start, including a panel Stop/Start without
+reloading Live, so an admin link from an earlier run stops working. The
+controller token is kept in the extension storage directory, under
+`storageDirectory/session/`, and stays valid until it is replaced. Requests
+are classified as viewer, controller, or admin and commands are authorized
+by role.
 
 The controller token is delivered by the generated QR URL and then moved into
 an HttpOnly, SameSite session cookie. Treat QR images, controller URLs, admin
 URLs, and active browser sessions as credentials. A party that obtains one of
-those tokens receives its associated role until the server restarts. Rescan
-the new QR after restarting; old pages become read-only.
+those tokens receives its associated role: the controller token keeps working
+across restarts, so a paired phone stays a controller, while the admin token
+only lasts for the run that issued it.
+
+To remove the access of every phone, quit Live, delete the file
+`session/controller-token` under `Preferences/Extensions/<id>/`, open Live
+again and scan the new QR. The next start draws a new controller token, and
+the phones that were paired come back as viewers.
 
 ## HTTPS and certificates
 
@@ -139,7 +148,10 @@ Remove-NetFirewallRule -Name 'RC-Surface-MIDI-UDP9000-LAN-Block'
 - Do not publish or forward QR, controller, or admin URLs.
 - Do not expose the bridge through public tunnels, public reverse proxies, or
   router port forwarding. Those deployments are outside the v2.0 threat model.
-- Stop and start the server to invalidate all issued session tokens.
+- Stop and start the server to invalidate the admin link: the admin token is
+  drawn again on the next start. The controller token survives a restart; it
+  is revoked by deleting `session/controller-token` under
+  `Preferences/Extensions/<id>/`.
 
 ## Command safety
 

@@ -8,6 +8,7 @@ Ele não coleta, transmite nem armazena dados pessoais além da própria máquin
 | Dado | Onde | Por quanto tempo |
 |------|------|------------------|
 | Certificado TLS autoassinado + chave privada | `storageDirectory/certs/` do Ableton | Até o usuário apagar o armazenamento ou o certificado expirar ou ser gerado de novo |
+| Token do controlador | `storageDirectory/session/` do Ableton | Até ser apagado |
 | Mapeamentos de controle | `surface-v2/` do Ableton | Persistem entre sessões |
 | Presets e projetos de mapeamento | `surface-v2/` do Ableton | Até serem apagados |
 | Preferências do celular | Armazenamento do navegador do celular | Até os dados do navegador serem limpos |

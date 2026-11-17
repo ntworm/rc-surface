@@ -77,6 +77,7 @@ function stateHarness(extra = {}) {
     http: { createServer }, https: { createServer }, process: { env: {} },
     useHttps: true, httpsOptions: {},
     loadCerts: async () => {}, regenerateTokens() {},
+    loadControllerToken: async () => null,
     getLocalCaDer: () => null,
     handleHttp() {}, handleUpgrade() {}, wssInit() {}, stopAllWsClients() {},
     onCertificateChange(fn) { listener.current = fn; },

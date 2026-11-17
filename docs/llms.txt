@@ -16,7 +16,7 @@
 - **Panel.** The **Main** tab of the Live panel shows the QR code and the connected clients. The addresses and the certificate are in the **Network** tab.
 - **Certificates.** A local certificate authority of this computer signs the server certificate for localhost and for the private addresses of the network. The **Certificate** section of the **Network** tab links an install page on the HTTPS port + 1, so the phone and the computer install it once and the browser stops warning. An address pinned with **USE** keeps a self-signed certificate.
 - **Storage.** Projects, presets and mappings live in `storageDirectory/surface-v2/` with schema 2, and data from 1.x is neither imported nor deleted.
-- **Architecture.** The host side runs on the Ableton Extensions SDK in TypeScript, and the phone side in plain browser JavaScript. The transport is HTTPS/WSS with rotating session tokens, meant for a trusted studio or home network.
+- **Architecture.** The host side runs on the Ableton Extensions SDK in TypeScript, and the phone side in plain browser JavaScript. The transport is HTTPS/WSS with session tokens: the admin token is drawn on every start and the controller token is kept until its file is deleted. It is meant for a trusted studio or home network.
 
 ## Requirements
 

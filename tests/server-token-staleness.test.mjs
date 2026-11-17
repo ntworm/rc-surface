@@ -4,9 +4,11 @@
 // Root cause R2 — a stale controller token must be reported, not silently
 // downgraded to "viewer".
 //
-// Tokens are regenerated on every extension start. A phone that reconnects
-// with a bookmarked / still-open URL therefore presents a token that no longer
-// matches. Today authenticateRequest() maps that to "viewer" — identical to
+// A token stops matching when the session that issued it is gone: an admin
+// token from an earlier run, or a controller token whose stored file was
+// deleted. A phone that reconnects with a bookmarked / still-open URL
+// therefore presents a token that no longer matches. Today
+// authenticateRequest() maps that to "viewer" — identical to
 // "no token supplied" — so the phone connects, looks healthy, and then every
 // transport / pad / knob write is rejected with no explanation.
 

@@ -411,13 +411,20 @@ that report into any bug report; it is far more useful than "it failed".
 The phone also self-diagnoses: when a handshake never completes it asks the
 server why and prints the reason to the browser console.
 
-### Tokens are regenerated every time the server starts
+### The phone reconnects as controller after a restart
 
-A page left open across a Live restart reconnects but its token is no longer
-valid, so the session drops to read-only. The status bar shows
-**SESSION EXPIRED — RESCAN QR**. That is expected — rescan the QR to regain
-control. Transport, pads and knobs are rejected until you do. Repeat this test
-with **Stop**, then **Start**, in the panel without restarting Live.
+A page left open across a Live restart reconnects and stays a controller: the
+controller token is kept in the extension storage directory, under
+`storageDirectory/session/`, and stays valid until it is replaced. Only the
+admin token is drawn on every server start, so the admin session is the one
+that needs a new link.
+
+**SESSION EXPIRED — RESCAN QR** appears on the phone only after the stored
+controller token was deleted: quit Live, delete `session/controller-token`
+under `Preferences/Extensions/<id>/`, and open Live again. The phone
+reconnects as a viewer; scan the new QR to regain control. Transport, pads
+and knobs are rejected until you do. Repeat the restart test with **Stop**,
+then **Start**, in the panel without restarting Live.
 
 ## Test checklist
 

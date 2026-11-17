@@ -13,6 +13,7 @@ import { createCaDownloadListener } from "./ca-download.js";
 import { handleHttp } from "./http.js";
 import { handleUpgrade, wssInit, stopAllWsClients } from "./ws.js";
 import { regenerateTokens } from "./session-auth.js";
+import { loadControllerToken } from "./controller-token.js";
 import { getPublishedLan, noteHttpsConnection, startLanRuntime, stopLanRuntime } from "./lan-runtime.js";
 
 export { useHttps } from "./cert.js";
@@ -201,10 +202,14 @@ async function closeServer(srv: http.Server | https.Server | null): Promise<void
 async function initializeServer(generation: number): Promise<void> {
   await loadCerts();
   if (generation !== serverGeneration) return;
-  // A stopped server is a closed security session. Rotate before opening the
-  // next listener so URLs, cookies, and still-open pages from the prior run
-  // become stale even when Live reuses this module instance.
-  regenerateTokens();
+  // A stopped server is a closed security session, but only for the admin
+  // token: it rotates on every start, so URLs, cookies and still-open pages
+  // from the prior run become stale even when Live reuses this module
+  // instance. The controller token is kept in the storage directory, so a
+  // phone that was paired before the restart stays a controller.
+  const persistedController = await loadControllerToken();
+  if (generation !== serverGeneration) return;
+  regenerateTokens(persistedController);
 
   let srv: http.Server | null = null;
   let httpsSrv: https.Server | null = null;

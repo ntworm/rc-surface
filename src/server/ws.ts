@@ -67,8 +67,8 @@ export type ClientMode = "performance" | "admin";
 /**
  * Why a session has the role it has.
  *  - "valid": the presented token matched a currently-issued token.
- *  - "stale": a token was presented but no longer matches — almost always a
- *    page left open across an Ableton restart, which regenerates tokens.
+ *  - "stale": a token was presented but no longer matches — an admin token
+ *    from an earlier run, or a controller token whose file was deleted.
  *  - "none": no token was presented at all (an ordinary viewer).
  */
 export type TokenStatus = "valid" | "stale" | "none";
@@ -713,7 +713,7 @@ function setupWssHandlers(wss: WebSocketServer, path: string, label: string, isA
     if (tokenStatus === "stale") {
       console.warn(
         `[ableton-rc-surface] ${label} id=${clientId} presented an expired token — ` +
-          `the client is almost certainly a page left open across a restart. ` +
+          `it was issued by an earlier admin session, or the stored controller token was deleted. ` +
           `It is connected as viewer and all live-write commands will be rejected.`,
       );
     }
