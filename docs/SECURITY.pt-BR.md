@@ -64,6 +64,7 @@ novo, e os celulares que estavam pareados voltam como viewers.
 - O certificado inclui, na lista SAN, `localhost`, `127.0.0.1` e os IPs atuais da rede local.
 - Se os IPs da rede local mudarem, a extensão consegue gerar o certificado de novo.
 - Os navegadores ainda avisam, porque o certificado é autoassinado. O usuário precisa aceitar o aviso uma vez em cada aparelho e navegador.
+- O painel mostra, debaixo do endereço da seção **Certificado**, o SHA-256 da autoridade. Antes de confiar nela no celular, compare esse valor com o SHA-256 da autoridade instalada, cujo nome é **RC Surface local CA** (detalhes do perfil instalado no iPhone, credenciais confiáveis do usuário no Android), e não com o certificado do cadeado do site. O celular pode separar os pares com espaços em vez de `:`; só os dígitos contam.
 
 Chaves privadas nunca vão dentro dos pacotes `.ablx`.
 

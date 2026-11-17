@@ -62,6 +62,13 @@ the phones that were paired come back as viewers.
 - If LAN IP coverage is stale, the extension can regenerate the certificate.
 - Browsers still warn because the certificate is self-signed. The user must
   accept the warning once on each device/browser.
+- The panel shows the SHA-256 of the authority under the address of the
+  **Certificate** section. Before trusting it on the phone, compare that value
+  with the SHA-256 of the installed authority named **RC Surface local CA**
+  (details of the installed profile on iPhone, trusted credentials of the user
+  on Android), not with the certificate behind the padlock of the site. The
+  phone may separate the pairs with spaces instead of `:`; only the digits
+  count.
 
 Private keys are never bundled in `.ablx` packages.
 

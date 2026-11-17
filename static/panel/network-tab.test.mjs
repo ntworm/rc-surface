@@ -157,7 +157,7 @@ function elementStub(id) {
 
 function domRig() {
   const elements = new Map();
-  for (const id of ['net-cert', 'net-cert-qr', 'net-cert-url']) elements.set(id, elementStub(id));
+  for (const id of ['net-cert', 'net-cert-qr', 'net-cert-url', 'net-cert-fp']) elements.set(id, elementStub(id));
   const document = {
     getElementById: id => elements.get(id) ?? null,
     createElement: tag => elementStub(tag),
@@ -190,4 +190,34 @@ test('the certificate section is there with a page to open, and gone without one
   assert.equal(elements.get('net-cert').classes.has('hidden'), true, 'the section is gone');
   assert.equal(elements.get('net-cert-url').textContent, '', 'and it leaves no address behind');
   assert.deepEqual(drawn, [null], 'and the code is taken away');
+});
+
+test('the fingerprint of the authority is written under the address', () => {
+  const { document, elements } = domRig();
+  const tab = load(document);
+  tab.init({
+    send: () => {},
+    translate: key => key,
+    ensureQr: () => {},
+    clearQr: () => {},
+    bindCopy: () => {},
+    startServer: () => {},
+    refreshServer: () => {},
+  });
+
+  const page = 'http://192.168.1.5:8732/ca';
+  const fingerprint = 'AA:BB:CC:DD';
+  const line = elements.get('net-cert-fp');
+
+  tab.setServerInfo({ isRunning: true, httpsPort: 8731, certUrl: page, caFingerprint: fingerprint });
+  assert.equal(line.textContent, `SHA-256 ${fingerprint}`, 'the fingerprint is written down');
+  assert.equal(line.classes.has('hidden'), false, 'and it is there');
+
+  tab.setServerInfo({ isRunning: true, httpsPort: 8731, certUrl: page, caFingerprint: null });
+  assert.equal(line.textContent, '', 'without a fingerprint there is nothing to write');
+  assert.equal(line.classes.has('hidden'), true, 'and the line is taken away');
+
+  tab.setServerInfo({ isRunning: true, httpsPort: 8731, certUrl: null, caFingerprint: fingerprint });
+  assert.equal(line.textContent, '', 'without a page there is nothing to write either');
+  assert.equal(line.classes.has('hidden'), true, 'and the line stays away');
 });
