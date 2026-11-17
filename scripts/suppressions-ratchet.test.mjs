@@ -1,3 +1,5 @@
+// Copyright © 2026 Gabriel Worm
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // suppressions-ratchet.test.mjs — the ESLint suppression budget only shrinks.
 //
 // eslint-suppressions.json is the structural debt ledger of the repo: every

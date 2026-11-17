@@ -1,6 +1,6 @@
 // check-release-gates.mjs — gates document validator.
 //
-// Contract (per frozen PLAN.md line 196):
+// Contract:
 //   * receives --stage local|publish --report PATH
 //   * validates the gates document
 //   * does NOT convert unknown into pass

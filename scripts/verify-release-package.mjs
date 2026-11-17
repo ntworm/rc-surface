@@ -1,7 +1,7 @@
 // verify-release-package.mjs — compare an existing candidate package
 // against a freshly produced build directory.
 //
-// Contract (per frozen PLAN.md lines 196-198):
+// Contract:
 //   * receives --package PATH --build-dir DIR --report PATH
 //   * reads package/build and writes the report outside the payload
 //   * never substitutes a different package to mask divergence

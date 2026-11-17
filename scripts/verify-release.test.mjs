@@ -20,6 +20,28 @@ function run(args) {
   });
 }
 
+// verify-release reads the gates document from its own repository root, so
+// the fixtures below run a copy of the verifier in a scratch directory that
+// carries a gates document of its own.
+async function scratchVerifier(name, gate) {
+  const scratch = join(reportDir, `verify-release-${name}`);
+  await mkdir(join(scratch, 'scripts'), { recursive: true });
+  await mkdir(join(scratch, 'dev'), { recursive: true });
+  await copyFile(
+    join(repoRoot, 'scripts', 'verify-release.mjs'),
+    join(scratch, 'scripts', 'verify-release.mjs'),
+  );
+  await copyFile(
+    join(repoRoot, 'scripts', 'check-release-gates.mjs'),
+    join(scratch, 'scripts', 'check-release-gates.mjs'),
+  );
+  await writeFile(join(scratch, 'dev', 'RELEASE-GATES-1.0.json'), JSON.stringify({
+    schema_version: 1,
+    gates: [gate],
+  }));
+  return scratch;
+}
+
 test('packagePath with .. is rejected by verify-release', () => {
   const result = run([join('scripts', 'verify-release.mjs'), '--package=../foo.ablx']);
   // Verify-release refuses on packagePath validation BEFORE running CI,
@@ -63,36 +85,33 @@ test('check-release-gates --stage local is permissive of pending', () => {
     '--stage=local',
     `--report=${join(reportDir, 'check-local-ok.json')}`,
   ]);
-  // The existing gates document has pending gates (P09) and a single
-  // blocked gate (P10 distribution). Under stage=local, blocked is
-  // treated as not-yet-passed but allowed; pending is also allowed.
+  // The live gates document (dev/RELEASE-GATES-1.0.json) records every gate
+  // with status "passed" today, so stage=local accepts the document as it
+  // stands and the run must exit 0.
   assert.equal(result.status, 0, `expected OK, got ${result.status} stderr=${result.stderr}`);
 });
 
 test('verify-release blocks an unknown gate status at stage local', async () => {
-  // verify-release reads the gates document from its own repository root,
-  // so the fixture runs a copy of the verifier in a scratch directory.
-  const scratch = join(reportDir, 'verify-release-unknown-status');
-  await mkdir(join(scratch, 'scripts'), { recursive: true });
-  await mkdir(join(scratch, 'dev'), { recursive: true });
-  await copyFile(
-    join(repoRoot, 'scripts', 'verify-release.mjs'),
-    join(scratch, 'scripts', 'verify-release.mjs'),
-  );
-  await copyFile(
-    join(repoRoot, 'scripts', 'check-release-gates.mjs'),
-    join(scratch, 'scripts', 'check-release-gates.mjs'),
-  );
-  await writeFile(join(scratch, 'dev', 'RELEASE-GATES-1.0.json'), JSON.stringify({
-    schema_version: 1,
-    gates: [
-      { id: 'unknown-status', phase: 'PXX', stage: 'local', status: 'unknown', owner: 'test', rationale: 'fixture' },
-    ],
-  }));
+  const scratch = await scratchVerifier('unknown-status-local', {
+    id: 'unknown-status', phase: 'PXX', stage: 'local', status: 'unknown', owner: 'test', rationale: 'fixture',
+  });
   try {
     const result = run([join(scratch, 'scripts', 'verify-release.mjs')]);
     assert.equal(result.status, 3, `expected exit 3, got ${result.status} stdout=${result.stdout} stderr=${result.stderr}`);
     assert.match(result.stderr, /unknown-status/);
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+});
+
+test('verify-release blocks an unknown gate status at stage publish', async () => {
+  const scratch = await scratchVerifier('unknown-status-publish', {
+    id: 'unknown-status-publish', phase: 'PXX', stage: 'publish', status: 'unknown', owner: 'test', rationale: 'fixture',
+  });
+  try {
+    const result = run([join(scratch, 'scripts', 'verify-release.mjs'), '--stage=publish']);
+    assert.equal(result.status, 3, `expected exit 3, got ${result.status} stdout=${result.stdout} stderr=${result.stderr}`);
+    assert.match(result.stderr, /unknown-status-publish/);
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }

@@ -4,7 +4,7 @@
 // It runs the local CI gate, validates the gates document, and asks the
 // package verifier to compare the candidate against a fresh build.
 //
-// Contract (per the frozen PLAN.md, line 194-206):
+// Contract:
 //   * no network, no git read for "latest", no service startup
 //   * no installs, no publication
 //   * ABLETON_RC_DEV_SYNC must be unset (or "0"); the verifier refuses to
@@ -74,10 +74,6 @@ function parseArgs(argv) {
       opts.stage = a.slice('--stage='.length);
     } else if (a === '--quick') {
       opts.quick = true;
-    } else if (a === '--package' || a === '--build-dir' || a === '--report' || a === '--stage') {
-      // already handled above
-    } else if (a === '--package' || a === '--build-dir' || a === '--report' || a === '--stage') {
-      opts[a.slice(2).toLowerCase() === 'stage' ? 'stage' : a.slice(2)] = rest[++i];
     } else {
       console.error(`unknown argument: ${a}`);
       process.exit(2);
@@ -98,8 +94,6 @@ function guardEnvironment() {
   // operator forgot to clear the variable in the parent shell.
   process.env.ABLETON_RC_DEV_SYNC = '0';
 }
-
-const STAGE_KEYS = { '--package': 'package', '--build-dir': 'buildDir', '--report': 'report', '--stage': 'stage' };
 
 async function loadGates() {
   const path = resolve(repoRoot, 'dev', 'RELEASE-GATES-1.0.json');

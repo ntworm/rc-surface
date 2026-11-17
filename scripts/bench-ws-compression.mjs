@@ -7,6 +7,10 @@
 // payloads from the server to the client and reports: bytes on the wire,
 // compress ratio, server CPU, send latency and round-trip latency.
 //
+// Direction: the bench measures server-to-client sends. In the product the
+// phone is the sender and pushes control_frame to the server, so the frames
+// measured here are the bench's own send path, not the phone's uplink.
+//
 // Compression is off by default; --deflate turns perMessageDeflate on for
 // both ends, so a run with and a run without compression can be compared
 // on the same payload.
@@ -39,8 +43,9 @@ const CONTROL_NAMES = [
 //
 //   { type: 'control_frame', client_id, controls: [{ name, value }] }
 //
-// The bench pushes the same shape from the server to the client, so the
-// bytes measured here are the bytes a phone receives on the wire. Real
+// The bench pushes the same shape from the server to the client: the bench
+// measures the server-to-client send path, while the product sends in the
+// opposite direction (the phone sends control_frame to the server). Real
 // frames carry between 2 and 8 controls: one finger is one control, a
 // two-finger gesture is two, and the phone batches at most eight per
 // frame. The names stay stable across frames while the values drift
@@ -78,7 +83,7 @@ function runBenchmark(wss) {
     const samples = {
       serverSendLatencyMs: [],
       roundTripLatencyMs: [],
-      bytesOnWireServer: 0, // bytes server pushed into ws.send()
+      bytesOnWireServer: 0, // bytes server pushed into ws.send() (sum of payload.length)
       bytesOnWireClient: 0, // bytes client observed on the socket
       frames: 0,
     };
@@ -185,16 +190,25 @@ const sendP50 = percentile(result.samples.serverSendLatencyMs, 0.5);
 const sendP95 = percentile(result.samples.serverSendLatencyMs, 0.95);
 const sendP99 = percentile(result.samples.serverSendLatencyMs, 0.99);
 
+// The measured mean length of the payloads this run sent: the sum of
+// payload.length over the frames sent, divided by the frames sent. A run
+// that sent no frame reports 0 (never Infinity, never null).
+const payloadBytes = result.samples.frames > 0
+  ? +(result.samples.bytesOnWireServer / result.samples.frames).toFixed(3)
+  : 0;
+
 console.log([
   `ws compression bench: deflate ${result.deflate ? 'on' : 'off'}`,
   'payload shape: phone control_frame { type, client_id, controls[2..8] }',
-  'direction: server to client sends',
+  'direction: bench sends server to client; in the product the phone sends control_frame to the server',
+  'payloadBytes: measured mean payload length per frame sent',
 ].join('\n'));
 
 console.log(JSON.stringify({
   deflate: result.deflate,
   messages: result.samples.frames,
-  payloadBytes: FORCED_BYTES,
+  payloadBytes,
+  forcedPayloadBytes: FORCED_BYTES,
   totalBytesSentByApp: result.samples.bytesOnWireServer,
   totalBytesOnSocket: result.samples.bytesOnWireClient,
   compressionRatio: result.samples.bytesOnWireServer === 0
