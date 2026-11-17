@@ -1519,3 +1519,8 @@ body{
   background: transparent;
 }
 .target-note-duration-bars button { border: 1px solid var(--border); }
+
+/* Addresses copy with one click */
+.copy-url{cursor:copy;user-select:text;-webkit-user-select:text}
+.copy-url:hover{text-decoration:underline}
+.copy-url.copied::after{content:"  Copied!";color:var(--accent);font-family:var(--mono)}

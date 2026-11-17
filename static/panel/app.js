@@ -305,6 +305,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   initTabs();
   initCopyButtons();
+  initUrlCopy();
   initFooterActions();
   initAutostartToggle();
   buildCtrlGroups();
@@ -1226,7 +1227,7 @@ function updateServerUI() {
   // elements before the JS is updated to match.
   setTextIfPresent("mode-proto", serverInfo.useHttps ? "HTTPS" : "HTTP");
   setTextIfPresent("mode-port", serverInfo.port != null ? String(serverInfo.port) : "—");
-  setTextIfPresent("mode-cert", serverInfo.useHttps ? "Self-signed" : "n/a");
+  setTextIfPresent("mode-cert", serverInfo.useHttps ? (serverInfo.certUrl ? "Local CA" : "Self-signed") : "n/a");
 
   // Server CPU usage (consumed by the conn-strip VU meter via lastCpuUsage)
   lastCpuUsage = typeof serverInfo.cpuUsage === "number" ? serverInfo.cpuUsage : 0;
@@ -1273,7 +1274,42 @@ function initCopyButtons() {
   document.querySelectorAll("[data-url]").forEach(bindCopyButton);
 }
 
-function copyText(text, btn) {
+// Every address the panel shows can be copied with one click: the links
+// (Open, admin) copy their address and still open it, and the address texts
+// (QR, network, certificate) copy what they show.
+const URL_TEXT_SELECTOR = ".qr-url, #iface-primary-url, .net-cert-url";
+
+function initUrlCopy() {
+  document.querySelectorAll(URL_TEXT_SELECTOR).forEach(el => el.classList.add("copy-url"));
+  document.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+    const link = target.closest("a[href]");
+    if (link && /^https?:\/\//.test(link.href) && !link.hasAttribute("download")) {
+      copyText(link.href, link);
+      return;
+    }
+    const text = target.closest(URL_TEXT_SELECTOR);
+    const value = text ? text.textContent.trim() : "";
+    if (/^https?:\/\//.test(value)) copyText(value, null, text);
+  });
+}
+
+function flashCopied(el) {
+  el.classList.add("copied");
+  setTimeout(() => el.classList.remove("copied"), 1200);
+}
+
+function copyText(text, btn, flashEl) {
+  if (!btn) {
+    const done = () => flashCopied(flashEl);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, null, done));
+    } else {
+      fallbackCopy(text, null, done);
+    }
+    return;
+  }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => showCopied(btn)).catch(() => fallbackCopy(text, btn));
   } else {
@@ -1281,7 +1317,7 @@ function copyText(text, btn) {
   }
 }
 
-function fallbackCopy(text, btn) {
+function fallbackCopy(text, btn, done) {
   const ta = document.createElement("textarea");
   ta.value = text;
   ta.style.position = "fixed";
@@ -1290,7 +1326,8 @@ function fallbackCopy(text, btn) {
   ta.select();
   try {
     document.execCommand("copy");
-    showCopied(btn);
+    if (btn) showCopied(btn);
+    else if (done) done();
   } catch {}
   document.body.removeChild(ta);
 }
