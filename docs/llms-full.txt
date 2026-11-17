@@ -489,6 +489,9 @@ nothing about the network. Open the **Network** tab in the panel:
 In Live: *Extensions* menu → *Manage Extensions* → remove the entry.
 Then delete the cert folder under
 `Preferences/Extensions/<extension-id>/` if you want a clean slate.
+Delete the `session/controller-token` file there as well (or the whole
+`session/` folder): the next start draws a new controller token, and the
+phones that were paired come back as viewers.
 
 ## Trademarks
 
@@ -3268,6 +3271,7 @@ It does not collect, transmit, or store personal data beyond the user's own mach
 | Data | Where | Lifetime |
 |------|-------|----------|
 | Self-signed TLS certificate + private key | Ableton `storageDirectory/certs/` | Until user deletes storage or cert expires/regenerates |
+| Controller token | Ableton storage `storageDirectory/session/` | Until deleted |
 | Control mappings | Ableton storage `surface-v2/` | Persistent across sessions |
 | Mapping presets/projects | Ableton storage `surface-v2/` | Until deleted |
 | Phone preferences | Phone browser storage | Until browser data is cleared |

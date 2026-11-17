@@ -374,6 +374,9 @@ nada sobre a rede. Abra a aba **Rede** do painel:
 No Live: menu *Extensions* → *Manage Extensions* → remova a entrada.
 Depois apague a pasta de certificados em
 `Preferences/Extensions/<extension-id>/` se quiser começar do zero.
+Apague também o arquivo `session/controller-token` de lá (ou a pasta
+`session/` inteira): o próximo início gera um token de controlador novo, e os
+celulares que estavam pareados voltam como viewers.
 
 ## Marcas registradas
 

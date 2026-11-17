@@ -45,7 +45,10 @@ export async function loadControllerToken(): Promise<string | null> {
     // The session directory is created before anything is written into it.
     await fs.mkdir(sessionDir, { recursive: true });
     const stored = await readStoredToken(tokenPath);
-    if (stored !== null && TOKEN_PATTERN.test(stored)) return stored;
+    if (stored !== null && TOKEN_PATTERN.test(stored)) {
+      await tightenPermissions(tokenPath);
+      return stored;
+    }
     // No token yet, or a file that does not hold one: a new token is drawn.
     return await writeToken(sessionDir, tokenPath);
   } catch (err) {
@@ -67,6 +70,21 @@ async function readStoredToken(tokenPath: string): Promise<string | null> {
   } catch (err) {
     if (errorCode(err) === "ENOENT") return null;
     throw err;
+  }
+}
+
+/**
+ * Makes the token file readable by its owner only. A file left by an older
+ * start can carry wider permissions, and a failure here is never worth the
+ * token: the best effort is given up and the token is still used.
+ */
+async function tightenPermissions(tokenPath: string): Promise<void> {
+  try {
+    await fs.chmod(tokenPath, 0o600);
+  } catch (err) {
+    console.warn(
+      `[ableton-rc-surface] the controller token file keeps its permissions (${errorCode(err)})`,
+    );
   }
 }
 

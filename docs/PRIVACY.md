@@ -8,6 +8,7 @@ It does not collect, transmit, or store personal data beyond the user's own mach
 | Data | Where | Lifetime |
 |------|-------|----------|
 | Self-signed TLS certificate + private key | Ableton `storageDirectory/certs/` | Until user deletes storage or cert expires/regenerates |
+| Controller token | Ableton storage `storageDirectory/session/` | Until deleted |
 | Control mappings | Ableton storage `surface-v2/` | Persistent across sessions |
 | Mapping presets/projects | Ableton storage `surface-v2/` | Until deleted |
 | Phone preferences | Phone browser storage | Until browser data is cleared |

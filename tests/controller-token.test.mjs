@@ -118,6 +118,25 @@ test("the stored token is readable by its owner only", {
   });
 });
 
+test("a stored token file that is too open is tightened when it is loaded", {
+  skip: process.platform === "win32" ? "POSIX permissions only" : false,
+}, async () => {
+  await inStorage(async (dir) => {
+    const tokenPath = path.join(dir, "session", "controller-token");
+    await fs.mkdir(path.dirname(tokenPath), { recursive: true });
+    await fs.writeFile(tokenPath, "c".repeat(32));
+    await fs.chmod(tokenPath, 0o644);
+    const before = await fs.stat(tokenPath);
+    assert.equal(before.mode & 0o777, 0o644, "the file starts readable by anyone else");
+
+    const token = await loadControllerToken();
+
+    assert.equal(token, "c".repeat(32), "the stored token must be kept");
+    const after = await fs.stat(tokenPath);
+    assert.equal(after.mode & 0o777, 0o600, "the token file must not be readable by anyone else");
+  });
+});
+
 test("a persisted controller token is kept while the admin token rotates", () => {
   const persisted = "a".repeat(32);
   const controllerBefore = getControllerToken();

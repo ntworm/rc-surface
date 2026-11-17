@@ -377,6 +377,9 @@ nothing about the network. Open the **Network** tab in the panel:
 In Live: *Extensions* menu → *Manage Extensions* → remove the entry.
 Then delete the cert folder under
 `Preferences/Extensions/<extension-id>/` if you want a clean slate.
+Delete the `session/controller-token` file there as well (or the whole
+`session/` folder): the next start draws a new controller token, and the
+phones that were paired come back as viewers.
 
 ## Trademarks
 
