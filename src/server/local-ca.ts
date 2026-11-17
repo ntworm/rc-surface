@@ -47,6 +47,9 @@ const CA_LIFETIME_DAYS = 3650;
 const SERVER_LIFETIME_DAYS = 397;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** How many days the authority must still have to stay quiet about. */
+const CA_MIN_DAYS_LEFT = 90;
+
 /** The addresses the authority may sign for: the loopback, the private
  *  networks and the link-local ones. Anything else is the internet, and the
  *  authority has no business signing for it. */
@@ -203,10 +206,29 @@ async function readLocalCa(certPath: string, keyPath: string): Promise<LocalCa |
     const certificate = new X509Certificate(certPem);
     if (!certificate.ca) return null;
     if (!keyBelongsToCertificate(keyPem, certificate)) return null;
+    // An authority that has ended is no authority: a new one is made.
+    const remaining = certificate.validToDate.getTime() - Date.now();
+    if (remaining <= 0) {
+      console.warn(
+        "[ableton-rc-surface] the local certificate authority has ended; a new one is made",
+      );
+      return null;
+    }
+    warnWhenEndingSoon(remaining);
     return { certPem, keyPem, der: Buffer.from(certificate.raw) };
   } catch {
     return null;
   }
+}
+
+/** Says so when the authority is about to end: the phone holds it, and a
+ *  new one means the phone has to trust it again. */
+function warnWhenEndingSoon(remainingMs: number): void {
+  const days = Math.floor(remainingMs / DAY_MS);
+  if (days >= CA_MIN_DAYS_LEFT) return;
+  console.warn(
+    `[ableton-rc-surface] the local certificate authority ends in ${days} day(s)`,
+  );
 }
 
 /** The authority of this computer: the one that is already on disk, or a new

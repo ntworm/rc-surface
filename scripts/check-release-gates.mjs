@@ -6,7 +6,7 @@
 //   * does NOT convert unknown into pass
 //
 // Decision rule:
-//   * stage = local  -> accepted statuses: passed | pending
+//   * stage = local  -> accepted statuses: passed | pending | blocked
 //   * stage = publish -> accepted statuses: passed
 //   * any unknown status blocks the stage
 //   * any gate whose status is not in the allowed list blocks the stage
@@ -24,6 +24,17 @@ import { fileURLToPath } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '..');
+
+// The validator is imported by scripts/verify-release.mjs, so the CLI
+// part only runs when this file is the entry point of the process.
+function isEntryScript() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const selfPath = resolve(fileURLToPath(import.meta.url));
+  const entryPath = resolve(entry);
+  if (process.platform === 'win32') return selfPath.toLowerCase() === entryPath.toLowerCase();
+  return selfPath === entryPath;
+}
 
 function printHelp() {
   console.log(
@@ -86,7 +97,7 @@ async function loadGates(gatesPath) {
   }
 }
 
-function evaluate(parsed, stage) {
+export function evaluate(parsed, stage) {
   const accepted = acceptedFor(stage);
   const allStatuses = new Set(['passed', 'pending', 'blocked', 'unknown']);
   const blocking = [];
@@ -136,7 +147,9 @@ async function main() {
   console.log(`[check-release-gates] stage=${opts.stage} OK; ${evaluation.allowed.length} gate(s) accepted; report at ${reportPath}`);
 }
 
-main().catch(e => {
-  console.error(`[check-release-gates] unexpected: ${e?.message ?? e}`);
-  process.exit(2);
-});
+if (isEntryScript()) {
+  main().catch(e => {
+    console.error(`[check-release-gates] unexpected: ${e?.message ?? e}`);
+    process.exit(2);
+  });
+}

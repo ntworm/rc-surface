@@ -36,7 +36,7 @@
     'lp.top.007': { en: 'Controls', 'pt-BR': 'Controles' },
     'lp.top.008': { en: 'Situations', 'pt-BR': 'Situações' },
     'lp.top.009': { en: 'Install', 'pt-BR': 'Instalação' },
-    'lp.top.010': { en: 'When it fails', 'pt-BR': 'Quando não funciona' },
+    'lp.top.010': { en: 'Troubleshooting', 'pt-BR': 'Solução de problemas' },
     'lp.top.011': { en: 'Docs', 'pt-BR': 'Documentação' },
     'lp.top.012': { en: 'Live 12.4.5+ Suite', 'pt-BR': 'Live 12.4.5+ Suite' },
     'lp.top.013': { en: 'Made by <b>Gabriel Worm</b>', 'pt-BR': 'Feito por <b>Gabriel Worm</b>' },

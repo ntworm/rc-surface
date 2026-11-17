@@ -144,3 +144,52 @@ test('tracking metadata reaches the host for added poses G4 through G15',()=>{
   f.stream.push({name:'sensor.vision.gesture.16',value:1,tracking:{seq:16,qualified:true,graceMs:140}});
   f.tick(8);assert.equal(f.sent.flatMap(frame=>frame.controls).length,12);
 });
+
+test('a latest-value control keeps only its newest position', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  for (const value of [0.1, 0.2, 0.3]) f.stream.push({ name: 'sensor.vision.pinch', value }, { ordered: false });
+  f.socket.bufferedAmount = 0; f.tick(8);
+  assert.deepEqual(f.sent[0].controls, [{ name: 'sensor.vision.pinch', value: 0.3 }]);
+});
+
+test('300 analog pinch values never fill the ordered queue nor close the socket by age', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  for (let i = 0; i < 300; i++) f.stream.push({ name: 'sensor.vision.pinch', value: i / 299 }, { ordered: false });
+  assert.equal(f.socket.readyState, 1, 'a latest-value channel must not fill the ordered queue');
+  f.tick(300);
+  assert.equal(f.socket.readyState, 1, 'only ordered events age out and close the socket');
+});
+
+test('the same values as ordered events keep their order', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  for (const value of [0.1, 0.2, 0.3]) f.stream.push({ name: 'sensor.vision.pinch', value }, { ordered: true });
+  f.socket.bufferedAmount = 0; f.tick(8);
+  assert.deepEqual(f.sent[0].controls, [
+    { name: 'sensor.vision.pinch', value: 0.1 },
+    { name: 'sensor.vision.pinch', value: 0.2 },
+    { name: 'sensor.vision.pinch', value: 0.3 },
+  ]);
+});
+
+test('an ordered event replaces the pending value of the same name', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  f.stream.push({ name: 'sensor.vision.pinch', value: 0.4 }, { ordered: false });
+  // No option: the name decides, exactly like the lost events in app.js.
+  f.stream.push({ name: 'sensor.vision.pinch', value: 0, lost: true });
+  f.socket.bufferedAmount = 0; f.tick(8);
+  assert.deepEqual(f.sent[0].controls, [{ name: 'sensor.vision.pinch', value: 0, lost: true }]);
+});
+
+test('controls without the option keep the discrete/continuous behaviour', () => {
+  const f = fixture();
+  f.socket.bufferedAmount = 1;
+  f.stream.push({ name: 'pad-1', value: 1 });
+  f.stream.push({ name: 'pad-1', value: 1 });
+  f.stream.push({ name: 'fader-1', value: 0.5 });
+  f.socket.bufferedAmount = 0; f.tick(8);
+  assert.deepEqual(f.sent[0].controls, [{ name: 'pad-1', value: 1 }, { name: 'fader-1', value: 0.5 }]);
+});

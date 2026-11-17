@@ -7,7 +7,7 @@
 // the License at https://polyformproject.org/licenses/noncommercial/1.0.0
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, X509Certificate } from "node:crypto";
 import selfsigned from "selfsigned";
 import { getExtensionContext } from "../context.js";
 import { stripWslDrivePrefix } from "../util/helpers.js";
@@ -24,6 +24,11 @@ export let useHttps = false;
 export let httpsOptions: { key: Buffer; cert: Buffer } | null = null;
 
 type CertificateOptions = { key: Buffer; cert: Buffer };
+
+/** How many days a certificate must still have to be kept: one that is
+ *  about to end is renewed while Live opens, not when it fails. */
+const MIN_CERT_VALID_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 let certificateListener: ((options: CertificateOptions) => void) | null = null;
 
@@ -71,6 +76,16 @@ export function mergeCertAddresses(
 export function certificateCovers(address: string): boolean {
   if (httpsOptions === null) return false;
   return certCoversRequiredAltNames(httpsOptions.cert, [address]);
+}
+
+/** The days the certificate still has, or null when it cannot be read. */
+export function certificateDaysLeft(cert: Buffer | string): number | null {
+  try {
+    const { validToDate } = new X509Certificate(cert);
+    return Math.floor((validToDate.getTime() - Date.now()) / DAY_MS);
+  } catch {
+    return null;
+  }
 }
 
 // selfsigned's SubjectAltNameEntry has type: 1|2|6|7, value?: string,
@@ -249,12 +264,12 @@ export async function loadCerts(): Promise<void> {
       fs.readFile(keyPath),
       fs.readFile(certPath),
     ]);
-    const issuedHere = issuedByAuthority(cert, localCa);
-    if (certCoversRequiredAltNames(cert, lanIps) && issuedHere) {
+    const reason = whyRegenerate(cert, lanIps, localCa);
+    if (reason === null) {
       persisted = { key, cert };
     } else {
       console.log(
-        `[ableton-rc-surface] persisted HTTPS cert does not fit the authority (${lanIpText}); regenerating`,
+        `[ableton-rc-surface] persisted HTTPS cert ${reason} (${lanIpText}); regenerating`,
       );
     }
   } catch {
@@ -382,6 +397,23 @@ async function loadAuthority(certDir: string): Promise<LocalCa | null> {
 function issuedByAuthority(cert: Buffer, ca: LocalCa | null): boolean {
   if (ca === null) return true;
   return isIssuedByCa(cert.toString("utf8"), ca.certPem);
+}
+
+/**
+ * Why the certificate on disk cannot be kept, or null when it can: it has
+ * to come from the authority, to cover the addresses and to have time left.
+ */
+function whyRegenerate(
+  cert: Buffer,
+  lanIps: string[],
+  ca: LocalCa | null,
+): string | null {
+  if (!issuedByAuthority(cert, ca)) return "does not fit the authority";
+  if (!certCoversRequiredAltNames(cert, lanIps)) return "does not cover the addresses";
+  const days = certificateDaysLeft(cert);
+  if (days === null) return "has no readable validity";
+  if (days < MIN_CERT_VALID_DAYS) return `has only ${days} days of validity left`;
+  return null;
 }
 
 /**

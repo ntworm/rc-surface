@@ -56,3 +56,24 @@ test("cert.ts detects persisted certs that are missing the current LAN IP SAN", 
     true,
   );
 });
+
+test("cert.ts counts the days a certificate still has", async () => {
+  const { buildSubjectAltNames, certificateDaysLeft } = await import("../src/server/cert.ts");
+  const attrs = [{ name: "commonName", value: "ableton-rc-surface.local" }];
+  const day = 24 * 60 * 60 * 1000;
+  const endingIn = (days) => selfsigned.generate(attrs, {
+    ...certOptions(buildSubjectAltNames([])),
+    notAfterDate: new Date(Date.now() + days * day),
+  });
+
+  const endingDays = certificateDaysLeft((await endingIn(10)).cert);
+  assert.ok(endingDays !== null && endingDays >= 9 && endingDays <= 10,
+    `a certificate that ends in ten days has ten days left: ${endingDays}`);
+
+  const freshDays = certificateDaysLeft((await endingIn(365)).cert);
+  assert.ok(freshDays !== null && freshDays >= 364 && freshDays <= 365,
+    `a certificate that ends in a year has a year left: ${freshDays}`);
+
+  assert.equal(certificateDaysLeft("not a certificate"), null,
+    "a certificate that cannot be read has no days left to count");
+});

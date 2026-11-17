@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
-import { writeFile, readFile, rm } from 'node:fs/promises';
+import { writeFile, readFile, rm, copyFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -67,6 +67,35 @@ test('check-release-gates --stage local is permissive of pending', () => {
   // blocked gate (P10 distribution). Under stage=local, blocked is
   // treated as not-yet-passed but allowed; pending is also allowed.
   assert.equal(result.status, 0, `expected OK, got ${result.status} stderr=${result.stderr}`);
+});
+
+test('verify-release blocks an unknown gate status at stage local', async () => {
+  // verify-release reads the gates document from its own repository root,
+  // so the fixture runs a copy of the verifier in a scratch directory.
+  const scratch = join(reportDir, 'verify-release-unknown-status');
+  await mkdir(join(scratch, 'scripts'), { recursive: true });
+  await mkdir(join(scratch, 'dev'), { recursive: true });
+  await copyFile(
+    join(repoRoot, 'scripts', 'verify-release.mjs'),
+    join(scratch, 'scripts', 'verify-release.mjs'),
+  );
+  await copyFile(
+    join(repoRoot, 'scripts', 'check-release-gates.mjs'),
+    join(scratch, 'scripts', 'check-release-gates.mjs'),
+  );
+  await writeFile(join(scratch, 'dev', 'RELEASE-GATES-1.0.json'), JSON.stringify({
+    schema_version: 1,
+    gates: [
+      { id: 'unknown-status', phase: 'PXX', stage: 'local', status: 'unknown', owner: 'test', rationale: 'fixture' },
+    ],
+  }));
+  try {
+    const result = run([join(scratch, 'scripts', 'verify-release.mjs')]);
+    assert.equal(result.status, 3, `expected exit 3, got ${result.status} stdout=${result.stdout} stderr=${result.stderr}`);
+    assert.match(result.stderr, /unknown-status/);
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
 });
 
 test('verify-release-package refuses to write the report inside the payload', async () => {

@@ -263,7 +263,7 @@
       enabled: window.phoneWs?.controlStreamVersion === 1,
     }),
   });
-  window.onControl = (ctrl) => {
+  window.onControl = (ctrl, opts) => {
     // The UI may display physical units (Hz), but the
     // mapping engine has one input contract: finite 0..1 values. Normalize at
     // this single boundary so curve previews, persisted live state, and the
@@ -291,7 +291,10 @@
     const idx = state.controls.findIndex(c => c.name === ctrl.name);
     if (idx >= 0) state.controls[idx] = ctrl;
     else state.controls.push(ctrl);
-    if (!applyingRemoteControls) controlStream?.push(ctrl);
+    // The options describe how this control travels (ordered event or latest
+    // value). They stay out of the control itself, which remains a plain
+    // measurement for the mapping engine.
+    if (!applyingRemoteControls) controlStream?.push(ctrl, opts);
   };
 
   window.onModulatorState = (modulator) => {
@@ -2661,10 +2664,13 @@
             // mode A so the wire exposes the continuous control surface. Mode
             // C replaces it with the latched toggle.
             if (visionControls.detectorEnabled('pinch')) {
+              // The two modes travel differently: the latched toggle is an
+              // ordered event that must not be dropped, while the analog
+              // position is a latest value that must not pile up.
               if (state.visionModes.pinch === 'C') {
-                window.onControl({ name: 'sensor.vision.pinch', value: state.visionToggle.pinch });
+                window.onControl({ name: 'sensor.vision.pinch', value: state.visionToggle.pinch }, { ordered: true });
               } else {
-                window.onControl({ name: 'sensor.vision.pinch', value: data.pinchVal ?? 0 });
+                window.onControl({ name: 'sensor.vision.pinch', value: data.pinchVal ?? 0 }, { ordered: false });
               }
             }
             // The clutch: pinch to engage, then the hand's travel drives three

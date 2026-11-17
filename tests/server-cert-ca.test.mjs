@@ -28,7 +28,7 @@ import {
   httpsOptions,
   loadCerts,
 } from '../src/server/cert.ts';
-import { isIssuedByCa, loadOrCreateLocalCa } from '../src/server/local-ca.ts';
+import { isIssuedByCa, loadOrCreateLocalCa, CA_COMMON_NAME } from '../src/server/local-ca.ts';
 import {
   actualCaPort,
   actualHttpsPort,
@@ -68,6 +68,57 @@ async function storageDir() {
 /** The authority that the server keeps in the certs folder. */
 function authorityOf(dir) {
   return loadOrCreateLocalCa(path.join(dir, 'certs'));
+}
+
+/** The milliseconds of a day. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The bytes of a PEM text. */
+const derOf = (pem) =>
+  Buffer.from(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''), 'base64');
+
+/**
+ * A certificate of the server signed by the authority, with the validity we
+ * choose: the days it has left before it ends.
+ */
+async function leafSignedBy(ca, days, ips) {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const keyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const algorithm = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+  const publicKey = await crypto.subtle.importKey(
+    'spki', createPublicKey(keyPem).export({ type: 'spki', format: 'der' }), algorithm, true, ['verify'],
+  );
+  const signingKey = await crypto.subtle.importKey(
+    'pkcs8', derOf(ca.keyPem), algorithm, false, ['sign'],
+  );
+  const notBefore = new Date(Date.now() - DAY_MS);
+  const certificate = await X509CertificateGenerator.create({
+    subject: [{ CN: ['ableton-rc-surface.local'] }],
+    issuer: [{ CN: [CA_COMMON_NAME] }],
+    publicKey,
+    signingKey,
+    notBefore,
+    notAfter: new Date(notBefore.getTime() + days * DAY_MS),
+    signingAlgorithm: algorithm,
+    extensions: [
+      new SubjectAlternativeNameExtension([
+        { type: 'dns', value: 'localhost' },
+        { type: 'ip', value: '127.0.0.1' },
+        ...ips.map(ip => ({ type: 'ip', value: ip })),
+      ], false),
+    ],
+  });
+  return { cert: certificate.toString('pem'), key: keyPem };
+}
+
+/** The certificate of the server that the next start will find. */
+function writeServerCerts(dir, leaf) {
+  const certPath = path.join(dir, 'certs', 'ableton-rc-server.crt');
+  const keyPath = path.join(dir, 'certs', 'ableton-rc-server.key');
+  return Promise.all([
+    fs.writeFile(certPath, leaf.cert),
+    fs.writeFile(keyPath, leaf.key),
+  ]);
 }
 
 test('the certificate of the server is signed by the authority of this computer', async t => {
@@ -130,6 +181,56 @@ test('a certificate the authority did not sign is replaced', async t => {
     true,
     'the certificate must come from the authority',
   );
+});
+
+test('a certificate that is about to end is renewed when Live opens', async t => {
+  const dir = await storageDir();
+  setExtensionContext({ environment: { storageDirectory: dir } });
+  setNetworkSnapshot(snapshotOf(['192.168.100.16']));
+  t.after(async () => {
+    setExtensionContext(null);
+    setNetworkSnapshot(null);
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  await loadCerts();
+  const ca = await authorityOf(dir);
+
+  // A certificate of the authority that ends in ten days: it still works,
+  // but it will not work for long.
+  const ending = await leafSignedBy(ca, 10, ['192.168.100.16']);
+  await writeServerCerts(dir, ending);
+
+  await loadCerts();
+
+  assert.notEqual(httpsOptions.cert.toString('utf8'), ending.cert,
+    'the certificate that was about to end must not be kept');
+  assert.equal(isIssuedByCa(httpsOptions.cert.toString('utf8'), ca.certPem), true,
+    'the same authority signs the new certificate');
+  assert.ok(certCoversRequiredAltNames(httpsOptions.cert, ['192.168.100.16']),
+    'the address is still named');
+});
+
+test('a certificate with time left on it is kept', async t => {
+  const dir = await storageDir();
+  setExtensionContext({ environment: { storageDirectory: dir } });
+  setNetworkSnapshot(snapshotOf(['192.168.100.16']));
+  t.after(async () => {
+    setExtensionContext(null);
+    setNetworkSnapshot(null);
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  await loadCerts();
+  const ca = await authorityOf(dir);
+
+  const fresh = await leafSignedBy(ca, 200, ['192.168.100.16']);
+  await writeServerCerts(dir, fresh);
+
+  await loadCerts();
+
+  assert.equal(httpsOptions.cert.toString('utf8'), fresh.cert,
+    'the certificate is kept as it is');
 });
 
 test('a new address is signed by the authority, and the old ones stay', async t => {

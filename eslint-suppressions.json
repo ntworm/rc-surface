@@ -121,7 +121,7 @@
   },
   "scripts/verify-release.mjs": {
     "complexity": {
-      "count": 4
+      "count": 3
     }
   },
   "src/extension.ts": {
