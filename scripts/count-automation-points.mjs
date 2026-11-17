@@ -244,7 +244,7 @@ function windowOf(times, window, secondsPerBeat) {
     distinctTimes,
     eventsPerSecond: round(inside.length / duration, 2),
     pointsPerSecond: round(distinctTimes / duration, 2),
-    ratio: inside.length ? round(distinctTimes / inside.length, 3) : 0,
+    distinctPerEvent: inside.length ? round(distinctTimes / inside.length, 3) : 0,
   };
 }
 
@@ -305,7 +305,7 @@ function formatWindow(window) {
     `    distinct times: ${window.distinctTimes}`,
     `    events/s: ${window.eventsPerSecond.toFixed(2)}`,
     `    points/s: ${window.pointsPerSecond.toFixed(2)}`,
-    `    ratio: ${window.ratio.toFixed(3)}`,
+    `    distinct per event: ${window.distinctPerEvent.toFixed(3)}`,
   ].join("\n");
 }
 

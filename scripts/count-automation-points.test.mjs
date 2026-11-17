@@ -122,7 +122,7 @@ test("summarize splits the points per window and per second", () => {
   assert.equal(report.windows[0].distinctTimes, 3);
   assert.equal(report.windows[0].durationSeconds, 1);
   assert.equal(report.windows[0].pointsPerSecond, 3);
-  assert.equal(report.windows[0].ratio, 0.75);
+  assert.equal(report.windows[0].distinctPerEvent, 0.75);
   assert.equal(report.windows[1].events, 1);
   assert.deepEqual(report.perSecond.map((b) => b.events), [4, 1]);
   assert.deepEqual(report.perSecond.map((b) => b.distinctTimes), [3, 1]);

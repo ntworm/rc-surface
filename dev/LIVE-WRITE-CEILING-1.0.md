@@ -8,7 +8,7 @@
 `teto_pontos_gravados/s = 45` (single) e `teto_efetivo = 45`. A tabela
 `LFO_SHAPE_MAX_HZ` em uso (sine 4, triangle 3, ramps 3, square 15) **não** é
 confirmada por essa medição: a regra derivada com `teto_efetivo = 45` daria
-square 11. A decisão é do item 18 da lista de mudanças de 2026-11-16; o código não muda.
+triangle e rampas 2 e square 11. A decisão é do item 18 da lista de mudanças de 2026-11-16; o código não muda.
 
 ## 1. Setup
 
@@ -125,9 +125,14 @@ matriz inteira do Utility Output de uma vez:
    `node scripts/count-automation-points.mjs <cópia>.als --device-class StereoGain --param Gain --bpm 120 --window 34.66:54.66 --window 54.66:74.66 --window 74.66:94.66 --window 94.66:114.66`
    — o primeiro ponto gravado está no beat 34,66; cada janela de 20 beats
    (10 s) cobre uma célula, na ordem single, parallel 2, parallel 4 e
-   parallel 8. As bordas variam ±2 pontos.
+   parallel 8. As bordas variam ±2 pontos; os 37 eventos depois do beat
+   114,66 (fim da última célula) ficam fora das janelas e só entram no total.
+   O envelope do Output do Utility nesse set é o `PointeeId 22207`
+   (`--pointee 22207` dá o mesmo resultado). O script mostra também
+   `distinct per event` (pontos distintos por evento), que não é a coluna
+   "pontos por escrita" da tabela.
 
-| célula | escritas (janela) | escritas/s (bench) | pontos distintos | pontos/s (contagem) | razão | eventos (envelope) |
+| célula | escritas (janela) | escritas/s (bench) | pontos distintos | pontos/s (contagem) | pontos por escrita | eventos (envelope) |
 | --- | --- | --- | --- | --- | --- | --- |
 | Utility Output — single | 473 | 47.1 | 452 | 45.2 | 0.96 | 688 |
 | Utility Output — parallel 2 | 916 | 91.3 | 879 | 87.9 | 0.96 | 1701 |
@@ -138,7 +143,7 @@ Leitura: o gargalo do caminho de produção (single-flight, uma escrita por
 vez) é o do single — 452 pontos distintos na janela de 10 s, ou seja
 `teto_pontos_gravados/s = 45`. Com 4 escritas em voo o Live grava 1258
 pontos distintos na mesma janela (125,8 pontos/s) para 1721 escritas: a razão
-cai para 0.73, e o gravador do Live satura em ≈ 125–135 pontos/s. Até ≈ 90
+(pontos distintos por escrita) cai para 0.73, e o gravador do Live satura em ≈ 125–135 pontos/s. Até ≈ 90
 escritas/s quase toda escrita vira ponto. O padrão em degraus faz o Live
 gravar duas vezes o mesmo instante em muitas mudanças, por isso a coluna de
 eventos é maior que a de pontos distintos.
