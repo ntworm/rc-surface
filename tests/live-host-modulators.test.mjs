@@ -245,7 +245,8 @@ test("host synced LFO applies updated shape while already active", async () => {
     await tickHostModulators(0);
 
     assert.ok(applied.includes(0.5));
-    assert.equal(applied.at(-2), 0, "switch releases the previous waveform");
+    assert.deepEqual(applied, [0.5, 0, 1, 1],
+      "the switch releases the previous waveform, and the overlap confirms the newest value");
     assert.equal(applied.at(-1), 1);
     assert.equal(hostModulators.get("client-1::toggle-1")?.shape, "square");
   } finally {

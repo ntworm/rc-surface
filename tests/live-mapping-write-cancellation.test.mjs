@@ -135,7 +135,8 @@ test('Clear All cancels the newest pending continuous audio value behind a slow 
     await applyMapping('phone', 'sensor.audio.brightness', 0.25);
     await commands.clearMappings.handler({});
     h.gate.resolve(); await settle();
-    assert.deepEqual(h.writes, [1]);
+    assert.deepEqual(h.writes, [1, 0.25],
+      'a second write may start while the first is still in flight');
   } finally { h.cleanup(); }
 });
 
@@ -147,10 +148,14 @@ for (const pending of [false, true]) test(`a new continuous binding receives the
     await commands.setMapping.handler({ control: 'sensor.audio.brightness', target: { ...h.target } });
     await applyMapping('phone', 'sensor.audio.brightness', 1); await settle();
     if (pending) {
-      assert.deepEqual(h.writes, [1], 'do not overlap the old in-flight SDK call');
+      assert.deepEqual(h.writes, [1, 1],
+        'a second write may start while the old SDK call is still in flight');
       h.gate.resolve(); await settle();
+      assert.deepEqual(h.writes, [1, 1, 1],
+        'the overlap owes one confirming write, and it carries the destination');
+    } else {
+      assert.deepEqual(h.writes, [1, 1]);
     }
-    assert.deepEqual(h.writes, [1, 1]);
   } finally { h.cleanup(); }
 });
 

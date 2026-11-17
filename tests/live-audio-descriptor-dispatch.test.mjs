@@ -67,10 +67,12 @@ test("slow audio pulses coalesce by physical target and disconnect supersedes th
       assert.deepEqual(f.writes[1], [0.25], control + " must not starve independent discrete targets");
       await button;
       await handleClientDisconnect("audio-slow");
-      assert.deepEqual(f.writes[0], [1]);
+      assert.deepEqual(f.writes[0], [1, 0.8, 0.6, 0.4, 0],
+        "two writes may be in flight, and the disconnect releases the target to zero");
       f.release(); await first; await drainMicrotasks();
-      assert.deepEqual(f.writes[0], [1, 0], control + " must discard obsolete envelope frames");
-      assert.equal(f.maxConcurrent[0], 1);
+      assert.deepEqual(f.writes[0], [1, 0.8, 0.6, 0.4, 0, 0],
+        control + " must discard obsolete envelope frames");
+      assert.equal(f.maxConcurrent[0], 2, "at most two writes may be in flight for one parameter");
     } finally {
       f.release(); await first; await drainMicrotasks(); cleanup();
     }
@@ -89,10 +91,12 @@ test(descriptor + " batch plus snapshot stays single-flight across clients and a
       lastMappedInputAt.set(client + "::sensor.audio." + descriptor, Date.now());
       await applyMapping(client, "sensor.audio." + descriptor, value);
     }
-    assert.equal(f.maxConcurrent[0], 1, "the snapshot must not open a second writer");
-    assert.deepEqual(f.writes[0], [0.2]);
+    assert.equal(f.maxConcurrent[0], 2, "two writes may be in flight for one parameter");
+    assert.deepEqual(f.writes[0], [0.2, 0.8, 0.6],
+      "the snapshot may open a second write, never a third");
     f.release(); await first; await drainMicrotasks();
-    assert.deepEqual(f.writes[0], [0.2, 0.6]);
+    assert.deepEqual(f.writes[0], [0.2, 0.8, 0.6, 0.6],
+      "the overlap owes one confirming write, and it carries the destination");
   } finally {
     f.release(); await first; await drainMicrotasks(); cleanup();
   }

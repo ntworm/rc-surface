@@ -87,13 +87,14 @@ test('sustained 4Hz LFO delivers the newest sample after each slow SDK completio
     for (let cycle = 0; cycle < 24; cycle++) {
       const countBefore = h.writes.length;
       for (let ms = 0; ms < stalls[cycle % stalls.length]; ms += 4) await h.advance(4);
-      assert.equal(h.writes.length, countBefore, 'only one write may remain in flight');
+      assert.ok(h.writes.length <= countBefore + 1,
+        'at most two writes may be in flight for one parameter');
       await h.acknowledge();
-      assert.equal(h.writes.length, countBefore + 1, 'the newest sample drains without a timer tick');
+      assert.ok(h.writes.length >= countBefore + 1, 'the newest sample drains without a timer tick');
       const ideal = 0.5 - 0.5 * Math.cos(2 * Math.PI * 4 * h.elapsed() / 1000);
       assert.ok(Math.abs(h.writes.at(-1).value - ideal) < 1e-7,
         `stale LFO sample after ${h.elapsed()} ms: ${h.writes.at(-1).value}, expected ${ideal}`);
-      assert.equal(h.maxInFlight(), 1);
+      assert.equal(h.maxInFlight(), 2, 'at most two writes may be in flight for one parameter');
     }
     await h.acknowledge();
     const settledCount = h.writes.length;
@@ -110,18 +111,20 @@ for (const smooth of [0, 0.8]) test(`LFO OFF discards a sustained 4Hz pending ta
     await h.advance(0);
     // Two seconds of generation while the first SDK promise remains blocked.
     for (let elapsed = 0; elapsed < 2032; elapsed += 4) await h.advance(4);
-    assert.equal(h.writes.length, 1);
+    assert.equal(h.writes.length, 2, 'a second write may start while the first is in flight');
     h.update({ active: false });
     await drainMicrotasks();
     assert.equal(hostModulators.size, 0);
     await h.acknowledge();
-    assert.deepEqual(h.writes.map(write => write.value), [0.2, 0],
+    assert.equal(h.writes.length, 3, 'the OFF drains after the two writes in flight');
+    assert.equal(h.writes[0].value, 0.2, 'the sample that was already sent stays first');
+    assert.equal(h.writes.at(-1).value, 0,
       'OFF must be next after the already-sent sample, without a smoothing tail');
     while (h.pending.length) await h.acknowledge();
     const stoppedCount = h.writes.length;
     await h.advance(5000);
     assert.equal(h.writes.length, stoppedCount);
-    assert.equal(h.maxInFlight(), 1);
+    assert.equal(h.maxInFlight(), 2, 'at most two writes may be in flight for one parameter');
   } finally { await h.close(); }
 });
 
@@ -136,13 +139,16 @@ for (const cancelAll of [false, true]) test(`LFO target restart preserves a slow
     actuator.cancel(cancelAll ? undefined : 'gain');
     request(0.6); await drainMicrotasks();
     request(0.9); await drainMicrotasks();
-    assert.equal(sdk.maxInFlight(), 1, 'cancellation cannot cancel an SDK call already sent');
-    assert.deepEqual(sdk.writes.map(write => write.value), [0.2]);
+    assert.equal(sdk.maxInFlight(), 2,
+      'cancellation cannot cancel an SDK call already sent, and a second one may start');
+    assert.deepEqual(sdk.writes.map(write => write.value), [0.2, 0.6]);
     await sdk.acknowledge();
-    assert.deepEqual(sdk.writes.map(write => write.value), [0.2, 0.9]);
-    await sdk.acknowledge();
+    assert.deepEqual(sdk.writes.map(write => write.value), [0.2, 0.6, 0.9]);
+    while (sdk.pending.length) await sdk.acknowledge();
     await actuator.settle();
-    assert.equal(sdk.maxInFlight(), 1);
+    assert.deepEqual(sdk.writes.map(write => write.value), [0.2, 0.6, 0.9, 0.9],
+      'the overlap owes one confirming write, and it carries the destination');
+    assert.equal(sdk.maxInFlight(), 2, 'at most two writes may be in flight for one parameter');
   } finally {
     actuator.stop();
     while (sdk.pending.length) sdk.pending.shift()();
