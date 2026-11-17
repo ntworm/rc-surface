@@ -155,9 +155,18 @@ export function recordControlFrame(clientId: string, timing: FrameTiming | null,
   if (timing.ageMs !== undefined) phoneQueue.push(timing.ageMs);
   if (timing.rttMs !== undefined) halfRtt.push(timing.rttMs / 2);
   hostDispatch.push(dispatchMs);
-  // The age of this frame, in milliseconds: the queue of the phone, the half
-  // of the round trip and the dispatch of the host. The write of Live is not
-  // part of it, so the percentiles of the ring are the age of the frames.
+  recordFrameAge(state, timing, dispatchMs);
+}
+
+/**
+ * The age of one frame, in milliseconds: the queue of the phone, the half of
+ * the round trip and the dispatch of the host. The write of Live is not part
+ * of it, so the percentiles of the ring are the age of the frames. The phone
+ * drops the items that grew older than its own limit before it sends them, so
+ * a frame whose queue alone reached the limit arrives with its oldest item
+ * already cut.
+ */
+function recordFrameAge(state: ClientState, timing: FrameTiming, dispatchMs: number): void {
   if (timing.ageMs !== undefined && timing.rttMs !== undefined) {
     const frameAgeMs = timing.ageMs + timing.rttMs / 2 + dispatchMs;
     frameAge.push(frameAgeMs);
@@ -166,9 +175,6 @@ export function recordControlFrame(clientId: string, timing: FrameTiming | null,
       state.overMaxAge += 1;
     }
   }
-  // The phone drops the items that grew older than its own limit before it
-  // sends them, so a frame whose queue alone reached the limit arrives with
-  // its oldest item already cut.
   if (timing.ageMs !== undefined && timing.ageMs >= PHONE_MAX_AGE_MS) {
     queueAtLimitCount += 1;
     state.queueAtLimit += 1;
