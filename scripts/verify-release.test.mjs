@@ -5,6 +5,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { writeFile, readFile, rm, copyFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from './verify-release.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -138,4 +139,36 @@ test('verify-release-package refuses to write the report inside the payload', as
   assert.equal(result.status, 4);
   assert.ok(existsSync(join(reportDir, 'stub-report.json')), 'report must be written under test-results/');
   assert.ok(!existsSync(join(tmpDist, 'stub-report.json')), 'report must NOT live inside the build dir');
+});
+
+test('verify-release accepts a separate value for every option, exactly like the = form', () => {
+  const argv = (...args) => ['node', 'verify-release.mjs', ...args];
+  const pairs = [
+    [['--package', 'candidate.ablx'], ['--package=candidate.ablx']],
+    [['--build-dir', 'out'], ['--build-dir=out']],
+    [['--report', 'report.json'], ['--report=report.json']],
+    [['--stage', 'publish'], ['--stage=publish']],
+  ];
+  for (const [separate, equals] of pairs) {
+    assert.deepEqual(
+      parseArgs(argv(...separate)),
+      parseArgs(argv(...equals)),
+      `${separate.join(' ')} must parse like ${equals.join(' ')}`,
+    );
+  }
+  // The separate form must land on the documented key, not on a key named
+  // after the option itself.
+  assert.deepEqual(parseArgs(argv('--build-dir', 'out')), {
+    package: null,
+    buildDir: 'out',
+    report: null,
+    stage: 'local',
+    quick: false,
+  });
+});
+
+test('verify-release refuses an option that is missing its value', () => {
+  const result = run([join('scripts', 'verify-release.mjs'), '--build-dir']);
+  assert.equal(result.status, 2, `expected exit 2, got ${result.status} stdout=${result.stdout} stderr=${result.stderr}`);
+  assert.match(result.stderr, /unknown argument: --build-dir/);
 });

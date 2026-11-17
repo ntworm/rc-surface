@@ -16,10 +16,10 @@ import { fileURLToPath } from 'node:url';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '..');
 
-// The ceiling is the baseline measured on 2026-11-17: 617 suppressions over
+// The ceiling is the baseline measured on 2026-11-17: 616 suppressions over
 // 144 files. It only ever goes down: lower this number when the debt
 // shrinks, never raise it.
-const MAX_SUPPRESSIONS = 617;
+const MAX_SUPPRESSIONS = 616;
 
 // Sums every `count` of an ESLint bulk-suppressions document.
 export function sumSuppressions(suppressions) {

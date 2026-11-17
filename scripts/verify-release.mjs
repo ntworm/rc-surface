@@ -33,6 +33,17 @@ import { evaluate } from './check-release-gates.mjs';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '..');
 
+// The verifier is also imported by scripts/verify-release.test.mjs, so the
+// CLI part only runs when this file is the entry point of the process.
+function isEntryScript() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const selfPath = resolve(fileURLToPath(import.meta.url));
+  const entryPath = resolve(entry);
+  if (process.platform === 'win32') return selfPath.toLowerCase() === entryPath.toLowerCase();
+  return selfPath === entryPath;
+}
+
 function printHelp() {
   console.log(
     'verify-release.mjs — local-only release verifier.\n' +
@@ -47,7 +58,17 @@ function printHelp() {
   );
 }
 
-function parseArgs(argv) {
+// Every option that takes a value, mapped to the key it writes. Both
+// spellings of an option ('--build-dir out' and '--build-dir=out') name
+// the same key, so the two forms cannot drift apart.
+const VALUE_OPTIONS = new Map([
+  ['--package', 'package'],
+  ['--build-dir', 'buildDir'],
+  ['--report', 'report'],
+  ['--stage', 'stage'],
+]);
+
+export function parseArgs(argv) {
   const opts = {
     package: null,
     buildDir: 'dist',
@@ -62,16 +83,15 @@ function parseArgs(argv) {
       printHelp();
       process.exit(0);
     }
-    if (a === '--package' || a === '--build-dir' || a === '--report' || a === '--stage') {
-      opts[a.slice(2).replace(/^./, c => c.toLowerCase()) === 'stage' ? 'stage' : a.slice(2)] = rest[++i];
-    } else if (a.startsWith('--package=')) {
-      opts.package = a.slice('--package='.length);
-    } else if (a.startsWith('--build-dir=')) {
-      opts.buildDir = a.slice('--build-dir='.length);
-    } else if (a.startsWith('--report=')) {
-      opts.report = a.slice('--report='.length);
-    } else if (a.startsWith('--stage=')) {
-      opts.stage = a.slice('--stage='.length);
+    const eq = a.indexOf('=');
+    const key = VALUE_OPTIONS.get(eq === -1 ? a : a.slice(0, eq));
+    if (key !== undefined) {
+      const value = eq === -1 ? rest[++i] : a.slice(eq + 1);
+      if (value === undefined) {
+        console.error(`unknown argument: ${a}`);
+        process.exit(2);
+      }
+      opts[key] = value;
     } else if (a === '--quick') {
       opts.quick = true;
     } else {
@@ -261,7 +281,9 @@ async function main() {
   console.log('[verify-release] OK');
 }
 
-main().catch(e => {
-  console.error(`[verify-release] unexpected error: ${e?.message ?? e}`);
-  process.exit(2);
-});
+if (isEntryScript()) {
+  main().catch(e => {
+    console.error(`[verify-release] unexpected error: ${e?.message ?? e}`);
+    process.exit(2);
+  });
+}
