@@ -11,7 +11,7 @@
 // phone trusts the authority once; every certificate after that comes from
 // it, so the browser stops warning about the address.
 
-import { createPublicKey, generateKeyPairSync, X509Certificate } from "node:crypto";
+import { createPublicKey, generateKeyPairSync, webcrypto, X509Certificate } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
@@ -26,8 +26,14 @@ import {
   SubjectKeyIdentifierExtension,
   X509Certificate as PeculiarCertificate,
   X509CertificateGenerator,
+  cryptoProvider,
   type JsonGeneralNames,
 } from "@peculiar/x509";
+
+// The extension host of Live has no global `crypto`, so both this file and
+// @peculiar/x509 take the Web Crypto of Node.
+const crypto = webcrypto as unknown as Crypto;
+cryptoProvider.set(crypto);
 
 /** The name the authority carries. */
 export const CA_COMMON_NAME = "RC Surface local CA";
