@@ -19,6 +19,11 @@ export function validVisionTracking(value: unknown): value is VisionTracking {
 }
 type Entry = {client: string; control: string; lastQualified: number; grace: number; lost: boolean;
   expired: boolean; token: object; timer: unknown; current: () => boolean; sequence: number};
+// Ableton Live's ExtensionHost has no global performance, so fall back to Date.now().
+const defaultNow = (): number =>
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
 export class VisionLossWatchdog {
   private entries = new Map<string, Entry>();
   private sequences = new Map<string, number>();
@@ -29,7 +34,7 @@ export class VisionLossWatchdog {
     feedback?: (client: string, control: string, state: string, remainingMs: number | null, sequence: number) => void;
     now?: () => number; set?: (fn: () => void, ms: number) => unknown; clear?: (id: unknown) => void;
   }) {}
-  private now = (): number => (this.options.now || (() => performance.now()))();
+  private now = (): number => (this.options.now || defaultNow)();
   private clear(entry: Entry) { if (entry.timer != null) (this.options.clear || (id => clearTimeout(id as any)))(entry.timer); entry.timer = null; }
   private notify(entry: Entry, state: string) {
     const p = this.options.policy();
