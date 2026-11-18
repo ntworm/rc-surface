@@ -354,12 +354,12 @@
         <div class="xy-plot"><canvas data-xy="${esc(rawName)}" width="120" height="120"></canvas></div>
         <div class="kv">
           <div class="k" data-signal="${esc(rawName)}" title="${esc(rawName)}">${name}</div>
-          <div class="v">x:${c.x.toFixed(2)} y:${c.y.toFixed(2)}</div>
+          <div class="v">x:${Number(c.x).toFixed(2)} y:${Number(c.y).toFixed(2)}</div>
         </div>`;
     }
-    const val = (c.value !== undefined && c.value !== null) ? c.value.toFixed(2) : '0.00';
+    const val = (c.value !== undefined && c.value !== null) ? Number(c.value).toFixed(2) : '0.00';
     const pressure = (c.pressure !== undefined && c.pressure !== null)
-      ? ` · p=${c.pressure.toFixed(2)}` : '';
+      ? ` · p=${Number(c.pressure).toFixed(2)}` : '';
     return `
       <div class="kv">
         <div class="k" data-signal="${esc(rawName)}" title="${esc(rawName)}">${name}</div>
@@ -414,11 +414,11 @@
         if (!v) continue;
         let txt;
         if (c.x !== undefined && c.y !== undefined) {
-          txt = `x:${c.x.toFixed(2)} y:${c.y.toFixed(2)}`;
+          txt = `x:${Number(c.x).toFixed(2)} y:${Number(c.y).toFixed(2)}`;
         } else {
-          const val = (c.value !== undefined && c.value !== null) ? c.value.toFixed(2) : '0.00';
+          const val = (c.value !== undefined && c.value !== null) ? Number(c.value).toFixed(2) : '0.00';
           txt = val
-            + ((c.pressure !== undefined && c.pressure !== null) ? ` · p=${c.pressure.toFixed(2)}` : '');
+            + ((c.pressure !== undefined && c.pressure !== null) ? ` · p=${Number(c.pressure).toFixed(2)}` : '');
         }
         if (v.textContent !== txt) v.textContent = txt;
       }
@@ -463,7 +463,7 @@
     const touchesHtml = touches.length === 0
       ? '<span class="muted">none</span>'
       : touches.map(t =>
-          `<span class="touch">#${t.id} x:${t.x.toFixed(2)} y:${t.y.toFixed(2)} f:${(t.force ?? 0).toFixed(2)}</span>`
+          `<span class="touch">#${esc(t.id)} x:${Number(t.x).toFixed(2)} y:${Number(t.y).toFixed(2)} f:${Number(t.force ?? 0).toFixed(2)}</span>`
         ).join(' ');
     if (refs.bodies.touches.innerHTML !== touchesHtml) {
       refs.bodies.touches.innerHTML = touchesHtml;
@@ -727,7 +727,8 @@
   }
 
   function esc(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const text = (s === null || s === undefined || typeof s === "object") ? "" : String(s);
+    return text.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function connect() {
