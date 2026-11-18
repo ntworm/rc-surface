@@ -18,7 +18,7 @@
 
 import { WebSocket } from "ws";
 import { argv, exit } from "node:process";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { realpathSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -256,7 +256,10 @@ async function main() {
   console.error(`\nJSON written to: ${jsonPath}`);
 }
 
-const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+// Both sides go through realpath: on macOS the temp folder is a symlink and
+// the module URL already points at the real path.
+const isMain = process.argv[1] !== undefined
+  && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]));
 if (isMain) {
   main().catch((err) => {
     console.error("bench failed:", err.message);

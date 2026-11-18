@@ -17,7 +17,7 @@
 // never writes to the set: the only file it can write is the --json path.
 
 import { gunzipSync } from "node:zlib";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { argv } from "node:process";
@@ -356,5 +356,8 @@ function main() {
   }
 }
 
-const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+// Both sides go through realpath: on macOS the temp folder is a symlink and
+// the module URL already points at the real path.
+const isMain = process.argv[1] !== undefined
+  && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolve(process.argv[1]));
 if (isMain) main();
