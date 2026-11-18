@@ -9,6 +9,11 @@
 `LFO_SHAPE_MAX_HZ` em uso (sine 4, triangle 3, ramps 3, square 15) **não** é
 confirmada por essa medição: a regra derivada com `teto_efetivo = 45` daria
 triangle e rampas 2 e square 11. A decisão é do item 18 da lista de mudanças de 2026-11-16; o código não muda.
+Desde a task `rc-surface-duas-escritas-20261117` o atuador mantém até duas
+escritas em voo por parâmetro, e o destino mais recente sempre chega por
+último. Com duas em voo a mesma medição de 2026-11-17 deu 91,3 escritas/s e
+87,9 pontos gravados/s, logo `teto_efetivo_2 = 87`: a regra dá sine 8,
+triangle 5, rampas 5 e square 21, e a tabela em uso fica abaixo desse teto.
 
 ## 1. Setup
 
@@ -32,7 +37,8 @@ A bancada `benchDeviceParamWrites` (admin-only, comando registrado em
 devolve `{started, completed, failed, skipped, meanMs, p50Ms, p95Ms,
 maxMs, ratePerSecond, param: {name, min, max}}`. O caminho de produção
 (actuador + SDK) tem limitador real = latência de conclusão de
-`param.setValue` (single-flight em `pumpLane`), portanto medir a latência
+`param.setValue` (single-flight em `pumpLane` até 2026-11-17; desde então até
+duas escritas em voo por parâmetro), portanto medir a latência
 natural de conclusão **sem sleep** entre escritas é o que reproduz a taxa
 do caminho real.
 
@@ -108,6 +114,11 @@ escritas/s**. Paralelismo até 4 em voo quadruplica a taxa (181/s); 8 não
 acrescenta (mesmo teto: o host serializa em ~5,5 ms por escrita). `skipped`
 em parallel 2 é o intervalo de 5 ms batendo no limite de 2 em voo, esperado.
 
+Medição de 2026-11-17 (Utility Output, mesmo comando, contagem em 3.2):
+single 47,1 escritas/s e parallel 2 91,3 escritas/s. Desde a task
+`rc-surface-duas-escritas-20261117` o caminho de produção é o de parallel 2:
+até duas escritas em voo por parâmetro, com o destino mais recente por último.
+
 ### 3.2 Contagem física de pontos de automação
 
 > A contagem é feita no arquivo salvo (`.als`), não na tela: o envelope
@@ -116,7 +127,7 @@ em parallel 2 é o intervalo de 5 ms batendo no limite de 2 em voo, esperado.
 Método (2026-11-17), um Set novo a 120 BPM com o Utility na track 0, gravando a
 matriz inteira do Utility Output de uma vez:
 
-1. Comando do bench na forma de :21, com Automation Arm ligado e gravação de
+1. Comando do bench na forma de :24, com Automation Arm ligado e gravação de
    arranjo ativa:
    `node scripts/bench-live-write-rate.mjs --matrix --port 8730 --insecure --token <admin> --track 0 --device 0 --param 9 --seconds 10`.
 2. Ao fim da matriz, parar e salvar o Set como cópia para contar o envelope
@@ -147,6 +158,9 @@ pontos distintos na mesma janela (125,8 pontos/s) para 1721 escritas: a razão
 escritas/s quase toda escrita vira ponto. O padrão em degraus faz o Live
 gravar duas vezes o mesmo instante em muitas mudanças, por isso a coluna de
 eventos é maior que a de pontos distintos.
+Com duas escritas em voo (caminho de produção desde a task
+`rc-surface-duas-escritas-20261117`) a célula parallel 2 grava 879 pontos
+distintos na janela, 87,9 pontos/s com razão 0.96: `teto_pontos_gravados_2/s = 87`.
 A contagem é do `.als` salvo, não da tela. A tabela `LFO_SHAPE_MAX_HZ` em
 uso não é confirmada por esta medição; a decisão é do item 18 da lista de mudanças de 2026-11-16.
 
@@ -158,7 +172,8 @@ uso não é confirmada por esta medição; a decisão é do item 18 da lista de 
 
 Não coletado em 2026-09-21: o token admin rotacionou entre a instalação
 final e a leitura, e o responsável encerrou a bancada. A taxa do caminho
-real é limitada pela mesma lane single-flight medida em 3.1 (≈ 48/s); os LFOs
+real era limitada pela mesma lane single-flight medida em 3.1 (≈ 48/s; com
+duas escritas em voo, ≈ 91/s); os LFOs
 sine/triangle/ramps/square foram aceitos visualmente na automação gravada
 pelo responsável nas cinco formas.
 
@@ -181,6 +196,10 @@ pelo responsável nas cinco formas.
 `teto_efetivo = min(teto_single_escritas/s, teto_pontos_gravados/s) = 45`
 (o menor — o gargalo real é o que o Live grava, não o que o SDK aceita).
 
+Com duas escritas em voo por parâmetro (desde a task
+`rc-surface-duas-escritas-20261117`): `teto_efetivo_2 = min(91, 87) = 87`
+(célula parallel 2: 91,3 escritas/s, 87,9 pontos/s).
+
 ## 5. Regra derivada para `LFO_SHAPE_MAX_HZ`
 
 A regra é `maxHz(shape) = floor(teto_efetivo / minPointsPerCycle(shape))`,
@@ -199,13 +218,16 @@ Ao lado da tabela em uso no código (`src/live/transport-clock.ts` e
 `static/phone-v3/controls.js`), com a regra aplicada a `teto_efetivo = 45`
 (contagem de 2026-11-17):
 
-| shape | min pontos / ciclo | em uso | derivada com 48 | derivada com 45 |
-| --- | --- | --- | --- | --- |
-| `sine` | 10 | 4 | 4 | `floor(45 / 10) = 4` |
-| `triangle` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
-| `ramp_up` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
-| `ramp_down` | 16 | 3 | 3 | `floor(45 / 16) = 2` |
-| `square` | 4 | 15 | 12 | `floor(45 / 4) = 11` |
+| shape | min pontos / ciclo | em uso | derivada com 48 | derivada com 45 | derivada com 87 (duas em voo) |
+| --- | --- | --- | --- | --- | --- |
+| `sine` | 10 | 4 | 4 | `floor(45 / 10) = 4` | `floor(87 / 10) = 8` |
+| `triangle` | 16 | 3 | 3 | `floor(45 / 16) = 2` | `floor(87 / 16) = 5` |
+| `ramp_up` | 16 | 3 | 3 | `floor(45 / 16) = 2` | `floor(87 / 16) = 5` |
+| `ramp_down` | 16 | 3 | 3 | `floor(45 / 16) = 2` | `floor(87 / 16) = 5` |
+| `square` | 4 | 15 | 12 | `floor(45 / 4) = 11` | `floor(87 / 4) = 21` |
+
+Com duas escritas em voo a tabela em uso fica abaixo do teto derivado em
+todas as formas; ela não muda.
 
 O `square` já diferia antes desta medição: 15 no código contra 12 derivado
 de `teto_efetivo = 48`. Com o teto de 45 a diferença passa a valer também
@@ -230,7 +252,8 @@ Esta tabela alimenta `LFO_SHAPE_MAX_HZ` na task
 
 A bancada `benchDeviceParamWrites` (admin) mede `setValue` por segundo
 em `DeviceParameter` real. A taxa single é limitada pela latência de
-conclusão do SDK (single-flight no atuador). Paralelismo testa se
+conclusão do SDK (single-flight no atuador até 2026-11-17; desde então
+até duas escritas em voo, teto efetivo 87). Paralelismo testa se
 aumenta a taxa efetiva; a taxa real do caminho de produção é medida
 via `getActuatorStats` com um LFO do phone rodando. A contagem física
 de pontos de automação no Live pode ser menor que as escritas
