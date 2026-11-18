@@ -727,7 +727,8 @@
   }
 
   function esc(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const text = (s === null || s === undefined || typeof s === "object") ? "" : String(s);
+    return text.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function connect() {

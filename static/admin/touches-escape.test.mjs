@@ -81,3 +81,14 @@ test('admin dashboard never calls toFixed on a raw client value', () => {
   const raw = source.match(/\b(?:c|t)\.(?:x|y|value|pressure|force)\.toFixed\(/g) || [];
   assert.deepEqual(raw, [], 'every client number goes through Number() before toFixed');
 });
+
+test('admin esc never throws on an object from a client message', () => {
+  const source = read('app.js');
+  const context = { esc: null };
+  vm.createContext(context);
+  vm.runInContext(`${extractFunction(source, 'esc')}\nthis.esc = esc;`, context);
+  assert.doesNotThrow(() => context.esc({ toString: 'x' }));
+  assert.equal(context.esc({ toString: 'x' }), '');
+  assert.equal(context.esc('<b>'), '&lt;b&gt;');
+  assert.equal(context.esc(3), '3');
+});
