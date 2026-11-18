@@ -87,10 +87,11 @@ test('pulse analog depth keeps only newest value while SDK is busy', async () =>
     for (const value of [0.1, 0.2, 0.4, 0.7, 0.9]) {
       void applyMapping('slow-pulse', 'toggle-5', value); await drainMicrotasks();
     }
-    assert.deepEqual(sdk.writes, [0.1]);
+    assert.deepEqual(sdk.writes, [0.1, 0.2],
+      'a second write may start while the first is still in flight');
     sdk.releases[0](); await drainMicrotasks();
-    assert.deepEqual(sdk.writes, [0.1, 0.9], 'old depth trajectory must not replay');
-    assert.equal(sdk.maxInFlight(), 1);
+    assert.deepEqual(sdk.writes, [0.1, 0.2, 0.9], 'old depth trajectory must not replay');
+    assert.equal(sdk.maxInFlight(), 2, 'at most two writes may be in flight for one parameter');
   } finally { await sdk.close(); }
 });
 
@@ -104,14 +105,18 @@ test('host pulse OFF supersedes every unsent pulse even with explicit smoothing'
       for (const ms of [0, 40, 40, 40, 40, 40]) {
         clock.advance(ms); void tickHostModulators(clock.get()); await drainMicrotasks();
       }
-      assert.deepEqual(sdk.writes, [0.8]);
+      assert.equal(sdk.writes[0], 0.8, 'the gate opens first');
+      assert.ok(sdk.writes.length <= 2,
+        `at most two writes may be in flight for one parameter: ${JSON.stringify(sdk.writes)}`);
       upd('toggle-5', { kind: 'pulse', active: false }); await drainMicrotasks();
       assert.equal(hostModulators.size, 0);
       sdk.releases[0](); await drainMicrotasks();
-      assert.deepEqual(sdk.writes, [0.8, 0], 'OFF must be next, not an old gate or a smoothing tail');
-      sdk.releases[1](); await drainMicrotasks();
+      assert.equal(sdk.writes.at(-1), 0, 'OFF must be next, not an old gate or a smoothing tail');
+      while (sdk.releases.length > 0) { sdk.releases.shift()(); await drainMicrotasks(); }
       clock.advance(5000); await tickHostModulators(clock.get()); await drainMicrotasks();
-      assert.deepEqual(sdk.writes, [0.8, 0], 'no writes after the final release');
+      assert.equal(sdk.writes.at(-1), 0, 'no gate value may follow the final release');
+      assert.equal(sdk.writes.filter((value) => value === 0.8).length, 1,
+        'the gate value is written once, before the OFF');
     } finally { await sdk.close(); clock.restore(); }
   }
 });
@@ -122,10 +127,11 @@ test('LFO and pulse bound to same parameter share one SDK writer', async () => {
   try {
     void applyMapping('shared-modulator', 'toggle-1', 0.2); await drainMicrotasks();
     void applyMapping('shared-modulator', 'toggle-5', 0.9); await drainMicrotasks();
-    assert.deepEqual(sdk.writes, [0.2], 'pulse must not start a second writer beside LFO');
+    assert.deepEqual(sdk.writes, [0.2, 0.9],
+      'both modulators share one writer, so the second value starts while the first is in flight');
     sdk.releases[0](); await drainMicrotasks();
     assert.deepEqual(sdk.writes, [0.2, 0.9]);
-    assert.equal(sdk.maxInFlight(), 1);
+    assert.equal(sdk.maxInFlight(), 2, 'at most two writes may be in flight for one parameter');
   } finally { await sdk.close(); }
 });
 

@@ -287,7 +287,8 @@ Amplie zero/reset, catálogo, limites e despacho de mapeamento juntos.
 O caminho rápido dos descritores independe da análise de amplitude e do
 snapshot geral de 30 Hz. A captura contínua usa um AudioWorklet só de descritores;
 o modo de compatibilidade identificado na tela usa análise por quadro de animação.
-As escritas em parâmetros não se sobrepõem e retêm apenas o destino mais recente.
+Cada parâmetro aceita duas escritas em voo, e o destino mais recente sempre
+chega por último.
 Preserve essa separação: suavização extra, desenho da
 UI ou quadros antigos enfileirados não devem atrasar o envio dos controles.
 Valide a latência física do microfone até o Live separadamente; uma janela de

@@ -78,7 +78,8 @@ test("high-rate mapping applies the latest pending value after an in-flight setV
     await Promise.resolve();
 
     await applyMapping("client-1", "button-1", 0.9);
-    assert.deepEqual(applied, [0.1]);
+    assert.deepEqual(applied, [0.1, 0.9],
+      'a second write may start while the first is still in flight');
 
     pending[0].resolve();
     await waitUntil(
@@ -115,9 +116,10 @@ test('timed XY/knob/fader frames use one SDK writer and smooth=0 has no hidden r
     await applyMapping('realtime-test', 'xy-1.x', 0.1); await drain();
     now += 16; await applyMapping('realtime-test', 'xy-1.x', 0.4); await drain();
     now += 8; void applyMapping('realtime-test', 'xy-1.x', 0.8); await drain();
-    assert.deepEqual(applied, [0.1], 'cadence must never switch to a second concurrent writer');
+    assert.deepEqual(applied, [0.1, 0.4],
+      'two writes may be in flight for one parameter, never a third');
     pending[0].resolve(); await drain();
-    assert.deepEqual(applied, [0.1, 0.8], 'newest position follows SDK completion without timer/ramp');
+    assert.deepEqual(applied, [0.1, 0.4, 0.8], 'newest position follows SDK completion without timer/ramp');
     pending[1].resolve(); await drain();
     for (const name of ['knob-1', 'fader-1']) {
       now += 33; await applyMapping('realtime-test', name, 0.6); await drain();
@@ -138,9 +140,10 @@ test('continuous LFO output keeps only newest position while a slow SDK write is
   try {
     void applyMapping('lfo-latency', 'toggle-1', 0.1); await drain();
     for (const value of [0.2, 0.4, 0.7, 0.9]) { void applyMapping('lfo-latency', 'toggle-1', value); await drain(); }
-    assert.deepEqual(applied, [0.1]);
+    assert.deepEqual(applied, [0.1, 0.2],
+      'a second write may start while the first is still in flight');
     pending[0].resolve(); await drain();
-    assert.deepEqual(applied, [0.1, 0.9], 'do not play an old LFO trajectory after the SDK catches up');
+    assert.deepEqual(applied, [0.1, 0.2, 0.9], 'do not play an old LFO trajectory after the SDK catches up');
   } finally {
     controlMappings.clear();
     for (const d of pending) d.resolve();

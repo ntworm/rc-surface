@@ -2882,7 +2882,8 @@ Extend capture zero/reset, catalog, bounds and mapping dispatch together.
 The fast descriptor path is independent of amplitude analysis and the general
 30 Hz state snapshot. Continuous capture uses a descriptor-only AudioWorklet;
 the labelled compatibility path falls back to animation-frame analysis.
-Parameter writes are single-flight and retain only the newest destination.
+Parameter writes allow two in flight per parameter, and the newest destination
+always lands last.
 Preserve that separation: added smoothing, UI painting,
 or stale queued frames must not delay control delivery. Validate physical
 microphone-to-Live latency separately; a DSP window is not an end-to-end result.
