@@ -694,7 +694,9 @@ export class ClipLaunchEngine {
       const owner = { control: input.control, targetIndex: input.targetIndex };
       return this.enqueue(() => this.activate(owner, input.target));
     }
-    const band = isBinaryControl(input.control) ? 0 : CONTINUOUS_REARM_BAND;
+    // The release point has to stay reachable: a band wider than half the
+    // threshold would put it below zero, and the control could never re-arm.
+    const band = isBinaryControl(input.control) ? 0 : Math.min(CONTINUOUS_REARM_BAND, threshold / 2);
     if (active && input.value < threshold - band + 1e-9) this.edges.set(key, false);
     return Promise.resolve();
   }
