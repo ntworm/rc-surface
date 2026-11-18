@@ -19,7 +19,8 @@
 import { WebSocket } from "ws";
 import { argv, exit } from "node:process";
 import { writeFileSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const HELP = `bench-live-write-rate — measure Live DeviceParameter.setValue write rate
 
@@ -255,7 +256,7 @@ async function main() {
   console.error(`\nJSON written to: ${jsonPath}`);
 }
 
-const isMain = import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, "/")}`;
+const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isMain) {
   main().catch((err) => {
     console.error("bench failed:", err.message);

@@ -9,7 +9,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { gzipSync } from "node:zlib";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -162,5 +162,16 @@ test("the CLI exits 2 when the parameter or the envelope is missing", () => {
     const noEnvelope = spawnSync(process.execPath, [SCRIPT, als, "--pointee", "999"], { encoding: "utf8" });
     assert.equal(noEnvelope.status, 2);
     assert.match(noEnvelope.stderr, /no automation envelope with PointeeId 999/);
+  });
+});
+
+test("the CLI runs as the main module from a path whose URL is encoded", () => {
+  withSet(({ dir, als }) => {
+    const spaced = join(dir, "dir with space");
+    mkdirSync(spaced);
+    const copy = join(spaced, "count-automation-points.mjs");
+    copyFileSync(SCRIPT, copy);
+    const out = execFileSync(process.execPath, [copy, als, "--pointee", String(POINTE)], { encoding: "utf8" });
+    assert.match(out, /events: 5/);
   });
 });

@@ -18,7 +18,8 @@
 
 import { gunzipSync } from "node:zlib";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { argv } from "node:process";
 
 const HELP = `count-automation-points — count the automation points a Live set stored
@@ -355,5 +356,5 @@ function main() {
   }
 }
 
-const isMain = import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, "/")}`;
+const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isMain) main();
