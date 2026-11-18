@@ -9,7 +9,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { gzipSync } from "node:zlib";
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, symlinkSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -172,6 +172,20 @@ test("the CLI runs as the main module from a path whose URL is encoded", () => {
     const copy = join(spaced, "count-automation-points.mjs");
     copyFileSync(SCRIPT, copy);
     const out = execFileSync(process.execPath, [copy, als, "--pointee", String(POINTE)], { encoding: "utf8" });
+    assert.match(out, /events: 5/);
+  });
+});
+
+test("the CLI runs as the main module when invoked through a linked folder", () => {
+  withSet(({ dir, als }) => {
+    const real = join(dir, "real");
+    mkdirSync(real);
+    copyFileSync(SCRIPT, join(real, "count-automation-points.mjs"));
+    const linked = join(dir, "linked");
+    symlinkSync(real, linked, process.platform === "win32" ? "junction" : "dir");
+    const out = execFileSync(process.execPath, [
+      join(linked, "count-automation-points.mjs"), als, "--pointee", String(POINTE),
+    ], { encoding: "utf8" });
     assert.match(out, /events: 5/);
   });
 });
