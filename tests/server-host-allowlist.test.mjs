@@ -37,9 +37,9 @@ test("a bracketed name that is not an address is refused", () => {
 test("the name of this computer is answered, in any case", () => {
   assert.equal(isAllowedHost(own), true, "the name of this computer must be answered");
   assert.equal(isAllowedHost(own.toUpperCase()), true, "the name of this computer must be answered in any case");
-  assert.equal(isAllowedHost(`${own}.local`), true, "the local name of this computer must be answered");
 });
 
+// The '.local' form is covered below: on macOS the name already ends in it.
 test("the name of this computer is answered with and without the '.local' suffix", () => {
   // The name of this computer, whatever shape the machine gives it.
   const base = own.toLowerCase().endsWith(".local")
