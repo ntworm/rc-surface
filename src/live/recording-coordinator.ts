@@ -206,6 +206,8 @@ export class RecordingCoordinator extends EventEmitter {
         groupId: tree.tracks[index]?.groupId ?? null, isGroup: tree.tracks[index]?.isGroup ?? false,
         arm: this.value('arm:' + index), solo: this.value('solo:' + index), mute: this.value('mute:' + index),
         canArm: this.value('canArm:' + index), monitor: this.value('monitor:' + index),
+        // The Live track colour paints a row. It is never evidence.
+        color: this.value('color:' + index) ?? null,
         volume: this.trackVolume(track)?.value ?? null, volumeDefault:this.trackVolume(track)?.defaultValue ?? null })),
       locators: song.cuePoints.filter(cue => Number.isFinite(cue.time) && cue.time >= 0).map(cue => ({ name: cue.name, time: cue.time })).sort((a,b)=>a.time-b.time),
       meter: { numerator: this.value('numerator'), denominator: this.value('denominator') },tempo:this.value('tempo'),
@@ -471,10 +473,17 @@ export class RecordingCoordinator extends EventEmitter {
       key = address === GET.isPlaying ? 'isPlaying' : address === REC.getRecordMode ? 'recordMode' : flags.find(flag => REC_PREFLIGHT[flag] === address); value = observedBoolean(args[0]?.value);
     } else if (args.length === 2 && Number.isInteger(args[0]?.value) && Number(args[0]?.value) >= 0) {
       const field = address === REC_PREFLIGHT.trackArm ? 'arm' : address === REC_PREFLIGHT.trackSolo ? 'solo' : address === REC_PREFLIGHT.trackMute ? 'mute'
-        : address === REC_PREFLIGHT.trackCanArm ? 'canArm' : address === REC_PREFLIGHT.trackMonitor ? 'monitor' : null;
+        : address === REC_PREFLIGHT.trackCanArm ? 'canArm' : address === REC_PREFLIGHT.trackMonitor ? 'monitor'
+        : address === REC_PREFLIGHT.trackColor ? 'color' : null;
       const raw = args[1]?.value;
-      if (field === 'monitor' ? raw === 0 || raw === 1 || raw === 2 : field !== null && observedBoolean(raw) !== null) {
-        key = field + ':' + args[0]?.value; value = field === 'monitor' ? raw : observedBoolean(raw);
+      // A colour paints a row and nothing else: a malformed one is ignored
+      // and never becomes a state.
+      let accepted = false;
+      if (field === 'monitor') accepted = raw === 0 || raw === 1 || raw === 2;
+      else if (field === 'color') accepted = typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 && raw <= 0xFFFFFF;
+      else if (field !== null) accepted = observedBoolean(raw) !== null;
+      if (accepted) {
+        key = field + ':' + args[0]?.value; value = field === 'monitor' || field === 'color' ? raw : observedBoolean(raw);
       }
     }
     if (key !== undefined) {
@@ -567,6 +576,10 @@ export class RecordingCoordinator extends EventEmitter {
       for (const field of ['solo','mute'] as const) if (operation.name === 'read' || this.value(field+':'+i) === null) {
         packets.push([field === 'solo' ? REC_PREFLIGHT.trackSolo : REC_PREFLIGHT.trackMute,i]); keys.push(field+':'+i);
       }
+      // The track colour only paints its row. It is never evidence, so it
+      // stays out of the keys: a colour that never answers can neither delay
+      // nor fail the read.
+      if (!markerRead && (operation.name === 'read' || this.value('color:'+i) === null)) packets.push([REC_PREFLIGHT.trackColor,i]);
     }
     for (const ref of markerRead?(this.selected?[this.selected]:[]):monitorRefs??this.activeTracks()) {packets.push([REC_PREFLIGHT.trackMonitor,ref.index]);keys.push('monitor:'+ref.index);}
     if (!markerRead && (this.range?.loop || this.range?.end || this.capture || this.preRollRequested || this.preRoll)) { packets.push([REC_LOOP.getStart], [REC_LOOP.getLength]); keys.push('loopStart', 'loopLength'); }

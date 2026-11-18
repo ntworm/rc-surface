@@ -88,6 +88,13 @@ body[data-page="recording"] { touch-action:pan-y pan-x; }
    starts at the same place, so the ruler can align with all of them. */
 .rec-track-row { display:grid; grid-template-columns:minmax(0,244px) minmax(0,1fr); grid-template-rows:auto auto; grid-template-areas:"name lane" "actions lane"; align-items:center; gap:0 8px; min-width:0; padding:4px 6px; border:1px solid var(--border); background:var(--surface); }
 .rec-track-group-toggle { grid-area:name; justify-self:start; align-self:center; min-width:44px; min-height:44px; width:44px; padding:0; font-size:12px; line-height:1; }
+/* A track row wears a light tint of the Live track colour. The row without
+   a colour keeps the ordinary surface. */
+.rec-track-row[data-track-color] { background:color-mix(in srgb, var(--rec-track-color) 18%, var(--surface)); }
+/* The column header of the Session grid wears the same tint of the Live
+   track colour as the track row. A header without a colour keeps the
+   ordinary surface. */
+.rec-session-grid .rec-session-label[data-track-color] { background:color-mix(in srgb, var(--rec-track-color) 18%, var(--surface)); }
 .rec-track-name { grid-area:name; justify-self:start; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; max-width:200px; align-content:center; font-size:11px; }
 /* The name of a group leaves room for the disclosure of its own row. The
    compact Record row is a flex line: its disclosure is a control of its own

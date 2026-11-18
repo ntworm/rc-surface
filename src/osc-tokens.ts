@@ -100,6 +100,7 @@ export const REC_PREFLIGHT = {
   trackMute: "/live/track/get/mute",
   trackCanArm: "/live/track/get/can_be_armed",
   trackMonitor: "/live/track/get/current_monitoring_state",
+  trackColor: "/live/track/get/color",
   signatureNumerator: "/live/song/get/signature_numerator",
   signatureDenominator: "/live/song/get/signature_denominator",
 } as const;
