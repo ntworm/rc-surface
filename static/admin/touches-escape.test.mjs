@@ -73,3 +73,11 @@ test('admin control rows escape the name and coerce the numbers', () => {
   assert.doesNotThrow(() => { xy = context.row({ name: 'pad-1', x: 'abc', y: 'def' }); });
   assert.match(xy, /x:NaN y:NaN/, 'a non-numeric coordinate renders as NaN instead of throwing');
 });
+
+test('admin dashboard never calls toFixed on a raw client value', () => {
+  // The live update path writes to textContent, but a string value from a
+  // phone made toFixed throw and froze the detail pane.
+  const source = read('app.js');
+  const raw = source.match(/\b(?:c|t)\.(?:x|y|value|pressure|force)\.toFixed\(/g) || [];
+  assert.deepEqual(raw, [], 'every client number goes through Number() before toFixed');
+});

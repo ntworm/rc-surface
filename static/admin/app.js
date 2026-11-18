@@ -414,11 +414,11 @@
         if (!v) continue;
         let txt;
         if (c.x !== undefined && c.y !== undefined) {
-          txt = `x:${c.x.toFixed(2)} y:${c.y.toFixed(2)}`;
+          txt = `x:${Number(c.x).toFixed(2)} y:${Number(c.y).toFixed(2)}`;
         } else {
-          const val = (c.value !== undefined && c.value !== null) ? c.value.toFixed(2) : '0.00';
+          const val = (c.value !== undefined && c.value !== null) ? Number(c.value).toFixed(2) : '0.00';
           txt = val
-            + ((c.pressure !== undefined && c.pressure !== null) ? ` · p=${c.pressure.toFixed(2)}` : '');
+            + ((c.pressure !== undefined && c.pressure !== null) ? ` · p=${Number(c.pressure).toFixed(2)}` : '');
         }
         if (v.textContent !== txt) v.textContent = txt;
       }
