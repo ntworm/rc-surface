@@ -376,8 +376,17 @@ test('REC disconnect disables existing timeline markers and retires queued click
 function gridHarness(t) {
   const nodes=new Map(),events=new Map(),documentEvents=new Map(),calls=[],saved=[],frames=[];let generated=0,now=10000;
   class ClockDate extends Date {static now(){return now;}}
+  // The style stub keeps the custom properties the page paints.
+  const styleOf=()=>{
+    const props=new Map();
+    const style={};
+    style.setProperty=function(name,value){props.set(name,String(value));};
+    style.removeProperty=function(name){props.delete(name);};
+    style.getPropertyValue=function(name){const value=props.get(name);return value===undefined?'':value;};
+    return style;
+  };
   const node=id=>{
-    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:{},children:[],listeners:new Map(),
+    if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,dataset:{},style:styleOf(),children:[],listeners:new Map(),
       setAttribute(name,value){this[name]=value;},addEventListener(name,handler){this.listeners.set(name,handler);},
       replaceChildren(...children){this.children=children;this.replacements=(this.replacements||0)+1;},appendChild(child){this.children.push(child);}});
     return nodes.get(id);
@@ -445,6 +454,27 @@ test('REC Session mode and scene selection are passive, include all ten arms, an
   assert.equal(h.node('rec-status').textContent,'rec.sessionState.queued');
   await h.seed({...owned,session:{...owned.session,owned:owned.session.owned.map(target=>({...target,state:'stopped'}))}});assert.equal(h.node('rec-status').textContent,'rec.finishSession');assert.equal(h.node('rec-start').disabled,true);
   h.node('rec-stop').listeners.get('click')();assert.equal(h.calls.at(-1).name,'recordingSessionStop');h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+});
+test('REC a session column header wears the Live track colour and loses it when the colour is gone',async t=>{
+  const h=gridHarness(t);h.client.session(true,'controller');
+  const state=h.state();
+  state.tracks[0].color=0x3366FF;
+  state.session={songId:'song',offset:0,totalScenes:1,active:false,scenes:[{index:0,id:'scene',name:'Scene'}],
+    rows:state.tracks.map(track=>({track,ready:true,slots:[{index:0,id:'slot-'+track.id,clip:null,state:'stopped'}]})),owned:[]};
+  await h.seed(state);
+  h.node('rec-clip-mode').listeners.get('click')();
+  h.calls.at(-1).cb({ok:true,result:state});await h.flush();
+  const grid=h.node('rec-session-grid'),header=grid.children[1];
+  assert.equal(header.textContent,'Input 1','the header names the track of its column');
+  assert.equal(header.dataset.trackColor,'true','the header wears the colour of its track');
+  assert.equal(header.style.getPropertyValue('--rec-track-color'),'#3366ff');
+  const builds=grid.replacements;
+  const cleared={...state,tracks:state.tracks.map((track,index)=>index?track:{...track,color:null})};
+  await h.seed(cleared);
+  assert.equal(grid.replacements,builds,'the Session grid is not rebuilt for a colour change');
+  assert.equal(grid.children[1],header,'the header keeps its own node');
+  assert.equal(header.dataset.trackColor,undefined,'a vanished colour leaves no mark behind');
+  assert.equal(header.style.getPropertyValue('--rec-track-color'),'');
 });
 test('REC a confirmed passive Session stop clears only its pending STOP error without another write',async t=>{
   const {client,calls}=api(t);client.session(true,'controller');

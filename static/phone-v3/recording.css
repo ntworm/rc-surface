@@ -91,6 +91,10 @@ body[data-page="recording"] { touch-action:pan-y pan-x; }
 /* A track row wears a light tint of the Live track colour. The row without
    a colour keeps the ordinary surface. */
 .rec-track-row[data-track-color] { background:color-mix(in srgb, var(--rec-track-color) 18%, var(--surface)); }
+/* The column header of the Session grid wears the same tint of the Live
+   track colour as the track row. A header without a colour keeps the
+   ordinary surface. */
+.rec-session-grid .rec-session-label[data-track-color] { background:color-mix(in srgb, var(--rec-track-color) 18%, var(--surface)); }
 .rec-track-name { grid-area:name; justify-self:start; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:44px; max-width:200px; align-content:center; font-size:11px; }
 /* The name of a group leaves room for the disclosure of its own row. The
    compact Record row is a flex line: its disclosure is a control of its own

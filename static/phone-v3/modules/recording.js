@@ -268,6 +268,10 @@
     let destination='record',sceneOffset=0,sceneTarget=null,sessionKey='',sessionSongId=null;
     let displayMeter=null,displaySongId=null;
     const sessionCells=new Map();
+    // The column header of every track of the Session grid. The header is
+    // remembered with the exact reference of its track, so the Live colour
+    // of that track can paint it.
+    const sessionHeaders=new Map();
     try { preRollBars=preRollPreference(root.localStorage); } catch { /* Disabled browser storage uses OFF. */ }
     try {if(root.localStorage?.getItem('rc-surface-v2.rec.armMode')==='exclusive')armMode='exclusive';}catch{}
     const cards=new Map();
@@ -436,9 +440,9 @@
       if(Number.isInteger(session.offset))sceneOffset=session.offset;
       const signature=JSON.stringify([session.songId,session.scenes,session.rows.map(row=>[row.track.index,row.track.id,row.track.name,row.slots.map(slot=>[slot.index,slot.id])])]);
       if(sessionKey!==signature) {
-        sessionKey=signature;sessionCells.clear();const nodes=[];
-        const label=text=>{const span=doc.createElement('span');span.className='rec-session-label';span.textContent=text;nodes.push(span);};
-        label(t('scene'));session.rows.forEach(row=>label(row.track.name));
+        sessionKey=signature;sessionCells.clear();sessionHeaders.clear();const nodes=[];
+        const label=text=>{const span=doc.createElement('span');span.className='rec-session-label';span.textContent=text;nodes.push(span);return span;};
+        label(t('scene'));session.rows.forEach(row=>{const span=label(row.track.name);sessionHeaders.set(row.track.index+':'+row.track.id,{span,index:row.track.index,id:row.track.id});});
         for(const scene of session.scenes) {
           const choose=()=>{const current=client.view();if(current.busy||current.state?.pending||current.state?.attemptActive||!current.fresh)return;sceneTarget={...scene};render(current);};
           const button=doc.createElement('button');button.type='button';button.className='rec-session-label';button.dataset.scene=String(scene.index);button.textContent=(scene.index+1)+' · '+scene.name;button.addEventListener('click',choose);nodes.push(button);sessionCells.set('scene:'+scene.index,{button,scene});
@@ -448,6 +452,21 @@
           }
         }
         el('session-grid').style.gridTemplateColumns='120px repeat('+session.rows.length+',160px)';el('session-grid').replaceChildren(...nodes);
+      }
+      // The column header wears the Live colour of its track: the same
+      // tint the track row wears. The colour lives in the track list and
+      // not in the Session, so it is read on every render and a vanished
+      // colour leaves no mark behind.
+      for(const header of sessionHeaders.values()) {
+        const track=view.state?.tracks?.find(track=>track.index===header.index&&track.id===header.id);
+        const color=track?.color;
+        if(typeof color==='number'&&Number.isInteger(color)&&color>=0&&color<=0xFFFFFF){
+          header.span.style?.setProperty?.('--rec-track-color','#'+color.toString(16).padStart(6,'0'));
+          header.span.dataset.trackColor='true';
+        }else{
+          header.span.style?.removeProperty?.('--rec-track-color');
+          delete header.span.dataset.trackColor;
+        }
       }
       for(const entry of sessionCells.values()) {
         const selected=sceneTarget?.index===entry.scene.index,slot=entry.trackIndex===undefined?null:session.rows.find(row=>row.track.index===entry.trackIndex)?.slots.find(slot=>slot.index===entry.scene.index);
