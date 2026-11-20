@@ -1325,20 +1325,25 @@ function fallbackCopy(text, btn, done) {
   document.body.appendChild(ta);
   ta.select();
   try {
-    document.execCommand("copy");
-    if (btn) showCopied(btn);
-    else if (done) done();
+    // execCommand answers false instead of throwing when the copy is refused.
+    if (document.execCommand("copy")) {
+      if (btn) showCopied(btn);
+      else if (done) done();
+    }
   } catch {}
   document.body.removeChild(ta);
 }
 
 function showCopied(btn) {
-  const oldText = btn.textContent;
+  // A second click inside the window keeps the label of the first one.
+  if (btn._copiedTimer) clearTimeout(btn._copiedTimer);
+  else btn._copiedLabel = btn.textContent;
   btn.textContent = "Copied!";
   btn.classList.add("copied");
-  setTimeout(() => {
-    btn.textContent = oldText;
+  btn._copiedTimer = setTimeout(() => {
+    btn.textContent = btn._copiedLabel;
     btn.classList.remove("copied");
+    btn._copiedTimer = null;
   }, 1200);
 }
 

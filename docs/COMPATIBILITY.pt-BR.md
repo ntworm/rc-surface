@@ -1,6 +1,6 @@
 # Compatibilidade
 
-Requisitos e evidências atuais do RC Surface 2.1.0.
+Requisitos e evidências atuais do RC Surface 2.1.1.
 
 ## Live
 

@@ -1,7 +1,7 @@
 # RC Surface
 
 [![PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm--Noncommercial-blue.svg)](LICENSE)
-[![v2.1.0](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.1.0)
+[![v2.1.1](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/ntworm/rc-surface/releases/tag/v2.1.1)
 [![CI](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml/badge.svg)](https://github.com/ntworm/rc-surface/actions/workflows/ci.yml)
 
 **Português:** [README.pt-BR.md](README.pt-BR.md) · [página em português](https://ntworm.github.io/rc-surface/pt-br.html)
@@ -18,8 +18,8 @@ RC Surface is an extension for Ableton Live 12 that serves a control surface in 
 
 ## Quick start
 
-1. **Download.** `RC-Surface-2.1.0.ablx` and `RC-Midi-Receiver.amxd` (plus the optional `RC-Audio-Sender.amxd`) from the [latest release](https://github.com/ntworm/rc-surface/releases/latest). Verify the files with `SHA256SUMS.txt`.
-2. **Install.** Double-click `RC-Surface-2.1.0.ablx` to install in Live (restart Live if it is open), then enable **RC Surface** under *Options → Preferences → Extensions*.
+1. **Download.** `RC-Surface-2.1.1.ablx` and `RC-Midi-Receiver.amxd` (plus the optional `RC-Audio-Sender.amxd`) from the [latest release](https://github.com/ntworm/rc-surface/releases/latest). Verify the files with `SHA256SUMS.txt`.
+2. **Install.** Double-click `RC-Surface-2.1.1.ablx` to install in Live (restart Live if it is open), then enable **RC Surface** under *Options → Preferences → Extensions*.
 3. **Connect.** In Live, open *Extensions → RC Surface → Show panel* and scan the QR code with the phone. Install the certificate authority of this computer once, from the plain page at the HTTPS port + 1; the **Certificate** section of the **Network** tab links that page. If the phone does not open the page, open the **Network** tab: it shows the address the QR code uses and has **FIND SETUP**.
 4. **Control.** Use the seven surface tabs to control Live. Tap **MAP** in the header to bind parameters, trigger MIDI notes or launch clips.
 
@@ -42,6 +42,13 @@ RC Surface is an extension for Ableton Live 12 that serves a control surface in 
 | **`TRN`** | Header overlay for transport and locators. |
 | **`AUT`** | Header overlay for XY gesture loops: record and loop movement on `XY 1` and `XY 2` after a `3–2–1` countdown, synced to Live (`1–5 bars`) or free (`1–30 seconds`). |
 | **`CFG`** | Customize each pad individually (modes A/B/C/D and Mode D burst timing), the `T1`–`T8` modulators and the independent Static/Physics XY behavior (friction, bounce, speed, trails). |
+
+## What is new in 2.1.1
+
+- **Local certificate on Live betas.** Build the local certificate authority with `node:crypto` `webcrypto` because Live 12.4 betas' extension host has no global `crypto`, restoring the **Certificate** section and install page in the panel.
+- **One-click copy.** Copy any address in the Live panel (QR, network, certificate, Open and admin links) in one click; `CERT` reads `Local CA` when the install page exists.
+
+See the [2.1.1 release](https://github.com/ntworm/rc-surface/releases/tag/v2.1.1) for the files and the full notes.
 
 ## What is new in 2.1.0
 

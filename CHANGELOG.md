@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1 — 2026-11-20
+
+- Build the local certificate authority with `node:crypto` `webcrypto` because Live 12.4 betas' extension host has no global `crypto`, so 2.1.0 fell back to a self-signed certificate and hid the Certificate section in the panel.
+- Add one-click copy to every address in the Live panel (QR, network, certificate, Open and admin links) and label CERT as `Local CA` when the install page exists.
+- Preserve 2.0 and 2.1 mappings, presets and projects; the companion Max devices are unchanged. Physical Mac/Live recording acceptance remains pending.
+
 ## 2.1.0 — 2026-11-06
 
 - Give REC three local views (Record, Arrangement, Clip) over one shared capture bar and one fixed mode bar. List tracks as native rows with ARM, SOLO, MUTE and a native volume fader; group rows expand on the phone without changing the Set. Select a range between two markers, focus a take, and move the destinations and CLICK into the REC header. Retire the CUE client.

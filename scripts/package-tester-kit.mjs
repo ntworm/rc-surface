@@ -65,6 +65,7 @@ const stageDocs = [
   ".github/release-notes/v2.0.0.md",
   ".github/release-notes/v2.0.1.md",
   ".github/release-notes/v2.1.0.md",
+  ".github/release-notes/v2.1.1.md",
   "vendor/README.md",
   "FUNDING.md",
   "dev/README.md",

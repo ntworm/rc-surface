@@ -1,9 +1,9 @@
 # Tester Guide
 
-Current local preparation: RC Surface 2.1.0. The older kit sections are dated
+Current local preparation: RC Surface 2.1.1. The older kit sections are dated
 history, including the rename migrator; they are not a 2.0 upgrade procedure.
 
-## Local 2.1.0 checks — physical Mac acceptance pending
+## Local 2.1.x checks — physical Mac acceptance pending
 
 Confirm Start, automatic-start preference and Close with the server stopped. With a virtual bridge and Wi-Fi, check the default QR, the Network tab and FIND SETUP. Change networks with the server running: the QR comes back alone and the phone asks once to accept the certificate. Test a real phone on a cable with two addresses, and on Wi-Fi with an isolated lighting cable plugged in. Record and replay a real take. Existing 2.0 profiles remain compatible. Mac WebView, hardware and timing acceptance remain pending.
 

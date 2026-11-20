@@ -94,7 +94,7 @@ test('the IndexNow key file proves the key it is named after', () => {
 test('release citation and bilingual notices match the current 2.0 version',()=>{
   const version=JSON.parse(read('package.json')).version,manifest=JSON.parse(read('manifest.json'));
   const citation=read('CITATION.cff');assert.match(citation,new RegExp('^version: '+version.replaceAll('.','\\.')+'$','m'));
-  assert.equal(manifest.version,version);assert.match(citation,/^date-released: "2026-11-05"$/m,'citation carries the 2.1.0 delivery date');
+  assert.equal(manifest.version,version);assert.match(citation,/^date-released: "2026-11-20"$/m,'citation carries the 2.1.1 delivery date');
   for(const feature of ['T1-T8','AUT','REC','fifteen','PALM/FACE'])assert.ok(citation.includes(feature),feature);
   for(const file of ['docs/THIRD-PARTY-NOTICES.md','docs/THIRD-PARTY-NOTICES.pt-BR.md'])assert.ok(read(file).includes('Build `'+version+'`'));
 });

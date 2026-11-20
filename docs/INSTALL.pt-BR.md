@@ -29,7 +29,7 @@ A extensão em si é construída sobre o
 
 ### Versão publicada ou candidata de teste
 
-A versão atual, 2.1.0, está na página da
+A versão atual, 2.1.1, está na página da
 [versão mais recente](https://github.com/ntworm/rc-surface/releases/latest).
 
 1. Baixe o `RC-Surface-X.Y.Z.ablx` mais recente na página de Releases

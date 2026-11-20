@@ -88,12 +88,12 @@
       'pt-BR': "Live 12.4.5+ Suite (Beta) · Safari no iOS 15.4+ ou Chromium no Android, usado na horizontal · mesma rede local · nada é instalado no celular.",
     },
     'lp.surface.004': {
-      en: "Download 2.1.0",
-      'pt-BR': "Baixar a 2.1.0",
+      en: "Download 2.1.1",
+      'pt-BR': "Baixar a 2.1.1",
     },
     'lp.new.title': {
-      en: "New in 2.1.0",
-      'pt-BR': "Novo na 2.1.0",
+      en: "New in 2.1.1",
+      'pt-BR': "Novo na 2.1.1",
     },
     'lp.new.recTitle': {
       en: "REC: three views",
@@ -136,8 +136,8 @@
       'pt-BR': "Toque em AUT para gravar e repetir gestos nos pads XY.",
     },
     'lp.new.note': {
-      en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">release notes</a>.",
-      'pt-BR': "Gravar e reproduzir ainda não foram verificados no Live no macOS. Lista completa: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.0\">notas da versão</a>.",
+      en: "Recording and playback have not yet been verified in Live on macOS. Full list of changes: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.1\">release notes</a>.",
+      'pt-BR': "Gravar e reproduzir ainda não foram verificados no Live no macOS. Lista completa: <a href=\"https://github.com/ntworm/rc-surface/releases/tag/v2.1.1\">notas da versão</a>.",
     },
     'lp.surface.005': {
       en: 'Source & licence',
@@ -289,8 +289,8 @@
       'pt-BR': 'Instale a extensão',
     },
     'lp.install.007': {
-      en: "Double-click the <code>.ablx</code> from the 2.1.0 release to request installation in Live.",
-      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado da versão 2.1.0 para instalar no Live.",
+      en: "Double-click the <code>.ablx</code> from the 2.1.1 release to request installation in Live.",
+      'pt-BR': "Dê dois cliques no <code>.ablx</code> baixado da versão 2.1.1 para instalar no Live.",
     },
     'lp.install.009': {
       en: 'Open the panel',

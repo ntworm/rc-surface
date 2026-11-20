@@ -30,7 +30,7 @@ The extension itself is built on the
 
 ### Release package
 
-The current version, 2.1.0, is on the
+The current version, 2.1.1, is on the
 [latest release](https://github.com/ntworm/rc-surface/releases/latest) page.
 
 1. Download the latest `RC-Surface-X.Y.Z.ablx` from the
