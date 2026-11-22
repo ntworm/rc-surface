@@ -98,3 +98,13 @@ test('release citation and bilingual notices match the current 2.0 version',()=>
   for(const feature of ['T1-T8','AUT','REC','fifteen','PALM/FACE'])assert.ok(citation.includes(feature),feature);
   for(const file of ['docs/THIRD-PARTY-NOTICES.md','docs/THIRD-PARTY-NOTICES.pt-BR.md'])assert.ok(read(file).includes('Build `'+version+'`'));
 });
+
+test('both landing pages show the current package version in masthead and signal chain', () => {
+  const version = JSON.parse(read('package.json')).version;
+  const escaped = version.replaceAll('.', '\\.');
+  for (const rel of ['docs/index.html', 'docs/pt-br.html']) {
+    const html = read(rel);
+    assert.ok(html.includes(`<span>v<b>${version}</b></span>`), `${rel} masthead version`);
+    assert.match(html, new RegExp(`RC SURFACE SERVER\\s+v${escaped}\\s*│`), `${rel} signal chain version`);
+  }
+});
